@@ -29,13 +29,13 @@
   },
   "overrides": {
     "@nestjs/platform-express": {
-      "multer": "2.2.0"
+      "multer": "2.3.0"
     },
     "@prisma/dev": {
       "@hono/node-server": "2.0.8"
     },
     "next": {
-      "postcss": "8.5.16"
+      "postcss": "8.5.28"
     }
   },
   "devDependencies": {
