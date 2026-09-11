@@ -97,7 +97,7 @@ export class IntegracionesUcheckService {
     const fecha = fechaSql(dto.fecha);
 
     return this.prisma.$transaction(async (tx) => {
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(${dto.ucheckJornadaId})`;
+      await tx.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(${dto.ucheckJornadaId})`;
       const existente = await tx.integracionUcheckEvento.findFirst({
         where: {
           OR: [
