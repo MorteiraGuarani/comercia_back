@@ -61,6 +61,7 @@ export class ClienteCampoDto {
 }
 
 export class LocalCampoDto {
+  // Datos compartidos con UCHECK.
   @Type(() => Number) @IsInt() @Min(1) @Max(MAX_INT4) clienteId!: number;
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.trim() : value,
@@ -74,6 +75,8 @@ export class LocalCampoDto {
   @IsString() @MaxLength(40) telefono = '';
   @IsNumber() @Min(-90) @Max(90) latitud!: number;
   @IsNumber() @Min(-180) @Max(180) longitud!: number;
+  @IsInt() @Min(10) @Max(5000) radioMetros = 100;
+  @IsString() @MaxLength(80) zonaHoraria = 'America/Asuncion';
   @IsString() @MaxLength(1000) notas = '';
   @IsBoolean() activo = true;
 }

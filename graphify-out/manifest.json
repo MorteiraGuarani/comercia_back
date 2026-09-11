@@ -160,8 +160,8 @@
     "semantic_hash": "7eee3d8be686734a7d02be67c7555852"
   },
   "apps/api/src/app.module.ts": {
-    "mtime": 1788875699.623899,
-    "ast_hash": "94ed8f2ad8f57ee3771429c309311c9a",
+    "mtime": 1789130525.5307558,
+    "ast_hash": "da8c88a8696ffa62a3629b37692dac51",
     "semantic_hash": ""
   },
   "apps/api/src/app.service.ts": {
@@ -305,13 +305,13 @@
     "semantic_hash": "5661b156ccf2b26900d18a68518d0a4d"
   },
   "apps/api/src/config/configuration.ts": {
-    "mtime": 1788368416.42945,
-    "ast_hash": "c891c2c30b4b48c0d5dd70b632ffd71d",
+    "mtime": 1789130432.8135674,
+    "ast_hash": "e71e09e151f71a3a6d0436cb81480337",
     "semantic_hash": ""
   },
   "apps/api/src/config/env.schema.ts": {
-    "mtime": 1788445352.8499634,
-    "ast_hash": "09f38d148e2d6f7c4c195d221ddd7e2b",
+    "mtime": 1789130432.8135674,
+    "ast_hash": "b846c92f48556586c8ea7de587f651ae",
     "semantic_hash": ""
   },
   "apps/api/src/empresas/admin-empresas.controller.ts": {
@@ -705,9 +705,9 @@
     "semantic_hash": ""
   },
   "apps/web/src/lib/api.ts": {
-    "mtime": 1783336583.488696,
-    "ast_hash": "73503dbe0af657f124ac7c2571f4f145",
-    "semantic_hash": "73503dbe0af657f124ac7c2571f4f145"
+    "mtime": 1789131757.3562095,
+    "ast_hash": "2e3fc59eae4003c12c4e6812b12edd91",
+    "semantic_hash": ""
   },
   "apps/web/src/lib/eventos-plataforma.ts": {
     "mtime": 1784211052.3354664,
@@ -1920,8 +1920,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/campo/campo.module.ts": {
-    "mtime": 1788876459.8146598,
-    "ast_hash": "01ab6cae50f82744e7616eb255d3a9af",
+    "mtime": 1789130525.5292523,
+    "ast_hash": "a829ea3b5cf4eb516c9f779b80095c98",
     "semantic_hash": ""
   },
   "apps/api/src/campo/catalogo-campo.service.ts": {
@@ -1930,8 +1930,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/campo/dto/campo.dto.ts": {
-    "mtime": 1788876459.873753,
-    "ast_hash": "bbdc0aabd108c1419f8948e3da03e79c",
+    "mtime": 1789130432.8135674,
+    "ast_hash": "a065595cfe0c169e153a3f709b714252",
     "semantic_hash": ""
   },
   "apps/api/src/campo/interfaces/calendario.interface.ts": {
@@ -1965,8 +1965,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/campo/utils/selectores.ts": {
-    "mtime": 1788876459.96688,
-    "ast_hash": "4c634c006b0b984c0087f253779f2e5b",
+    "mtime": 1789130432.8125672,
+    "ast_hash": "cdafb41710a5519c0f1f39f50314e618",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/catalogo-panel.tsx": {
@@ -2027,6 +2027,41 @@
   "apps/web/src/components/campo/selector-ubicacion.tsx": {
     "mtime": 1788890331.0132568,
     "ast_hash": "896c467d0c295f7683ab27f7dae7e5fa",
+    "semantic_hash": ""
+  },
+  "apps/api/prisma/migrations/20260911153000_integracion_ucheck/migration.sql": {
+    "mtime": 1789132042.5509157,
+    "ast_hash": "d6f35b460e53aa045870e552318cc919",
+    "semantic_hash": ""
+  },
+  "apps/api/src/integraciones-ucheck/dto/agenda-ucheck.dto.ts": {
+    "mtime": 1789130525.5242438,
+    "ast_hash": "d5b7fa11d32be6c2bf9235416ddc7fed",
+    "semantic_hash": ""
+  },
+  "apps/api/src/integraciones-ucheck/dto/marcacion-ucheck.dto.ts": {
+    "mtime": 1789132042.5509157,
+    "ast_hash": "3e9303d2d123c95bdeab46d5b1354aef",
+    "semantic_hash": ""
+  },
+  "apps/api/src/integraciones-ucheck/integraciones-ucheck.controller.ts": {
+    "mtime": 1789130525.5282595,
+    "ast_hash": "15c530d7e03e4e008386d870a4142d2d",
+    "semantic_hash": ""
+  },
+  "apps/api/src/integraciones-ucheck/integraciones-ucheck.module.ts": {
+    "mtime": 1789130525.5292523,
+    "ast_hash": "7f9e1aab60a187b819fe7324d824dc68",
+    "semantic_hash": ""
+  },
+  "apps/api/src/integraciones-ucheck/integraciones-ucheck.service.ts": {
+    "mtime": 1789132042.5509157,
+    "ast_hash": "d4a241936a5c9aa5461c49cb5ee8ec83",
+    "semantic_hash": ""
+  },
+  "apps/api/src/integraciones-ucheck/ucheck-integracion.guard.ts": {
+    "mtime": 1789131660.8869267,
+    "ast_hash": "86d789d83829e9d36b8ad6e1f5dfcc61",
     "semantic_hash": ""
   }
 }

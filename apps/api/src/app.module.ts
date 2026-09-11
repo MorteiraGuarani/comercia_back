@@ -17,6 +17,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { UsuariosModule } from './usuarios/usuarios.module';
 import { RolesModule } from './roles/roles.module';
 import { CampoModule } from './campo/campo.module';
+import { IntegracionesUcheckModule } from './integraciones-ucheck/integraciones-ucheck.module';
 
 const usaBaseProduccion = process.env.COMERCIA_DATABASE_TARGET === 'production';
 
@@ -56,6 +57,7 @@ if (process.env.NODE_ENV !== 'production' && !usaBaseProduccion) {
     EmpresasModule,
     RolesModule,
     CampoModule,
+    IntegracionesUcheckModule,
     PlataformaModule,
     UsuariosModule,
   ],

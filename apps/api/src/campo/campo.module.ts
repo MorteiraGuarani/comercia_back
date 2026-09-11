@@ -17,5 +17,6 @@ import { JornadaCampoService } from './jornada-campo.service';
     PlanificacionCampoService,
     JornadaCampoService,
   ],
+  exports: [CampoAccesoService, JornadaCampoService],
 })
 export class CampoModule {}

@@ -2,7 +2,7 @@
 // Las cookies de sesión son httpOnly y viajan con credentials: 'include'.
 
 export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/api/v1";
+  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3002/api/v1";
 
 export class ApiError extends Error {
   constructor(

@@ -16,4 +16,7 @@ export default () => ({
     throttleTtl: Number(process.env.THROTTLE_TTL),
     throttleLimit: Number(process.env.THROTTLE_LIMIT),
   },
+  integrations: {
+    ucheckSecret: process.env.UCHECK_INTEGRATION_SECRET,
+  },
 });

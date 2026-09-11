@@ -9,6 +9,7 @@ coverage/
 !.env.example
 !.env.development
 !.env.production.local.example
+!deploy/.env.production.example
 # Los .env del front solo llevan variables NEXT_PUBLIC_* (públicas) y se commitean
 !apps/web/.env.development
 !apps/web/.env.production

@@ -23,6 +23,7 @@ const rawEnvSchema = z.object({
   THROTTLE_LIMIT: z.coerce.number().int().min(1).default(100),
   SWAGGER_ENABLED: booleanFromString.default(true),
   COOKIE_SECRET: z.string().min(32).optional(),
+  UCHECK_INTEGRATION_SECRET: z.string().min(32).optional(),
 });
 
 export type Env = z.infer<typeof rawEnvSchema> & {
@@ -49,6 +50,12 @@ export function validateEnv(config: Record<string, unknown>): Env {
 
   if (parsed.data.NODE_ENV === 'production' && !parsed.data.DATABASE_URL) {
     throw new Error('DATABASE_URL is required in production');
+  }
+  if (
+    parsed.data.NODE_ENV === 'production' &&
+    !parsed.data.UCHECK_INTEGRATION_SECRET
+  ) {
+    throw new Error('UCHECK_INTEGRATION_SECRET is required in production');
   }
 
   const env = {

@@ -61,6 +61,8 @@ services:
       FRONTEND_URL: ${FRONTEND_URL:?Falta FRONTEND_URL en .env (ej. https://tudominio.com)}
       CORS_ORIGINS: ${CORS_ORIGINS:?Falta CORS_ORIGINS en .env (ej. https://tudominio.com)}
       COOKIE_SECRET: ${COOKIE_SECRET:?Falta COOKIE_SECRET en .env (64 caracteres aleatorios)}
+      # Secreto compartido con UCHECK para los endpoints server-to-server.
+      UCHECK_INTEGRATION_SECRET: ${UCHECK_INTEGRATION_SECRET:?Falta UCHECK_INTEGRATION_SECRET en .env}
       THROTTLE_TTL: ${THROTTLE_TTL:-60000}
       THROTTLE_LIMIT: ${THROTTLE_LIMIT:-100}
       SWAGGER_ENABLED: ${SWAGGER_ENABLED:-false}
