@@ -16,6 +16,16 @@ This version has breaking changes. APIs, conventions, and file structure may dif
 - Reutilizar `src/components/selector-paginado.tsx` con `buscable` cuando el
   endpoint admita `buscar`. El servidor filtra dentro del alcance autorizado
   y pagina; filtrar solamente la página actual en el navegador no alcanza.
+- La búsqueda y la selección deben compartir **un solo campo editable
+  (combobox)** con la etiqueta del dato, por ejemplo «Cliente». No agregar
+  un input «Buscar cliente» separado de otro select «Cliente».
+- Al enfocar o hacer clic, abrir el desplegable con la primera página sin
+  exigir texto previo: 7 opciones por defecto (al menos 5 si existen).
+  Escribir filtra la búsqueda remota; elegir una opción muestra su nombre
+  en ese mismo campo y cierra el desplegable. Paginar dentro del desplegable.
+- Permitir flechas, Enter para elegir y Escape para cerrar, además de clic
+  y toque. El texto libre no es una selección válida: guardar exige un ID
+  elegido cuando el campo es obligatorio.
 - Esperar brevemente al escribir, cancelar consultas anteriores y descartar
   respuestas obsoletas. Volver a la primera página al cambiar la búsqueda.
 - Mantener el ID y nombre seleccionados aunque no estén en los resultados

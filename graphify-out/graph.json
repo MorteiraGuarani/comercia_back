@@ -439,8 +439,8 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "apps_api_package_dependencies_nestjs_jwt",
-      "community": 63,
-      "community_name": "@nestjs/jwt",
+      "community": 37,
+      "community_name": "dependencies",
       "norm_label": "@nestjs/jwt"
     },
     {
@@ -450,8 +450,8 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "nestjs_jwt",
-      "community": 63,
-      "community_name": "@nestjs/jwt",
+      "community": 37,
+      "community_name": "dependencies",
       "norm_label": "@nestjs/jwt"
     },
     {
@@ -593,8 +593,8 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "apps_api_package_dependencies_class_transformer",
-      "community": 37,
-      "community_name": "dependencies",
+      "community": 63,
+      "community_name": "class-transformer",
       "norm_label": "class-transformer"
     },
     {
@@ -604,8 +604,8 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "class_transformer",
-      "community": 37,
-      "community_name": "dependencies",
+      "community": 63,
+      "community_name": "class-transformer",
       "norm_label": "class-transformer"
     },
     {
@@ -10747,7 +10747,7 @@
       "_origin": "ast",
       "id": "apps_web_src_app_panel_modulo_pagina_page",
       "community": 65,
-      "community_name": "[pagina]/page.tsx",
+      "community_name": "admin/page.tsx",
       "norm_label": "[pagina]/page.tsx"
     },
     {
@@ -10758,7 +10758,7 @@
       "_origin": "ast",
       "id": "apps_web_src_app_panel_modulo_pagina_page_clientespanel",
       "community": 65,
-      "community_name": "[pagina]/page.tsx",
+      "community_name": "admin/page.tsx",
       "norm_label": "clientespanel"
     },
     {
@@ -10769,7 +10769,7 @@
       "_origin": "ast",
       "id": "apps_web_src_app_panel_modulo_pagina_page_localespanel",
       "community": 65,
-      "community_name": "[pagina]/page.tsx",
+      "community_name": "admin/page.tsx",
       "norm_label": "localespanel"
     },
     {
@@ -10780,7 +10780,7 @@
       "_origin": "ast",
       "id": "apps_web_src_app_panel_modulo_pagina_page_tareaspanel",
       "community": 65,
-      "community_name": "[pagina]/page.tsx",
+      "community_name": "admin/page.tsx",
       "norm_label": "tareaspanel"
     },
     {
@@ -10791,7 +10791,7 @@
       "_origin": "ast",
       "id": "apps_web_src_app_panel_modulo_pagina_page_jornadapanel",
       "community": 65,
-      "community_name": "[pagina]/page.tsx",
+      "community_name": "admin/page.tsx",
       "norm_label": "jornadapanel"
     },
     {
@@ -10802,7 +10802,7 @@
       "_origin": "ast",
       "id": "apps_web_src_app_panel_modulo_pagina_page_visitaspanel",
       "community": 65,
-      "community_name": "[pagina]/page.tsx",
+      "community_name": "admin/page.tsx",
       "norm_label": "visitaspanel"
     },
     {
@@ -10813,7 +10813,7 @@
       "_origin": "ast",
       "id": "apps_web_src_app_panel_modulo_pagina_page_paginamodulo",
       "community": 65,
-      "community_name": "[pagina]/page.tsx",
+      "community_name": "admin/page.tsx",
       "norm_label": "paginamodulo()"
     },
     {
@@ -10823,8 +10823,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_app_panel_admin_page",
-      "community": 30,
-      "community_name": "apiFetch",
+      "community": 65,
+      "community_name": "admin/page.tsx",
       "norm_label": "admin/page.tsx"
     },
     {
@@ -10834,8 +10834,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "apps_web_src_app_panel_admin_page_tab",
-      "community": 30,
-      "community_name": "apiFetch",
+      "community": 65,
+      "community_name": "admin/page.tsx",
       "norm_label": "tab"
     },
     {
@@ -10846,7 +10846,7 @@
       "_origin": "ast",
       "id": "apps_web_src_app_panel_admin_page_adminpage",
       "community": 65,
-      "community_name": "[pagina]/page.tsx",
+      "community_name": "admin/page.tsx",
       "norm_label": "adminpage()"
     },
     {
@@ -10912,7 +10912,7 @@
       "_origin": "ast",
       "id": "apps_web_src_app_panel_page",
       "community": 65,
-      "community_name": "[pagina]/page.tsx",
+      "community_name": "admin/page.tsx",
       "norm_label": "panel/page.tsx"
     },
     {
@@ -10923,7 +10923,7 @@
       "_origin": "ast",
       "id": "apps_web_src_app_panel_page_paneliniciopage",
       "community": 65,
-      "community_name": "[pagina]/page.tsx",
+      "community_name": "admin/page.tsx",
       "norm_label": "paneliniciopage()"
     },
     {
@@ -11043,8 +11043,8 @@
       "source_location": "L95",
       "_origin": "ast",
       "id": "apps_web_src_components_admin_empresas_abm_panel_empresasabmpanel",
-      "community": 30,
-      "community_name": "apiFetch",
+      "community": 65,
+      "community_name": "admin/page.tsx",
       "norm_label": "empresasabmpanel()"
     },
     {
@@ -11065,8 +11065,8 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "apps_web_src_components_admin_empresas_panel_empresaspanel",
-      "community": 30,
-      "community_name": "apiFetch",
+      "community": 65,
+      "community_name": "admin/page.tsx",
       "norm_label": "empresaspanel()"
     },
     {
@@ -11109,8 +11109,8 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "apps_web_src_components_admin_modulos_panel_modulospanel",
-      "community": 30,
-      "community_name": "apiFetch",
+      "community": 65,
+      "community_name": "admin/page.tsx",
       "norm_label": "modulospanel()"
     },
     {
@@ -11230,8 +11230,8 @@
       "source_location": "L88",
       "_origin": "ast",
       "id": "apps_web_src_components_admin_roles_panel_rolespanel",
-      "community": 30,
-      "community_name": "apiFetch",
+      "community": 65,
+      "community_name": "admin/page.tsx",
       "norm_label": "rolespanel()"
     },
     {
@@ -11406,8 +11406,8 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_jornada_panel_jornadapanel",
-      "community": 30,
-      "community_name": "apiFetch",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "jornadapanel()"
     },
     {
@@ -11417,8 +11417,8 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_jornada_panel_agendadeldia",
-      "community": 30,
-      "community_name": "apiFetch",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "agendadeldia()"
     },
     {
@@ -11428,8 +11428,8 @@
       "source_location": "L212",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_jornada_panel_modalmarca",
-      "community": 30,
-      "community_name": "apiFetch",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "modalmarca()"
     },
     {
@@ -11450,8 +11450,8 @@
       "source_location": "L380",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_jornada_panel_visitaspanel",
-      "community": 30,
-      "community_name": "apiFetch",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "visitaspanel()"
     },
     {
@@ -11461,8 +11461,8 @@
       "source_location": "L412",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_jornada_panel_listadovisitas",
-      "community": 30,
-      "community_name": "apiFetch",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "listadovisitas()"
     },
     {
@@ -11549,8 +11549,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_selector_ubicacion",
-      "community": 9,
-      "community_name": "jornada-panel.tsx",
+      "community": 96,
+      "community_name": "selector-ubicacion.tsx",
       "norm_label": "selector-ubicacion.tsx"
     },
     {
@@ -11560,8 +11560,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_selector_ubicacion_selectorubicacion",
-      "community": 9,
-      "community_name": "jornada-panel.tsx",
+      "community": 96,
+      "community_name": "selector-ubicacion.tsx",
       "norm_label": "selectorubicacion()"
     },
     {
@@ -11781,7 +11781,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_panel_contexto_usepanel",
       "community": 65,
-      "community_name": "[pagina]/page.tsx",
+      "community_name": "admin/page.tsx",
       "norm_label": "usepanel()"
     },
     {
@@ -12066,8 +12066,8 @@
       "source_location": "L139",
       "_origin": "ast",
       "id": "apps_web_src_components_usuarios_usuarios_panel_usuariospanel",
-      "community": 30,
-      "community_name": "apiFetch",
+      "community": 83,
+      "community_name": "usuarios-panel.tsx",
       "norm_label": "usuariospanel()"
     },
     {
@@ -12088,8 +12088,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_hooks_use_lista_campo",
-      "community": 21,
-      "community_name": "roles-panel.tsx",
+      "community": 30,
+      "community_name": "apiFetch",
       "norm_label": "use-lista-campo.ts"
     },
     {
@@ -12847,8 +12847,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_utils_fechas",
-      "community": 30,
-      "community_name": "apiFetch",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "fechas.ts"
     },
     {
@@ -12858,8 +12858,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "apps_web_src_utils_fechas_fechainputaiso",
-      "community": 30,
-      "community_name": "apiFetch",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "fechainputaiso()"
     },
     {
@@ -12869,8 +12869,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "apps_web_src_utils_fechas_isoafechainput",
-      "community": 30,
-      "community_name": "apiFetch",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "isoafechainput()"
     },
     {
@@ -12880,8 +12880,8 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "apps_web_src_utils_fechas_formatofecha",
-      "community": 30,
-      "community_name": "apiFetch",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "formatofecha()"
     },
     {
@@ -12891,8 +12891,8 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "apps_web_src_utils_fechas_formatofechahora",
-      "community": 30,
-      "community_name": "apiFetch",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "formatofechahora()"
     },
     {
@@ -12902,8 +12902,8 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "apps_web_src_utils_fechas_fechaenzonaiso",
-      "community": 30,
-      "community_name": "apiFetch",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "fechaenzonaiso()"
     },
     {
@@ -20938,7 +20938,7 @@
       "label": "Organizaci\u00f3n del c\u00f3digo del front (OBLIGATORIA)",
       "file_type": "document",
       "source_file": "apps/web/AGENTS.md",
-      "source_location": "L32",
+      "source_location": "L42",
       "_origin": "ast",
       "id": "apps_web_agents_organizaci\u00f3n_del_c\u00f3digo_del_front_obligatoria",
       "community": 100,
@@ -20949,7 +20949,7 @@
       "label": "Tablas y paginaci\u00f3n (OBLIGATORIO en toda tabla/listado)",
       "file_type": "document",
       "source_file": "apps/web/AGENTS.md",
-      "source_location": "L46",
+      "source_location": "L56",
       "_origin": "ast",
       "id": "apps_web_agents_tablas_y_paginaci\u00f3n_obligatorio_en_toda_tabla_listado",
       "community": 100,
@@ -20960,7 +20960,7 @@
       "label": "Reglas de UI/UX de Comercia (OBLIGATORIAS \u2014 aplicarlas en TODO lo que se construya)",
       "file_type": "document",
       "source_file": "apps/web/AGENTS.md",
-      "source_location": "L62",
+      "source_location": "L72",
       "_origin": "ast",
       "id": "apps_web_agents_reglas_de_ui_ux_de_comercia_obligatorias_aplicarlas_en_todo_lo_que_se_construya",
       "community": 100,
@@ -20971,7 +20971,7 @@
       "label": "Vista m\u00f3vil de tablas (OBLIGATORIA)",
       "file_type": "document",
       "source_file": "apps/web/AGENTS.md",
-      "source_location": "L64",
+      "source_location": "L74",
       "_origin": "ast",
       "id": "apps_web_agents_vista_m\u00f3vil_de_tablas_obligatoria",
       "community": 100,
@@ -20982,7 +20982,7 @@
       "label": "Elementos clickeables",
       "file_type": "document",
       "source_file": "apps/web/AGENTS.md",
-      "source_location": "L85",
+      "source_location": "L95",
       "_origin": "ast",
       "id": "apps_web_agents_elementos_clickeables",
       "community": 100,
@@ -20993,7 +20993,7 @@
       "label": "Feedback global de procedimientos",
       "file_type": "document",
       "source_file": "apps/web/AGENTS.md",
-      "source_location": "L95",
+      "source_location": "L105",
       "_origin": "ast",
       "id": "apps_web_agents_feedback_global_de_procedimientos",
       "community": 100,
@@ -21004,7 +21004,7 @@
       "label": "Botones de alta en ABM",
       "file_type": "document",
       "source_file": "apps/web/AGENTS.md",
-      "source_location": "L106",
+      "source_location": "L116",
       "_origin": "ast",
       "id": "apps_web_agents_botones_de_alta_en_abm",
       "community": 100,
@@ -21015,7 +21015,7 @@
       "label": "Modales",
       "file_type": "document",
       "source_file": "apps/web/AGENTS.md",
-      "source_location": "L118",
+      "source_location": "L128",
       "_origin": "ast",
       "id": "apps_web_agents_modales",
       "community": 100,
@@ -21026,7 +21026,7 @@
       "label": "Responsive (cr\u00edtico: los comerciales usan la app desde el CELULAR)",
       "file_type": "document",
       "source_file": "apps/web/AGENTS.md",
-      "source_location": "L128",
+      "source_location": "L138",
       "_origin": "ast",
       "id": "apps_web_agents_responsive_cr\u00edtico_los_comerciales_usan_la_app_desde_el_celular",
       "community": 100,
@@ -21037,7 +21037,7 @@
       "label": "Modo claro/oscuro (OBLIGATORIO en todo c\u00f3digo nuevo)",
       "file_type": "document",
       "source_file": "apps/web/AGENTS.md",
-      "source_location": "L140",
+      "source_location": "L150",
       "_origin": "ast",
       "id": "apps_web_agents_modo_claro_oscuro_obligatorio_en_todo_c\u00f3digo_nuevo",
       "community": 100,
@@ -51572,7 +51572,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/web/src/components/selector-paginado.tsx",
-      "source_location": "L49",
+      "source_location": "L67",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_selector_paginado_selectorpaginado",
@@ -59327,7 +59327,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/AGENTS.md",
-      "source_location": "L32",
+      "source_location": "L42",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_agents",
@@ -59338,7 +59338,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/AGENTS.md",
-      "source_location": "L62",
+      "source_location": "L72",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_agents",
@@ -59349,7 +59349,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/AGENTS.md",
-      "source_location": "L46",
+      "source_location": "L56",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_agents",
@@ -59382,7 +59382,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/AGENTS.md",
-      "source_location": "L106",
+      "source_location": "L116",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_agents_reglas_de_ui_ux_de_comercia_obligatorias_aplicarlas_en_todo_lo_que_se_construya",
@@ -59393,7 +59393,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/AGENTS.md",
-      "source_location": "L85",
+      "source_location": "L95",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_agents_reglas_de_ui_ux_de_comercia_obligatorias_aplicarlas_en_todo_lo_que_se_construya",
@@ -59404,7 +59404,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/AGENTS.md",
-      "source_location": "L95",
+      "source_location": "L105",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_agents_reglas_de_ui_ux_de_comercia_obligatorias_aplicarlas_en_todo_lo_que_se_construya",
@@ -59415,7 +59415,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/AGENTS.md",
-      "source_location": "L118",
+      "source_location": "L128",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_agents_reglas_de_ui_ux_de_comercia_obligatorias_aplicarlas_en_todo_lo_que_se_construya",
@@ -59426,7 +59426,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/AGENTS.md",
-      "source_location": "L140",
+      "source_location": "L150",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_agents_reglas_de_ui_ux_de_comercia_obligatorias_aplicarlas_en_todo_lo_que_se_construya",
@@ -59437,7 +59437,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/AGENTS.md",
-      "source_location": "L128",
+      "source_location": "L138",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_agents_reglas_de_ui_ux_de_comercia_obligatorias_aplicarlas_en_todo_lo_que_se_construya",
@@ -59448,7 +59448,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/AGENTS.md",
-      "source_location": "L64",
+      "source_location": "L74",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_agents_reglas_de_ui_ux_de_comercia_obligatorias_aplicarlas_en_todo_lo_que_se_construya",
@@ -60348,5 +60348,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "28c113b5285dacbb6179dc3c63ebcb7e72032eef"
+  "built_at_commit": "9fe699e9e3d85150ad72492bd7b54aa619a06ee0"
 }

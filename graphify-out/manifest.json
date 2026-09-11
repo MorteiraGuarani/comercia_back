@@ -1650,8 +1650,8 @@
     "semantic_hash": ""
   },
   "apps/web/AGENTS.md": {
-    "mtime": 1788890296.7864747,
-    "ast_hash": "fa5be37e51d3691886ff019425e073ad",
+    "mtime": 1788891078.8248332,
+    "ast_hash": "1e64e99772fe8acc72e4d601ceaad0d8",
     "semantic_hash": ""
   },
   "apps/web/CLAUDE.md": {
@@ -1890,8 +1890,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/selector-paginado.tsx": {
-    "mtime": 1788890330.9596224,
-    "ast_hash": "cbd0b16e37c35072e3b87f6a99475da4",
+    "mtime": 1788891079.4505038,
+    "ast_hash": "5df8a1d46b4970a222bc582b0e5d48a0",
     "semantic_hash": ""
   },
   "apps/web/src/types/opcion-selector.ts": {

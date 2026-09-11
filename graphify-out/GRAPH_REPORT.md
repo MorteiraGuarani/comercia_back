@@ -1,16 +1,16 @@
 # Graph Report - COMERCIA  (2026-09-08)
 
 ## Corpus Check
-- 395 files · ~127,427 words
+- 395 files · ~127,866 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2013 nodes · 3295 edges · 327 communities (138 shown, 189 thin omitted)
+- 2013 nodes · 3295 edges · 328 communities (139 shown, 189 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 6 edges (avg confidence: 0.65)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `28c113b5`
+- Built from commit: `9fe699e9`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -75,9 +75,9 @@
 - compression
 - helmet
 - libphonenumber-js
-- @nestjs/jwt
+- class-transformer
 - @nestjs/platform-express
-- [pagina]/page.tsx
+- admin/page.tsx
 - @nestjs/throttler
 - 7. JavaScript Performance
 - Q: en que tabla puedo ver que se guarda los datos de la ubi etc del usuario? ademas quiero que se envie la ubi cada 1min etc de los usuarios
@@ -332,19 +332,19 @@
 ## Surprising Connections (you probably didn't know these)
 - `PanelLayout()` --calls--> `apiFetch()`  [EXTRACTED]
   apps/web/src/app/panel/layout.tsx → apps/web/src/lib/api.ts
+- `ModalMarca()` --calls--> `useOperacionCampo()`  [EXTRACTED]
+  apps/web/src/components/campo/jornada-panel.tsx → apps/web/src/hooks/use-lista-campo.ts
 - `CrearUsuarioDto` --inherits--> `RegisterDto`  [EXTRACTED]
   apps/api/src/usuarios/dto/usuario.dto.ts → apps/api/src/auth/dto/register.dto.ts
 - `ConsultaCampoDto` --inherits--> `PaginacionDto`  [EXTRACTED]
   apps/api/src/campo/dto/campo.dto.ts → apps/api/src/common/utils/paginacion.ts
 - `ListarRolesDto` --inherits--> `PaginacionDto`  [EXTRACTED]
   apps/api/src/roles/dto/rol.dto.ts → apps/api/src/common/utils/paginacion.ts
-- `ListarUsuariosDto` --inherits--> `PaginacionDto`  [EXTRACTED]
-  apps/api/src/usuarios/dto/usuario.dto.ts → apps/api/src/common/utils/paginacion.ts
 
 ## Import Cycles
 - None detected.
 
-## Communities (327 total, 189 thin omitted)
+## Communities (328 total, 189 thin omitted)
 
 ### Community 0 - "roles.service.ts"
 Cohesion: 0.09
@@ -379,8 +379,8 @@ Cohesion: 0.35
 Nodes (4): UsuarioAdminDto, aUsuarioDto(), Injectable, UsuariosService
 
 ### Community 9 - "jornada-panel.tsx"
-Cohesion: 0.15
-Nodes (25): SelectorUbicacion, BotonesFormulario(), CabeceraCampo(), CampoActivo(), CampoTexto(), MapaLocal(), PlanLocal(), TablaCampo() (+17 more)
+Cohesion: 0.12
+Nodes (33): SelectorUbicacion, BotonesFormulario(), CabeceraCampo(), CampoActivo(), CampoTexto(), AgendaDelDia(), JornadaPanel(), ListadoVisitas() (+25 more)
 
 ### Community 10 - "jornada-campo.service.ts"
 Cohesion: 0.15
@@ -443,8 +443,8 @@ Cohesion: 0.17
 Nodes (18): allowedHosts, apiEnvironment, apiPort, checkTunnel(), environmentPath, finish(), main(), openTunnel() (+10 more)
 
 ### Community 30 - "apiFetch"
-Cohesion: 0.12
-Nodes (25): Tab, EmpresasAbmPanel(), EmpresasPanel(), ModulosPanel(), RolesPanel(), ClientesPanel(), LocalesPanel(), AgendaDelDia() (+17 more)
+Cohesion: 0.37
+Nodes (11): ClientesPanel(), LocalesPanel(), TareasDeLocal(), AsignacionesLocal(), BackupsAsignacion(), HorariosLocal(), TareasPanel(), useListaCampo() (+3 more)
 
 ### Community 31 - "API Tsconfig Json Tsconfig"
 Cohesion: 0.09
@@ -464,7 +464,7 @@ Nodes (13): manrope, metadata, viewport, ActualizadorDespliegue(), deploymentIdD
 
 ### Community 37 - "dependencies"
 Cohesion: 0.09
-Nodes (23): dependencies, class-transformer, class-validator, cookie-parser, dotenv, @nestjs/common, @nestjs/config, @nestjs/core (+15 more)
+Nodes (23): dependencies, class-validator, cookie-parser, dotenv, @nestjs/common, @nestjs/config, @nestjs/core, @nestjs/jwt (+15 more)
 
 ### Community 38 - "jwt-auth.guard.ts"
 Cohesion: 0.13
@@ -534,9 +534,9 @@ Nodes (6): author, description, license, name, private, version
 Cohesion: 0.40
 Nodes (4): Configuración, Operaciones de campo, Reglas operativas, Validación
 
-### Community 65 - "[pagina]/page.tsx"
-Cohesion: 0.22
-Nodes (9): AdminPage(), ClientesPanel, JornadaPanel, LocalesPanel, PaginaModulo(), TareasPanel, VisitasPanel, PanelInicioPage() (+1 more)
+### Community 65 - "admin/page.tsx"
+Cohesion: 0.14
+Nodes (14): AdminPage(), Tab, ClientesPanel, JornadaPanel, LocalesPanel, PaginaModulo(), TareasPanel, VisitasPanel (+6 more)
 
 ### Community 67 - "7. JavaScript Performance"
 Cohesion: 0.13
@@ -592,7 +592,7 @@ Nodes (4): Answer, Outcome, Q: como se llama el store que usa cuando no hay cone
 
 ### Community 83 - "usuarios-panel.tsx"
 Cohesion: 0.18
-Nodes (9): FORM_INICIAL, FormUsuario, UsuariosPanelProps, MetaUsuarios, UsuarioAdmin, calcularDvRucPy(), esRucParaguayoValido(), normalizarRucPy() (+1 more)
+Nodes (10): FORM_INICIAL, FormUsuario, UsuariosPanel(), UsuariosPanelProps, MetaUsuarios, UsuarioAdmin, calcularDvRucPy(), esRucParaguayoValido() (+2 more)
 
 ### Community 84 - "API Base de Datos"
 Cohesion: 0.50
@@ -815,7 +815,7 @@ _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `PrismaService` connect `PrismaService` to `roles.service.ts`, `RequestConUsuario`, `app.module.ts`, `ModulosService`, `acceso-plataforma.service.ts`, `jwt-auth.guard.ts`, `auth.service.ts`, `jornada-campo.service.ts`, `rangoPaginacion`, `admin-empresas.service.ts`, `PaginacionDto`, `EjecutablesService`, `usuarios.service.ts`, `mi-plataforma.service.ts`, `plataforma.controller.ts`, `AsignarModuloDto`, `modulos.service.ts`?**
   _High betweenness centrality (0.062) - this node is a cross-community bridge._
-- **Why does `dependencies` connect `dependencies` to `@nestjs/platform-express`, `@nestjs/throttler`, `@prisma/adapter-pg`, `jornada-campo.service.ts`, `@prisma/client`, `zod`, `@nestjs/swagger`, `api/package.json`, `compression`, `helmet`, `libphonenumber-js`, `@nestjs/jwt`?**
+- **Why does `dependencies` connect `dependencies` to `@nestjs/platform-express`, `@nestjs/throttler`, `@prisma/adapter-pg`, `jornada-campo.service.ts`, `@prisma/client`, `zod`, `@nestjs/swagger`, `api/package.json`, `compression`, `helmet`, `libphonenumber-js`, `class-transformer`?**
   _High betweenness centrality (0.061) - this node is a cross-community bridge._
 - **Why does `prisma` connect `jornada-campo.service.ts` to `dependencies`?**
   _High betweenness centrality (0.057) - this node is a cross-community bridge._
