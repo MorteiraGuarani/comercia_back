@@ -12,21 +12,22 @@ datasource db {
 }
 
 model Empresa {
-  id            Int                       @id @default(autoincrement())
-  nombre        String                    @unique
-  dbName        String?                   @map("db_name")
-  empresaId     Int?                      @map("empresas_id")
-  padre         Empresa?                  @relation("EmpresaJerarquia", fields: [empresaId], references: [id])
-  hijas         Empresa[]                 @relation("EmpresaJerarquia")
-  usuarios      Usuario[]
-  roles         Rol[]
-  clientesCampo ClienteCampo[]
-  tareasCampo   TareaCampo[]
-  eventosUcheck IntegracionUcheckEvento[]
-  modulos       EmpresaModulo[]
-  paginas       EmpresaPagina[]
-  createdAt     DateTime                  @default(now()) @map("created_at")
-  updatedAt     DateTime                  @default(now()) @updatedAt @map("updated_at")
+  id                    Int                       @id @default(autoincrement())
+  nombre                String                    @unique
+  dbName                String?                   @map("db_name")
+  empresaId             Int?                      @map("empresas_id")
+  padre                 Empresa?                  @relation("EmpresaJerarquia", fields: [empresaId], references: [id])
+  hijas                 Empresa[]                 @relation("EmpresaJerarquia")
+  usuarios              Usuario[]
+  roles                 Rol[]
+  clientesCampo         ClienteCampo[]
+  tareasCampo           TareaCampo[]
+  eventosUcheck         IntegracionUcheckEvento[]
+  modulos               EmpresaModulo[]
+  paginas               EmpresaPagina[]
+  notificacionesCampo   NotificacionCampo[]
+  createdAt             DateTime                  @default(now()) @map("created_at")
+  updatedAt             DateTime                  @default(now()) @updatedAt @map("updated_at")
 
   @@map("empresas")
 }
@@ -155,29 +156,33 @@ model Rol {
 }
 
 model Usuario {
-  id                Int                       @id @default(autoincrement())
-  empresaId         Int                       @map("empresa_id")
-  empresa           Empresa                   @relation(fields: [empresaId], references: [id])
-  nombre            String
-  apellido          String
-  correo            String                    @unique
-  nombreLogin       String                    @unique @map("nombre_login")
-  passwordHash      String                    @map("password_hash")
-  ruc               String                    @unique
-  celular           String
-  rolId             Int?                      @map("rol_id")
-  rol               Rol?                      @relation(fields: [rolId, empresaId], references: [id, empresaId], onDelete: NoAction, onUpdate: NoAction)
-  superiorId        Int?                      @map("superior_id")
-  superior          Usuario?                  @relation("UsuarioJerarquia", fields: [superiorId], references: [id])
-  subordinados      Usuario[]                 @relation("UsuarioJerarquia")
-  asignacionesCampo AsignacionCampo[]         @relation("CampoTitular")
-  backupsCampo      BackupCampo[]             @relation("CampoBackup")
-  visitasCampo      VisitaCampo[]
-  eventosUcheck     IntegracionUcheckEvento[]
-  esSuperadmin      Boolean                   @default(false) @map("es_superadmin")
-  isActive          Boolean                   @default(true) @map("is_active")
-  createdAt         DateTime                  @default(now()) @map("created_at")
-  updatedAt         DateTime                  @default(now()) @updatedAt @map("updated_at")
+  id                        Int                       @id @default(autoincrement())
+  empresaId                 Int                       @map("empresa_id")
+  empresa                   Empresa                   @relation(fields: [empresaId], references: [id])
+  nombre                    String
+  apellido                  String
+  correo                    String                    @unique
+  nombreLogin               String                    @unique @map("nombre_login")
+  passwordHash              String                    @map("password_hash")
+  ruc                       String                    @unique
+  celular                   String
+  rolId                     Int?                      @map("rol_id")
+  rol                       Rol?                      @relation(fields: [rolId, empresaId], references: [id, empresaId], onDelete: NoAction, onUpdate: NoAction)
+  superiorId                Int?                      @map("superior_id")
+  superior                  Usuario?                  @relation("UsuarioJerarquia", fields: [superiorId], references: [id])
+  subordinados              Usuario[]                 @relation("UsuarioJerarquia")
+  asignacionesCampo         AsignacionCampo[]         @relation("CampoTitular")
+  backupsCampo              BackupCampo[]             @relation("CampoBackup")
+  visitasCampo              VisitaCampo[]
+  eventosUcheck             IntegracionUcheckEvento[]
+  comentariosTarea          ComentarioTareaCampo[]
+  fotosTarea                FotoTareaCampo[]
+  notificacionesRecibidas   NotificacionCampo[]       @relation("NotificacionesRecibidas")
+  notificacionesEnviadas    NotificacionCampo[]       @relation("NotificacionesEnviadas")
+  esSuperadmin              Boolean                   @default(false) @map("es_superadmin")
+  isActive                  Boolean                   @default(true) @map("is_active")
+  createdAt                 DateTime                  @default(now()) @map("created_at")
+  updatedAt                 DateTime                  @default(now()) @updatedAt @map("updated_at")
 
   @@map("usuarios")
 }
@@ -282,17 +287,19 @@ model BackupCampo {
 }
 
 model TareaCampo {
-  id            Int                 @id @default(autoincrement())
-  empresaId     Int                 @map("empresa_id")
-  empresa       Empresa             @relation(fields: [empresaId], references: [id])
-  nombre        String              @db.VarChar(120)
-  descripcion   String              @default("") @db.VarChar(1000)
-  todosLocales  Boolean             @default(true) @map("todos_locales")
-  fechaDesde    DateTime            @map("fecha_desde") @db.Date
-  fechaHasta    DateTime?           @map("fecha_hasta") @db.Date
-  activo        Boolean             @default(true)
-  locales       TareaLocalCampo[]
-  cumplimientos CumplimientoCampo[]
+  id                 Int                 @id @default(autoincrement())
+  empresaId          Int                 @map("empresa_id")
+  empresa            Empresa             @relation(fields: [empresaId], references: [id])
+  nombre             String              @db.VarChar(120)
+  descripcion        String              @default("") @db.VarChar(1000)
+  todosLocales       Boolean             @default(true) @map("todos_locales")
+  fechaDesde         DateTime            @map("fecha_desde") @db.Date
+  fechaHasta         DateTime?           @map("fecha_hasta") @db.Date
+  activo             Boolean             @default(true)
+  requiereFotos      Boolean             @default(false) @map("requiere_fotos")
+  fotosObligatorias  Boolean             @default(false) @map("fotos_obligatorias")
+  locales            TareaLocalCampo[]
+  cumplimientos      CumplimientoCampo[]
 
   @@index([empresaId, activo, fechaDesde])
   @@map("campo_tareas")
@@ -396,13 +403,86 @@ model IntegracionUcheckEvento {
 }
 
 model CumplimientoCampo {
-  visitaId     Int         @map("visita_id")
-  visita       VisitaCampo @relation(fields: [visitaId], references: [id])
-  tareaId      Int         @map("tarea_id")
-  tarea        TareaCampo  @relation(fields: [tareaId], references: [id])
-  nombreTarea  String      @map("nombre_tarea") @db.VarChar(120)
-  completadaAt DateTime    @default(now()) @map("completada_at")
+  visitaId        Int                    @map("visita_id")
+  visita          VisitaCampo            @relation(fields: [visitaId], references: [id])
+  tareaId         Int                    @map("tarea_id")
+  tarea           TareaCampo             @relation(fields: [tareaId], references: [id])
+  nombreTarea     String                 @map("nombre_tarea") @db.VarChar(120)
+  completadaAt    DateTime               @default(now()) @map("completada_at")
+  fotosValidadas  Boolean                @default(true) @map("fotos_validadas")
+  comentarios     ComentarioTareaCampo[]
+  fotos           FotoTareaCampo[]
 
   @@id([visitaId, tareaId])
   @@map("campo_cumplimientos")
+}
+
+enum TipoNotificacionCampo {
+  COMENTARIO_TAREA
+  TAREA_COMPLETADA
+  FOTO_SUBIDA
+}
+
+enum MomentoFotoCampo {
+  ANTES
+  DESPUES
+}
+
+model ComentarioTareaCampo {
+  id                   Int               @id @default(autoincrement())
+  cumplimientoVisitaId Int               @map("cumplimiento_visita_id")
+  cumplimientoTareaId  Int               @map("cumplimiento_tarea_id")
+  cumplimiento         CumplimientoCampo @relation(fields: [cumplimientoVisitaId, cumplimientoTareaId], references: [visitaId, tareaId], onDelete: Cascade)
+  usuarioId            Int               @map("usuario_id")
+  usuario              Usuario           @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
+  comentario           String            @db.VarChar(500)
+  creadoAt             DateTime          @default(now()) @map("creado_at")
+  leidoPorLider        Boolean           @default(false) @map("leido_por_lider")
+  leidoAt              DateTime?         @map("leido_at")
+
+  @@index([cumplimientoVisitaId, cumplimientoTareaId])
+  @@index([usuarioId])
+  @@index([leidoPorLider, creadoAt])
+  @@map("campo_tarea_comentarios")
+}
+
+model FotoTareaCampo {
+  id                   Int               @id @default(autoincrement())
+  cumplimientoVisitaId Int               @map("cumplimiento_visita_id")
+  cumplimientoTareaId  Int               @map("cumplimiento_tarea_id")
+  cumplimiento         CumplimientoCampo @relation(fields: [cumplimientoVisitaId, cumplimientoTareaId], references: [visitaId, tareaId], onDelete: Cascade)
+  usuarioId            Int               @map("usuario_id")
+  usuario              Usuario           @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
+  momento              MomentoFotoCampo
+  rutaArchivo          String            @map("ruta_archivo") @db.VarChar(500)
+  mimeType             String            @map("mime_type") @db.VarChar(50)
+  tamanioBytes         Int               @map("tamanio_bytes")
+  creadoAt             DateTime          @default(now()) @map("creado_at")
+
+  @@unique([cumplimientoVisitaId, cumplimientoTareaId, momento])
+  @@index([cumplimientoVisitaId, cumplimientoTareaId])
+  @@index([usuarioId])
+  @@map("campo_tarea_fotos")
+}
+
+model NotificacionCampo {
+  id                    Int                      @id @default(autoincrement())
+  empresaId             Int                      @map("empresa_id")
+  empresa               Empresa                  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  usuarioDestinatarioId Int                      @map("usuario_destinatario_id")
+  usuarioDestinatario   Usuario                  @relation("NotificacionesRecibidas", fields: [usuarioDestinatarioId], references: [id], onDelete: Cascade)
+  usuarioEmisorId       Int                      @map("usuario_emisor_id")
+  usuarioEmisor         Usuario                  @relation("NotificacionesEnviadas", fields: [usuarioEmisorId], references: [id], onDelete: Cascade)
+  tipo                  TipoNotificacionCampo
+  referenciaId          Int?                     @map("referencia_id")
+  titulo                String                   @db.VarChar(100)
+  mensaje               String                   @db.VarChar(250)
+  creadoAt              DateTime                 @default(now()) @map("creado_at")
+  leido                 Boolean                  @default(false)
+  leidoAt               DateTime?                @map("leido_at")
+
+  @@index([usuarioDestinatarioId, leido, creadoAt(sort: Desc)])
+  @@index([empresaId, creadoAt(sort: Desc)])
+  @@index([tipo, referenciaId])
+  @@map("campo_notificaciones")
 }

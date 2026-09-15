@@ -64,6 +64,8 @@ export interface TareaCampo {
   activo: boolean;
   fechaDesde: string;
   fechaHasta: string | null;
+  requiereFotos: boolean;
+  fotosObligatorias: boolean;
   locales: { local: { id: number; nombre: string } }[];
 }
 export interface VisitaCampo {
@@ -101,7 +103,14 @@ export interface TareaJornadaCampo {
   id: number;
   nombre: string;
   descripcion: string;
+  requiereFotos: boolean;
+  fotosObligatorias: boolean;
   visitasCompletadas: number[];
+  completada?: boolean;
+  completadaAt?: string;
+  contadorComentarios?: number;
+  tieneAntes?: boolean;
+  tieneDespues?: boolean;
 }
 export interface FormHorarioCampo {
   frecuencia: HorarioCampo["frecuencia"];
@@ -121,9 +130,72 @@ export interface FormTareaCampo {
   fechaDesde: string;
   fechaHasta: string;
   localIds: number[];
+  requiereFotos: boolean;
+  fotosObligatorias: boolean;
 }
 export interface MarcaCampo {
   latitud?: number;
   longitud?: number;
   nota: string;
+}
+
+// ========== COMENTARIOS ==========
+
+export interface ComentarioTarea {
+  id: number;
+  comentario: string;
+  usuario: {
+    id: number;
+    nombre: string;
+    apellido: string;
+  };
+  creadoAt: string;
+  leidoPorLider: boolean;
+  leidoAt?: string;
+}
+
+export interface FormComentarioTarea {
+  comentario: string;
+}
+
+// ========== FOTOS ==========
+
+export type MomentoFoto = "ANTES" | "DESPUES";
+
+export interface FotoTarea {
+  id: number;
+  momento: MomentoFoto;
+  rutaArchivo: string;
+  mimeType: string;
+  tamanioBytes: number;
+  creadoAt: string;
+}
+
+export interface FotosTareaResponse {
+  antes?: FotoTarea;
+  despues?: FotoTarea;
+}
+
+// ========== NOTIFICACIONES ==========
+
+export type TipoNotificacion = "COMENTARIO_TAREA" | "TAREA_COMPLETADA" | "FOTO_SUBIDA";
+
+export interface Notificacion {
+  id: number;
+  tipo: TipoNotificacion;
+  titulo: string;
+  mensaje: string;
+  usuarioEmisor: {
+    id: number;
+    nombre: string;
+    apellido: string;
+  };
+  creadoAt: string;
+  leido: boolean;
+  leidoAt?: string;
+  referenciaId?: number;
+}
+
+export interface ContadorNoLeidas {
+  noLeidas: number;
 }

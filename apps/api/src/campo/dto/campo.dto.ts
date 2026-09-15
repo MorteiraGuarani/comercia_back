@@ -138,6 +138,8 @@ export class TareaCampoDto extends VigenciaCampoDto {
   @Max(MAX_INT4, { each: true })
   localIds: number[] = [];
   @IsBoolean() activo = true;
+  @IsBoolean() requiereFotos = false;
+  @IsBoolean() fotosObligatorias = false;
 }
 
 export class MarcaCampoDto {

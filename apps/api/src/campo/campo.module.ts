@@ -7,6 +7,9 @@ import { CampoAccesoService } from './campo-acceso.service';
 import { CatalogoCampoService } from './catalogo-campo.service';
 import { PlanificacionCampoService } from './planificacion-campo.service';
 import { JornadaCampoService } from './jornada-campo.service';
+import { ComentarioService } from './services/comentario.service';
+import { FotoService } from './services/foto.service';
+import { NotificacionService } from './services/notificacion.service';
 
 @Module({
   imports: [AuthModule, PrismaModule, PlataformaModule],
@@ -16,6 +19,9 @@ import { JornadaCampoService } from './jornada-campo.service';
     CatalogoCampoService,
     PlanificacionCampoService,
     JornadaCampoService,
+    ComentarioService,
+    FotoService,
+    NotificacionService,
   ],
   exports: [CampoAccesoService, JornadaCampoService],
 })

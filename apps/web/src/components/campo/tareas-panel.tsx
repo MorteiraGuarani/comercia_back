@@ -32,6 +32,8 @@ export function TareasPanel() {
       fechaDesde: t?.fechaDesde.slice(0, 10) ?? fechaEnZonaIso(new Date()),
       fechaHasta: t?.fechaHasta?.slice(0, 10) ?? "",
       localIds: t?.locales.map((x) => x.local.id) ?? [],
+      requiereFotos: t?.requiereFotos ?? false,
+      fotosObligatorias: t?.fotosObligatorias ?? false,
     });
   }
   return (
@@ -57,6 +59,13 @@ export function TareasPanel() {
             titulo: "Vigencia",
             valor: (t) =>
               `${t.fechaDesde.slice(0, 10)} · ${t.fechaHasta?.slice(0, 10) ?? "Sin fin"}`,
+          },
+          {
+            titulo: "Fotos",
+            valor: (t) => 
+              t.requiereFotos 
+                ? (t.fotosObligatorias ? "Obligatorias" : "Opcionales")
+                : "No",
           },
           {
             titulo: "Estado",
@@ -171,6 +180,41 @@ export function TareasPanel() {
                 </div>
               </>
             ) : null}
+            <div className="space-y-3 rounded-lg border border-gray-300 dark:border-gray-600 p-4 bg-gray-50 dark:bg-gray-800">
+              <p className="font-medium text-sm text-gray-900 dark:text-white">
+                Configuración de fotos
+              </p>
+              <label className="flex min-h-11 items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.requiereFotos}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      requiereFotos: e.target.checked,
+                      fotosObligatorias: e.target.checked ? form.fotosObligatorias : false,
+                    })
+                  }
+                />
+                <span className="text-sm text-gray-700 dark:text-gray-300">
+                  Requiere fotos antes y después
+                </span>
+              </label>
+              {form.requiereFotos && (
+                <label className="flex min-h-11 items-center gap-2 ml-6 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.fotosObligatorias}
+                    onChange={(e) =>
+                      setForm({ ...form, fotosObligatorias: e.target.checked })
+                    }
+                  />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                    Fotos obligatorias (no puede completar sin ambas fotos)
+                  </span>
+                </label>
+              )}
+            </div>
             <CampoActivo
               value={form.activo}
               onChange={(activo) => setForm({ ...form, activo })}

@@ -9,13 +9,21 @@ import {
   Put,
   Query,
   Req,
+  Res,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import type { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import type { RequestConUsuario } from '../auth/interfaces/request-con-usuario.interface';
 import { CatalogoCampoService } from './catalogo-campo.service';
 import { PlanificacionCampoService } from './planificacion-campo.service';
 import { JornadaCampoService } from './jornada-campo.service';
+import { ComentarioService } from './services/comentario.service';
+import { FotoService } from './services/foto.service';
+import { NotificacionService } from './services/notificacion.service';
 import {
   AsignacionCampoDto,
   BackupCampoDto,
@@ -27,6 +35,11 @@ import {
   MarcaCampoDto,
   TareaCampoDto,
 } from './dto/campo.dto';
+import { CrearComentarioTareaDto } from './dto/comentario-tarea.dto';
+import { MomentoFotoDto, SubirFotoTareaDto } from './dto/foto-tarea.dto';
+import { ListarNotificacionesDto } from './dto/notificacion.dto';
+import { multerConfigFotosTareas } from './utils/multer-config';
+import { createReadStream, existsSync } from 'fs';
 
 @Controller('campo')
 @UseGuards(JwtAuthGuard)
@@ -35,6 +48,9 @@ export class CampoController {
     private readonly catalogo: CatalogoCampoService,
     private readonly plan: PlanificacionCampoService,
     private readonly jornada: JornadaCampoService,
+    private readonly comentarioService: ComentarioService,
+    private readonly fotoService: FotoService,
+    private readonly notificacionService: NotificacionService,
   ) {}
 
   @Get('clientes') clientes(
@@ -240,5 +256,126 @@ export class CampoController {
     @Param('tareaId', ParseIntPipe) tareaId: number,
   ) {
     return this.jornada.completar(r.usuarioId, visitaId, tareaId);
+  }
+
+  // ========== COMENTARIOS ==========
+
+  @Post('jornada/visitas/:visitaId/tareas/:tareaId/comentarios')
+  crearComentario(
+    @Req() r: RequestConUsuario,
+    @Param('visitaId', ParseIntPipe) visitaId: number,
+    @Param('tareaId', ParseIntPipe) tareaId: number,
+    @Body() dto: CrearComentarioTareaDto,
+  ) {
+    return this.comentarioService.crear(
+      r.usuarioId,
+      r.empresaId,
+      visitaId,
+      tareaId,
+      dto,
+    );
+  }
+
+  @Get('jornada/visitas/:visitaId/tareas/:tareaId/comentarios')
+  listarComentarios(
+    @Req() r: RequestConUsuario,
+    @Param('visitaId', ParseIntPipe) visitaId: number,
+    @Param('tareaId', ParseIntPipe) tareaId: number,
+  ) {
+    return this.comentarioService.listar(r.usuarioId, visitaId, tareaId);
+  }
+
+  @Put('jornada/comentarios/:id/marcar-leido')
+  marcarComentarioLeido(
+    @Req() r: RequestConUsuario,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.comentarioService.marcarLeido(r.usuarioId, id);
+  }
+
+  // ========== FOTOS ==========
+
+  @Post('jornada/visitas/:visitaId/tareas/:tareaId/fotos')
+  @UseInterceptors(FileInterceptor('foto', multerConfigFotosTareas))
+  subirFoto(
+    @Req() r: RequestConUsuario,
+    @Param('visitaId', ParseIntPipe) visitaId: number,
+    @Param('tareaId', ParseIntPipe) tareaId: number,
+    @Body() dto: SubirFotoTareaDto,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.fotoService.subir(
+      r.usuarioId,
+      r.empresaId,
+      visitaId,
+      tareaId,
+      dto.momento,
+      file,
+    );
+  }
+
+  @Get('jornada/visitas/:visitaId/tareas/:tareaId/fotos')
+  obtenerFotos(
+    @Req() r: RequestConUsuario,
+    @Param('visitaId', ParseIntPipe) visitaId: number,
+    @Param('tareaId', ParseIntPipe) tareaId: number,
+  ) {
+    return this.fotoService.obtener(r.usuarioId, visitaId, tareaId);
+  }
+
+  @Get('fotos/:id')
+  async servirFoto(
+    @Param('id', ParseIntPipe) id: number,
+    @Res() res: Response,
+  ) {
+    const foto = await this.fotoService.obtenerPorId(id);
+
+    if (!foto || !existsSync(foto.rutaArchivo)) {
+      return res.status(404).json({ message: 'Foto no encontrada' });
+    }
+
+    res.setHeader('Content-Type', foto.mimeType);
+    res.setHeader('Content-Length', foto.tamanioBytes);
+
+    const stream = createReadStream(foto.rutaArchivo);
+    stream.pipe(res);
+  }
+
+  @Delete('jornada/visitas/:visitaId/tareas/:tareaId/fotos/:momento')
+  eliminarFoto(
+    @Req() r: RequestConUsuario,
+    @Param('visitaId', ParseIntPipe) visitaId: number,
+    @Param('tareaId', ParseIntPipe) tareaId: number,
+    @Param('momento') momento: MomentoFotoDto,
+  ) {
+    return this.fotoService.eliminar(r.usuarioId, visitaId, tareaId, momento);
+  }
+
+  // ========== NOTIFICACIONES ==========
+
+  @Get('notificaciones')
+  listarNotificaciones(
+    @Req() r: RequestConUsuario,
+    @Query() dto: ListarNotificacionesDto,
+  ) {
+    return this.notificacionService.listar(r.usuarioId, dto);
+  }
+
+  @Put('notificaciones/:id/marcar-leida')
+  marcarNotificacionLeida(
+    @Req() r: RequestConUsuario,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.notificacionService.marcarLeida(r.usuarioId, id);
+  }
+
+  @Put('notificaciones/marcar-todas-leidas')
+  marcarTodasNotificacionesLeidas(@Req() r: RequestConUsuario) {
+    return this.notificacionService.marcarTodasLeidas(r.usuarioId);
+  }
+
+  @Get('notificaciones/contador-no-leidas')
+  contadorNotificacionesNoLeidas(@Req() r: RequestConUsuario) {
+    return this.notificacionService.contadorNoLeidas(r.usuarioId);
   }
 }

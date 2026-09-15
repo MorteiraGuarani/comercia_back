@@ -319,13 +319,43 @@ export class JornadaCampoService {
             },
           ],
         },
-        select: { id: true, nombre: true },
+        select: { id: true, nombre: true, requiereFotos: true, fotosObligatorias: true },
       });
       if (!tarea) throw new NotFoundException('Tarea no disponible');
+      
+      // Validar fotos obligatorias
+      if (tarea.requiereFotos && tarea.fotosObligatorias) {
+        const fotos = await tx.fotoTareaCampo.findMany({
+          where: {
+            cumplimientoVisitaId: visitaId,
+            cumplimientoTareaId: tareaId,
+          },
+          select: { momento: true },
+        });
+        
+        const tieneAntes = fotos.some((f) => f.momento === 'ANTES');
+        const tieneDespues = fotos.some((f) => f.momento === 'DESPUES');
+        
+        if (!tieneAntes || !tieneDespues) {
+          throw new BadRequestException(
+            'Debes subir foto antes y después para completar esta tarea',
+          );
+        }
+      }
+      
+      // Determinar si las fotos están validadas
+      const fotosValidadas = !tarea.requiereFotos || !tarea.fotosObligatorias || 
+        (await tx.fotoTareaCampo.count({
+          where: {
+            cumplimientoVisitaId: visitaId,
+            cumplimientoTareaId: tareaId,
+          },
+        })) >= 2;
+      
       await tx.cumplimientoCampo.upsert({
         where: { visitaId_tareaId: { visitaId, tareaId } },
-        create: { visitaId, tareaId, nombreTarea: tarea.nombre },
-        update: {},
+        create: { visitaId, tareaId, nombreTarea: tarea.nombre, fotosValidadas },
+        update: { fotosValidadas },
         select: { tareaId: true },
       });
       return { ok: true };
