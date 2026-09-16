@@ -10,6 +10,7 @@ export function TablaCampo<T extends { id: number }>({
   columnas,
   etiqueta,
   acciones,
+  tarjetaMovil,
 }: {
   lista: {
     datos: RespuestaPaginada<T> | null;
@@ -23,6 +24,7 @@ export function TablaCampo<T extends { id: number }>({
   columnas: { titulo: string; valor: (item: T) => ReactNode }[];
   etiqueta: string;
   acciones?: (item: T) => ReactNode;
+  tarjetaMovil?: (item: T) => ReactNode;
 }) {
   return (
     <div className="w-full min-w-0">
@@ -76,20 +78,26 @@ export function TablaCampo<T extends { id: number }>({
         {lista.items.map((item) => (
           <li
             key={item.id}
-            className="min-w-0 rounded-xl border border-line bg-surface-raised p-4 [content-visibility:auto]"
+            className="min-w-0"
           >
-            <div className="font-semibold">{columnas[0].valor(item)}</div>
-            <dl className="mt-2 space-y-2 text-sm">
-              {columnas.slice(1).map((c) => (
-                <div key={c.titulo}>
-                  <dt className="text-xs text-muted">{c.titulo}</dt>
-                  <dd className="break-words">{c.valor(item)}</dd>
-                </div>
-              ))}
-            </dl>
-            {acciones ? (
-              <div className="mt-3 flex flex-wrap gap-2">{acciones(item)}</div>
-            ) : null}
+            {tarjetaMovil ? (
+              tarjetaMovil(item)
+            ) : (
+              <div className="rounded-xl border border-line bg-surface-raised p-4 [content-visibility:auto]">
+                <div className="font-semibold">{columnas[0].valor(item)}</div>
+                <dl className="mt-2 space-y-2 text-sm">
+                  {columnas.slice(1).map((c) => (
+                    <div key={c.titulo}>
+                      <dt className="text-xs text-muted">{c.titulo}</dt>
+                      <dd className="break-words">{c.valor(item)}</dd>
+                    </div>
+                  ))}
+                </dl>
+                {acciones ? (
+                  <div className="mt-3 flex flex-wrap gap-2">{acciones(item)}</div>
+                ) : null}
+              </div>
+            )}
           </li>
         ))}
       </ul>

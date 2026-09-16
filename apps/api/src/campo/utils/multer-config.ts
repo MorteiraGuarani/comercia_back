@@ -43,9 +43,7 @@ export const multerConfigFotosTareas: MulterOptions = {
   fileFilter: (req, file, cb) => {
     if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
       return cb(
-        new BadRequestException(
-          'Solo se permiten imágenes JPG, PNG o WebP',
-        ) as any,
+        new BadRequestException('Solo se permiten imágenes JPG, PNG o WebP'),
         false,
       );
     }
@@ -56,7 +54,7 @@ export const multerConfigFotosTareas: MulterOptions = {
 
     if (!validExtensions.includes(ext)) {
       return cb(
-        new BadRequestException('Extensión de archivo no válida') as any,
+        new BadRequestException('Extensión de archivo no válida'),
         false,
       );
     }

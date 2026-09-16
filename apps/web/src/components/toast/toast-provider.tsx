@@ -15,6 +15,7 @@ import type {
   ToastEntrada,
   ToastItem,
 } from "@/types/toast";
+import { registrarListenerToast } from "./toast-controller";
 
 const DURACION_EXITO_MS = 7_000;
 const ContextoToast = createContext<ToastContexto | null>(null);
@@ -200,6 +201,12 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       activos.clear();
     };
   }, []);
+
+  useEffect(() => {
+    return registrarListenerToast((t) => {
+      mostrarToast(t);
+    });
+  }, [mostrarToast]);
 
   const valor = useMemo(
     () => ({ mostrarToast, cerrarToast, cerrarToastPorClave }),

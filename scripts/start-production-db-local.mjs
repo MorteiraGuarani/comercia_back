@@ -90,6 +90,7 @@ const apiEnvironment = {
 const webEnvironment = {
   ...process.env,
   PORT: String(webPort),
+  NEXT_PUBLIC_API_URL: `http://localhost:${apiPort}/api/v1`,
 };
 let closed = false;
 let ownedTunnel;

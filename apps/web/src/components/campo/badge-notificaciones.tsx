@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   listarNotificaciones,
   marcarNotificacionLeida,
   marcarTodasNotificacionesLeidas,
   obtenerContadorNoLeidas,
 } from "@/lib/api-tareas";
-import type { Notificacion } from "@/types/campo";
+import type { Notificacion, TipoNotificacion } from "@/types/campo";
 import { mostrarToast } from "@/components/toast/toast-controller";
 import { Modal } from "@/components/modal";
 
@@ -15,20 +15,34 @@ export function BadgeNotificaciones() {
   const [noLeidas, setNoLeidas] = useState(0);
   const [mostrarPanel, setMostrarPanel] = useState(false);
 
-  const cargarContador = async () => {
-    try {
-      const data = await obtenerContadorNoLeidas();
-      setNoLeidas(data.noLeidas);
-    } catch (error) {
-      // Silencioso, no mostrar error en badge
-    }
-  };
+  const refrescarContador = useCallback(() => {
+    void obtenerContadorNoLeidas()
+      .then((data) => {
+        setNoLeidas(data.noLeidas);
+      })
+      .catch(() => undefined);
+  }, []);
 
   useEffect(() => {
-    cargarContador();
-    // Recargar cada 30 segundos
-    const interval = setInterval(cargarContador, 30000);
-    return () => clearInterval(interval);
+    let activo = true;
+    void obtenerContadorNoLeidas()
+      .then((data) => {
+        if (activo) setNoLeidas(data.noLeidas);
+      })
+      .catch(() => undefined);
+
+    const interval = setInterval(() => {
+      void obtenerContadorNoLeidas()
+        .then((data) => {
+          if (activo) setNoLeidas(data.noLeidas);
+        })
+        .catch(() => undefined);
+    }, 30000);
+
+    return () => {
+      activo = false;
+      clearInterval(interval);
+    };
   }, []);
 
   return (
@@ -36,36 +50,42 @@ export function BadgeNotificaciones() {
       <button
         type="button"
         onClick={() => setMostrarPanel(true)}
-        className="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+        className="relative grid h-10 w-10 place-items-center rounded-xl border border-transparent text-muted transition hover:border-line hover:bg-surface-soft hover:text-foreground focus-visible:ring-2 focus-visible:ring-brand-600/40"
         aria-label={`Notificaciones${noLeidas > 0 ? ` (${noLeidas} sin leer)` : ""}`}
         title="Notificaciones"
       >
         <svg
-          className="w-6 h-6 text-gray-700 dark:text-gray-300"
+          className="h-5 w-5"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
         >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-          />
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+          <path d="M13.73 21a2 2 0 0 1-3.46 0" />
         </svg>
+
         {noLeidas > 0 && (
-          <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full">
-            {noLeidas > 9 ? "9+" : noLeidas}
+          <span
+            className="absolute -top-1 -right-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold leading-none text-white shadow-sm ring-2 ring-surface-raised dark:bg-red-500"
+            aria-hidden="true"
+          >
+            {noLeidas > 99 ? "99+" : noLeidas}
           </span>
         )}
       </button>
 
       {mostrarPanel && (
         <PanelNotificaciones
+          noLeidas={noLeidas}
           onCerrar={() => {
             setMostrarPanel(false);
-            cargarContador();
+            refrescarContador();
           }}
+          onActualizado={refrescarContador}
         />
       )}
     </>
@@ -73,145 +93,448 @@ export function BadgeNotificaciones() {
 }
 
 interface PanelNotificacionesProps {
+  noLeidas: number;
   onCerrar: () => void;
+  onActualizado: () => void;
 }
 
-function PanelNotificaciones({ onCerrar }: PanelNotificacionesProps) {
+function IconoTipo({ tipo }: { tipo: TipoNotificacion }) {
+  switch (tipo) {
+    case "COMENTARIO_TAREA":
+      return (
+        <svg
+          className="h-4 w-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        </svg>
+      );
+    case "TAREA_COMPLETADA":
+      return (
+        <svg
+          className="h-4 w-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+          <polyline points="22 4 12 14.01 9 11.01" />
+        </svg>
+      );
+    case "FOTO_SUBIDA":
+      return (
+        <svg
+          className="h-4 w-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+          <circle cx="12" cy="13" r="4" />
+        </svg>
+      );
+    default:
+      return (
+        <svg
+          className="h-4 w-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+          <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+        </svg>
+      );
+  }
+}
+
+function obtenerGrupoFecha(fechaIso: string): string {
+  const fecha = new Date(fechaIso);
+  const ahora = new Date();
+
+  const esMismoDia = (d1: Date, d2: Date) =>
+    d1.getFullYear() === d2.getFullYear() &&
+    d1.getMonth() === d2.getMonth() &&
+    d1.getDate() === d2.getDate();
+
+  if (esMismoDia(fecha, ahora)) return "Hoy";
+
+  const ayer = new Date(ahora);
+  ayer.setDate(ayer.getDate() - 1);
+  if (esMismoDia(fecha, ayer)) return "Ayer";
+
+  const hace7Dias = new Date(ahora);
+  hace7Dias.setDate(hace7Dias.getDate() - 7);
+  if (fecha >= hace7Dias) return "Esta semana";
+
+  return "Anteriores";
+}
+
+function formatearHoraOFecha(fechaIso: string): string {
+  const fecha = new Date(fechaIso);
+  const ahora = new Date();
+  const esHoy =
+    fecha.getFullYear() === ahora.getFullYear() &&
+    fecha.getMonth() === ahora.getMonth() &&
+    fecha.getDate() === ahora.getDate();
+
+  if (esHoy) {
+    return fecha.toLocaleTimeString("es-PY", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+
+  return fecha.toLocaleDateString("es-PY", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function PanelNotificaciones({
+  noLeidas,
+  onCerrar,
+  onActualizado,
+}: PanelNotificacionesProps) {
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
   const [cargando, setCargando] = useState(true);
   const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(7);
   const [totalPages, setTotalPages] = useState(1);
-  const [soloNoLeidas, setSoloNoLeidas] = useState(true);
+  const [totalItems, setTotalItems] = useState(0);
+  const [filtro, setFiltro] = useState<"todas" | "no_leidas">("todas");
+  const [marcandoTodas, setMarcandoTodas] = useState(false);
 
-  const cargarNotificaciones = async () => {
+  const cargarNotificaciones = useCallback(async () => {
     setCargando(true);
     try {
-      const data = await listarNotificaciones(page, 7, soloNoLeidas ? false : undefined);
+      const data = await listarNotificaciones(
+        page,
+        limit,
+        filtro === "no_leidas" ? false : undefined,
+      );
       setNotificaciones(data.items);
       setTotalPages(data.totalPages);
-    } catch (error) {
+      setTotalItems(data.total);
+    } catch {
       mostrarToast("error", "Error al cargar notificaciones");
     } finally {
       setCargando(false);
     }
-  };
+  }, [page, limit, filtro]);
 
   useEffect(() => {
-    cargarNotificaciones();
-  }, [page, soloNoLeidas]);
+    let activo = true;
+    void listarNotificaciones(
+      page,
+      limit,
+      filtro === "no_leidas" ? false : undefined,
+    )
+      .then((data) => {
+        if (activo) {
+          setNotificaciones(data.items);
+          setTotalPages(data.totalPages);
+          setTotalItems(data.total);
+        }
+      })
+      .catch(() => {
+        if (activo) mostrarToast("error", "Error al cargar notificaciones");
+      })
+      .finally(() => {
+        if (activo) setCargando(false);
+      });
 
-  const handleMarcarLeida = async (id: number) => {
+    return () => {
+      activo = false;
+    };
+  }, [page, limit, filtro]);
+
+  const handleMarcarLeida = async (n: Notificacion) => {
+    if (n.leido) return;
     try {
-      await marcarNotificacionLeida(id);
+      // Optimistic update
+      setNotificaciones((prev) =>
+        prev.map((item) => (item.id === n.id ? { ...item, leido: true } : item)),
+      );
+      await marcarNotificacionLeida(n.id);
       await cargarNotificaciones();
-    } catch (error) {
+      onActualizado();
+    } catch {
       mostrarToast("error", "Error al marcar como leída");
+      cargarNotificaciones();
     }
   };
 
   const handleMarcarTodasLeidas = async () => {
+    if (marcandoTodas) return;
+    setMarcandoTodas(true);
     try {
       const result = await marcarTodasNotificacionesLeidas();
       mostrarToast("exito", `${result.marcadas} notificaciones marcadas como leídas`);
+      setNotificaciones((prev) => prev.map((item) => ({ ...item, leido: true })));
+      onActualizado();
       await cargarNotificaciones();
-    } catch (error) {
+    } catch {
       mostrarToast("error", "Error al marcar todas como leídas");
+    } finally {
+      setMarcandoTodas(false);
     }
   };
 
+  // Agrupamiento por período (Hoy, Ayer, Esta semana, Anteriores)
+  const grupos = useMemo(() => {
+    const orden = ["Hoy", "Ayer", "Esta semana", "Anteriores"];
+    const mapa: Record<string, Notificacion[]> = {};
+
+    for (const n of notificaciones) {
+      const grupo = obtenerGrupoFecha(n.creadoAt);
+      if (!mapa[grupo]) mapa[grupo] = [];
+      mapa[grupo].push(n);
+    }
+
+    return orden
+      .filter((g) => mapa[g] && mapa[g].length > 0)
+      .map((g) => ({ nombre: g, items: mapa[g] }));
+  }, [notificaciones]);
+
   return (
-    <Modal titulo="Notificaciones" onCerrar={onCerrar} ancho="max-w-2xl">
-      <div className="space-y-4">
-        {/* Controles */}
-        <div className="flex items-center justify-between gap-4 pb-4 border-b border-gray-200 dark:border-gray-700">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={soloNoLeidas}
-              onChange={(e) => {
-                setSoloNoLeidas(e.target.checked);
+    <Modal titulo="Avisos y Notificaciones" abierto onCerrar={onCerrar} ancho="lg">
+      <div className="flex flex-col space-y-4">
+        {/* Barra superior de filtros y acción "Marcar leídas" */}
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line pb-3">
+          <div className="flex items-center gap-1.5 rounded-lg bg-surface-soft p-1">
+            <button
+              type="button"
+              onClick={() => {
+                setFiltro("todas");
                 setPage(1);
               }}
-              className="rounded"
-            />
-            <span className="text-sm text-gray-700 dark:text-gray-300">
-              Solo no leídas
-            </span>
-          </label>
+              aria-pressed={filtro === "todas"}
+              className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+                filtro === "todas"
+                  ? "bg-surface-raised text-foreground shadow-sm"
+                  : "text-muted hover:text-foreground"
+              }`}
+            >
+              Todas {filtro === "todas" && totalItems > 0 ? `(${totalItems})` : ""}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setFiltro("no_leidas");
+                setPage(1);
+              }}
+              aria-pressed={filtro === "no_leidas"}
+              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+                filtro === "no_leidas"
+                  ? "bg-surface-raised text-foreground shadow-sm"
+                  : "text-muted hover:text-foreground"
+              }`}
+            >
+              <span>No leídas</span>
+              {noLeidas > 0 && (
+                <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[9px] font-bold text-white">
+                  {noLeidas > 99 ? "99+" : noLeidas}
+                </span>
+              )}
+            </button>
+          </div>
+
           <button
             type="button"
             onClick={handleMarcarTodasLeidas}
-            className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+            disabled={marcandoTodas || noLeidas === 0}
+            className="text-xs font-semibold text-brand-700 hover:text-brand-800 disabled:opacity-40 dark:text-brand-400 dark:hover:text-brand-300 transition-colors"
           >
-            Marcar todas como leídas
+            {marcandoTodas ? "Marcando..." : "Marcar todas como leídas"}
           </button>
         </div>
 
-        {/* Lista de notificaciones */}
-        {cargando ? (
-          <div className="py-8 text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          </div>
-        ) : notificaciones.length === 0 ? (
-          <p className="text-center text-gray-500 dark:text-gray-400 py-8">
-            No hay notificaciones
-          </p>
-        ) : (
-          <div className="space-y-2 max-h-96 overflow-y-auto">
-            {notificaciones.map((n) => (
-              <div
-                key={n.id}
-                className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                  n.leido
-                    ? "bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700"
-                    : "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800"
-                }`}
-                onClick={() => !n.leido && handleMarcarLeida(n.id)}
-              >
-                <div className="flex items-start justify-between gap-2 mb-1">
-                  <p className="font-medium text-sm text-gray-900 dark:text-white">
-                    {n.titulo}
-                  </p>
-                  <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                    {new Date(n.creadoAt).toLocaleDateString("es-PY")}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-700 dark:text-gray-300">
-                  {n.mensaje}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  {n.usuarioEmisor.nombre} {n.usuarioEmisor.apellido}
-                </p>
+        {/* Lista de Notificaciones */}
+        <div className="max-h-[60vh] overflow-y-auto pr-1">
+          {cargando ? (
+            <div className="py-12 text-center">
+              <div className="mx-auto h-7 w-7 animate-spin rounded-full border-2 border-brand-600 border-t-transparent dark:border-brand-400"></div>
+              <p className="mt-2 text-xs text-muted">Cargando avisos...</p>
+            </div>
+          ) : notificaciones.length === 0 ? (
+            <div className="py-12 text-center">
+              <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-surface-soft text-muted">
+                <svg
+                  className="h-6 w-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  strokeWidth="1.8"
+                  aria-hidden="true"
+                >
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                </svg>
               </div>
-            ))}
-          </div>
-        )}
+              <p className="mt-3 text-sm font-semibold text-foreground">
+                {filtro === "no_leidas"
+                  ? "No tenés avisos pendientes"
+                  : "No hay notificaciones"}
+              </p>
+              <p className="mt-1 text-xs text-muted">
+                {filtro === "no_leidas"
+                  ? "Todo al día en tus locales, tareas y equipo."
+                  : "Las novedades de tu operación aparecerán aquí."}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {grupos.map((grupo) => (
+                <div key={grupo.nombre}>
+                  <p className="mb-2 text-xs font-bold uppercase tracking-wider text-muted">
+                    {grupo.nombre}
+                  </p>
+                  <div className="space-y-2">
+                    {grupo.items.map((n) => {
+                      const esComentario = n.tipo === "COMENTARIO_TAREA";
+                      const esCompletada = n.tipo === "TAREA_COMPLETADA";
+                      const esFoto = n.tipo === "FOTO_SUBIDA";
+
+                      const colorClase = esCompletada
+                        ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200/60 dark:border-emerald-800/40"
+                        : esComentario
+                          ? "bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300 border-sky-200/60 dark:border-sky-800/40"
+                          : esFoto
+                            ? "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200/60 dark:border-amber-800/40"
+                            : "bg-surface-soft text-foreground border-line";
+
+                      return (
+                        <button
+                          key={n.id}
+                          type="button"
+                          disabled={n.leido}
+                          onClick={() => void handleMarcarLeida(n)}
+                          aria-label={
+                            n.leido
+                              ? `${n.titulo}. Notificación leída`
+                              : `${n.titulo}. Marcar como leída`
+                          }
+                          className={`group flex w-full items-start gap-3 rounded-xl border p-3.5 text-left transition-[background-color,border-color,box-shadow,opacity] ${
+                            !n.leido
+                              ? "border-line bg-surface-raised shadow-[0_2px_8px_rgba(var(--warm-shadow),0.06)] hover:border-brand-500/50 dark:hover:border-brand-500/40"
+                              : "border-line/60 bg-surface-soft/30 opacity-80 disabled:cursor-default"
+                          }`}
+                        >
+                          {/* Ícono temático en avatar circular */}
+                          <div
+                            className={`grid h-9 w-9 shrink-0 place-items-center rounded-full border ${colorClase}`}
+                          >
+                            <IconoTipo tipo={n.tipo} />
+                          </div>
+
+                          {/* Contenido */}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="truncate text-sm font-semibold text-foreground">
+                                {n.titulo}
+                              </p>
+                              {!n.leido && (
+                                <span
+                                  className="h-2 w-2 shrink-0 rounded-full bg-red-600 dark:bg-red-500"
+                                  title="No leída"
+                                  aria-label="No leída"
+                                />
+                              )}
+                            </div>
+
+                            <p className="mt-0.5 text-xs text-muted leading-relaxed break-words">
+                              {n.mensaje}
+                            </p>
+
+                            <div className="mt-2 flex items-center justify-between gap-2 border-t border-line/40 pt-1.5 text-[11px] text-muted">
+                              <span className="flex items-center gap-1 truncate">
+                                <svg
+                                  className="h-3 w-3 shrink-0"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                  strokeWidth="2"
+                                  aria-hidden="true"
+                                >
+                                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                                  <circle cx="12" cy="7" r="4" />
+                                </svg>
+                                {n.usuarioEmisor.nombre} {n.usuarioEmisor.apellido}
+                              </span>
+
+                              <span className="font-mono text-[10px] text-muted shrink-0">
+                                {formatearHoraOFecha(n.creadoAt)}
+                              </span>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Paginación */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-center gap-2 pt-4">
+        {totalItems > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3 text-xs">
+            <label className="flex items-center gap-1.5 text-muted">
+              Por pagina
+              <select
+                aria-label="Registros por pagina"
+                value={limit}
+                onChange={(e) => {
+                  setLimit(Number(e.target.value));
+                  setPage(1);
+                }}
+                className="min-h-9 rounded-lg border border-line bg-surface-raised px-2 text-xs text-foreground"
+              >
+                {[7, 15, 30].map((opcion) => (
+                  <option key={opcion} value={opcion}>
+                    {opcion}
+                  </option>
+                ))}
+              </select>
+            </label>
             <button
               type="button"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="px-3 py-1 rounded border border-gray-300 dark:border-gray-600
-                disabled:opacity-50 disabled:cursor-not-allowed
-                hover:bg-gray-100 dark:hover:bg-gray-700
-                text-sm"
+              className="rounded-lg border border-line px-3 py-1.5 font-medium transition-colors hover:bg-surface-soft disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Anterior
             </button>
-            <span className="text-sm text-gray-600 dark:text-gray-400">
+            <span className="text-muted">
               Página {page} de {totalPages}
             </span>
             <button
               type="button"
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
-              className="px-3 py-1 rounded border border-gray-300 dark:border-gray-600
-                disabled:opacity-50 disabled:cursor-not-allowed
-                hover:bg-gray-100 dark:hover:bg-gray-700
-                text-sm"
+              className="rounded-lg border border-line px-3 py-1.5 font-medium transition-colors hover:bg-surface-soft disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Siguiente
             </button>

@@ -93,6 +93,24 @@ const ICONOS: Record<string, (p: Props) => React.ReactNode> = {
       <path d="M10 9a3 3 0 100-6 3 3 0 000 6zM6 8a2 2 0 11-4 0 2 2 0 014 0zM1.49 15.326a.78.78 0 01-.358-.442 3 3 0 014.308-3.516 6.484 6.484 0 00-1.905 3.959c-.023.222-.014.442.025.654a4.97 4.97 0 01-2.07-.655zM16.44 15.98a4.97 4.97 0 002.07-.654.78.78 0 00.357-.442 3 3 0 00-4.308-3.517 6.484 6.484 0 011.907 3.96 2.32 2.32 0 01-.026.654zM18 8a2 2 0 11-4 0 2 2 0 014 0zM5.304 16.19a.844.844 0 01-.277-.71 5 5 0 019.947 0 .843.843 0 01-.277.71A6.975 6.975 0 0110 18a6.974 6.974 0 01-4.696-1.81z" />
     </Base>
   ),
+  calendario: (p) => (
+    <Base {...p}>
+      <path
+        fillRule="evenodd"
+        d="M5.75 2a.75.75 0 01.75.75V4h7V2.75a.75.75 0 011.5 0V4h.25A2.75 2.75 0 0118 6.75v8.5A2.75 2.75 0 0115.25 18H4.75A2.75 2.75 0 012 15.25v-8.5A2.75 2.75 0 014.75 4H5V2.75A.75.75 0 015.75 2zm-1 5.5c-.414 0-.75.336-.75.75v7c0 .414.336.75.75.75h10.5c.414 0 .75-.336.75-.75v-7c0-.414-.336-.75-.75-.75H4.75z"
+        clipRule="evenodd"
+      />
+    </Base>
+  ),
+  ruta: (p) => (
+    <Base {...p}>
+      <path
+        fillRule="evenodd"
+        d="M8.157 2.176a1.5 1.5 0 00-1.147.242L2.61 5.418A1.5 1.5 0 002 6.64v8.868a1.5 1.5 0 001.843 1.46l4.3-1.076 3.868 2.062a1.5 1.5 0 001.428-.027l4.39-2.634A1.5 1.5 0 0018 13.99V5.122a1.5 1.5 0 00-1.843-1.46l-4.3 1.076L7.989 2.676a1.5 1.5 0 00-.832-.5zM3.5 6.64l4-2.667v8.914l-4 1v-7.247zm5.5-2.288l3 1.6v8.948l-3-1.6V4.352zm4.5 2.378l3-1.8v7.247l-3 .75V6.73z"
+        clipRule="evenodd"
+      />
+    </Base>
+  ),
 };
 
 function Generico(p: Props) {
@@ -116,4 +134,51 @@ export function IconoModulo({
 }) {
   const Comp = (nombre && ICONOS[nombre]) || Generico;
   return <Comp className={className} />;
+}
+
+export function resolverIconoPagina({
+  moduloRuta,
+  moduloIcono,
+  paginaRuta,
+  paginaIcono,
+}: {
+  moduloRuta: string;
+  moduloIcono: string | null;
+  paginaRuta: string;
+  paginaIcono: string | null;
+}): string {
+  // 1. Si la página tiene un ícono explícito configurado y registrado
+  if (paginaIcono && paginaIcono in ICONOS) return paginaIcono;
+
+  // 2. Personalización para módulo de Team Leader (Gestión de campo)
+  if (moduloRuta === "gestion-campo") {
+    switch (paginaRuta) {
+      case "clientes":
+        return "clientes";
+      case "locales":
+        return "locales";
+      case "tareas":
+        return "tareas";
+      case "visitas":
+        return "equipo";
+    }
+  }
+
+  // 3. Personalización para módulo de Impulsador (Mi jornada)
+  if (moduloRuta === "mi-jornada") {
+    switch (paginaRuta) {
+      case "locales":
+        return "ruta";
+      case "tareas":
+        return "visitas";
+    }
+  }
+
+  // 4. Si la ruta de la página coincide directamente con un icono disponible
+  if (paginaRuta in ICONOS) return paginaRuta;
+
+  // 5. Si el icono del módulo está registrado
+  if (moduloIcono && moduloIcono in ICONOS) return moduloIcono;
+
+  return paginaIcono ?? moduloIcono ?? paginaRuta ?? "generico";
 }

@@ -14,7 +14,6 @@ import { verificarAccesoCumplimiento } from '../utils/autorizacion';
 import { validarArchivoImagen } from '../utils/multer-config';
 import { NotificacionService } from './notificacion.service';
 import { unlinkSync } from 'fs';
-import { MomentoFotoCampo } from '../../../generated/prisma/client';
 
 @Injectable()
 export class FotoService {
@@ -72,7 +71,9 @@ export class FotoService {
 
     // Verificar que el usuario es el dueño de la visita
     if (cumplimiento.visita.usuarioId !== usuarioId) {
-      throw new ForbiddenException('Solo puedes subir fotos a tus propias tareas');
+      throw new ForbiddenException(
+        'Solo puedes subir fotos a tus propias tareas',
+      );
     }
 
     // Verificar que la visita sigue abierta (opcional, permitir subir después también)
@@ -87,7 +88,7 @@ export class FotoService {
         cumplimientoVisitaId_cumplimientoTareaId_momento: {
           cumplimientoVisitaId: visitaId,
           cumplimientoTareaId: tareaId,
-          momento: momento as MomentoFotoCampo,
+          momento: momento,
         },
       },
     });
@@ -122,7 +123,7 @@ export class FotoService {
 
       return {
         id: fotoActualizada.id,
-        momento: fotoActualizada.momento as 'ANTES' | 'DESPUES',
+        momento: fotoActualizada.momento,
         rutaArchivo: fotoActualizada.rutaArchivo,
         mimeType: fotoActualizada.mimeType,
         tamanioBytes: fotoActualizada.tamanioBytes,
@@ -136,7 +137,7 @@ export class FotoService {
         cumplimientoVisitaId: visitaId,
         cumplimientoTareaId: tareaId,
         usuarioId,
-        momento: momento as MomentoFotoCampo,
+        momento: momento,
         rutaArchivo: file.path,
         mimeType: file.mimetype,
         tamanioBytes: file.size,
@@ -162,7 +163,7 @@ export class FotoService {
 
     return {
       id: foto.id,
-      momento: foto.momento as 'ANTES' | 'DESPUES',
+      momento: foto.momento,
       rutaArchivo: foto.rutaArchivo,
       mimeType: foto.mimeType,
       tamanioBytes: foto.tamanioBytes,
@@ -206,7 +207,7 @@ export class FotoService {
     for (const foto of fotos) {
       const fotoDto: FotoTareaDto = {
         id: foto.id,
-        momento: foto.momento as 'ANTES' | 'DESPUES',
+        momento: foto.momento,
         rutaArchivo: foto.rutaArchivo,
         mimeType: foto.mimeType,
         tamanioBytes: foto.tamanioBytes,
@@ -245,7 +246,7 @@ export class FotoService {
 
     return {
       id: foto.id,
-      momento: foto.momento as 'ANTES' | 'DESPUES',
+      momento: foto.momento,
       rutaArchivo: foto.rutaArchivo,
       mimeType: foto.mimeType,
       tamanioBytes: foto.tamanioBytes,
@@ -307,7 +308,7 @@ export class FotoService {
         cumplimientoVisitaId_cumplimientoTareaId_momento: {
           cumplimientoVisitaId: visitaId,
           cumplimientoTareaId: tareaId,
-          momento: momento as MomentoFotoCampo,
+          momento: momento,
         },
       },
     });

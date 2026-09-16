@@ -17,19 +17,22 @@ export function PanelComentarios({ visitaId, tareaId, esLider = false }: PanelCo
   const [enviando, setEnviando] = useState(false);
   const [texto, setTexto] = useState("");
 
-  const cargarComentarios = async () => {
-    try {
-      const data = await listarComentarios(visitaId, tareaId);
-      setComentarios(data);
-    } catch (error) {
-      mostrarToast("error", "Error al cargar comentarios");
-    } finally {
-      setCargando(false);
-    }
-  };
-
   useEffect(() => {
-    cargarComentarios();
+    let activo = true;
+    listarComentarios(visitaId, tareaId)
+      .then((data) => {
+        if (activo) setComentarios(data);
+      })
+      .catch(() => {
+        if (activo) mostrarToast("error", "Error al cargar comentarios");
+      })
+      .finally(() => {
+        if (activo) setCargando(false);
+      });
+
+    return () => {
+      activo = false;
+    };
   }, [visitaId, tareaId]);
 
   const handleEnviar = async (e: React.FormEvent) => {
@@ -41,9 +44,10 @@ export function PanelComentarios({ visitaId, tareaId, esLider = false }: PanelCo
       await crearComentario(visitaId, tareaId, { comentario: texto.trim() });
       setTexto("");
       mostrarToast("exito", "Comentario enviado");
-      await cargarComentarios();
-    } catch (error) {
-      mostrarToast("error", error instanceof Error ? error.message : "Error al enviar comentario");
+      const data = await listarComentarios(visitaId, tareaId);
+      setComentarios(data);
+    } catch {
+      mostrarToast("error", "Error al enviar comentario");
     } finally {
       setEnviando(false);
     }
@@ -52,8 +56,9 @@ export function PanelComentarios({ visitaId, tareaId, esLider = false }: PanelCo
   const handleMarcarLeido = async (comentarioId: number) => {
     try {
       await marcarComentarioLeido(comentarioId);
-      await cargarComentarios();
-    } catch (error) {
+      const data = await listarComentarios(visitaId, tareaId);
+      setComentarios(data);
+    } catch {
       mostrarToast("error", "Error al marcar como leído");
     }
   };

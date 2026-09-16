@@ -7,8 +7,14 @@ import {
   MarcarTodasLeidasDto,
   NotificacionDto,
 } from '../dto/notificacion.dto';
-import { rangoPaginacion, respuestaPaginada } from '../../common/utils/paginacion';
-import { TipoNotificacionCampo } from '../../../generated/prisma/client';
+import {
+  rangoPaginacion,
+  respuestaPaginada,
+} from '../../common/utils/paginacion';
+import {
+  Prisma,
+  TipoNotificacionCampo,
+} from '../../../generated/prisma/client';
 
 @Injectable()
 export class NotificacionService {
@@ -110,17 +116,19 @@ export class NotificacionService {
   async listar(
     usuarioId: number,
     dto: ListarNotificacionesDto,
-  ): Promise<{ items: NotificacionDto[]; total: number; page: number; limit: number; totalPages: number }> {
+  ): Promise<{
+    items: NotificacionDto[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
     const { skip, take, page, limit } = rangoPaginacion(dto);
 
-    const where: any = {
+    const where: Prisma.NotificacionCampoWhereInput = {
       usuarioDestinatarioId: usuarioId,
+      ...(dto.leido !== undefined ? { leido: dto.leido } : {}),
     };
-
-    // Filtro opcional por estado leído
-    if (dto.leido !== undefined) {
-      where.leido = dto.leido;
-    }
 
     const [items, total] = await this.prisma.$transaction([
       this.prisma.notificacionCampo.findMany({
@@ -151,7 +159,7 @@ export class NotificacionService {
 
     const notificaciones: NotificacionDto[] = items.map((item) => ({
       id: item.id,
-      tipo: item.tipo as 'COMENTARIO_TAREA' | 'TAREA_COMPLETADA' | 'FOTO_SUBIDA',
+      tipo: item.tipo,
       titulo: item.titulo,
       mensaje: item.mensaje,
       usuarioEmisor: item.usuarioEmisor,
@@ -201,7 +209,7 @@ export class NotificacionService {
 
     return {
       id: notificacion.id,
-      tipo: notificacion.tipo as 'COMENTARIO_TAREA' | 'TAREA_COMPLETADA' | 'FOTO_SUBIDA',
+      tipo: notificacion.tipo,
       titulo: notificacion.titulo,
       mensaje: notificacion.mensaje,
       usuarioEmisor: notificacion.usuarioEmisor,

@@ -9,10 +9,11 @@ import type { UsuarioSesion } from "@/types/usuario";
 import type { ModuloMenu } from "@/types/plataforma";
 import { BrandMark } from "@/components/auth-shell";
 import { BotonTema } from "@/components/boton-tema";
+import { BadgeNotificaciones } from "@/components/campo/badge-notificaciones";
 import { Modal } from "@/components/modal";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { PanelProvider } from "@/components/panel/contexto";
-import { IconoModulo } from "@/components/panel/iconos";
+import { IconoModulo, resolverIconoPagina } from "@/components/panel/iconos";
 import { btnGhost } from "@/components/ui";
 import { EVENTO_PLATAFORMA_ACTUALIZADA } from "@/lib/eventos-plataforma";
 
@@ -108,7 +109,12 @@ export default function PanelLayout({
       m.paginas.map((p) => ({
         href: `/panel/${m.ruta}/${p.ruta}`,
         nombre: p.nombre,
-        icono: p.icono ?? m.icono,
+        icono: resolverIconoPagina({
+          moduloRuta: m.ruta,
+          moduloIcono: m.icono,
+          paginaRuta: p.ruta,
+          paginaIcono: p.icono,
+        }),
       })),
     ),
   ];
@@ -151,6 +157,7 @@ export default function PanelLayout({
             </div>
 
             <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
+              <BadgeNotificaciones />
               <BotonTema />
               <div ref={menuRef} className="relative">
                 <button

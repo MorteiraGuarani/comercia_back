@@ -4,7 +4,9 @@ import { defineConfig } from "prisma/config";
 loadEnv({ path: "../../.env" });
 loadEnv({ path: ".env", override: true });
 
-if (process.env.NODE_ENV !== "production") {
+if (process.env.COMERCIA_DATABASE_TARGET === "production") {
+  loadEnv({ path: "../../.env.production.local", override: true });
+} else if (process.env.NODE_ENV !== "production") {
   loadEnv({ path: "../../.env.development", override: true });
 }
 
