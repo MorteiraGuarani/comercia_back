@@ -14,6 +14,7 @@ export function SelectorPaginado({
   etiqueta,
   value,
   onChange,
+  onSeleccionar,
   seleccionActual,
   vacio = "Seleccioná una opción",
   required = false,
@@ -24,6 +25,7 @@ export function SelectorPaginado({
   etiqueta: string;
   value: number | "";
   onChange: (id: number | "") => void;
+  onSeleccionar?: (opcion: OpcionSelector) => void;
   seleccionActual?: string;
   vacio?: string;
   required?: boolean;
@@ -121,6 +123,7 @@ export function SelectorPaginado({
   function elegir(item: OpcionSelector) {
     setElegida(item);
     onChange(item.id);
+    onSeleccionar?.(item);
     setEditando(false);
     setAbierto(false);
     setActiva(-1);
@@ -210,8 +213,10 @@ export function SelectorPaginado({
             onChange={(evento) => {
               const id =
                 evento.target.value === "" ? "" : Number(evento.target.value);
-              setElegida(opciones.find((item) => item.id === id) ?? null);
+              const opcion = opciones.find((item) => item.id === id) ?? null;
+              setElegida(opcion);
               onChange(id);
+              if (opcion) onSeleccionar?.(opcion);
             }}
           >
             <option value="">{vacio}</option>

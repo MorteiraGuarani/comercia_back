@@ -1890,8 +1890,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/selector-paginado.tsx": {
-    "mtime": 1788891079.4505038,
-    "ast_hash": "5df8a1d46b4970a222bc582b0e5d48a0",
+    "mtime": 1789578488.638981,
+    "ast_hash": "2db1f2fdf3a2abd79f22b41e83b7d07b",
     "semantic_hash": ""
   },
   "apps/web/src/types/opcion-selector.ts": {
@@ -2000,8 +2000,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/tareas-panel.tsx": {
-    "mtime": 1789416741.4093149,
-    "ast_hash": "90ce05a8915888d7f8f18b2443a5fd4b",
+    "mtime": 1789578576.5157702,
+    "ast_hash": "58834935188fb76446a336fa8a13c9ec",
     "semantic_hash": ""
   },
   "apps/web/src/hooks/use-lista-campo.ts": {
@@ -2070,8 +2070,8 @@
     "semantic_hash": ""
   },
   "apps/api/prisma/migrations/20260916120000_iconos_paginas_campo/migration.sql": {
-    "mtime": 1789569872.635767,
-    "ast_hash": "06d71428b3a0ce36aa0f91898667e727",
+    "mtime": 1789572766.154457,
+    "ast_hash": "352988d291e79e3cb0508cc0408ccdd3",
     "semantic_hash": ""
   },
   "apps/api/src/campo/dto/comentario-tarea.dto.ts": {

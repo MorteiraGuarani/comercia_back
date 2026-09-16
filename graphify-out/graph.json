@@ -1176,8 +1176,8 @@
       "source_location": "L66",
       "_origin": "ast",
       "id": "apps_api_package_devdependencies_eslint",
-      "community": 86,
-      "community_name": "eslint",
+      "community": 35,
+      "community_name": "devDependencies",
       "norm_label": "eslint"
     },
     {
@@ -1187,8 +1187,8 @@
       "source_location": "L66",
       "_origin": "ast",
       "id": "apps_api_package_json_eslint",
-      "community": 86,
-      "community_name": "eslint",
+      "community": 35,
+      "community_name": "devDependencies",
       "norm_label": "eslint"
     },
     {
@@ -1198,8 +1198,8 @@
       "source_location": "L67",
       "_origin": "ast",
       "id": "apps_api_package_devdependencies_eslint_config_prettier",
-      "community": 35,
-      "community_name": "devDependencies",
+      "community": 86,
+      "community_name": "eslint-config-prettier",
       "norm_label": "eslint-config-prettier"
     },
     {
@@ -1209,8 +1209,8 @@
       "source_location": "L67",
       "_origin": "ast",
       "id": "eslint_config_prettier",
-      "community": 35,
-      "community_name": "devDependencies",
+      "community": 86,
+      "community_name": "eslint-config-prettier",
       "norm_label": "eslint-config-prettier"
     },
     {
@@ -57658,7 +57658,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/web/src/components/campo/tareas-panel.tsx",
-      "source_location": "L95",
+      "source_location": "L104",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_tareas_panel_tareaspanel",
@@ -58275,7 +58275,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/web/src/components/selector-paginado.tsx",
-      "source_location": "L67",
+      "source_location": "L69",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_selector_paginado_selectorpaginado",
@@ -67640,5 +67640,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "ba4978449294e084ad752dc3e3dde494d650caa7"
+  "built_at_commit": "130d709e930e7a4052c94e2a3a5fdab6d68379fb"
 }

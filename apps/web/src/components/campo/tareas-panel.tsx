@@ -21,9 +21,18 @@ export function TareasPanel() {
   const op = useOperacionCampo();
   const [id, setId] = useState(0);
   const [form, setForm] = useState<FormTareaCampo | null>(null);
+  const [nombresLocales, setNombresLocales] = useState<
+    Record<number, string>
+  >({});
   function abrir(t?: TareaCampo) {
     setId(t?.id ?? 0);
     op.limpiarError();
+    setNombresLocales(
+      t?.locales.reduce<Record<number, string>>((nombres, { local }) => {
+        nombres[local.id] = local.nombre;
+        return nombres;
+      }, {}) ?? {},
+    );
     setForm({
       nombre: t?.nombre ?? "",
       descripcion: t?.descripcion ?? "",
@@ -144,6 +153,7 @@ export function TareasPanel() {
                     localIds: [],
                   })
                 }
+                onClick={() => setNombresLocales({})}
               />
               Todos los locales de mi empresa
             </label>
@@ -157,26 +167,45 @@ export function TareasPanel() {
                     if (v && !form.localIds.includes(v))
                       setForm({ ...form, localIds: [...form.localIds, v] });
                   }}
+                  onSeleccionar={(local) =>
+                    setNombresLocales((actual) => ({
+                      ...actual,
+                      [local.id]:
+                        local.nombre ?? local.descripcion ?? `Local ${local.id}`,
+                    }))
+                  }
                 />
                 <p className="text-xs text-muted">
                   {form.localIds.length} locales seleccionados (máximo 50).
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {form.localIds.map((localId) => (
-                    <button
-                      type="button"
-                      className={btnGhost}
-                      key={localId}
-                      onClick={() =>
-                        setForm({
-                          ...form,
-                          localIds: form.localIds.filter((x) => x !== localId),
-                        })
-                      }
-                    >
-                      Local #{localId} ×
-                    </button>
-                  ))}
+                  {form.localIds.map((localId) => {
+                    const nombre =
+                      nombresLocales[localId] ?? `Local ${localId}`;
+                    return (
+                      <button
+                        type="button"
+                        className={`${btnGhost} min-w-0 max-w-full gap-1 overflow-hidden px-3 sm:max-w-80`}
+                        key={localId}
+                        title={`Quitar ${nombre}`}
+                        aria-label={`Quitar ${nombre}`}
+                        onClick={() => {
+                          setForm({
+                            ...form,
+                            localIds: form.localIds.filter((x) => x !== localId),
+                          });
+                          setNombresLocales((actual) => {
+                            const siguiente = { ...actual };
+                            delete siguiente[localId];
+                            return siguiente;
+                          });
+                        }}
+                      >
+                        <span className="min-w-0 truncate">{nombre}</span>
+                        <span aria-hidden>×</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </>
             ) : null}

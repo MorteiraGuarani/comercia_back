@@ -1,7 +1,7 @@
 # Graph Report - COMERCIA  (2026-09-16)
 
 ## Corpus Check
-- 417 files · ~139,950 words
+- 417 files · ~140,045 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `ba497844`
+- Built from commit: `130d709e`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -99,7 +99,7 @@
 - usuarios-panel.tsx
 - 1. Eliminating Waterfalls
 - 2. Bundle Size Optimization
-- eslint
+- eslint-config-prettier
 - typescript
 - planificacion-campo.service.ts
 - 20260706115040_plataforma_modular/migration.sql
@@ -477,7 +477,7 @@ Nodes (45): dependencies, flag-icons, leaflet, libphonenumber-js, motion, next, 
 
 ### Community 35 - "devDependencies"
 Cohesion: 0.29
-Nodes (7): devDependencies, eslint-config-prettier, globals, tsconfig-paths, eslint-config-prettier, globals, tsconfig-paths
+Nodes (7): devDependencies, eslint, globals, tsconfig-paths, eslint, globals, tsconfig-paths
 
 ### Community 36 - "toast-provider.tsx"
 Cohesion: 0.13
