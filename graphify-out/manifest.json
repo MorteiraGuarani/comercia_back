@@ -505,23 +505,23 @@
     "semantic_hash": ""
   },
   "apps/api/src/usuarios/admin-usuarios.controller.ts": {
-    "mtime": 1788871867.2129314,
-    "ast_hash": "52af3171f37efaee5cafcfbdf2dfc993",
+    "mtime": 1789582727.1929233,
+    "ast_hash": "e8888a23054d04964ac06f9bc25f02ef",
     "semantic_hash": ""
   },
   "apps/api/src/usuarios/dto/usuario.dto.ts": {
-    "mtime": 1785842050.420296,
-    "ast_hash": "d7b77aedb0f3e1d243c4e992eab6a0aa",
+    "mtime": 1789582723.9274356,
+    "ast_hash": "2f9252ddf2b5f64762a85525936aa7e8",
     "semantic_hash": ""
   },
   "apps/api/src/usuarios/interfaces/usuario-admin.interface.ts": {
-    "mtime": 1788871867.2209861,
-    "ast_hash": "7c74060b56bed5de76667e8710c7943b",
+    "mtime": 1789582724.732075,
+    "ast_hash": "de0c2c03bacde0cbbd1ef1fc5448a5e8",
     "semantic_hash": ""
   },
   "apps/api/src/usuarios/usuarios.controller.ts": {
-    "mtime": 1788871867.227043,
-    "ast_hash": "45a7bddef6f563505185861ec9b5841f",
+    "mtime": 1789582726.3788538,
+    "ast_hash": "a5dfd4f0c13d99b91d7524748d48ceba",
     "semantic_hash": ""
   },
   "apps/api/src/usuarios/usuarios.module.ts": {
@@ -530,8 +530,8 @@
     "semantic_hash": "7c2f0a5f859e84cd1f4a1c62c65e314a"
   },
   "apps/api/src/usuarios/usuarios.service.ts": {
-    "mtime": 1788871867.2588947,
-    "ast_hash": "57eda9b8835999919114d937d695fa8d",
+    "mtime": 1789582857.221608,
+    "ast_hash": "8947209891647a6311199ebf0f35070e",
     "semantic_hash": ""
   },
   "apps/api/test/app.e2e-spec.ts": {
@@ -700,8 +700,8 @@
     "semantic_hash": "692f7f4acb1607e8575b72c625e03c79"
   },
   "apps/web/src/components/usuarios/usuarios-panel.tsx": {
-    "mtime": 1788876793.2671402,
-    "ast_hash": "b0b897777aee6b8c31ca62210c61831d",
+    "mtime": 1789583004.1049821,
+    "ast_hash": "7cfb6fa9267794f41f55f9e859827318",
     "semantic_hash": ""
   },
   "apps/web/src/lib/api.ts": {
@@ -745,8 +745,8 @@
     "semantic_hash": "4042a4750ef35b4aedaf0c766ab123d7"
   },
   "apps/web/src/types/usuario.ts": {
-    "mtime": 1788871867.3933668,
-    "ast_hash": "1cc3d8df8d11d47565e50f0685c43186",
+    "mtime": 1789582740.720956,
+    "ast_hash": "8fc3a8ee18121c96c17074d8b0b4f21d",
     "semantic_hash": ""
   },
   "apps/web/src/utils/direccion-ruta.ts": {

@@ -1,6 +1,7 @@
 import { Type } from 'class-transformer';
 import {
   IsBoolean,
+  IsDateString,
   IsInt,
   IsOptional,
   IsString,
@@ -20,6 +21,25 @@ export class ListarUsuariosDto extends PaginacionDto {
   @Min(1)
   @Max(MAX_INT4)
   empresaId?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  buscar?: string;
+}
+
+export class AsignarUsuarioLocalDto {
+  @IsInt()
+  @Min(1)
+  @Max(MAX_INT4)
+  localId!: number;
+
+  @IsDateString({ strict: true })
+  fechaDesde!: string;
+
+  @IsOptional()
+  @IsDateString({ strict: true })
+  fechaHasta?: string | null;
 }
 
 export class CrearUsuarioDto extends RegisterDto {

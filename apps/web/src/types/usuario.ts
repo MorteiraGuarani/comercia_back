@@ -33,3 +33,12 @@ export interface MetaUsuarios {
   empresas: { id: number; nombre: string }[];
   esSuperadmin: boolean;
 }
+
+export interface UsuarioLocalAsignacion {
+  id: number;
+  localId: number;
+  nombreLocal: string;
+  nombreCliente: string;
+  fechaDesde: string;
+  fechaHasta: string | null;
+}

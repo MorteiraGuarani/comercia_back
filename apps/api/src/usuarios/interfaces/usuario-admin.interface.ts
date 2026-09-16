@@ -18,3 +18,12 @@ export interface MetaUsuariosDto {
   empresas: { id: number; nombre: string }[];
   esSuperadmin: boolean;
 }
+
+export interface UsuarioLocalAsignacionDto {
+  id: number;
+  localId: number;
+  nombreLocal: string;
+  nombreCliente: string;
+  fechaDesde: string;
+  fechaHasta: string | null;
+}

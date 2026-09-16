@@ -10,9 +10,14 @@ import { apiFetch, ApiError } from "@/lib/api";
 import { SelectorPaginado } from "@/components/selector-paginado";
 import { IconoMas } from "@/components/icono-mas";
 import type { RespuestaPaginada } from "@/types/paginacion";
-import type { MetaUsuarios, UsuarioAdmin } from "@/types/usuario";
+import type {
+  MetaUsuarios,
+  UsuarioAdmin,
+  UsuarioLocalAsignacion,
+} from "@/types/usuario";
 import { Modal } from "@/components/modal";
 import { Paginacion } from "@/components/paginacion";
+import { PantallaCarga } from "@/components/pantalla-carga";
 import {
   btnGhost,
   btnPrimary,
@@ -58,10 +63,12 @@ const FORM_INICIAL: FormUsuario = {
 function ListaUsuariosMovil({
   usuarios,
   onEditar,
+  onLocales,
   onEliminar,
 }: {
   usuarios: UsuarioAdmin[];
   onEditar: (usuario: UsuarioAdmin) => void;
+  onLocales: (usuario: UsuarioAdmin) => void;
   onEliminar?: (usuario: UsuarioAdmin) => void;
 }) {
   return (
@@ -114,8 +121,15 @@ function ListaUsuariosMovil({
             <>
               <button
                 type="button"
-                onClick={() => onEditar(usuario)}
+                onClick={() => onLocales(usuario)}
                 className={`${btnGhost} mt-3 min-h-11 w-full whitespace-nowrap`}
+              >
+                Gestionar locales
+              </button>
+              <button
+                type="button"
+                onClick={() => onEditar(usuario)}
+                className={`${btnGhost} mt-2 min-h-11 w-full whitespace-nowrap`}
               >
                 Editar usuario
               </button>
@@ -151,6 +165,9 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
   const [eliminando, setEliminando] = useState<UsuarioAdmin | null>(null);
   const [desactivando, setDesactivando] = useState(false);
   const [errorEliminar, setErrorEliminar] = useState<string | null>(null);
+  const [localesUsuario, setLocalesUsuario] = useState<UsuarioAdmin | null>(
+    null,
+  );
   const base = soloSuperadmin ? "/admin/usuarios" : "/usuarios";
 
   const cargar = useCallback(() => {
@@ -181,7 +198,10 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
       );
   }, [base]);
 
-  useEffect(() => cargar(), [cargar]);
+  useEffect(() => {
+    const timer = window.setTimeout(cargar, 0);
+    return () => window.clearTimeout(timer);
+  }, [cargar]);
 
   function abrirNuevo() {
     setForm({ ...FORM_INICIAL, rolId: "" });
@@ -206,8 +226,9 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
     setGuardando(true);
     setError(null);
     try {
+      let creado: UsuarioAdmin | null = null;
       if (editando === "nuevo") {
-        await apiFetch(base, {
+        creado = await apiFetch<UsuarioAdmin>(base, {
           method: "POST",
           body: JSON.stringify({
             empresaId,
@@ -237,6 +258,7 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
       }
       setEditando(null);
       cargar();
+      if (creado && !creado.esSuperadmin) setLocalesUsuario(creado);
     } catch (e) {
       setError(
         e instanceof ApiError ? e.message : "No se pudo guardar el usuario",
@@ -282,7 +304,8 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
             {soloSuperadmin ? "Usuarios de empresas" : "Usuarios"}
           </h1>
           <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            Alta, roles, superiores y estado de acceso por empresa.
+            Creá impulsadores, administradores y superadmins; asigná superiores,
+            locales y las tareas que reciben en su agenda.
           </p>
         </div>
         <button
@@ -321,6 +344,7 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
       <ListaUsuariosMovil
         usuarios={usuarios}
         onEditar={abrirEditar}
+        onLocales={setLocalesUsuario}
         onEliminar={soloSuperadmin ? setEliminando : undefined}
       />
       <div className="mt-5 hidden overflow-x-auto rounded-xl border border-line bg-surface-raised md:block">
@@ -371,6 +395,13 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
                     </span>
                   ) : (
                     <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setLocalesUsuario(usuario)}
+                        className={btnGhost}
+                      >
+                        Locales
+                      </button>
                       <button
                         type="button"
                         onClick={() => abrirEditar(usuario)}
@@ -603,6 +634,14 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
         </form>
       </Modal>
 
+      {localesUsuario ? (
+        <AsignacionesUsuario
+          base={base}
+          usuario={localesUsuario}
+          onCerrar={() => setLocalesUsuario(null)}
+        />
+      ) : null}
+
       <Modal
         titulo="Desactivar usuario"
         abierto={eliminando !== null}
@@ -666,5 +705,231 @@ function Campo({
         className={inputBase}
       />
     </label>
+  );
+}
+
+function AsignacionesUsuario({
+  base,
+  usuario,
+  onCerrar,
+}: {
+  base: string;
+  usuario: UsuarioAdmin;
+  onCerrar: () => void;
+}) {
+  const [datos, setDatos] = useState<RespuestaPaginada<UsuarioLocalAsignacion> | null>(null);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(7);
+  const [localId, setLocalId] = useState<number | "">("");
+  const [fechaDesde, setFechaDesde] = useState(() =>
+    new Date().toISOString().slice(0, 10),
+  );
+  const [fechaHasta, setFechaHasta] = useState("");
+  const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const cargar = useCallback(() => {
+    setCargando(true);
+    apiFetch<RespuestaPaginada<UsuarioLocalAsignacion>>(
+      `${base}/${usuario.id}/asignaciones?page=${page}&limit=${limit}`,
+    )
+      .then((respuesta) => {
+        setDatos(respuesta);
+        setError(null);
+      })
+      .catch((problema) =>
+        setError(
+          problema instanceof ApiError
+            ? problema.message
+            : "No se pudieron cargar los locales asignados",
+        ),
+      )
+      .finally(() => setCargando(false));
+  }, [base, limit, page, usuario.id]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(cargar, 0);
+    return () => window.clearTimeout(timer);
+  }, [cargar]);
+
+  async function asignar(e: React.FormEvent) {
+    e.preventDefault();
+    if (localId === "") return;
+    setGuardando(true);
+    setError(null);
+    try {
+      await apiFetch(`${base}/${usuario.id}/asignaciones`, {
+        method: "POST",
+        body: JSON.stringify({
+          localId,
+          fechaDesde,
+          fechaHasta: fechaHasta || null,
+        }),
+      });
+      setLocalId("");
+      setFechaHasta("");
+      setPage(1);
+      cargar();
+    } catch (problema) {
+      setError(
+        problema instanceof ApiError
+          ? problema.message
+          : "No se pudo asignar el local",
+      );
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  async function quitar(asignacion: UsuarioLocalAsignacion) {
+    if (!window.confirm(`¿Quitar ${asignacion.nombreLocal} de este usuario?`)) return;
+    setGuardando(true);
+    setError(null);
+    try {
+      await apiFetch(
+        `${base}/${usuario.id}/asignaciones/${asignacion.id}`,
+        { method: "DELETE" },
+      );
+      cargar();
+    } catch (problema) {
+      setError(
+        problema instanceof ApiError
+          ? problema.message
+          : "No se pudo quitar el local",
+      );
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return (
+    <Modal
+      titulo={`Locales de ${usuario.nombre} ${usuario.apellido}`}
+      abierto
+      onCerrar={onCerrar}
+      ancho="lg"
+    >
+      <p className="text-sm text-muted">
+        Las tareas configuradas para estos locales aparecerán automáticamente en su agenda
+        durante la vigencia de cada asignación.
+      </p>
+      <form onSubmit={asignar} className="mt-5 space-y-3 rounded-xl border border-line bg-surface-soft p-4">
+        <SelectorPaginado
+          key={`${base}-${usuario.id}`}
+          url={`${base}/locales?empresaId=${usuario.empresa.id}`}
+          buscable
+          etiqueta="Local"
+          value={localId}
+          required
+          onChange={setLocalId}
+        />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Campo
+            label="Desde"
+            type="date"
+            value={fechaDesde}
+            onChange={setFechaDesde}
+          />
+          <Campo
+            label="Hasta (opcional)"
+            type="date"
+            required={false}
+            value={fechaHasta}
+            onChange={setFechaHasta}
+          />
+        </div>
+        <div className="flex justify-end">
+          <button
+            type="submit"
+            disabled={guardando}
+            className={`${btnPrimary} min-h-11 whitespace-nowrap`}
+          >
+            {guardando ? "Guardando..." : "Asignar local"}
+          </button>
+        </div>
+      </form>
+      {error ? <p className={`${errorBox} mt-3`}>{error}</p> : null}
+      {cargando ? (
+        <p className="mt-5 text-sm text-muted">Cargando asignaciones...</p>
+      ) : datos && datos.items.length > 0 ? (
+        <>
+          <ul className="mt-5 space-y-2 md:hidden" aria-label="Locales asignados">
+            {datos.items.map((asignacion) => (
+              <li key={asignacion.id} className="rounded-xl border border-line bg-surface-raised p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold">{asignacion.nombreLocal}</p>
+                    <p className="truncate text-xs text-muted">{asignacion.nombreCliente}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void quitar(asignacion)}
+                    disabled={guardando}
+                    className="min-h-11 shrink-0 rounded-lg px-3 text-sm font-semibold text-red-700 transition hover:bg-red-50 focus-visible:ring-2 focus-visible:ring-red-600/40 disabled:cursor-not-allowed disabled:opacity-50 dark:text-red-300 dark:hover:bg-red-950"
+                  >
+                    Quitar
+                  </button>
+                </div>
+                <p className="mt-2 text-xs text-muted">
+                  Vigencia: {asignacion.fechaDesde.slice(0, 10)} · {asignacion.fechaHasta?.slice(0, 10) ?? "sin fecha de fin"}
+                </p>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-5 hidden overflow-x-auto rounded-xl border border-line md:block">
+            <table className="min-w-full divide-y divide-line text-sm">
+              <thead className="bg-surface-soft text-left text-xs font-semibold uppercase">
+                <tr>
+                  <th className="px-4 py-3">Local</th>
+                  <th className="px-4 py-3">Cliente</th>
+                  <th className="px-4 py-3">Vigencia</th>
+                  <th className="px-4 py-3 text-right">Acción</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line bg-surface-raised">
+                {datos.items.map((asignacion) => (
+                  <tr key={asignacion.id}>
+                    <td className="px-4 py-3 font-medium">{asignacion.nombreLocal}</td>
+                    <td className="px-4 py-3">{asignacion.nombreCliente}</td>
+                    <td className="px-4 py-3 text-muted">
+                      {asignacion.fechaDesde.slice(0, 10)} · {asignacion.fechaHasta?.slice(0, 10) ?? "Sin fin"}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        type="button"
+                        onClick={() => void quitar(asignacion)}
+                        disabled={guardando}
+                        className="min-h-11 rounded-lg px-3 text-sm font-semibold text-red-700 transition hover:bg-red-50 focus-visible:ring-2 focus-visible:ring-red-600/40 disabled:cursor-not-allowed disabled:opacity-50 dark:text-red-300 dark:hover:bg-red-950"
+                      >
+                        Quitar
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {datos.total > 0 ? (
+            <Paginacion
+              page={datos.page}
+              totalPages={datos.totalPages}
+              total={datos.total}
+              limit={datos.limit}
+              onPageChange={setPage}
+              onLimitChange={(nuevo) => {
+                setLimit(nuevo);
+                setPage(1);
+              }}
+            />
+          ) : null}
+        </>
+      ) : (
+        <p className="mt-5 rounded-xl border border-dashed border-line p-5 text-center text-sm text-muted">
+          Todavía no tiene locales asignados.
+        </p>
+      )}
+      <PantallaCarga visible={guardando} mensaje="Actualizando asignaciones" />
+    </Modal>
   );
 }

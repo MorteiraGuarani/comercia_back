@@ -16,11 +16,13 @@ import { puedeAdministrarUsuarios } from '../common/utils/permisos-usuario';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   ActualizarUsuarioDto,
+  AsignarUsuarioLocalDto,
   CrearUsuarioDto,
   ListarUsuariosDto,
 } from './dto/usuario.dto';
 import type {
   MetaUsuariosDto,
+  UsuarioLocalAsignacionDto,
   UsuarioAdminDto,
 } from './interfaces/usuario-admin.interface';
 
@@ -61,6 +63,12 @@ interface ContextoAdmin {
   empresaId: number;
   esSuperadmin: boolean;
 }
+
+const SELECT_LOCAL_USUARIO = {
+  id: true,
+  nombre: true,
+  cliente: { select: { nombre: true } },
+} as const;
 
 function aUsuarioDto(usuario: UsuarioFila): UsuarioAdminDto {
   return {
@@ -181,6 +189,155 @@ export class UsuariosService {
       }),
     ]);
     return respuestaPaginada(items, total, page, limit);
+  }
+
+  async listarLocales(usuarioId: number, query: ListarUsuariosDto) {
+    const actual = await this.contexto(usuarioId);
+    const empresaId = this.empresaObjetivo(actual, query.empresaId);
+    const where = {
+      cliente: {
+        empresaId,
+        ...(query.buscar
+          ? { nombre: { contains: query.buscar, mode: 'insensitive' as const } }
+          : {}),
+      },
+      ...(query.buscar
+        ? { nombre: { contains: query.buscar, mode: 'insensitive' as const } }
+        : {}),
+      activo: true,
+    };
+    const { skip, take, page, limit } = rangoPaginacion(query);
+    const [total, locales] = await Promise.all([
+      this.prisma.localCampo.count({ where }),
+      this.prisma.localCampo.findMany({
+        where,
+        select: SELECT_LOCAL_USUARIO,
+        orderBy: [{ nombre: 'asc' }, { id: 'asc' }],
+        skip,
+        take,
+      }),
+    ]);
+    return respuestaPaginada(
+      locales.map((local) => ({
+        id: local.id,
+        nombre: `${local.nombre} · ${local.cliente.nombre}`,
+      })),
+      total,
+      page,
+      limit,
+    );
+  }
+
+  private async objetivoAsignable(usuarioId: number, objetivoId: number) {
+    const actual = await this.contexto(usuarioId);
+    const objetivo = await this.prisma.usuario.findFirst({
+      where: {
+        id: objetivoId,
+        ...(actual.esSuperadmin ? {} : { empresaId: actual.empresaId }),
+        esSuperadmin: false,
+      },
+      select: { id: true, empresaId: true, isActive: true },
+    });
+    if (!objetivo) throw new NotFoundException('El usuario no existe');
+    return { actual, objetivo };
+  }
+
+  async listarAsignaciones(
+    usuarioId: number,
+    objetivoId: number,
+    query: ListarUsuariosDto,
+  ): Promise<RespuestaPaginada<UsuarioLocalAsignacionDto>> {
+    await this.objetivoAsignable(usuarioId, objetivoId);
+    const { skip, take, page, limit } = rangoPaginacion(query);
+    const where = { usuarioId: objetivoId, activo: true };
+    const [total, asignaciones] = await Promise.all([
+      this.prisma.asignacionCampo.count({ where }),
+      this.prisma.asignacionCampo.findMany({
+        where,
+        select: {
+          id: true,
+          localId: true,
+          fechaDesde: true,
+          fechaHasta: true,
+          local: { select: { nombre: true, cliente: { select: { nombre: true } } } },
+        },
+        orderBy: [{ fechaDesde: 'desc' }, { id: 'desc' }],
+        skip,
+        take,
+      }),
+    ]);
+    return respuestaPaginada(
+      asignaciones.map((asignacion) => ({
+        id: asignacion.id,
+        localId: asignacion.localId,
+        nombreLocal: asignacion.local.nombre,
+        nombreCliente: asignacion.local.cliente.nombre,
+        fechaDesde: asignacion.fechaDesde.toISOString(),
+        fechaHasta: asignacion.fechaHasta?.toISOString() ?? null,
+      })),
+      total,
+      page,
+      limit,
+    );
+  }
+
+  async asignarLocal(
+    usuarioId: number,
+    objetivoId: number,
+    dto: AsignarUsuarioLocalDto,
+  ): Promise<UsuarioLocalAsignacionDto> {
+    const { objetivo } = await this.objetivoAsignable(usuarioId, objetivoId);
+    const local = await this.prisma.localCampo.findFirst({
+      where: { id: dto.localId, cliente: { empresaId: objetivo.empresaId } },
+      select: { id: true },
+    });
+    if (!local) throw new NotFoundException('El local no existe');
+    const fechaDesde = new Date(`${dto.fechaDesde}T00:00:00.000Z`);
+    const fechaHasta = dto.fechaHasta
+      ? new Date(`${dto.fechaHasta}T00:00:00.000Z`)
+      : null;
+    if (fechaHasta && fechaHasta < fechaDesde) {
+      throw new BadRequestException('La fecha hasta debe ser posterior al inicio');
+    }
+    const solapada = await this.prisma.asignacionCampo.findFirst({
+      where: {
+        localId: dto.localId,
+        usuarioId: objetivoId,
+        activo: true,
+        fechaDesde: { lte: fechaHasta ?? new Date('9999-12-31') },
+        OR: [{ fechaHasta: null }, { fechaHasta: { gte: fechaDesde } }],
+      },
+      select: { id: true },
+    });
+    if (solapada) throw new BadRequestException('Ese local ya está asignado en esas fechas');
+    const asignacion = await this.prisma.asignacionCampo.create({
+      data: { localId: dto.localId, usuarioId: objetivoId, fechaDesde, fechaHasta },
+      select: {
+        id: true,
+        localId: true,
+        fechaDesde: true,
+        fechaHasta: true,
+        local: { select: { nombre: true, cliente: { select: { nombre: true } } } },
+      },
+    });
+    return {
+      id: asignacion.id,
+      localId: asignacion.localId,
+      nombreLocal: asignacion.local.nombre,
+      nombreCliente: asignacion.local.cliente.nombre,
+      fechaDesde: asignacion.fechaDesde.toISOString(),
+      fechaHasta: asignacion.fechaHasta?.toISOString() ?? null,
+    };
+  }
+
+  async quitarLocal(usuarioId: number, objetivoId: number, asignacionId: number) {
+    await this.objetivoAsignable(usuarioId, objetivoId);
+    const resultado = await this.prisma.asignacionCampo.updateMany({
+      where: { id: asignacionId, usuarioId: objetivoId, activo: true },
+      data: { activo: false },
+    });
+    if (!resultado.count) throw new NotFoundException('La asignación no existe');
+    return { ok: true };
   }
 
   private async validarAsignaciones(
