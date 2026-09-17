@@ -17,7 +17,13 @@ export class ListarNotificacionesDto extends PaginacionDto {
  */
 export interface NotificacionDto {
   id: number;
-  tipo: 'COMENTARIO_TAREA' | 'TAREA_COMPLETADA' | 'FOTO_SUBIDA';
+  tipo:
+    | 'COMENTARIO_TAREA'
+    | 'TAREA_COMPLETADA'
+    | 'FOTO_SUBIDA'
+    | 'NOVEDAD_CREADA'
+    | 'NOVEDAD_ACTUALIZADA'
+    | 'AVISO_RECIBIDO';
   titulo: string;
   mensaje: string;
   usuarioEmisor: {

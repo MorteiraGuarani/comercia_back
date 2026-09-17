@@ -147,6 +147,51 @@ function IconoTipo({ tipo }: { tipo: TipoNotificacion }) {
           <circle cx="12" cy="13" r="4" />
         </svg>
       );
+    case "NOVEDAD_CREADA":
+      return (
+        <svg
+          className="h-4 w-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+      );
+    case "NOVEDAD_ACTUALIZADA":
+      return (
+        <svg
+          className="h-4 w-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      );
+    case "AVISO_RECIBIDO":
+      return (
+        <svg
+          className="h-4 w-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+        </svg>
+      );
     default:
       return (
         <svg
@@ -415,6 +460,9 @@ function PanelNotificaciones({
                       const esComentario = n.tipo === "COMENTARIO_TAREA";
                       const esCompletada = n.tipo === "TAREA_COMPLETADA";
                       const esFoto = n.tipo === "FOTO_SUBIDA";
+                      const esNovedadCreada = n.tipo === "NOVEDAD_CREADA";
+                      const esNovedadActualizada = n.tipo === "NOVEDAD_ACTUALIZADA";
+                      const esAviso = n.tipo === "AVISO_RECIBIDO";
 
                       const colorClase = esCompletada
                         ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200/60 dark:border-emerald-800/40"
@@ -422,7 +470,13 @@ function PanelNotificaciones({
                           ? "bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300 border-sky-200/60 dark:border-sky-800/40"
                           : esFoto
                             ? "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200/60 dark:border-amber-800/40"
-                            : "bg-surface-soft text-foreground border-line";
+                            : esNovedadCreada
+                              ? "bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-300 border-red-200/60 dark:border-red-800/40"
+                              : esNovedadActualizada
+                                ? "bg-indigo-100 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-300 border-indigo-200/60 dark:border-indigo-800/40"
+                                : esAviso
+                                  ? "bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300 border-purple-200/60 dark:border-purple-800/40"
+                                  : "bg-surface-soft text-foreground border-line";
 
                       return (
                         <button

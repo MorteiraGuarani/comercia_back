@@ -26,6 +26,8 @@ model Empresa {
   modulos               EmpresaModulo[]
   paginas               EmpresaPagina[]
   notificacionesCampo   NotificacionCampo[]
+  novedadesCampo        NovedadCampo[]
+  avisosCampo           AvisoCampo[]
   createdAt             DateTime                  @default(now()) @map("created_at")
   updatedAt             DateTime                  @default(now()) @updatedAt @map("updated_at")
 
@@ -179,6 +181,11 @@ model Usuario {
   fotosTarea                FotoTareaCampo[]
   notificacionesRecibidas   NotificacionCampo[]       @relation("NotificacionesRecibidas")
   notificacionesEnviadas    NotificacionCampo[]       @relation("NotificacionesEnviadas")
+  novedadesReportadas       NovedadCampo[]            @relation("NovedadesReportadas")
+  novedadesCerradas         NovedadCampo[]            @relation("NovedadesCerradas")
+  avisosEnviados            AvisoCampo[]              @relation("AvisosEnviados")
+  avisosRecibidos           AvisoCampo[]              @relation("AvisosRecibidos")
+  lecturasAvisos            AvisoLecturaCampo[]
   esSuperadmin              Boolean                   @default(false) @map("es_superadmin")
   isActive                  Boolean                   @default(true) @map("is_active")
   createdAt                 DateTime                  @default(now()) @map("created_at")
@@ -195,6 +202,7 @@ model ClienteCampo {
   ruc       String       @default("") @db.VarChar(30)
   contacto  String       @default("") @db.VarChar(120)
   telefono  String       @default("") @db.VarChar(40)
+  logoUrl   String?      @map("logo_url") @db.VarChar(500)
   activo    Boolean      @default(true)
   locales   LocalCampo[]
 
@@ -220,6 +228,7 @@ model LocalCampo {
   asignaciones  AsignacionCampo[]
   tareas        TareaLocalCampo[]
   visitas       VisitaCampo[]
+  novedades     NovedadCampo[]
   eventosUcheck IntegracionUcheckEvento[]
 
   @@index([clienteId, activo])
@@ -298,8 +307,12 @@ model TareaCampo {
   activo             Boolean             @default(true)
   requiereFotos      Boolean             @default(false) @map("requiere_fotos")
   fotosObligatorias  Boolean             @default(false) @map("fotos_obligatorias")
+  categoria          String              @default("Relevamiento") @db.VarChar(60)
+  estado             EstadoTareaCampo    @default(ABIERTA)
+  esObligatoria      Boolean             @default(false) @map("es_obligatoria")
   locales            TareaLocalCampo[]
   cumplimientos      CumplimientoCampo[]
+  novedades          NovedadCampo[]
 
   @@index([empresaId, activo, fechaDesde])
   @@map("campo_tareas")
@@ -347,6 +360,7 @@ model VisitaCampo {
   notaEntrada          String                    @default("") @map("nota_entrada") @db.VarChar(250)
   notaSalida           String                    @default("") @map("nota_salida") @db.VarChar(250)
   cumplimientos        CumplimientoCampo[]
+  novedades            NovedadCampo[]
   eventosUcheck        IntegracionUcheckEvento[]
 
   @@unique([asignacionId, horarioId, fecha])
@@ -421,6 +435,9 @@ enum TipoNotificacionCampo {
   COMENTARIO_TAREA
   TAREA_COMPLETADA
   FOTO_SUBIDA
+  NOVEDAD_CREADA
+  NOVEDAD_ACTUALIZADA
+  AVISO_RECIBIDO
 }
 
 enum MomentoFotoCampo {
@@ -485,4 +502,97 @@ model NotificacionCampo {
   @@index([empresaId, creadoAt(sort: Desc)])
   @@index([tipo, referenciaId])
   @@map("campo_notificaciones")
+}
+
+enum EstadoTareaCampo {
+  ABIERTA
+  CERRADA
+  CANCELADA
+}
+
+enum TipoNovedadCampo {
+  RECLAMO
+  CONSULTA
+  SUGERENCIA
+  INCIDENCIA
+}
+
+enum EstadoNovedadCampo {
+  ABIERTA
+  CERRADA
+  CANCELADA
+}
+
+enum PrioridadNovedadCampo {
+  NORMAL
+  ALTA
+  CRITICA
+}
+
+model NovedadCampo {
+  id           Int                   @id @default(autoincrement())
+  empresaId    Int                   @map("empresa_id")
+  empresa      Empresa               @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  usuarioId    Int                   @map("usuario_id")
+  usuario      Usuario               @relation("NovedadesReportadas", fields: [usuarioId], references: [id], onDelete: Restrict)
+  localId      Int                   @map("local_id")
+  local        LocalCampo            @relation(fields: [localId], references: [id], onDelete: Cascade)
+  visitaId     Int?                  @map("visita_id")
+  visita       VisitaCampo?          @relation(fields: [visitaId], references: [id], onDelete: SetNull)
+  tareaId      Int?                  @map("tarea_id")
+  tarea        TareaCampo?           @relation(fields: [tareaId], references: [id], onDelete: SetNull)
+  tipo         TipoNovedadCampo      @default(INCIDENCIA)
+  estado       EstadoNovedadCampo    @default(ABIERTA)
+  prioridad    PrioridadNovedadCampo @default(NORMAL)
+  titulo       String                @db.VarChar(120)
+  descripcion  String                @db.VarChar(1000)
+  resolucion   String?               @db.VarChar(1000)
+  cerradoPorId Int?                  @map("cerrado_por_id")
+  cerradoPor   Usuario?              @relation("NovedadesCerradas", fields: [cerradoPorId], references: [id], onDelete: SetNull)
+  cerradoAt    DateTime?             @map("cerrado_at")
+  creadoAt     DateTime              @default(now()) @map("creado_at")
+  updatedAt    DateTime              @default(now()) @updatedAt @map("updated_at")
+
+  @@index([empresaId, estado, creadoAt(sort: Desc)])
+  @@index([usuarioId, estado])
+  @@index([localId, estado])
+  @@index([tareaId])
+  @@map("campo_novedades")
+}
+
+enum TipoAvisoCampo {
+  INDIVIDUAL
+  EQUIPO
+}
+
+model AvisoCampo {
+  id             Int                 @id @default(autoincrement())
+  empresaId      Int                 @map("empresa_id")
+  empresa        Empresa             @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  emisorId       Int                 @map("emisor_id")
+  emisor         Usuario             @relation("AvisosEnviados", fields: [emisorId], references: [id], onDelete: Restrict)
+  tipo           TipoAvisoCampo      @default(EQUIPO)
+  destinatarioId Int?                @map("destinatario_id")
+  destinatario   Usuario?            @relation("AvisosRecibidos", fields: [destinatarioId], references: [id], onDelete: Cascade)
+  mensaje        String              @db.VarChar(1000)
+  creadoAt       DateTime            @default(now()) @map("creado_at")
+  lecturas       AvisoLecturaCampo[]
+
+  @@index([empresaId, creadoAt(sort: Desc)])
+  @@index([emisorId, creadoAt(sort: Desc)])
+  @@index([destinatarioId, creadoAt(sort: Desc)])
+  @@map("campo_avisos")
+}
+
+model AvisoLecturaCampo {
+  id        Int        @id @default(autoincrement())
+  avisoId   Int        @map("aviso_id")
+  aviso     AvisoCampo @relation(fields: [avisoId], references: [id], onDelete: Cascade)
+  usuarioId Int        @map("usuario_id")
+  usuario   Usuario    @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  leidoAt   DateTime   @default(now()) @map("leido_at")
+
+  @@unique([avisoId, usuarioId])
+  @@index([usuarioId])
+  @@map("campo_aviso_lecturas")
 }

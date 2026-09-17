@@ -3,7 +3,12 @@
  * anchor hue: commercial green + copper · contrast: pass (40–41)
  * responsive: pass (34, 49, 50–57)
  */
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap');
 @import "tailwindcss";
+
+.ft-display { font-family: 'Barlow Condensed', sans-serif; }
+.ft-body { font-family: 'IBM Plex Sans', sans-serif; }
+.ft-mono { font-family: 'IBM Plex Mono', monospace; }
 
 /* Modo oscuro por CLASE (.dark en <html>): automático según el dispositivo por
    defecto, con botón manual en el navbar que persiste en localStorage("tema").

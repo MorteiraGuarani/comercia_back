@@ -10,6 +10,9 @@ import { JornadaCampoService } from './jornada-campo.service';
 import { ComentarioService } from './services/comentario.service';
 import { FotoService } from './services/foto.service';
 import { NotificacionService } from './services/notificacion.service';
+import { NovedadService } from './services/novedad.service';
+import { AvisoService } from './services/aviso.service';
+import { SupervisionService } from './services/supervision.service';
 
 @Module({
   imports: [AuthModule, PrismaModule, PlataformaModule],
@@ -22,7 +25,16 @@ import { NotificacionService } from './services/notificacion.service';
     ComentarioService,
     FotoService,
     NotificacionService,
+    NovedadService,
+    AvisoService,
+    SupervisionService,
   ],
-  exports: [CampoAccesoService, JornadaCampoService],
+  exports: [
+    CampoAccesoService,
+    JornadaCampoService,
+    NovedadService,
+    AvisoService,
+    SupervisionService,
+  ],
 })
 export class CampoModule {}

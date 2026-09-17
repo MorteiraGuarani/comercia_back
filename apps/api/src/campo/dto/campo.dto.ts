@@ -16,11 +16,21 @@ import {
   Min,
   MinLength,
 } from 'class-validator';
-import { FrecuenciaCampo } from '../../../generated/prisma/client';
+import {
+  EstadoTareaCampo,
+  FrecuenciaCampo,
+} from '../../../generated/prisma/client';
 import { PaginacionDto } from '../../common/utils/paginacion';
 import { MAX_INT4 } from '../../common/utils/numeros';
 
 export class ConsultaCampoDto extends PaginacionDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(1000)
+  override limit?: number = undefined;
+
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -57,6 +67,7 @@ export class ClienteCampoDto {
   @IsString() @MaxLength(30) ruc = '';
   @IsString() @MaxLength(120) contacto = '';
   @IsString() @MaxLength(40) telefono = '';
+  @IsOptional() @IsString() @MaxLength(500) logoUrl?: string;
   @IsBoolean() activo = true;
 }
 
@@ -140,6 +151,9 @@ export class TareaCampoDto extends VigenciaCampoDto {
   @IsBoolean() activo = true;
   @IsBoolean() requiereFotos = false;
   @IsBoolean() fotosObligatorias = false;
+  @IsOptional() @IsString() @MaxLength(60) categoria?: string;
+  @IsOptional() @IsBoolean() esObligatoria?: boolean;
+  @IsOptional() @IsEnum(EstadoTareaCampo) estado?: EstadoTareaCampo;
 }
 
 export class MarcaCampoDto {

@@ -20,6 +20,23 @@ const VisitasPanel = dynamic(() =>
   import("@/components/campo/jornada-panel").then((m) => m.VisitasPanel),
 );
 
+// Nuevos paneles modulares con el diseño editorial y paridad Desktop/Mobile
+const SupervisionPanel = dynamic(() =>
+  import("@/components/campo/supervision-panel").then((m) => m.SupervisionPanel),
+);
+const RutaImpulsadorPanel = dynamic(() =>
+  import("@/components/campo/ruta-impulsador-panel").then((m) => m.RutaImpulsadorPanel),
+);
+const TareasImpulsadorPanel = dynamic(() =>
+  import("@/components/campo/tareas-impulsador-panel").then((m) => m.TareasImpulsadorPanel),
+);
+const NovedadesPanel = dynamic(() =>
+  import("@/components/campo/novedades-panel").then((m) => m.NovedadesPanel),
+);
+const AvisosPanel = dynamic(() =>
+  import("@/components/campo/avisos-panel").then((m) => m.AvisosPanel),
+);
+
 export default function PaginaModulo({
   params,
 }: {
@@ -40,14 +57,24 @@ export default function PaginaModulo({
     );
   }
 
+  // MÓDULO: GESTIÓN DE CAMPO (SUPERVISOR / TEAM LEADER)
   if (modulo === "gestion-campo") {
+    if (pagina === "visitas") return <SupervisionPanel />;
+    if (pagina === "novedades") return <NovedadesPanel esImpulsador={false} />;
+    if (pagina === "avisos") return <AvisosPanel esImpulsador={false} />;
     if (pagina === "clientes") return <ClientesPanel />;
     if (pagina === "locales") return <LocalesPanel />;
     if (pagina === "tareas") return <TareasPanel />;
-    if (pagina === "visitas") return <VisitasPanel />;
   }
-  if (modulo === "mi-jornada" && (pagina === "locales" || pagina === "tareas"))
-    return <JornadaPanel tareas={pagina === "tareas"} />;
+
+  // MÓDULO: MI JORNADA (IMPULSADOR / REPOSITOR DE CAMPO)
+  if (modulo === "mi-jornada") {
+    if (pagina === "locales") return <RutaImpulsadorPanel />;
+    if (pagina === "tareas") return <TareasImpulsadorPanel />;
+    if (pagina === "novedades") return <NovedadesPanel esImpulsador={true} />;
+    if (pagina === "avisos") return <AvisosPanel esImpulsador={true} />;
+    if (pagina === "agenda") return <JornadaPanel />;
+  }
 
   return (
     <div>

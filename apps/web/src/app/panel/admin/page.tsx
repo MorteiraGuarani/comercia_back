@@ -36,7 +36,7 @@ export default function AdminPage() {
     }`;
 
   return (
-    <div className="w-full min-w-0">
+    <div className="w-full min-w-0 p-4 sm:p-6 lg:p-8">
       <h1 className="text-xl font-bold tracking-tight">Administración</h1>
       <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
         Gestioná usuarios, roles, empresas y el acceso a la plataforma.

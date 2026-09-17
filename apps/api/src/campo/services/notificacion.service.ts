@@ -111,6 +111,101 @@ export class NotificacionService {
   }
 
   /**
+   * Crear notificación cuando un impulsador reporta una novedad
+   */
+  async crearNotificacionNovedad(
+    empresaId: number,
+    emisorId: number,
+    novedadId: number,
+    nombreLocal: string,
+    tipoNovedad: string,
+  ): Promise<void> {
+    const liderId = await obtenerLiderDirecto(this.prisma, emisorId);
+    if (!liderId) return;
+
+    const emisor = await this.prisma.usuario.findUnique({
+      where: { id: emisorId },
+      select: { nombre: true, apellido: true },
+    });
+    if (!emisor) return;
+
+    const titulo = `Nueva novedad: ${tipoNovedad.toLowerCase()}`;
+    const mensaje = `${emisor.nombre} ${emisor.apellido} reportó una novedad en '${nombreLocal}'`;
+
+    await this.prisma.notificacionCampo.create({
+      data: {
+        empresaId,
+        usuarioDestinatarioId: liderId,
+        usuarioEmisorId: emisorId,
+        tipo: TipoNotificacionCampo.NOVEDAD_CREADA,
+        referenciaId: novedadId,
+        titulo,
+        mensaje,
+      },
+    });
+  }
+
+  /**
+   * Crear notificación cuando una novedad es cerrada o cancelada por el Team Leader
+   */
+  async crearNotificacionNovedadActualizada(
+    empresaId: number,
+    emisorId: number,
+    destinatarioId: number,
+    novedadId: number,
+    nombreLocal: string,
+    nuevoEstado: string,
+  ): Promise<void> {
+    const titulo = `Novedad ${nuevoEstado.toLowerCase()}`;
+    const mensaje = `Tu novedad en '${nombreLocal}' fue marcada como ${nuevoEstado.toLowerCase()}`;
+
+    await this.prisma.notificacionCampo.create({
+      data: {
+        empresaId,
+        usuarioDestinatarioId: destinatarioId,
+        usuarioEmisorId: emisorId,
+        tipo: TipoNotificacionCampo.NOVEDAD_ACTUALIZADA,
+        referenciaId: novedadId,
+        titulo,
+        mensaje,
+      },
+    });
+  }
+
+  /**
+   * Crear notificación cuando un usuario recibe un aviso
+   */
+  async crearNotificacionAviso(
+    empresaId: number,
+    emisorId: number,
+    destinatarioId: number,
+    avisoId: number,
+    mensajeAviso: string,
+  ): Promise<void> {
+    const emisor = await this.prisma.usuario.findUnique({
+      where: { id: emisorId },
+      select: { nombre: true, apellido: true },
+    });
+    const nombreEmisor = emisor ? `${emisor.nombre} ${emisor.apellido}` : 'Tu líder';
+
+    const titulo = 'Nuevo aviso de supervisión';
+    const preview = mensajeAviso.length > 80 ? `${mensajeAviso.slice(0, 77)}...` : mensajeAviso;
+    const mensaje = `${nombreEmisor}: ${preview}`;
+
+    await this.prisma.notificacionCampo.create({
+      data: {
+        empresaId,
+        usuarioDestinatarioId: destinatarioId,
+        usuarioEmisorId: emisorId,
+        tipo: TipoNotificacionCampo.AVISO_RECIBIDO,
+        referenciaId: avisoId,
+        titulo,
+        mensaje,
+      },
+    });
+  }
+
+  /**
    * Listar notificaciones del usuario (con paginación)
    */
   async listar(

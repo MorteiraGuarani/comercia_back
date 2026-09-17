@@ -37,7 +37,13 @@ export class CatalogoCampoService {
     const where = {
       empresaId: usuario.empresaId,
       ...(query.buscar
-        ? { nombre: { contains: query.buscar, mode: 'insensitive' as const } }
+        ? {
+            OR: [
+              { nombre: { contains: query.buscar, mode: 'insensitive' as const } },
+              { ruc: { contains: query.buscar, mode: 'insensitive' as const } },
+              { contacto: { contains: query.buscar, mode: 'insensitive' as const } },
+            ],
+          }
         : {}),
     };
     const { skip, take, page, limit } = rangoPaginacion(query);
@@ -93,9 +99,15 @@ export class CatalogoCampoService {
       });
     const where = {
       cliente: { empresaId: u.empresaId },
-      clienteId: query.clienteId,
+      ...(query.clienteId ? { clienteId: query.clienteId } : {}),
       ...(query.buscar
-        ? { nombre: { contains: query.buscar, mode: 'insensitive' as const } }
+        ? {
+            OR: [
+              { nombre: { contains: query.buscar, mode: 'insensitive' as const } },
+              { direccion: { contains: query.buscar, mode: 'insensitive' as const } },
+              { contacto: { contains: query.buscar, mode: 'insensitive' as const } },
+            ],
+          }
         : {}),
     };
     const { skip, take, page, limit } = rangoPaginacion(query);
@@ -188,6 +200,11 @@ export class CatalogoCampoService {
       descripcion: dto.descripcion,
       activo: dto.activo,
       todosLocales: dto.todosLocales,
+      requiereFotos: dto.requiereFotos,
+      fotosObligatorias: dto.fotosObligatorias,
+      categoria: dto.categoria ?? 'Góndola',
+      esObligatoria: dto.esObligatoria ?? false,
+      ...(dto.estado ? { estado: dto.estado } : {}),
       ...fechas,
     };
     // Las tareas globales se resuelven al consultar: incluyen también locales futuros.

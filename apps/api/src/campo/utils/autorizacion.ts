@@ -47,7 +47,13 @@ export async function esLiderDe(
 export async function obtenerEquipoCompleto(
   prisma: PrismaService,
   liderUserId: number,
+  visitados = new Set<number>(),
 ): Promise<number[]> {
+  if (visitados.has(liderUserId)) {
+    return [];
+  }
+  visitados.add(liderUserId);
+
   const lider = await prisma.usuario.findUnique({
     where: { id: liderUserId },
     select: {
@@ -81,7 +87,9 @@ export async function obtenerEquipoCompleto(
 
   // Recursivamente obtener subordinados de subordinados
   const subordinadosIndirectos = await Promise.all(
-    subordinadosDirectos.map((id) => obtenerEquipoCompleto(prisma, id)),
+    subordinadosDirectos
+      .filter((id) => !visitados.has(id))
+      .map((id) => obtenerEquipoCompleto(prisma, id, visitados)),
   );
 
   return [

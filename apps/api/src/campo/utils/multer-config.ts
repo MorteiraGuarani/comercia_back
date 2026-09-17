@@ -64,6 +64,39 @@ export const multerConfigFotosTareas: MulterOptions = {
 };
 
 /**
+ * Configuración de Multer para logos de clientes
+ */
+export const multerConfigLogoCliente: MulterOptions = {
+  storage: diskStorage({
+    destination: (req, file, cb) => {
+      const dir = 'uploads/clientes';
+      if (!existsSync(dir)) {
+        mkdirSync(dir, { recursive: true });
+      }
+      cb(null, dir);
+    },
+    filename: (req, file, cb) => {
+      const uniqueId = uuidv4();
+      const ext = extname(file.originalname).toLowerCase();
+      cb(null, `logo_${uniqueId}${ext}`);
+    },
+  }),
+  limits: {
+    fileSize: MAX_FILE_SIZE,
+  },
+  fileFilter: (req, file, cb) => {
+    const tipos = [...ALLOWED_MIME_TYPES, 'image/svg+xml'];
+    if (!tipos.includes(file.mimetype)) {
+      return cb(
+        new BadRequestException('Solo se permiten imágenes JPG, PNG, WebP o SVG'),
+        false,
+      );
+    }
+    cb(null, true);
+  },
+};
+
+/**
  * Validación adicional de archivo de imagen (verificar magic bytes)
  * Previene spoofing de MIME type
  */

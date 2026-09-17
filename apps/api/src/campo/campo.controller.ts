@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -16,6 +17,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
+import { join, extname } from 'path';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import type { RequestConUsuario } from '../auth/interfaces/request-con-usuario.interface';
 import { CatalogoCampoService } from './catalogo-campo.service';
@@ -24,6 +26,9 @@ import { JornadaCampoService } from './jornada-campo.service';
 import { ComentarioService } from './services/comentario.service';
 import { FotoService } from './services/foto.service';
 import { NotificacionService } from './services/notificacion.service';
+import { NovedadService } from './services/novedad.service';
+import { AvisoService } from './services/aviso.service';
+import { SupervisionService } from './services/supervision.service';
 import {
   AsignacionCampoDto,
   BackupCampoDto,
@@ -38,7 +43,14 @@ import {
 import { CrearComentarioTareaDto } from './dto/comentario-tarea.dto';
 import { MomentoFotoDto, SubirFotoTareaDto } from './dto/foto-tarea.dto';
 import { ListarNotificacionesDto } from './dto/notificacion.dto';
-import { multerConfigFotosTareas } from './utils/multer-config';
+import {
+  ActualizarEstadoNovedadDto,
+  CrearNovedadDto,
+  ListarNovedadesDto,
+} from './dto/novedad.dto';
+import { CrearAvisoDto } from './dto/aviso.dto';
+import { ConsultaSupervisionDto } from './dto/supervision.dto';
+import { multerConfigFotosTareas, multerConfigLogoCliente } from './utils/multer-config';
 import { createReadStream, existsSync } from 'fs';
 
 @Controller('campo')
@@ -51,6 +63,9 @@ export class CampoController {
     private readonly comentarioService: ComentarioService,
     private readonly fotoService: FotoService,
     private readonly notificacionService: NotificacionService,
+    private readonly novedadService: NovedadService,
+    private readonly avisoService: AvisoService,
+    private readonly supervisionService: SupervisionService,
   ) {}
 
   @Get('clientes') clientes(
@@ -77,6 +92,40 @@ export class CampoController {
     @Param('id', ParseIntPipe) id: number,
   ) {
     return this.catalogo.eliminarCliente(r.usuarioId, id);
+  }
+
+  @Post('clientes/subir-logo')
+  @UseInterceptors(FileInterceptor('logo', multerConfigLogoCliente))
+  async subirLogoCliente(
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    if (!file) {
+      throw new BadRequestException('No se envió archivo de imagen');
+    }
+    return { url: `/api/v1/campo/clientes/logos/${file.filename}` };
+  }
+
+  @Get('clientes/logos/:filename')
+  async servirLogoCliente(
+    @Param('filename') filename: string,
+    @Res() res: Response,
+  ) {
+    const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '');
+    const ruta = join(process.cwd(), 'uploads', 'clientes', safeName);
+    if (!existsSync(ruta)) {
+      return res.status(404).json({ message: 'Logo no encontrado' });
+    }
+    const ext = extname(safeName).toLowerCase();
+    const mimeTypes: Record<string, string> = {
+      '.png': 'image/png',
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.webp': 'image/webp',
+      '.svg': 'image/svg+xml',
+    };
+    res.setHeader('Content-Type', mimeTypes[ext] || 'application/octet-stream');
+    const stream = createReadStream(ruta);
+    stream.pipe(res);
   }
 
   @Get('locales') locales(
@@ -377,5 +426,93 @@ export class CampoController {
   @Get('notificaciones/contador-no-leidas')
   contadorNotificacionesNoLeidas(@Req() r: RequestConUsuario) {
     return this.notificacionService.contadorNoLeidas(r.usuarioId);
+  }
+
+  // ========== SUPERVISIÓN Y PRESENTISMO ==========
+
+  @Get('supervision/resumen')
+  resumenSupervision(
+    @Req() r: RequestConUsuario,
+    @Query() q: ConsultaSupervisionDto,
+  ) {
+    return this.supervisionService.resumen(r.usuarioId, q);
+  }
+
+  @Get('supervision/colaboradores/:id')
+  detalleColaborador(
+    @Req() r: RequestConUsuario,
+    @Param('id', ParseIntPipe) id: number,
+    @Query() q: ConsultaSupervisionDto,
+  ) {
+    return this.supervisionService.detalleColaborador(r.usuarioId, id, q);
+  }
+
+  // ========== NOVEDADES ==========
+
+  @Post('novedades')
+  crearNovedad(
+    @Req() r: RequestConUsuario,
+    @Body() d: CrearNovedadDto,
+  ) {
+    return this.novedadService.crear(r.usuarioId, r.empresaId, d);
+  }
+
+  @Get('novedades')
+  listarNovedades(
+    @Req() r: RequestConUsuario,
+    @Query() q: ListarNovedadesDto,
+  ) {
+    return this.novedadService.listar(r.usuarioId, r.empresaId, q);
+  }
+
+  @Get('novedades/:id')
+  obtenerNovedad(
+    @Req() r: RequestConUsuario,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.novedadService.obtenerPorId(r.usuarioId, id);
+  }
+
+  @Put('novedades/:id/estado')
+  actualizarEstadoNovedad(
+    @Req() r: RequestConUsuario,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() d: ActualizarEstadoNovedadDto,
+  ) {
+    return this.novedadService.actualizarEstado(r.usuarioId, id, d);
+  }
+
+  // ========== AVISOS ==========
+
+  @Post('avisos')
+  crearAviso(
+    @Req() r: RequestConUsuario,
+    @Body() d: CrearAvisoDto,
+  ) {
+    return this.avisoService.crear(r.usuarioId, r.empresaId, d);
+  }
+
+  @Get('avisos/enviados')
+  listarAvisosEnviados(
+    @Req() r: RequestConUsuario,
+    @Query() q: ConsultaCampoDto,
+  ) {
+    return this.avisoService.listarEnviados(r.usuarioId, r.empresaId, q);
+  }
+
+  @Get('avisos/recibidos')
+  listarAvisosRecibidos(
+    @Req() r: RequestConUsuario,
+    @Query() q: ConsultaCampoDto,
+  ) {
+    return this.avisoService.listarRecibidos(r.usuarioId, r.empresaId, q);
+  }
+
+  @Put('avisos/:id/marcar-leido')
+  marcarAvisoLeido(
+    @Req() r: RequestConUsuario,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.avisoService.marcarLeido(r.usuarioId, id);
   }
 }
