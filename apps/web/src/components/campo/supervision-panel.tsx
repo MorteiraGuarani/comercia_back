@@ -239,55 +239,20 @@ export function SupervisionPanel({
 
   return (
     <div
-      className="w-full min-h-[calc(100vh-5rem)] flex flex-col font-sans transition-colorsoverflow-hidden shadow-sm"
+      className="campo-screen flex min-h-[calc(100vh-5rem)] w-full flex-col overflow-hidden font-sans"
       style={{
         background: TOKENS.bone,
         color: TOKENS.ink,
       }}
     >
-      {/* Top Header con Estilo Editorial y Selector de Fechas */}
-      <div
-        className="flex flex-col sm:flex-row sm:items-center justify-between px-4 sm:px-6 py-3.5"
-        style={{
-          background: TOKENS.ink,
-          borderColor: "#33362F",
-        }}
-      >
-        <div className="flex items-center gap-3">
-          <div
-            className="w-10 h-10 rounded-full flex flex-col items-center justify-center border border-dashed shrink-0"
-            style={{
-              borderColor: "#C9A54A",
-              color: "#C9A54A",
-              transform: "rotate(-4deg)",
-            }}
-          >
-            <span className="ft-display text-[9px] font-bold leading-none tracking-wider">
-              COMERCIA
-            </span>
-            <span className="ft-display text-xs font-black leading-none">
-              FIELD
-            </span>
-          </div>
-          <div>
-            <h1 className="ft-display text-xl sm:text-2xl font-black tracking-wide text-white leading-tight">
-              Presencias del Equipo
-            </h1>
-            <p className="ft-body text-xs sm:text-sm text-zinc-300 font-medium mt-0.5">
-              Control operativo en calle · Presentismo, Rutas y Tareas de los
-              impulsadores
-            </p>
-          </div>
-        </div>
-
-        {/* Selector de Período con Presets y Calendario */}
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          <SelectorFechaFiltro valorActual={periodo} onChange={setPeriodo} />
-        </div>
-      </div>
+      <TopBar
+        title="Presencias del equipo"
+        subtitle="Presentismo, rutas y tareas de los impulsadores"
+        right={<SelectorFechaFiltro valorActual={periodo} onChange={setPeriodo} />}
+      />
 
       {/* Selector de pestañas superiores (Desktop & Tablet) */}
-      <div className="hidden sm:flex border-b px-4 sm:px-8 py-2 bg-zinc-100/80 dark:bg-zinc-900/40 gap-2 overflow-x-auto">
+      <div className="hidden gap-1 overflow-x-auto border-b border-line bg-surface-raised px-4 py-1 sm:flex sm:px-8">
         {navItems.map((it) => {
           const isActive = tab === it.key;
           const Icon = it.icon;
@@ -295,13 +260,14 @@ export function SupervisionPanel({
             <button
               key={it.key}
               onClick={() => setTab(it.key)}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-bold ft-body transition-all cursor-pointer ${
+              aria-pressed={isActive}
+              className={`ft-body flex min-h-11 items-center gap-2 whitespace-nowrap border-b-2 px-3 text-sm font-medium transition-colors hover:bg-surface-soft ${
                 isActive
-                  ? "bg-[#1E2320] text-white shadow-xs"
-                  : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-200/60"
+                  ? "border-accent-ink text-foreground"
+                  : "border-transparent text-muted"
               }`}
             >
-              <Icon size={16} color={isActive ? "#ffffff" : "currentColor"} />
+              <span aria-hidden="true"><Icon size={16} color="currentColor" /></span>
               <span>{it.label}</span>
             </button>
           );
@@ -346,7 +312,7 @@ export function SupervisionPanel({
                       style={{ color: TOKENS.sub }}
                     >
                       Período de observación:{" "}
-                      <span className="font-extrabold text-zinc-900">
+                      <span className="font-extrabold text-foreground">
                         {periodo.etiqueta}
                       </span>
                     </p>
@@ -358,7 +324,7 @@ export function SupervisionPanel({
                     </h2>
                   </div>
                   <div className="flex items-center gap-2 self-start sm:self-auto">
-                    <span className="ft-mono text-sm sm:text-base font-extrabold px-4 py-2 rounded-xl bg-zinc-200/80 text-zinc-800 border border-zinc-300">
+                    <span className="ft-mono text-sm sm:text-base font-extrabold px-4 py-2 rounded-xl bg-zinc-200/80 text-foreground border border-line">
                       {resumen.colaboradores.length} Colaboradores
                     </span>
                   </div>
@@ -372,41 +338,41 @@ export function SupervisionPanel({
                   >
                     Estado actual del equipo
                   </p>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-                    <StatChip
+                  <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 mb-6 sm:grid sm:grid-cols-4 sm:overflow-visible">
+                    <div className="min-w-[8.25rem] flex-1"><StatChip
                       label="En ruta activa"
                       value={resumen.presentismo.enRuta}
                       tone="frio"
                       sub="Con Check-In"
-                    />
-                    <StatChip
+                    /></div>
+                    <div className="min-w-[8.25rem] flex-1"><StatChip
                       label="Jornada finalizada"
                       value={resumen.presentismo.finalizados}
                       tone="fresco"
                       sub="Check-Out cerrado"
-                    />
-                    <StatChip
+                    /></div>
+                    <div className="min-w-[8.25rem] flex-1"><StatChip
                       label="Sin iniciar aún"
                       value={resumen.presentismo.sinIniciar}
                       tone="alerta"
                       sub="Pendientes de ingreso"
-                    />
-                    <StatChip
+                    /></div>
+                    <div className="min-w-[8.25rem] flex-1"><StatChip
                       label="Total Colaboradores"
                       value={resumen.presentismo.totalEquipo}
                       tone="ink"
                       sub="Plantel asignado"
-                    />
+                    /></div>
                   </div>
 
                   {/* Barras de avance globales de Rutas y Tareas */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
                     <div
-                      className="rounded-2xl p-5 sm:p-6 transition-all shadow-sm bg-white"
+                      className="rounded-2xl p-5 sm:p-6 transition-all shadow-sm bg-surface-raised"
                       style={{ border: `1px solid ${TOKENS.line}` }}
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <p className="ft-body text-sm sm:text-base font-bold text-zinc-800">
+                        <p className="ft-body text-sm sm:text-base font-bold text-foreground">
                           Avance global de rutas
                         </p>
                         <span className="ft-mono text-xs sm:text-sm font-extrabold px-3 py-1 rounded-lg bg-blue-50 text-blue-800 border border-blue-200">
@@ -421,7 +387,7 @@ export function SupervisionPanel({
                         >
                           {resumen.rutas.pct}%
                         </p>
-                        <span className="ft-body text-xs sm:text-sm font-medium text-zinc-600">
+                        <span className="ft-body text-xs sm:text-sm font-medium text-muted">
                           {resumen.rutas.enCurso} paradas en curso
                         </span>
                       </div>
@@ -485,22 +451,22 @@ export function SupervisionPanel({
                     >
                       Detalle por Colaborador
                     </p>
-                    <span className="ft-body text-xs sm:text-sm font-medium text-zinc-500">
+                    <span className="ft-body text-xs sm:text-sm font-medium text-muted">
                       Tocá cualquier colaborador para ver su ruta y tareas al
                       detalle
                     </span>
                   </div>
-                  <p className="ft-body text-sm text-[#726C60] mb-5">
+                  <p className="ft-body text-sm text-muted mb-5">
                     Horario de inicio = primer Check-In registrado · Fin =
                     Check-Out del último local.
                   </p>
 
                   {resumen.colaboradores.length === 0 ? (
                     <div
-                      className="rounded-2xl p-12 text-center bg-white"
+                      className="rounded-2xl p-12 text-center bg-surface-raised"
                       style={{ border: `1px solid ${TOKENS.line}` }}
                     >
-                      <p className="ft-body text-base text-zinc-500 font-medium">
+                      <p className="ft-body text-base text-muted font-medium">
                         No hay colaboradores asignados a tu equipo en el período
                         seleccionado.
                       </p>
@@ -553,10 +519,10 @@ export function SupervisionPanel({
                   </div>
                   <BigProgress pct={resumen.rutas.pct} color={TOKENS.frio} />
 
-                  <div className="flex flex-wrap gap-4 mt-3 pt-3 border-t border-[#DAD5C9]/60 ft-mono text-xs text-zinc-600">
+                  <div className="flex flex-wrap gap-4 mt-3 pt-3 border-t border-[#DAD5C9]/60 ft-mono text-xs text-muted">
                     <span>
                       Total asignado:{" "}
-                      <b className="text-zinc-900">{resumen.rutas.total}</b>
+                      <b className="text-foreground">{resumen.rutas.total}</b>
                     </span>
                     <span>
                       <b style={{ color: TOKENS.fresco }}>
@@ -611,11 +577,11 @@ export function SupervisionPanel({
 
                 {/* Resumen Global de Tareas */}
                 <div
-                  className="rounded-2xl p-6 sm:p-7 shadow-sm bg-white"
+                  className="rounded-2xl p-6 sm:p-7 shadow-sm bg-surface-raised"
                   style={{ border: `1px solid ${TOKENS.line}` }}
                 >
                   <div className="flex items-center justify-between mb-3">
-                    <p className="ft-body text-sm sm:text-base font-bold text-zinc-800">
+                    <p className="ft-body text-sm sm:text-base font-bold text-foreground">
                       Cumplimiento global de tareas del equipo
                     </p>
                     <p
@@ -684,7 +650,7 @@ export function SupervisionPanel({
             {/* Header del colaborador */}
             <div className="flex items-center justify-between">
               <div>
-                <p className="ft-body text-xs sm:text-sm text-zinc-500 font-medium">
+                <p className="ft-body text-xs sm:text-sm text-muted font-medium">
                   {detalleColab.colaborador.zona} · Tel:{" "}
                   {detalleColab.colaborador.telefono}
                 </p>
@@ -715,14 +681,14 @@ export function SupervisionPanel({
               }}
             >
               <div className="flex items-center gap-1.5">
-                <span className="text-zinc-500">Inicio:</span>
-                <span className="ft-mono font-bold text-zinc-900">
+                <span className="text-muted">Inicio:</span>
+                <span className="ft-mono font-bold text-foreground">
                   {detalleColab.colaborador.inicioJornada ?? "—"}
                 </span>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="text-zinc-500">Fin:</span>
-                <span className="ft-mono font-bold text-zinc-900">
+                <span className="text-muted">Fin:</span>
+                <span className="ft-mono font-bold text-foreground">
                   {detalleColab.colaborador.finJornada ??
                     (detalleColab.colaborador.asistencia === "en_curso"
                       ? "en curso"
@@ -753,7 +719,7 @@ export function SupervisionPanel({
             {subTabColab === "ruta" && (
               <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
                 {detalleColab.ruta.length === 0 ? (
-                  <p className="text-xs text-zinc-500 text-center py-6">
+                  <p className="text-xs text-muted text-center py-6">
                     Sin paradas asignadas
                   </p>
                 ) : (
@@ -767,14 +733,14 @@ export function SupervisionPanel({
                       }}
                     >
                       <div className="flex items-center gap-2.5">
-                        <span className="w-5 h-5 rounded-full bg-zinc-200 text-zinc-800 ft-mono font-bold text-[11px] flex items-center justify-center shrink-0">
+                        <span className="w-5 h-5 rounded-full bg-zinc-200 text-foreground ft-mono font-bold text-[11px] flex items-center justify-center shrink-0">
                           {i + 1}
                         </span>
                         <div>
-                          <p className="ft-body font-semibold text-zinc-900 text-sm">
+                          <p className="ft-body font-semibold text-foreground text-sm">
                             {p.local}
                           </p>
-                          <p className="ft-mono text-[11px] text-zinc-500">
+                          <p className="ft-mono text-[11px] text-muted">
                             Ventana: {p.ventana ?? "Sin franja"} · {p.cliente}
                           </p>
                         </div>
@@ -800,7 +766,7 @@ export function SupervisionPanel({
             {subTabColab === "tareas" && (
               <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
                 {detalleColab.tareasCategorias.length === 0 ? (
-                  <p className="text-xs text-zinc-500 text-center py-6">
+                  <p className="text-xs text-muted text-center py-6">
                     Sin tareas registradas
                   </p>
                 ) : (
@@ -814,10 +780,10 @@ export function SupervisionPanel({
                       }}
                     >
                       <div className="flex items-center justify-between mb-1">
-                        <span className="ft-body font-bold text-zinc-900 text-sm">
+                        <span className="ft-body font-bold text-foreground text-sm">
                           {cat.categoria}
                         </span>
-                        <span className="ft-mono text-xs font-semibold text-zinc-600">
+                        <span className="ft-mono text-xs font-semibold text-muted">
                           {cat.completadas} / {cat.total}
                         </span>
                       </div>

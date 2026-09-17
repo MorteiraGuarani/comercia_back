@@ -18,16 +18,13 @@ export function StatusStamp({
 
   return (
     <span
-      className={`ft-display inline-flex items-center justify-center border-2 rounded-full whitespace-nowrap select-none ${
-        size === "sm" ? "px-2.5 py-0.5 text-[11px]" : "px-3.5 py-1 text-xs"
+      className={`ft-body inline-flex shrink-0 items-center justify-center rounded border whitespace-nowrap font-medium ${
+        size === "sm" ? "px-2 py-0.5 text-[11px]" : "px-2.5 py-1 text-xs"
       } ${className}`}
       style={{
-        borderColor: color,
+        borderColor: `color-mix(in srgb, ${color} 30%, transparent)`,
+        background: `color-mix(in srgb, ${color} 8%, transparent)`,
         color: color,
-        borderStyle: "dashed",
-        transform: "rotate(-3deg)",
-        letterSpacing: "0.03em",
-        fontWeight: 600,
       }}
     >
       {children}

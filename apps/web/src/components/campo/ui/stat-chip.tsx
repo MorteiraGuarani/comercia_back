@@ -23,24 +23,21 @@ export function StatChip({
 
   return (
     <div
-      className={`flex-1 rounded-xl py-2.5 px-3 text-center transition-all bg-white shadow-xs ${className}`}
-      style={{
-        border: `1px solid ${TOKENS.line}`,
-      }}
+      className={`min-w-0 flex-1 rounded-lg border border-line bg-surface-raised p-3 text-left sm:p-4 ${className}`}
     >
       <div
-        className="ft-display text-2xl sm:text-3xl font-bold leading-tight tracking-tight"
+        className="ft-body text-xs font-medium leading-snug text-muted"
+      >
+        {label}
+      </div>
+      <div
+        className="ft-display mt-1.5 text-3xl font-semibold leading-none tabular-nums sm:text-4xl"
         style={{ color }}
       >
         {value}
       </div>
-      <div
-        className="ft-body text-xs font-semibold text-zinc-700 mt-0.5 truncate uppercase tracking-wider"
-      >
-        {label}
-      </div>
       {sub && (
-        <div className="ft-mono text-[11px] text-zinc-500 font-normal mt-0.5 truncate">
+        <div className="ft-body mt-2 hidden text-xs leading-relaxed text-muted sm:block">
           {sub}
         </div>
       )}

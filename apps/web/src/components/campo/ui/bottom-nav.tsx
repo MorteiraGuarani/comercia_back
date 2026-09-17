@@ -1,5 +1,4 @@
 import React from "react";
-import { TOKENS } from "../tokens";
 
 export interface NavItem<T extends string = string> {
   key: T;
@@ -23,28 +22,23 @@ export function BottomNav<T extends string = string>({
 }: BottomNavProps<T>) {
   return (
     <nav
-      aria-label="Navegación principal"
-      className={`flex items-stretch shrink-0 ${className}`}
-      style={{
-        background: TOKENS.ink,
-        borderTop: "1px solid #33362F",
-      }}
+      aria-label="Secciones de supervisión"
+      className={`flex w-full min-w-0 shrink-0 items-stretch border-t border-line bg-surface-raised pb-[env(safe-area-inset-bottom)] ${className}`}
     >
       {items.map((it) => {
         const isActive = active === it.key;
         const Icon = it.icon;
-        const activeColor = "#C9A54A";
-        const inactiveColor = "#8B8A7E";
 
         return (
           <button
             key={it.key}
             type="button"
+            aria-pressed={isActive}
             onClick={() => onChange(it.key)}
-            className="flex-1 flex flex-col items-center justify-center gap-1 py-2.5 px-1 relative transition-colors cursor-pointer select-none"
+            className={`relative flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-1 border-t-2 px-1 py-2 text-xs whitespace-nowrap transition-colors hover:bg-surface-soft ${isActive ? "border-accent-ink text-accent-ink" : "border-transparent text-muted"}`}
           >
             <div className="relative">
-              <Icon size={18} color={isActive ? activeColor : inactiveColor} />
+              <span aria-hidden="true"><Icon size={18} color="currentColor" /></span>
               {it.badge && it.badge > 0 ? (
                 <span className="absolute -top-1.5 -right-2 min-w-4 h-4 rounded-full bg-red-600 text-white text-[9px] font-bold flex items-center justify-center px-1">
                   {it.badge > 99 ? "99+" : it.badge}
@@ -52,10 +46,7 @@ export function BottomNav<T extends string = string>({
               ) : null}
             </div>
             <span
-              className="ft-body text-[9px] font-medium transition-colors truncate max-w-full"
-              style={{
-                color: isActive ? activeColor : inactiveColor,
-              }}
+              className="ft-body text-xs font-medium"
             >
               {it.label}
             </span>

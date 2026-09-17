@@ -14,6 +14,7 @@ import { verificarAccesoCumplimiento } from '../utils/autorizacion';
 import { validarArchivoImagen } from '../utils/multer-config';
 import { NotificacionService } from './notificacion.service';
 import { unlinkSync } from 'fs';
+import { prepararEvidencia, tareaParaEvidencia } from '../utils/evidencia-tarea';
 
 @Injectable()
 export class FotoService {
@@ -36,51 +37,12 @@ export class FotoService {
     // Validar archivo
     validarArchivoImagen(file);
 
-    // Verificar que el cumplimiento existe
-    const cumplimiento = await this.prisma.cumplimientoCampo.findUnique({
-      where: {
-        visitaId_tareaId: {
-          visitaId,
-          tareaId,
-        },
-      },
-      select: {
-        nombreTarea: true,
-        visita: {
-          select: {
-            usuarioId: true,
-            salida: true,
-          },
-        },
-        tarea: {
-          select: {
-            requiereFotos: true,
-          },
-        },
-      },
-    });
-
-    if (!cumplimiento) {
-      throw new NotFoundException('Tarea no completada');
+    const tarea = await tareaParaEvidencia(this.prisma, usuarioId, empresaId, visitaId, tareaId);
+    if (!tarea.requiereFotos) {
+      throw new BadRequestException('Esta tarea no admite fotos');
     }
-
-    // Verificar que la tarea requiere fotos
-    if (!cumplimiento.tarea.requiereFotos) {
-      throw new BadRequestException('Esta tarea no requiere fotos');
-    }
-
-    // Verificar que el usuario es el dueño de la visita
-    if (cumplimiento.visita.usuarioId !== usuarioId) {
-      throw new ForbiddenException(
-        'Solo puedes subir fotos a tus propias tareas',
-      );
-    }
-
-    // Verificar que la visita sigue abierta (opcional, permitir subir después también)
-    // Si quieres restringir a visitas abiertas, descomentar:
-    // if (cumplimiento.visita.salida) {
-    //   throw new BadRequestException('No puedes subir fotos después de cerrar la visita');
-    // }
+    // Crear un borrador para las evidencias, sin contabilizar una tarea cumplida.
+    await prepararEvidencia(this.prisma, visitaId, tareaId, tarea.nombre);
 
     // Verificar si ya existe una foto para este momento
     const fotoExistente = await this.prisma.fotoTareaCampo.findUnique({
@@ -94,14 +56,6 @@ export class FotoService {
     });
 
     if (fotoExistente) {
-      // Eliminar archivo anterior del disco
-      try {
-        unlinkSync(fotoExistente.rutaArchivo);
-      } catch (error) {
-        // Si falla la eliminación, continuar (archivo puede no existir)
-        console.error('Error al eliminar foto anterior:', error);
-      }
-
       // Actualizar registro con nueva foto
       const fotoActualizada = await this.prisma.fotoTareaCampo.update({
         where: { id: fotoExistente.id },
@@ -120,6 +74,14 @@ export class FotoService {
           creadoAt: true,
         },
       });
+
+      // Eliminar archivo anterior del disco
+      try {
+        unlinkSync(fotoExistente.rutaArchivo);
+      } catch (error) {
+        // Si falla la eliminación, continuar (archivo puede no existir)
+        console.error('Error al eliminar foto anterior:', error);
+      }
 
       return {
         id: fotoActualizada.id,
@@ -200,6 +162,7 @@ export class FotoService {
         tamanioBytes: true,
         creadoAt: true,
       },
+      take: 2,
     });
 
     const resultado: FotosTareaResponseDto = {};
@@ -227,11 +190,13 @@ export class FotoService {
   /**
    * Obtener foto por ID (para servir el archivo)
    */
-  async obtenerPorId(fotoId: number): Promise<FotoTareaDto | null> {
-    const foto = await this.prisma.fotoTareaCampo.findUnique({
-      where: { id: fotoId },
+  async obtenerPorId(usuarioId: number, empresaId: number, fotoId: number): Promise<FotoTareaDto | null> {
+    const foto = await this.prisma.fotoTareaCampo.findFirst({
+      where: { id: fotoId, usuario: { empresaId } },
       select: {
         id: true,
+        cumplimientoVisitaId: true,
+        cumplimientoTareaId: true,
         momento: true,
         rutaArchivo: true,
         mimeType: true,
@@ -243,6 +208,8 @@ export class FotoService {
     if (!foto) {
       return null;
     }
+
+    await verificarAccesoCumplimiento(this.prisma, usuarioId, foto.cumplimientoVisitaId, foto.cumplimientoTareaId);
 
     return {
       id: foto.id,

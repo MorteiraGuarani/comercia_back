@@ -29,18 +29,15 @@ export function CollaboratorRow({
     <button
       type="button"
       onClick={onOpen}
-      className={`w-full flex items-center gap-3 rounded-lg p-3 text-left transition-all hover:brightness-[0.98] active:scale-[0.99] cursor-pointer select-none ${className}`}
-      style={{
-        background: TOKENS.canvas,
-        border: `1px solid ${TOKENS.line}`,
-      }}
+      aria-label={`Ver detalle de ${v.nombre}`}
+      className={`group relative flex min-h-20 w-full items-center gap-3 overflow-hidden rounded-lg border bg-surface-raised p-3 text-left transition-colors hover:bg-surface-soft active:bg-surface-soft ${className}`}
     >
+      <span className="absolute inset-y-0 left-0 w-1 bg-accent-ink opacity-60" aria-hidden="true" />
       {/* Avatar circular con iniciales */}
       <div
-        className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 ft-display text-sm font-bold tracking-wider"
+        className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-surface-soft ft-display text-sm font-semibold tracking-wide text-foreground"
         style={{
-          background: TOKENS.ink,
-          color: "#ffffff",
+          color: TOKENS.ink,
         }}
       >
         {v.iniciales}
@@ -50,7 +47,7 @@ export function CollaboratorRow({
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2 mb-0.5">
           <p
-            className="ft-body font-semibold text-sm truncate leading-snug"
+            className="ft-body min-w-0 truncate text-sm font-semibold leading-snug text-foreground"
             style={{ color: TOKENS.ink }}
           >
             {v.nombre}
@@ -112,12 +109,12 @@ export function CollaboratorRow({
               className="flex justify-between ft-body text-xs mb-1 font-medium"
               style={{ color: TOKENS.sub }}
             >
-              <span className="flex items-center gap-1">
+            <span className="flex min-w-0 items-center gap-1">
                 {v.tareas.completadas}/{v.tareas.total} tareas
                 {v.tareas.obligPendientes > 0 && (
                   <span
                     title={`${v.tareas.obligPendientes} tarea(s) obligatoria(s) pendiente(s)`}
-                    className="inline-flex items-center text-red-600 font-bold"
+                      className="inline-flex items-center font-bold text-rose-700 dark:text-rose-300"
                   >
                     <svg
                       width="12"
@@ -156,7 +153,8 @@ export function CollaboratorRow({
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
-        className="shrink-0 ml-1"
+        className="ml-1 shrink-0 text-muted transition-transform group-hover:translate-x-0.5"
+        aria-hidden="true"
       >
         <polyline points="9 18 15 12 9 6" />
       </svg>

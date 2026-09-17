@@ -125,6 +125,7 @@ export class SupervisionService {
         },
         include: {
           cumplimientos: {
+            where: { NOT: { completadaAt: null } },
             select: { tareaId: true },
           },
         },
@@ -370,6 +371,7 @@ export class SupervisionService {
           },
         },
         cumplimientos: {
+          where: { NOT: { completadaAt: null } },
           select: { tareaId: true },
         },
       },

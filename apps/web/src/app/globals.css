@@ -361,3 +361,46 @@ body {
     animation: none !important;
   }
 }
+
+/* Campo · Hallmark refinement: hierarchy, restraint and shared interaction states.
+   Keep the existing brand; use status colours only for operational meaning. */
+:root {
+  --campo-carne: #8b2635;
+  --campo-frio: #2c4a6e;
+  --campo-fresco: #38613b;
+  --campo-alerta: #8b511e;
+  --campo-critico: #a32f2f;
+  --campo-plum: #5b4b7a;
+  --campo-ink: #1e2320;
+  --campo-bone: #ece9e2;
+  --campo-canvas: #f8f7f4;
+  --campo-line: #dad5c9;
+  --campo-sub: #726c60;
+}
+.campo-screen {
+  --campo-ink: var(--foreground);
+  --campo-bone: var(--background);
+  --campo-canvas: var(--surface-raised);
+  --campo-line: var(--border);
+  --campo-sub: var(--muted);
+}
+.dark .campo-screen {
+  --campo-carne: #e5a2ae;
+  --campo-frio: #a0bddf;
+  --campo-fresco: #a0c5a1;
+  --campo-alerta: #ebbb8c;
+  --campo-critico: #f1a2a2;
+  --campo-plum: #c1afd9;
+}
+
+/* Controls in the operational screens stay usable on touch devices. */
+.campo-screen :where(button, input:not([type="checkbox"]):not([type="radio"]), select, summary) {
+  min-height: 2.75rem;
+}
+.campo-screen :where(button) {
+  white-space: nowrap;
+}
+.campo-screen :where(button:disabled) {
+  cursor: not-allowed;
+  opacity: 0.5;
+}

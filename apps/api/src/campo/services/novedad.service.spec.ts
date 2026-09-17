@@ -63,6 +63,9 @@ describe('NovedadService', () => {
     });
 
     expect(res.id).toBe(5);
+    expect(prisma.novedadCampo.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ empresaId: 10, usuarioId: 1, localId: 10 }),
+    }));
     expect(notificaciones.crearNotificacionNovedad).toHaveBeenCalledWith(
       10,
       1,
@@ -70,5 +73,34 @@ describe('NovedadService', () => {
       'Super 1',
       'INCIDENCIA',
     );
+  });
+
+  it('pagina los locales dentro del alcance del impulsador sin usar permisos de gestión', async () => {
+    const prisma = {
+      localCampo: {
+        count: jest.fn().mockResolvedValue(8),
+        findMany: jest.fn().mockResolvedValue([{ id: 12, nombre: 'Local asignado' }]),
+      },
+    };
+    const service = new NovedadService(prisma as unknown as PrismaService, {} as NotificacionService);
+    const respuesta = await service.locales(1, 10, { page: 2, limit: 7, buscar: 'Local' });
+    expect(respuesta.items).toEqual([{ id: 12, nombre: 'Local asignado' }]);
+    expect(prisma.localCampo.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      skip: 7, take: 7, select: { id: true, nombre: true },
+      where: expect.objectContaining({
+        cliente: { empresaId: 10, activo: true },
+        OR: expect.arrayContaining([{ visitas: { some: { usuarioId: 1 } } }]),
+      }),
+    }));
+  });
+
+  it('impide a un líder filtrar novedades de usuarios ajenos a su equipo', async () => {
+    const prisma = {
+      usuario: { findUnique: jest.fn().mockImplementation(({ where }) => Promise.resolve(
+        where.id === 1 ? { id: 1, rol: { hijos: [{ usuarios: [{ id: 2 }] }] } } : { id: 2, rol: null },
+      )) },
+    };
+    const service = new NovedadService(prisma as unknown as PrismaService, {} as NotificacionService);
+    await expect(service.listar(1, 10, { usuarioId: 999 })).rejects.toBeInstanceOf(ForbiddenException);
   });
 });

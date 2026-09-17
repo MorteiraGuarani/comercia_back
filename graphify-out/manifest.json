@@ -20,8 +20,8 @@
     "semantic_hash": "fa439650fa28a1a7aa8c2b6d81c8cc20"
   },
   "apps/api/package.json": {
-    "mtime": 1789416792.2488346,
-    "ast_hash": "f5cab42082d9129b37643a4dad9d876e",
+    "mtime": 1789645889.974835,
+    "ast_hash": "5a42a4b2d9e7a285f3065a4282f36b68",
     "semantic_hash": ""
   },
   "apps/api/prisma.config.ts": {
@@ -215,13 +215,13 @@
     "semantic_hash": "5ace7d98cf048bdbc8c65b5e969d01c7"
   },
   "apps/api/src/auth/jwt-auth.guard.spec.ts": {
-    "mtime": 1786123098.342876,
-    "ast_hash": "7abe23d8e33925fecf73f6b31a1dcf09",
+    "mtime": 1789672337.9639745,
+    "ast_hash": "10bc932f316ad73d7b0346493d86e58b",
     "semantic_hash": ""
   },
   "apps/api/src/auth/jwt-auth.guard.ts": {
-    "mtime": 1786123622.0107982,
-    "ast_hash": "eedc7af07077d64067f798ba7ebad9c5",
+    "mtime": 1789672337.1110122,
+    "ast_hash": "9bf00b7d623c075c2a5c41604edd29f0",
     "semantic_hash": ""
   },
   "apps/api/src/auth/superadmin.guard.ts": {
@@ -590,29 +590,29 @@
     "semantic_hash": "d9f771f7f9842dc2363d611826f66eb7"
   },
   "apps/web/src/app/panel/[modulo]/[pagina]/page.tsx": {
-    "mtime": 1788876460.1348667,
-    "ast_hash": "62b2ecc6cd9eb72919d09de525ec5174",
+    "mtime": 1789646414.144838,
+    "ast_hash": "a8b356294201a8090e9cf694c3827ceb",
     "semantic_hash": ""
   },
   "apps/web/src/app/panel/admin/page.tsx": {
-    "mtime": 1785500605.024876,
-    "ast_hash": "88752c94069891a6454cae0afe030e9b",
-    "semantic_hash": "88752c94069891a6454cae0afe030e9b"
+    "mtime": 1789651139.007305,
+    "ast_hash": "a75161769c61b693a5c19fc21f4bc56a",
+    "semantic_hash": ""
   },
   "apps/web/src/app/panel/layout.tsx": {
-    "mtime": 1789569640.4723182,
-    "ast_hash": "63cffa4fb6c992d5c9fd6c3f25aeff2d",
+    "mtime": 1789651128.996029,
+    "ast_hash": "a9864d87769013e6090c6c1b36db7e7d",
     "semantic_hash": ""
   },
   "apps/web/src/app/panel/page.tsx": {
-    "mtime": 1788368154.8285594,
-    "ast_hash": "30856e23aef0c78a495bd419cdaa9330",
+    "mtime": 1789663778.571746,
+    "ast_hash": "9cf4675c518912d9f4ccb1e584e639a0",
     "semantic_hash": ""
   },
   "apps/web/src/app/panel/usuarios/page.tsx": {
-    "mtime": 1784123047.809059,
-    "ast_hash": "f384a24b9e8064b0a16c3040d3a3eff3",
-    "semantic_hash": "f384a24b9e8064b0a16c3040d3a3eff3"
+    "mtime": 1789651143.8434727,
+    "ast_hash": "d991cd10e546beaeeb114e252cf80ba2",
+    "semantic_hash": ""
   },
   "apps/web/src/components/actualizador-despliegue.tsx": {
     "mtime": 1785759564.6162534,
@@ -675,8 +675,8 @@
     "semantic_hash": "146ff6a4fba7758a8a8aef7401049045"
   },
   "apps/web/src/components/panel/iconos.tsx": {
-    "mtime": 1789569500.3908622,
-    "ast_hash": "9228c3c644ccf49f282ae19250796f62",
+    "mtime": 1789646402.6115577,
+    "ast_hash": "5841119e6dd424ea1df4da42143e9f90",
     "semantic_hash": ""
   },
   "apps/web/src/components/pantalla-carga.tsx": {
@@ -1915,23 +1915,23 @@
     "semantic_hash": ""
   },
   "apps/api/src/campo/campo.controller.ts": {
-    "mtime": 1789416777.3271725,
-    "ast_hash": "8132e7249f46ad456da76923de56854c",
+    "mtime": 1789677988.781087,
+    "ast_hash": "04ff768679e7741d8bb7c9c1e4d88251",
     "semantic_hash": ""
   },
   "apps/api/src/campo/campo.module.ts": {
-    "mtime": 1789415180.5197115,
-    "ast_hash": "84642cc32d34c16f0f1ab431b3695fa4",
+    "mtime": 1789645629.7494452,
+    "ast_hash": "959b046b830d15cd131a1900e071de6f",
     "semantic_hash": ""
   },
   "apps/api/src/campo/catalogo-campo.service.ts": {
-    "mtime": 1788876459.848094,
-    "ast_hash": "7810385e59fa989ac9599bebc3c934a5",
+    "mtime": 1789677987.8812253,
+    "ast_hash": "7e8a4bd40586347886d1056e5d994d3a",
     "semantic_hash": ""
   },
   "apps/api/src/campo/dto/campo.dto.ts": {
-    "mtime": 1789414978.706645,
-    "ast_hash": "79e19e21743f5600a8409b1462daf798",
+    "mtime": 1789651554.6383884,
+    "ast_hash": "a0f6d1bd230ec0ae7f4a6cb85b205f55",
     "semantic_hash": ""
   },
   "apps/api/src/campo/interfaces/calendario.interface.ts": {
@@ -1940,8 +1940,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/campo/jornada-campo.service.ts": {
-    "mtime": 1789566250.407875,
-    "ast_hash": "96461e5711eecaf63bad60062862f4ad",
+    "mtime": 1789672623.3609886,
+    "ast_hash": "4bb6a2413c8f836a8d9e571e2119cc73",
     "semantic_hash": ""
   },
   "apps/api/src/campo/planificacion-campo.service.ts": {
@@ -1965,13 +1965,13 @@
     "semantic_hash": ""
   },
   "apps/api/src/campo/utils/selectores.ts": {
-    "mtime": 1789145977.145478,
-    "ast_hash": "22440d57e0f2d2cf4dea2768664ec932",
+    "mtime": 1789672798.1374786,
+    "ast_hash": "20817105ad7003043193a6becdf70fba",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/catalogo-panel.tsx": {
-    "mtime": 1789570647.0810602,
-    "ast_hash": "060136d895fa487df26b46517db3d06b",
+    "mtime": 1789648111.6418395,
+    "ast_hash": "7b315c1e683a7665a74927a1763e39e8",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/form-campo.tsx": {
@@ -1990,8 +1990,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/plan-local.tsx": {
-    "mtime": 1788876460.0775049,
-    "ast_hash": "f003a6d32e26d1cff9a6bc81dbffdc26",
+    "mtime": 1789652113.6288166,
+    "ast_hash": "96fd987b5d9d609f509fed06adf5b0a5",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/tabla-campo.tsx": {
@@ -2000,18 +2000,18 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/tareas-panel.tsx": {
-    "mtime": 1789578576.5157702,
-    "ast_hash": "58834935188fb76446a336fa8a13c9ec",
+    "mtime": 1789678347.015443,
+    "ast_hash": "7a015f50fd7667f244baae2bb9b49578",
     "semantic_hash": ""
   },
   "apps/web/src/hooks/use-lista-campo.ts": {
-    "mtime": 1788876530.1534853,
-    "ast_hash": "54875c0c7d705d9c59e07b5fdb5f9f24",
+    "mtime": 1789651885.3999028,
+    "ast_hash": "82178d47b14934d56ebae675e052f597",
     "semantic_hash": ""
   },
   "apps/web/src/types/campo.ts": {
-    "mtime": 1789416592.0226734,
-    "ast_hash": "340fd4aabbddc1ca0f97a2638c9f4243",
+    "mtime": 1789678120.4925582,
+    "ast_hash": "0f42534b3476c2506d8611c3914c1ff3",
     "semantic_hash": ""
   },
   "docs/operaciones-campo.md": {
@@ -2025,8 +2025,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/selector-ubicacion.tsx": {
-    "mtime": 1788890331.0132568,
-    "ast_hash": "896c467d0c295f7683ab27f7dae7e5fa",
+    "mtime": 1789651981.334998,
+    "ast_hash": "1c67684f4e02f9ec41c6864e866b09b4",
     "semantic_hash": ""
   },
   "apps/api/prisma/migrations/20260911153000_integracion_ucheck/migration.sql": {
@@ -2085,38 +2085,38 @@
     "semantic_hash": ""
   },
   "apps/api/src/campo/dto/notificacion.dto.ts": {
-    "mtime": 1789416779.24427,
-    "ast_hash": "7c5f4196d1d8b4a3ac5617b17d5533a1",
+    "mtime": 1789645548.7558928,
+    "ast_hash": "07c4f4a4b8a82c54618cfc1ef1e91fcd",
     "semantic_hash": ""
   },
   "apps/api/src/campo/services/comentario.service.ts": {
-    "mtime": 1789566307.4001896,
-    "ast_hash": "13e51fed3724345e0390aa7fbfad409e",
+    "mtime": 1789678491.2386723,
+    "ast_hash": "8493106e465ae20c563a8e2f1ef83571",
     "semantic_hash": ""
   },
   "apps/api/src/campo/services/foto.service.ts": {
-    "mtime": 1789566315.8080354,
-    "ast_hash": "83942a08173947018907b524fcd43b4d",
+    "mtime": 1789672632.1778407,
+    "ast_hash": "d2dc6b14c2f387846a607637c7f10797",
     "semantic_hash": ""
   },
   "apps/api/src/campo/services/notificacion.service.ts": {
-    "mtime": 1789566361.8785174,
-    "ast_hash": "09d065d884a077741e9b537f4edf57f9",
+    "mtime": 1789645558.8287394,
+    "ast_hash": "882e5885b9730dcd7dfe791c3e35a892",
     "semantic_hash": ""
   },
   "apps/api/src/campo/utils/autorizacion.ts": {
-    "mtime": 1789415003.3062613,
-    "ast_hash": "a567cd3897ee29a0487d6bd89f358da2",
+    "mtime": 1789672404.6876113,
+    "ast_hash": "29a34f7494f6a1717b659edbd191a18c",
     "semantic_hash": ""
   },
   "apps/api/src/campo/utils/multer-config.ts": {
-    "mtime": 1789566250.407875,
-    "ast_hash": "38aa18855c56a6f12d60546d5d707b5f",
+    "mtime": 1789649808.9286869,
+    "ast_hash": "1a4d1d61ecaf66f585a4604d96f7ea7f",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/badge-notificaciones.tsx": {
-    "mtime": 1789572610.4574094,
-    "ast_hash": "e202d7cb107c23b8ba9512950fe5dfb3",
+    "mtime": 1789646367.5688784,
+    "ast_hash": "d2e2f0238077789abccb05d74d282b90",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/panel-comentarios.tsx": {
@@ -2125,8 +2125,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/subidor-fotos.tsx": {
-    "mtime": 1789416663.7808504,
-    "ast_hash": "32ec2e1e93582ff8f515376b4132d8c9",
+    "mtime": 1789678605.8293083,
+    "ast_hash": "7354aa2c4950cbd34fb18f7644e12a80",
     "semantic_hash": ""
   },
   "apps/web/src/components/toast/toast-controller.ts": {
@@ -2135,8 +2135,188 @@
     "semantic_hash": ""
   },
   "apps/web/src/lib/api-tareas.ts": {
-    "mtime": 1789416627.1481748,
-    "ast_hash": "06df01bccf3567840f29feeafdd45fa1",
+    "mtime": 1789677847.9543574,
+    "ast_hash": "113d49e40496bc849a6b9fc806f9e793",
+    "semantic_hash": ""
+  },
+  "apps/api/prisma/migrations/20260917000000_modulo_comercial_novedades_avisos_supervision/migration.sql": {
+    "mtime": 1789645497.4286869,
+    "ast_hash": "7debc2b73682b58b9f5c834626dda90c",
+    "semantic_hash": ""
+  },
+  "apps/api/prisma/migrations/20260917010000_cliente_logo_url/migration.sql": {
+    "mtime": 1789649673.330379,
+    "ast_hash": "b3bcff8677bf8d0b8c89d0dbb30e6439",
+    "semantic_hash": ""
+  },
+  "apps/api/prisma/migrations/20260917120000_cumplimiento_evidencia_previa/migration.sql": {
+    "mtime": 1789672341.0735524,
+    "ast_hash": "d567fa378ab864087b90871cb6934641",
+    "semantic_hash": ""
+  },
+  "apps/api/src/campo/catalogo-campo.service.spec.ts": {
+    "mtime": 1789678545.668576,
+    "ast_hash": "e4bc805e53d378068662ddf5731e5819",
+    "semantic_hash": ""
+  },
+  "apps/api/src/campo/dto/aviso.dto.ts": {
+    "mtime": 1789645515.840179,
+    "ast_hash": "7661d8d63e1b26893381cb8037c0bf87",
+    "semantic_hash": ""
+  },
+  "apps/api/src/campo/dto/consulta-tareas.dto.ts": {
+    "mtime": 1789677987.0879984,
+    "ast_hash": "9ebfe599f96891bccce3e99450ff3023",
+    "semantic_hash": ""
+  },
+  "apps/api/src/campo/dto/novedad.dto.ts": {
+    "mtime": 1789645507.2804813,
+    "ast_hash": "cfec2feb62c45cd2db93c65be56502cb",
+    "semantic_hash": ""
+  },
+  "apps/api/src/campo/dto/supervision.dto.ts": {
+    "mtime": 1789649768.3788142,
+    "ast_hash": "579ab0b1c4a7a913f85ea013803b1307",
+    "semantic_hash": ""
+  },
+  "apps/api/src/campo/services/aviso.service.spec.ts": {
+    "mtime": 1789645966.680602,
+    "ast_hash": "c31f99101ffe89cc9620f71d0b7cc836",
+    "semantic_hash": ""
+  },
+  "apps/api/src/campo/services/aviso.service.ts": {
+    "mtime": 1789645589.579919,
+    "ast_hash": "0e7025868d797b75249bd34b1d3164c1",
+    "semantic_hash": ""
+  },
+  "apps/api/src/campo/services/foto.service.spec.ts": {
+    "mtime": 1789678546.4569156,
+    "ast_hash": "de827bcdf3fc476d20251f559e3a20ed",
+    "semantic_hash": ""
+  },
+  "apps/api/src/campo/services/novedad.service.spec.ts": {
+    "mtime": 1789677946.670674,
+    "ast_hash": "6183279e6c324f1f080b09aeeedcdf6c",
+    "semantic_hash": ""
+  },
+  "apps/api/src/campo/services/novedad.service.ts": {
+    "mtime": 1789677613.0990965,
+    "ast_hash": "fede0c593ff429dcb93a524d69493492",
+    "semantic_hash": ""
+  },
+  "apps/api/src/campo/services/supervision.service.spec.ts": {
+    "mtime": 1789645977.8387816,
+    "ast_hash": "15c488454748175127f9e2818c2cfd60",
+    "semantic_hash": ""
+  },
+  "apps/api/src/campo/services/supervision.service.ts": {
+    "mtime": 1789672799.1307378,
+    "ast_hash": "9021baf08d6c0167fdfb0693d9083b57",
+    "semantic_hash": ""
+  },
+  "apps/api/src/campo/utils/evidencia-tarea.ts": {
+    "mtime": 1789672344.4297552,
+    "ast_hash": "5c901869b2f772503afbd171d4b7a2bf",
+    "semantic_hash": ""
+  },
+  "apps/api/src/campo/utils/locales-novedad.ts": {
+    "mtime": 1789677612.0862265,
+    "ast_hash": "c311f237f8fab684ddc408d0828ee38d",
+    "semantic_hash": ""
+  },
+  "apps/web/src/components/campo/avisos-panel.tsx": {
+    "mtime": 1789652154.3498049,
+    "ast_hash": "0912c1d2540d4c1cf0d4e2740575d795",
+    "semantic_hash": ""
+  },
+  "apps/web/src/components/campo/clientes-panel.tsx": {
+    "mtime": 1789651930.5860758,
+    "ast_hash": "c1804f5b6d072407a3e5d20d25d141ad",
+    "semantic_hash": ""
+  },
+  "apps/web/src/components/campo/locales-panel.tsx": {
+    "mtime": 1789652363.3258097,
+    "ast_hash": "34d18471a70b58e72cddefd3b40f3e7b",
+    "semantic_hash": ""
+  },
+  "apps/web/src/components/campo/mapa-clientes.tsx": {
+    "mtime": 1789652014.2968314,
+    "ast_hash": "109fee1c83db6741c1a7c784e8976f65",
+    "semantic_hash": ""
+  },
+  "apps/web/src/components/campo/novedades-panel.tsx": {
+    "mtime": 1789678346.1053677,
+    "ast_hash": "321897c35723c17cf8947ba70ccc5f67",
+    "semantic_hash": ""
+  },
+  "apps/web/src/components/campo/ruta-impulsador-panel.tsx": {
+    "mtime": 1789678258.2766988,
+    "ast_hash": "72fd21e63905f2b81c16396c3bfebed0",
+    "semantic_hash": ""
+  },
+  "apps/web/src/components/campo/selector-cliente-combobox.tsx": {
+    "mtime": 1789651879.9463959,
+    "ast_hash": "a82eb52e590ae565c7be0f9c9de6dac3",
+    "semantic_hash": ""
+  },
+  "apps/web/src/components/campo/supervision-panel.tsx": {
+    "mtime": 1789678258.2786973,
+    "ast_hash": "6f11b6229c23376c04109d4e588a76bb",
+    "semantic_hash": ""
+  },
+  "apps/web/src/components/campo/tareas-impulsador-panel.tsx": {
+    "mtime": 1789678492.1219852,
+    "ast_hash": "afdaf28e6beae5288b2814f197b98888",
+    "semantic_hash": ""
+  },
+  "apps/web/src/components/campo/tokens.ts": {
+    "mtime": 1789663483.3281648,
+    "ast_hash": "1e45479cc3026a920b0b4f840eda2e9e",
+    "semantic_hash": ""
+  },
+  "apps/web/src/components/campo/ui/big-progress.tsx": {
+    "mtime": 1789663486.9666,
+    "ast_hash": "1fc44c3b7186a873735d3389155c67c5",
+    "semantic_hash": ""
+  },
+  "apps/web/src/components/campo/ui/bottom-nav.tsx": {
+    "mtime": 1789663579.6565578,
+    "ast_hash": "fe28f45954845e769b14a939480fb75f",
+    "semantic_hash": ""
+  },
+  "apps/web/src/components/campo/ui/collaborator-row.tsx": {
+    "mtime": 1789677577.5394857,
+    "ast_hash": "f0d8225cbf03454468f7da86b712d783",
+    "semantic_hash": ""
+  },
+  "apps/web/src/components/campo/ui/iconos-campo.tsx": {
+    "mtime": 1789652336.4024644,
+    "ast_hash": "2a746f3b1017b54e9cfd54a770f2ff96",
+    "semantic_hash": ""
+  },
+  "apps/web/src/components/campo/ui/seg-tabs.tsx": {
+    "mtime": 1789663579.6555576,
+    "ast_hash": "dbc35dbe852390904860145205e9bac9",
+    "semantic_hash": ""
+  },
+  "apps/web/src/components/campo/ui/selector-fecha-filtro.tsx": {
+    "mtime": 1789652307.455195,
+    "ast_hash": "0707512eefc53827d74df40f999c1c4a",
+    "semantic_hash": ""
+  },
+  "apps/web/src/components/campo/ui/stat-chip.tsx": {
+    "mtime": 1789672701.43364,
+    "ast_hash": "7cae36da47b716b51604dacba8a9fbfe",
+    "semantic_hash": ""
+  },
+  "apps/web/src/components/campo/ui/status-stamp.tsx": {
+    "mtime": 1789663485.0973299,
+    "ast_hash": "1348235e2a5c673c902d07d4c4827091",
+    "semantic_hash": ""
+  },
+  "apps/web/src/components/campo/ui/top-bar.tsx": {
+    "mtime": 1789678256.833114,
+    "ast_hash": "c3c236c21acabadb38b42474241ff198",
     "semantic_hash": ""
   }
 }

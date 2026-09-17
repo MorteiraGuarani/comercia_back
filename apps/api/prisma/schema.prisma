@@ -422,7 +422,8 @@ model CumplimientoCampo {
   tareaId         Int                    @map("tarea_id")
   tarea           TareaCampo             @relation(fields: [tareaId], references: [id])
   nombreTarea     String                 @map("nombre_tarea") @db.VarChar(120)
-  completadaAt    DateTime               @default(now()) @map("completada_at")
+  // Null mientras se adjuntan evidencias; se completa explícitamente después.
+  completadaAt    DateTime?              @default(now()) @map("completada_at")
   fotosValidadas  Boolean                @default(true) @map("fotos_validadas")
   comentarios     ComentarioTareaCampo[]
   fotos           FotoTareaCampo[]

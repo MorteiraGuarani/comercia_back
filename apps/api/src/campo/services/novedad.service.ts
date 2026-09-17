@@ -17,6 +17,8 @@ import {
   respuestaPaginada,
 } from '../../common/utils/paginacion';
 import { esLiderDe, obtenerEquipoCompleto } from '../utils/autorizacion';
+import { localesParaNovedad } from '../utils/locales-novedad';
+import { ConsultaCampoDto } from '../dto/campo.dto';
 
 @Injectable()
 export class NovedadService {
@@ -24,6 +26,22 @@ export class NovedadService {
     private readonly prisma: PrismaService,
     private readonly notificaciones: NotificacionService,
   ) {}
+
+  async locales(usuarioId: number, empresaId: number, query: ConsultaCampoDto) {
+    const where: Prisma.LocalCampoWhereInput = {
+      ...localesParaNovedad(usuarioId, empresaId),
+      ...(query.buscar ? { nombre: { contains: query.buscar, mode: 'insensitive' } } : {}),
+    };
+    const { skip, take, page, limit } = rangoPaginacion(query);
+    const [total, items] = await Promise.all([
+      this.prisma.localCampo.count({ where }),
+      this.prisma.localCampo.findMany({
+        where, select: { id: true, nombre: true },
+        orderBy: [{ nombre: 'asc' }, { id: 'asc' }], skip, take,
+      }),
+    ]);
+    return respuestaPaginada(items, total, page, limit);
+  }
 
   /**
    * Crear novedad reportada por un impulsador
@@ -36,9 +54,8 @@ export class NovedadService {
     // Validar existencia del local en la empresa
     const local = await this.prisma.localCampo.findFirst({
       where: {
+        ...localesParaNovedad(usuarioId, empresaId),
         id: dto.localId,
-        activo: true,
-        cliente: { empresaId },
       },
       select: { id: true, nombre: true },
     });
@@ -120,7 +137,7 @@ export class NovedadService {
 
     let usuariosFiltrados: number[];
     if (dto.usuarioId) {
-      if (!equipoIds.includes(dto.usuarioId) && !esLider) {
+      if (!equipoIds.includes(dto.usuarioId)) {
         throw new ForbiddenException('No tienes acceso a novedades de este usuario');
       }
       usuariosFiltrados = [dto.usuarioId];

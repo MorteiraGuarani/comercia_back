@@ -7,12 +7,14 @@ import { StatusStamp } from "./ui/status-stamp";
 import { TopBar } from "./ui/top-bar";
 import { Modal } from "@/components/modal";
 import { PantallaCarga } from "@/components/pantalla-carga";
+import { SelectorPaginado } from "@/components/selector-paginado";
+import { Paginacion } from "@/components/paginacion";
+import { IconoMas } from "@/components/icono-mas";
 import type {
   NovedadCampoItem,
   NovedadesResponse,
   TipoNovedad,
   EstadoNovedad,
-  LocalCampo,
 } from "@/types/campo";
 
 export function NovedadesPanel({
@@ -28,12 +30,16 @@ export function NovedadesPanel({
     total: 0,
   });
   const [filtro, setFiltro] = useState<EstadoNovedad>("ABIERTA");
-  const [cargando, setCargando] = useState(true);
+  const [revision, setRevision] = useState(0);
+  const [consultaTerminada, setConsultaTerminada] = useState("");
   const [error, setError] = useState("");
+  const [errorFormulario, setErrorFormulario] = useState("");
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(7);
+  const [paginacion, setPaginacion] = useState({ total: 0, totalPages: 1 });
 
   // Modal para crear novedad
   const [creando, setCreando] = useState(false);
-  const [locales, setLocales] = useState<LocalCampo[]>([]);
   const [localSeleccionado, setLocalSeleccionado] = useState<number | null>(
     null,
   );
@@ -47,37 +53,24 @@ export function NovedadesPanel({
   const [accion, setAccion] = useState<"CERRADA" | "CANCELADA">("CERRADA");
   const [resolucion, setResolucion] = useState("");
 
-  const cargar = async () => {
-    try {
-      setCargando(true);
-      setError("");
-      const res = await apiFetch<NovedadesResponse>(
-        `/campo/novedades?estado=${filtro}`,
-      );
-      setNovedades(res.items);
-      setCounts(res.counts);
-    } catch (e: any) {
-      setError(e.message ?? "Error al cargar novedades");
-    } finally {
-      setCargando(false);
-    }
-  };
-
+  const consulta = `${filtro}|${page}|${limit}|${revision}`;
+  const cargando = consulta !== consultaTerminada;
+  const cargar = () => setRevision((n) => n + 1);
   useEffect(() => {
-    cargar();
-  }, [filtro]);
-
-  // Cargar locales para el selector si va a crear
-  useEffect(() => {
-    if (creando && locales.length === 0) {
-      apiFetch<{ items: LocalCampo[] }>("/campo/locales?limit=50")
-        .then((res) => {
-          setLocales(res.items);
-          if (res.items.length > 0) setLocalSeleccionado(res.items[0].id);
-        })
-        .catch(() => {});
-    }
-  }, [creando, locales.length]);
+    let vigente = true;
+    apiFetch<NovedadesResponse>(`/campo/novedades?estado=${filtro}&page=${page}&limit=${limit}`)
+      .then((res) => {
+        if (!vigente) return;
+        setNovedades(res.items);
+        setCounts(res.counts);
+        setPaginacion({ total: res.total, totalPages: res.totalPages });
+        setError("");
+        if (page > res.totalPages) setPage(res.totalPages);
+      })
+      .catch((e: unknown) => { if (vigente) setError(e instanceof Error ? e.message : "Error al cargar novedades"); })
+      .finally(() => { if (vigente) setConsultaTerminada(consulta); });
+    return () => { vigente = false; };
+  }, [filtro, page, limit, consulta]);
 
   const guardarNueva = async () => {
     if (
@@ -89,6 +82,7 @@ export function NovedadesPanel({
       return;
     try {
       setGuardando(true);
+      setErrorFormulario("");
       await apiFetch("/campo/novedades", {
         method: "POST",
         body: JSON.stringify({
@@ -102,8 +96,8 @@ export function NovedadesPanel({
       setTitulo("");
       setDescripcion("");
       cargar();
-    } catch (e: any) {
-      alert("Error: " + e.message);
+    } catch (e: unknown) {
+      setErrorFormulario(e instanceof Error ? e.message : "No se pudo enviar la novedad");
     } finally {
       setGuardando(false);
     }
@@ -113,6 +107,7 @@ export function NovedadesPanel({
     if (!resolviendo || guardando) return;
     try {
       setGuardando(true);
+      setErrorFormulario("");
       await apiFetch(`/campo/novedades/${resolviendo.id}/estado`, {
         method: "PUT",
         body: JSON.stringify({
@@ -123,8 +118,8 @@ export function NovedadesPanel({
       setResolviendo(null);
       setResolucion("");
       cargar();
-    } catch (e: any) {
-      alert("Error: " + e.message);
+    } catch (e: unknown) {
+      setErrorFormulario(e instanceof Error ? e.message : "No se pudo guardar la resolución");
     } finally {
       setGuardando(false);
     }
@@ -132,7 +127,7 @@ export function NovedadesPanel({
 
   return (
     <div
-      className="w-full min-h-[calc(100vh-5rem)] flex flex-col font-sans"
+      className="campo-screen min-w-0 w-full min-h-[calc(100vh-5rem)] flex flex-col font-sans"
       style={{
         background: TOKENS.bone,
         color: TOKENS.ink,
@@ -149,11 +144,13 @@ export function NovedadesPanel({
           esImpulsador && (
             <button
               type="button"
-              onClick={() => setCreando(true)}
-              className="px-3 py-1.5 rounded-lg text-xs font-bold text-white shadow-sm transition cursor-pointer"
+              onClick={() => { setErrorFormulario(""); setCreando(true); }}
+              aria-label="Crear novedad"
+              title="Crear novedad"
+              className="grid h-11 w-11 place-items-center rounded-lg text-white transition hover:brightness-110"
               style={{ background: TOKENS.carne }}
             >
-              + Nueva Novedad
+              <IconoMas />
             </button>
           )
         }
@@ -161,7 +158,7 @@ export function NovedadesPanel({
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5 flex-1 overflow-y-auto w-full">
         {/* Pestañas de estado (Abiertas, Cerradas, Canceladas) */}
-        <div className="flex gap-2.5 shrink-0">
+        <div className="flex min-w-0 gap-1 border-b border-line">
           {(["ABIERTA", "CERRADA", "CANCELADA"] as const).map((st) => {
             const isActive = filtro === st;
             const colors = {
@@ -185,12 +182,12 @@ export function NovedadesPanel({
               <button
                 key={st}
                 type="button"
-                onClick={() => setFiltro(st)}
-                className="flex-1 ft-body text-xs sm:text-sm font-bold py-2 px-3.5 rounded-xl transition-all cursor-pointer select-none"
+                onClick={() => { setFiltro(st); setPage(1); }}
+                aria-pressed={isActive}
+                className="min-w-0 flex-1 ft-body text-xs sm:text-sm font-semibold min-h-11 px-1 border-b-2 transition-colors hover:bg-surface-soft"
                 style={{
-                  background: isActive ? colors[st] : "transparent",
-                  color: isActive ? "#ffffff" : TOKENS.sub,
-                  border: `1.5px solid ${isActive ? colors[st] : TOKENS.line}`,
+                  color: isActive ? colors[st] : TOKENS.sub,
+                  borderColor: isActive ? colors[st] : "transparent",
                 }}
               >
                 {labels[st]} ({count})
@@ -200,7 +197,7 @@ export function NovedadesPanel({
         </div>
 
         {cargando ? (
-          <div className="py-16 text-center text-sm sm:text-base text-zinc-500 font-mono">
+          <div className="py-16 text-center text-sm sm:text-base text-muted font-mono">
             Cargando novedades...
           </div>
         ) : error ? (
@@ -209,7 +206,7 @@ export function NovedadesPanel({
           </div>
         ) : novedades.length === 0 ? (
           <div
-            className="rounded-2xl p-12 text-center bg-white"
+            className="rounded-2xl p-12 text-center bg-surface-raised"
             style={{ border: `1px solid ${TOKENS.line}` }}
           >
             <p
@@ -218,7 +215,7 @@ export function NovedadesPanel({
             >
               Sin novedades {filtro.toLowerCase()}s
             </p>
-            <p className="ft-body text-sm sm:text-base text-zinc-500">
+            <p className="ft-body text-sm sm:text-base text-muted">
               {filtro === "ABIERTA"
                 ? "No hay incidencias ni requerimientos pendientes de atención."
                 : "No se registran elementos en este estado."}
@@ -238,7 +235,7 @@ export function NovedadesPanel({
               return (
                 <div
                   key={n.id}
-                  className="rounded-xl p-4 sm:p-5 flex flex-col justify-between bg-white shadow-xs hover:shadow-md transition-all"
+                  className="rounded-xl p-4 sm:p-5 flex flex-col justify-between bg-surface-raised shadow-xs hover:shadow-md transition-all"
                   style={{ border: `1px solid ${TOKENS.line}` }}
                 >
                   <div>
@@ -266,22 +263,22 @@ export function NovedadesPanel({
                       </StatusStamp>
                     </div>
 
-                    <p className="ft-body text-sm sm:text-base font-bold mb-1.5 text-zinc-900 leading-snug">
+                    <p className="ft-body text-sm sm:text-base font-bold mb-1.5 text-foreground leading-snug">
                       {n.titulo}
                     </p>
-                    <p className="ft-body text-xs sm:text-sm leading-relaxed text-zinc-700">
+                    <p className="ft-body text-xs sm:text-sm leading-relaxed text-foreground">
                       {n.descripcion}
                     </p>
 
                     {n.resolucion && (
                       <div
-                        className="mt-3 p-3 rounded-xl bg-zinc-50 border text-sm"
+                        className="mt-3 p-3 rounded-xl bg-surface-soft border text-sm"
                         style={{ borderColor: TOKENS.line }}
                       >
-                        <p className="font-bold text-xs sm:text-sm text-zinc-800">
+                        <p className="font-bold text-xs sm:text-sm text-foreground">
                           Resolución:
                         </p>
-                        <p className="text-zinc-700 italic text-xs sm:text-sm mt-0.5">
+                        <p className="text-foreground italic text-xs sm:text-sm mt-0.5">
                           {n.resolucion}
                         </p>
                       </div>
@@ -312,6 +309,7 @@ export function NovedadesPanel({
                           type="button"
                           onClick={() => {
                             setResolviendo(n);
+                            setErrorFormulario("");
                             setAccion("CERRADA");
                             setResolucion("");
                           }}
@@ -327,36 +325,25 @@ export function NovedadesPanel({
             })}
           </div>
         )}
+        <Paginacion page={page} limit={limit} total={paginacion.total} totalPages={paginacion.totalPages} onPageChange={setPage} onLimitChange={(n) => { setLimit(n); setPage(1); }} />
       </div>
+
+      <PantallaCarga visible={guardando} mensaje={creando ? "Enviando novedad" : "Guardando resolución"} />
 
       {/* Modal Crear Novedad */}
       {creando && (
         <Modal
           titulo="Reportar Nueva Novedad"
           abierto={creando}
-          onCerrar={() => setCreando(false)}
+          onCerrar={() => { if (!guardando) setCreando(false); }}
           ancho="md"
         >
           <div className="space-y-3">
-            <div>
-              <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                Local:
-              </label>
-              <select
-                value={localSeleccionado ?? ""}
-                onChange={(e) => setLocalSeleccionado(Number(e.target.value))}
-                className="w-full text-xs p-2.5 rounded-lg border border-zinc-300 bg-white outline-none"
-              >
-                {locales.map((l) => (
-                  <option key={l.id} value={l.id}>
-                    {l.nombre} ({l.cliente?.nombre})
-                  </option>
-                ))}
-              </select>
-            </div>
+            {errorFormulario && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-200">{errorFormulario}</p>}
+            <SelectorPaginado url="/campo/novedades/locales" etiqueta="Local" buscable required value={localSeleccionado ?? ""} onChange={(id) => setLocalSeleccionado(id === "" ? null : id)} />
 
             <div>
-              <label className="block text-xs font-semibold text-zinc-700 mb-1">
+              <label className="block text-xs font-semibold text-foreground mb-1">
                 Tipo:
               </label>
               <div className="grid grid-cols-2 gap-1.5">
@@ -370,7 +357,7 @@ export function NovedadesPanel({
                     className={`py-1.5 px-2 rounded-md text-xs font-semibold border transition cursor-pointer ${
                       tipo === t
                         ? "bg-zinc-900 text-white border-zinc-900"
-                        : "bg-white text-zinc-700 border-zinc-300"
+                        : "bg-surface-raised text-foreground border-line"
                     }`}
                   >
                     {t}
@@ -380,28 +367,30 @@ export function NovedadesPanel({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-zinc-700 mb-1">
+              <label className="block text-xs font-semibold text-foreground mb-1">
                 Asunto / Título:
               </label>
               <input
                 type="text"
+                maxLength={120}
                 value={titulo}
                 onChange={(e) => setTitulo(e.target.value)}
                 placeholder="Ej: Faltante de stock o local cerrado"
-                className="w-full text-xs p-2.5 rounded-lg border border-zinc-300 bg-white outline-none"
+                className="w-full text-xs p-2.5 rounded-lg border border-line bg-surface-raised outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-zinc-700 mb-1">
+              <label className="block text-xs font-semibold text-foreground mb-1">
                 Descripción detallada:
               </label>
               <textarea
+                maxLength={1000}
                 value={descripcion}
                 onChange={(e) => setDescripcion(e.target.value)}
                 rows={3}
                 placeholder="Detallá lo sucedido para que tu Team Leader intervenga..."
-                className="w-full text-xs p-2.5 rounded-lg border border-zinc-300 bg-white outline-none"
+                className="w-full text-xs p-2.5 rounded-lg border border-line bg-surface-raised outline-none"
               />
             </div>
 
@@ -409,14 +398,14 @@ export function NovedadesPanel({
               <button
                 type="button"
                 onClick={() => setCreando(false)}
-                className="flex-1 py-2 text-xs font-semibold border rounded-lg text-zinc-700"
+                className="flex-1 py-2 text-xs font-semibold border rounded-lg text-foreground"
               >
                 Cancelar
               </button>
               <button
                 type="button"
                 onClick={guardarNueva}
-                disabled={!titulo.trim() || !descripcion.trim() || guardando}
+                disabled={!localSeleccionado || titulo.trim().length < 2 || descripcion.trim().length < 3 || guardando}
                 className="flex-1 py-2 text-xs font-bold bg-[#1E2320] text-white rounded-lg hover:bg-black transition disabled:opacity-50 cursor-pointer"
               >
                 {guardando ? "Enviando..." : "Reportar"}
@@ -431,17 +420,18 @@ export function NovedadesPanel({
         <Modal
           titulo="Resolver Novedad"
           abierto={!!resolviendo}
-          onCerrar={() => setResolviendo(null)}
+          onCerrar={() => { if (!guardando) setResolviendo(null); }}
           ancho="md"
         >
           <div className="space-y-3">
-            <div className="p-3 rounded-lg bg-zinc-50 border text-xs text-zinc-700">
+            {errorFormulario && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-200">{errorFormulario}</p>}
+            <div className="p-3 rounded-lg bg-surface-soft border text-xs text-foreground">
               <p className="font-bold">{resolviendo.titulo}</p>
               <p className="mt-1">{resolviendo.descripcion}</p>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-zinc-700 mb-1">
+              <label className="block text-xs font-semibold text-foreground mb-1">
                 Acción:
               </label>
               <div className="flex gap-2">
@@ -451,7 +441,7 @@ export function NovedadesPanel({
                   className={`flex-1 py-2 text-xs font-bold rounded-lg border transition cursor-pointer ${
                     accion === "CERRADA"
                       ? "bg-emerald-700 text-white border-emerald-700"
-                      : "bg-white text-zinc-700 border-zinc-300"
+                      : "bg-surface-raised text-foreground border-line"
                   }`}
                 >
                   Cerrar como Resuelta
@@ -462,7 +452,7 @@ export function NovedadesPanel({
                   className={`flex-1 py-2 text-xs font-bold rounded-lg border transition cursor-pointer ${
                     accion === "CANCELADA"
                       ? "bg-zinc-700 text-white border-zinc-700"
-                      : "bg-white text-zinc-700 border-zinc-300"
+                      : "bg-surface-raised text-foreground border-line"
                   }`}
                 >
                   Cancelar Novedad
@@ -471,7 +461,7 @@ export function NovedadesPanel({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-zinc-700 mb-1">
+              <label className="block text-xs font-semibold text-foreground mb-1">
                 Resolución:
               </label>
               <textarea
@@ -479,7 +469,7 @@ export function NovedadesPanel({
                 onChange={(e) => setResolucion(e.target.value)}
                 rows={3}
                 placeholder="Explicá la solución o respuesta..."
-                className="w-full text-xs p-2.5 rounded-lg border border-zinc-300 bg-white outline-none"
+                className="w-full text-xs p-2.5 rounded-lg border border-line bg-surface-raised outline-none"
               />
             </div>
 
@@ -487,7 +477,7 @@ export function NovedadesPanel({
               <button
                 type="button"
                 onClick={() => setResolviendo(null)}
-                className="flex-1 py-2 text-xs font-semibold border rounded-lg text-zinc-700"
+                className="flex-1 py-2 text-xs font-semibold border rounded-lg text-foreground"
               >
                 Volver
               </button>

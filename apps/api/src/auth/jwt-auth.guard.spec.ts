@@ -31,10 +31,10 @@ describe('JwtAuthGuard', () => {
     };
     jwt.verify.mockReturnValue({ sub: 42 });
     jwt.sign.mockReturnValue('token-renovado');
-    prisma.usuario.findUnique.mockResolvedValue({ isActive: true });
+    prisma.usuario.findUnique.mockResolvedValue({ isActive: true, empresaId: 7 });
 
     await expect(guard.canActivate(context as never)).resolves.toBe(true);
-    expect(request).toMatchObject({ usuarioId: 42 });
+    expect(request).toMatchObject({ usuarioId: 42, empresaId: 7 });
     expect(jwt.sign).toHaveBeenCalledWith({ sub: 42 });
     expect(response.cookie).toHaveBeenCalledWith(
       'comercia_token',
@@ -76,10 +76,10 @@ describe('JwtAuthGuard', () => {
       }),
     };
     jwt.verify.mockReturnValue({ sub: 42 });
-    prisma.usuario.findUnique.mockResolvedValue({ isActive: true });
+    prisma.usuario.findUnique.mockResolvedValue({ isActive: true, empresaId: 9 });
 
     await expect(guard.canActivate(context as never)).resolves.toBe(true);
-    expect(request).toMatchObject({ usuarioId: 42 });
+    expect(request).toMatchObject({ usuarioId: 42, empresaId: 9 });
     expect(jwt.sign).not.toHaveBeenCalled();
     expect(response.cookie).not.toHaveBeenCalled();
   });

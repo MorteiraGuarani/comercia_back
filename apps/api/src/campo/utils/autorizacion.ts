@@ -200,7 +200,27 @@ export async function verificarAccesoCumplimiento(
   });
 
   if (!cumplimiento) {
-    throw new ForbiddenException('Cumplimiento no encontrado');
+    // Todavía puede no haber evidencias: abrir el panel no completa la tarea.
+    const visita = await prisma.visitaCampo.findUnique({
+      where: { id: visitaId },
+      select: { usuarioId: true, localId: true, fecha: true, local: { select: { cliente: { select: { empresaId: true } } } } },
+    });
+    if (!visita || (visita.usuarioId !== usuarioId && !(await esLiderDe(prisma, usuarioId, visita.usuarioId)))) {
+      throw new ForbiddenException('Tarea no disponible');
+    }
+    const tarea = await prisma.tareaCampo.findFirst({
+      where: {
+        id: tareaId, empresaId: visita.local.cliente.empresaId,
+        fechaDesde: { lte: visita.fecha },
+        AND: [
+          { OR: [{ fechaHasta: null }, { fechaHasta: { gte: visita.fecha } }] },
+          { OR: [{ todosLocales: true }, { locales: { some: { localId: visita.localId } } }] },
+        ],
+      },
+      select: { id: true },
+    });
+    if (!tarea) throw new ForbiddenException('Tarea no disponible');
+    return;
   }
 
   // Si es el dueño, tiene acceso

@@ -4,6 +4,7 @@ import type {
   FormComentarioTarea,
   FotosTareaResponse,
   MomentoFoto,
+  FotoTarea,
   Notificacion,
   ContadorNoLeidas,
 } from "@/types/campo";
@@ -52,7 +53,7 @@ export async function subirFoto(
   tareaId: number,
   momento: MomentoFoto,
   archivo: File,
-): Promise<{ id: number; momento: MomentoFoto; rutaArchivo: string }> {
+): Promise<FotoTarea> {
   const formData = new FormData();
   formData.append("momento", momento);
   formData.append("foto", archivo);

@@ -1,5 +1,4 @@
 import React from "react";
-import { TOKENS } from "../tokens";
 
 export interface TabItem<T extends string = string> {
   key: T;
@@ -22,7 +21,7 @@ export function SegTabs<T extends string = string>({
   className = "",
 }: SegTabsProps<T>) {
   return (
-    <div className={`flex gap-1.5 shrink-0 ${className}`}>
+    <div role="group" aria-label="Secciones" className={`flex min-w-0 gap-1 border-b border-line ${className}`}>
       {tabs.map((tab) => {
         const isActive = active === tab.key;
         const Icon = tab.icon;
@@ -31,16 +30,12 @@ export function SegTabs<T extends string = string>({
           <button
             key={tab.key}
             type="button"
+            aria-pressed={isActive}
             onClick={() => onChange(tab.key)}
-            className="flex-1 ft-body text-[11px] font-medium py-2 px-2.5 rounded-md flex flex-col items-center justify-center gap-1 transition-all cursor-pointer select-none"
-            style={{
-              background: isActive ? TOKENS.ink : "transparent",
-              color: isActive ? "#ffffff" : TOKENS.sub,
-              border: `1px solid ${isActive ? TOKENS.ink : TOKENS.line}`,
-            }}
+            className={`ft-body flex min-h-11 min-w-0 flex-1 items-center justify-center gap-2 border-b-2 px-2 py-2 text-sm font-medium whitespace-nowrap transition-colors hover:bg-surface-soft ${isActive ? "border-accent-ink text-foreground" : "border-transparent text-muted"}`}
           >
-            {Icon && <Icon size={14} color={isActive ? "#ffffff" : TOKENS.sub} />}
-            <span className="truncate">
+            {Icon && <span aria-hidden="true"><Icon size={16} color="currentColor" /></span>}
+            <span>
               {tab.label} {tab.count !== undefined ? `(${tab.count})` : ""}
             </span>
           </button>

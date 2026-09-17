@@ -39,12 +39,13 @@ export class JwtAuthGuard implements CanActivate {
     }
     const usuario = await this.prisma.usuario.findUnique({
       where: { id: payload.sub },
-      select: { isActive: true },
+      select: { isActive: true, empresaId: true },
     });
     if (!usuario?.isActive) {
       throw new UnauthorizedException('Sesión inválida o expirada');
     }
     request.usuarioId = payload.sub;
+    request.empresaId = usuario.empresaId;
     // Solo la sesión web renueva su cookie. El token Bearer de la app móvil
     // permanece aislado de las cookies httpOnly del navegador.
     if (!bearer) {

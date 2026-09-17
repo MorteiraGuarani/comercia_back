@@ -1,11 +1,13 @@
 "use client";
 
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { apiFetch } from "@/lib/api";
 import { useListaCampo, useOperacionCampo } from "@/hooks/use-lista-campo";
 import { fechaEnZonaIso } from "@/utils/fechas";
 import { Modal } from "@/components/modal";
 import { PantallaCarga } from "@/components/pantalla-carga";
+import { Paginacion } from "@/components/paginacion";
+import { IconoMas } from "@/components/icono-mas";
 import { TOKENS } from "./tokens";
 import { StatusStamp } from "./ui/status-stamp";
 import { StatChip } from "./ui/stat-chip";
@@ -13,14 +15,12 @@ import { TopBar } from "./ui/top-bar";
 import {
   IconoBuscar,
   IconoCruz,
-  IconoMas,
   IconoEditar,
+  IconoCamara,
   IconoGlobo,
   IconoPin,
-  IconoCamara,
-  IconoTareas,
 } from "./ui/iconos-campo";
-import type { FormTareaCampo, TareaCampo, LocalCampo } from "@/types/campo";
+import type { FormTareaCampo, TareaCampo, LocalCampo, RespuestaCatalogoTareasCampo } from "@/types/campo";
 
 const CATEGORIAS_PRESET = [
   "Góndola",
@@ -33,12 +33,23 @@ const CATEGORIAS_PRESET = [
 ];
 
 export function TareasPanel() {
-  const lista = useListaCampo<TareaCampo>("/campo/tareas");
   const op = useOperacionCampo();
 
   const [busqueda, setBusqueda] = useState("");
   const [categoriaFiltro, setCategoriaFiltro] = useState<string>("Todas");
   const [filtroTipo, setFiltroTipo] = useState<"todas" | "obligatorias" | "con_fotos">("todas");
+  const [buscar, setBuscar] = useState("");
+  const parametros = new URLSearchParams({ buscar });
+  if (categoriaFiltro !== "Todas") parametros.set("categoria", categoriaFiltro);
+  if (filtroTipo !== "todas") parametros.set("tipo", filtroTipo);
+  const lista = useListaCampo<TareaCampo>(`/campo/tareas?${parametros}`, 0, 7);
+  const resumen = (lista.datos as RespuestaCatalogoTareasCampo | null)?.resumen;
+  const { setPage } = lista;
+
+  useEffect(() => {
+    const timer = setTimeout(() => { setBuscar(busqueda.trim()); setPage(1); }, 300);
+    return () => clearTimeout(timer);
+  }, [busqueda, setPage]);
 
   const [id, setId] = useState(0);
   const [form, setForm] = useState<FormTareaCampo | null>(null);
@@ -78,38 +89,9 @@ export function TareasPanel() {
     });
   }
 
-  // Filtrado de tareas
-  const tareasFiltradas = useMemo(() => {
-    return lista.items.filter((t) => {
-      const matchBusqueda =
-        !busqueda.trim() ||
-        t.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-        t.descripcion.toLowerCase().includes(busqueda.toLowerCase());
-
-      const matchCategoria =
-        categoriaFiltro === "Todas" || (t.categoria || "Góndola") === categoriaFiltro;
-
-      const matchTipo =
-        filtroTipo === "todas" ||
-        (filtroTipo === "obligatorias" && t.esObligatoria) ||
-        (filtroTipo === "con_fotos" && t.requiereFotos);
-
-      return matchBusqueda && matchCategoria && matchTipo;
-    });
-  }, [lista.items, busqueda, categoriaFiltro, filtroTipo]);
-
-  const totalObligatorias = useMemo(
-    () => lista.items.filter((t) => t.esObligatoria).length,
-    [lista.items],
-  );
-  const totalConFotos = useMemo(
-    () => lista.items.filter((t) => t.requiereFotos).length,
-    [lista.items],
-  );
-
   return (
     <div
-      className="min-h-screen text-[13px] font-sans pb-16"
+      className="campo-screen min-w-0 w-full min-h-screen text-[13px] font-sans pb-16"
       style={{ backgroundColor: TOKENS.bone, color: TOKENS.ink }}
     >
       <TopBar
@@ -119,51 +101,31 @@ export function TareasPanel() {
           <button
             type="button"
             onClick={() => abrir()}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold uppercase tracking-wider text-white shadow-sm transition-all hover:brightness-110 active:scale-95 cursor-pointer shrink-0"
+            aria-label="Crear tarea"
+            title="Crear tarea"
+            className="grid h-11 w-11 place-items-center rounded-lg text-white transition-colors hover:brightness-110"
             style={{ backgroundColor: TOKENS.carne }}
           >
             <IconoMas className="w-4 h-4" />
-            <span>Nueva Tarea</span>
           </button>
         }
       />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
-        {/* KPI Chips */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-          <StatChip
-            label="Total Tareas"
-            value={lista.items.length}
-            sub="En el catálogo de la empresa"
-            color="ink"
-          />
-          <StatChip
-            label="Tareas Obligatorias"
-            value={totalObligatorias}
-            sub="Control crítico de góndola"
-            color="carne"
-          />
-          <StatChip
-            label="Validación con Fotos"
-            value={totalConFotos}
-            sub="Evidencia antes y después"
-            color="fresco"
-          />
-        </div>
-
+      <main className="max-w-7xl min-w-0 mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-3 sm:space-y-5">
         {/* Filtros por Categoría */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
           {["Todas", ...CATEGORIAS_PRESET].map((cat) => {
             const activo = categoriaFiltro === cat;
             return (
               <button
                 key={cat}
                 type="button"
-                onClick={() => setCategoriaFiltro(cat)}
-                className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all cursor-pointer ${
+                onClick={() => { setCategoriaFiltro(cat); lista.setPage(1); }}
+                aria-pressed={activo}
+                className={`min-h-11 px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all cursor-pointer ${
                   activo
-                    ? "bg-[#1E2320] text-white shadow-sm"
-                    : "bg-white text-[#726C60] hover:text-[#1E2320] border"
+                    ? "bg-foreground text-background"
+                    : "bg-surface-raised text-muted hover:text-foreground border"
                 }`}
                 style={{ borderColor: activo ? "transparent" : TOKENS.line }}
               >
@@ -173,13 +135,20 @@ export function TareasPanel() {
           })}
         </div>
 
+        {/* KPI Chips: una tira compacta en móvil */}
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 sm:grid sm:grid-cols-3 sm:overflow-visible">
+          <StatChip label="Total tareas" value={resumen?.total ?? "—"} color="ink" />
+          <StatChip label="Obligatorias" value={resumen?.obligatorias ?? "—"} color="carne" />
+          <StatChip label="Con fotos" value={resumen?.conFotos ?? "—"} color="fresco" />
+        </div>
+
         {/* Buscador y Filtro Secundario */}
         <div
-          className="p-3.5 rounded-xl border flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between shadow-xs bg-white"
+          className="p-3.5 rounded-xl border flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between shadow-xs bg-surface-raised"
           style={{ borderColor: TOKENS.line }}
         >
           <div className="relative flex-1">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-zinc-400 pointer-events-none">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted pointer-events-none">
               <IconoBuscar className="w-4 h-4" />
             </span>
             <input
@@ -187,21 +156,21 @@ export function TareasPanel() {
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
               placeholder="Buscar tarea por título o descripción..."
-              className="w-full pl-9 pr-8 py-2 text-xs sm:text-sm rounded-lg border bg-white focus:outline-none focus:ring-2 focus:ring-[#1E2320]"
+              className="w-full pl-9 pr-8 py-2 text-xs sm:text-sm rounded-lg border bg-surface-raised focus:outline-none focus:ring-2 focus:ring-[#1E2320]"
               style={{ borderColor: TOKENS.line }}
             />
             {busqueda && (
               <button
                 type="button"
                 onClick={() => setBusqueda("")}
-                className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-zinc-400 hover:text-zinc-800 cursor-pointer"
+                className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-muted hover:text-foreground cursor-pointer"
               >
                 <IconoCruz className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
 
-          <div className="flex items-center gap-2 p-1.5 rounded-xl border bg-[#ECE9E2]/60" style={{ borderColor: TOKENS.line }}>
+          <div className="flex items-center gap-2 p-1.5 rounded-xl border bg-surface-soft" style={{ borderColor: TOKENS.line }}>
             {(
               [
                 { id: "todas", label: "Todas" },
@@ -214,11 +183,12 @@ export function TareasPanel() {
                 <button
                   key={f.id}
                   type="button"
-                  onClick={() => setFiltroTipo(f.id)}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                  onClick={() => { setFiltroTipo(f.id); lista.setPage(1); }}
+                  aria-pressed={activo}
+                  className={`min-w-0 flex-1 min-h-11 px-2 rounded-md text-xs sm:text-sm font-semibold transition-colors ${
                     activo
-                      ? "bg-[#1E2320] text-white shadow-sm"
-                      : "text-[#726C60] hover:text-[#1E2320]"
+                      ? "bg-foreground text-background"
+                      : "text-muted hover:text-foreground"
                   }`}
                 >
                   {f.label}
@@ -228,155 +198,56 @@ export function TareasPanel() {
           </div>
         </div>
 
-        {/* Grilla de Tareas */}
-        {lista.cargando && !lista.items.length ? (
-          <div className="py-16 text-center text-[#726C60]">
-            <div className="w-8 h-8 mx-auto border-2 border-[#1E2320] border-t-transparent rounded-full animate-spin mb-3" />
-            <p className="text-xs font-mono">Cargando tareas del equipo...</p>
-          </div>
-        ) : tareasFiltradas.length === 0 ? (
-          <div
-            className="p-12 text-center rounded-xl border"
-            style={{ backgroundColor: TOKENS.canvas, borderColor: TOKENS.line }}
-          >
-            <p className="text-base font-bold text-[#1E2320] mb-1">
-              No hay tareas que coincidan
-            </p>
-            <p className="text-xs text-[#726C60] mb-4">
-              {busqueda || categoriaFiltro !== "Todas" || filtroTipo !== "todas"
-                ? "Prueba cambiando los filtros seleccionados"
-                : "Crea tu primera tarea para que los impulsadores la realicen en sus visitas."}
-            </p>
-            <button
-              type="button"
-              onClick={() => abrir()}
-              className="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider text-white"
-              style={{ backgroundColor: TOKENS.ink }}
-            >
-              + Crear Tarea
-            </button>
-          </div>
+        {lista.error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-200">{lista.error}</p>}
+        {lista.cargando ? (
+          <p role="status" className="py-8 text-center text-sm text-muted">Cargando tareas…</p>
+        ) : lista.items.length === 0 ? (
+          <p className="rounded-lg border border-line bg-surface-raised p-6 text-sm text-muted">No hay tareas que coincidan con los filtros.</p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {tareasFiltradas.map((tarea) => {
-              const cat = tarea.categoria || "Góndola";
-              return (
-                <div
-                  key={tarea.id}
-                  className="p-6 sm:p-7 rounded-2xl border transition-all hover:shadow-xl flex flex-col justify-between bg-white shadow-xs"
-                  style={{ borderColor: TOKENS.line }}
-                >
-                  <div>
-                    {/* Encabezado */}
-                    <div className="flex items-start justify-between gap-2 mb-3">
-                      <span
-                        className="text-xs sm:text-sm font-mono uppercase px-3 py-1 rounded-lg font-extrabold"
-                        style={{
-                          backgroundColor:
-                            cat === "Precios"
-                              ? "#EAF0F6"
-                              : cat === "Limpieza"
-                              ? "#F0FDF4"
-                              : "#F6ECEC",
-                          color:
-                            cat === "Precios"
-                              ? TOKENS.frio
-                              : cat === "Limpieza"
-                              ? TOKENS.fresco
-                              : TOKENS.carne,
-                        }}
-                      >
-                        {cat}
-                      </span>
-
-                      <StatusStamp
-                        tone={
-                          !tarea.activo
-                            ? "sub"
-                            : tarea.esObligatoria
-                            ? "carne"
-                            : "fresco"
-                        }
-                        size="sm"
-                      >
-                        {!tarea.activo
-                          ? "INACTIVA"
-                          : tarea.esObligatoria
-                          ? "OBLIGATORIA"
-                          : "ACTIVA"}
-                      </StatusStamp>
+          <>
+            <ul aria-label="Catálogo de tareas" className="divide-y divide-line rounded-lg border border-line bg-surface-raised md:hidden">
+              {lista.items.map((tarea) => (
+                <li key={tarea.id} className="p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-xs text-muted">{tarea.categoria || "Góndola"}</p>
+                      <h3 className="mt-1 text-sm font-semibold text-foreground">{tarea.nombre}</h3>
                     </div>
-
-                    <h3 className="text-xl sm:text-2xl font-black uppercase tracking-tight text-[#1E2320] ft-display leading-tight mb-2">
-                      {tarea.nombre}
-                    </h3>
-
-                    <p className="text-sm sm:text-base text-[#726C60] line-clamp-2 mb-4 leading-relaxed font-medium">
-                      {tarea.descripcion || "Sin instrucciones adicionales."}
-                    </p>
-
-                    {/* Metadata chips */}
-                    <div
-                      className="space-y-2 py-3 border-y my-2.5 text-xs text-zinc-800"
-                      style={{ borderColor: TOKENS.line }}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="text-[#1E2320] font-bold">Alcance:</span>
-                        <span className="truncate font-medium inline-flex items-center gap-1">
-                          {tarea.todosLocales ? (
-                            <>
-                              <IconoGlobo className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                              <span>Todos los locales de la empresa</span>
-                            </>
-                          ) : (
-                            <>
-                              <IconoPin className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                              <span>{tarea.locales?.length ?? 0} locales seleccionados</span>
-                            </>
-                          )}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <span className="text-[#1E2320] font-bold">Validación:</span>
-                        <span className="font-medium inline-flex items-center gap-1">
-                          {tarea.requiereFotos ? (
-                            <span className="font-semibold text-[#8B2635] inline-flex items-center gap-1">
-                              <IconoCamara className="w-3.5 h-3.5 shrink-0" />
-                              <span>Fotos {tarea.fotosObligatorias ? "Obligatorias" : "Opcionales"}</span>
-                            </span>
-                          ) : (
-                            "Sin fotos requeridas"
-                          )}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-2 text-xs font-mono text-zinc-600">
-                        <span className="text-[#1E2320] font-bold">Vigencia:</span>
-                        <span>
-                          {tarea.fechaDesde.slice(0, 10)} {tarea.fechaHasta ? `al ${tarea.fechaHasta.slice(0, 10)}` : "· Permanente"}
-                        </span>
-                      </div>
-                    </div>
+                    <button type="button" onClick={() => abrir(tarea)} aria-label={"Editar " + tarea.nombre} className="grid h-11 w-11 shrink-0 place-items-center rounded-md border border-line text-foreground hover:bg-surface-soft"><IconoEditar className="h-4 w-4" /></button>
                   </div>
-
-                  {/* Acciones */}
-                  <div className="pt-2.5 flex items-center justify-end border-t border-[#DAD5C9]/60 mt-1">
-                    <button
-                      type="button"
-                      onClick={() => abrir(tarea)}
-                      className="px-3 py-1.5 rounded-lg border text-xs font-bold uppercase tracking-wider text-[#1E2320] bg-zinc-50 hover:bg-zinc-100 flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
-                      style={{ borderColor: TOKENS.line }}
-                    >
-                      <IconoEditar className="w-3.5 h-3.5" />
-                      <span>Editar Tarea</span>
-                    </button>
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted">
+                    <StatusStamp tone={!tarea.activo ? "sub" : tarea.esObligatoria ? "carne" : "fresco"}>{!tarea.activo ? "Inactiva" : tarea.esObligatoria ? "Obligatoria" : "Activa"}</StatusStamp>
+                    <span>{tarea.requiereFotos ? (tarea.fotosObligatorias ? "Fotos obligatorias" : "Fotos opcionales") : "Sin fotos"}</span>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                  <details className="mt-1 text-sm text-muted">
+                    <summary className="flex min-h-11 cursor-pointer items-center rounded-md text-xs hover:text-foreground">Ver instrucciones y alcance</summary>
+                    <p className="whitespace-pre-wrap">{tarea.descripcion || "Sin instrucciones adicionales."}</p>
+                    <p className="mt-2">{tarea.todosLocales ? "Todos los locales" : (tarea.locales?.length ?? 0) + " locales seleccionados"}</p>
+                    <p className="mt-1 text-xs">{tarea.fechaDesde.slice(0, 10)} · {tarea.fechaHasta?.slice(0, 10) ?? "Sin fecha de fin"}</p>
+                  </details>
+                </li>
+              ))}
+            </ul>
+            <div className="hidden overflow-x-auto rounded-lg border border-line bg-surface-raised md:block">
+              <table className="w-full text-left text-sm">
+                <thead className="border-b border-line bg-surface-soft text-xs text-muted"><tr><th className="p-4">Tarea</th><th className="p-4">Estado</th><th className="p-4">Fotos</th><th className="p-4">Alcance</th><th className="p-4"><span className="sr-only">Acciones</span></th></tr></thead>
+                <tbody className="divide-y divide-line">
+                  {lista.items.map((tarea) => (
+                    <tr key={tarea.id} className="hover:bg-surface-soft">
+                      <td className="max-w-md p-4"><p className="text-xs text-muted">{tarea.categoria || "Góndola"}</p><p className="font-semibold text-foreground">{tarea.nombre}</p><p className="mt-1 line-clamp-2 text-sm text-muted">{tarea.descripcion}</p></td>
+                      <td className="p-4"><StatusStamp tone={!tarea.activo ? "sub" : tarea.esObligatoria ? "carne" : "fresco"}>{!tarea.activo ? "Inactiva" : tarea.esObligatoria ? "Obligatoria" : "Activa"}</StatusStamp></td>
+                      <td className="p-4 text-muted">{tarea.requiereFotos ? (tarea.fotosObligatorias ? "Antes y después · obligatorias" : "Antes y después · opcionales") : "Sin fotos"}</td>
+                      <td className="p-4 text-muted">{tarea.todosLocales ? "Todos los locales" : (tarea.locales?.length ?? 0) + " locales"}</td>
+                      <td className="p-4"><button type="button" onClick={() => abrir(tarea)} className="min-h-11 rounded-md border border-line px-3 text-foreground hover:bg-surface-soft">Editar</button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
+        <Paginacion page={lista.page} limit={lista.limit} total={lista.datos?.total ?? 0} totalPages={lista.datos?.totalPages ?? 1} onPageChange={lista.setPage} onLimitChange={lista.setLimit} />
+
       </main>
 
       {/* Modal de Creación / Edición */}
@@ -413,7 +284,7 @@ export function TareasPanel() {
             )}
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-[#726C60] mb-1">
+              <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">
                 Nombre de la Tarea *
               </label>
               <input
@@ -422,14 +293,14 @@ export function TareasPanel() {
                 value={form.nombre}
                 onChange={(e) => setForm({ ...form, nombre: e.target.value })}
                 placeholder="Ej: Reposición de lácteos en góndola central, Limpieza de estantes..."
-                className="w-full p-2.5 rounded-lg border bg-white text-sm font-sans focus:outline-none focus:ring-2 focus:ring-[#1E2320]"
+                className="w-full p-2.5 rounded-lg border bg-surface-raised text-sm font-sans focus:outline-none focus:ring-2 focus:ring-[#1E2320]"
                 style={{ borderColor: TOKENS.line }}
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-[#726C60] mb-1">
+                <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">
                   Categoría Operativa
                 </label>
                 {!categoriaPersonalizada ? (
@@ -444,7 +315,7 @@ export function TareasPanel() {
                           setForm({ ...form, categoria: e.target.value });
                         }
                       }}
-                      className="w-full p-2.5 rounded-lg border bg-white text-sm font-sans focus:outline-none focus:ring-2 focus:ring-[#1E2320]"
+                      className="w-full p-2.5 rounded-lg border bg-surface-raised text-sm font-sans focus:outline-none focus:ring-2 focus:ring-[#1E2320]"
                       style={{ borderColor: TOKENS.line }}
                     >
                       {CATEGORIAS_PRESET.map((c) => (
@@ -463,7 +334,7 @@ export function TareasPanel() {
                       value={form.categoria}
                       onChange={(e) => setForm({ ...form, categoria: e.target.value })}
                       placeholder="Ej: Auditoría, Degustación..."
-                      className="w-full p-2.5 rounded-lg border bg-white text-sm font-sans"
+                      className="w-full p-2.5 rounded-lg border bg-surface-raised text-sm font-sans"
                       style={{ borderColor: TOKENS.line }}
                     />
                     <button
@@ -472,7 +343,7 @@ export function TareasPanel() {
                         setCategoriaPersonalizada(false);
                         setForm({ ...form, categoria: "Góndola" });
                       }}
-                      className="px-2 text-xs text-[#726C60] hover:text-[#1E2320]"
+                      className="px-2 text-xs text-muted hover:text-foreground"
                     >
                       Lista
                     </button>
@@ -481,17 +352,17 @@ export function TareasPanel() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-[#726C60] mb-1">
+                <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">
                   Nivel de Obligatoriedad
                 </label>
-                <label className="flex items-center gap-2 p-2.5 rounded-lg border bg-white cursor-pointer" style={{ borderColor: TOKENS.line }}>
+                <label className="flex items-center gap-2 p-2.5 rounded-lg border bg-surface-raised cursor-pointer" style={{ borderColor: TOKENS.line }}>
                   <input
                     type="checkbox"
                     checked={form.esObligatoria}
                     onChange={(e) => setForm({ ...form, esObligatoria: e.target.checked })}
                     className="w-4 h-4 rounded border-[#DAD5C9] text-[#8B2635] focus:ring-[#8B2635]"
                   />
-                  <span className="text-xs font-bold text-[#1E2320]">
+                  <span className="text-xs font-bold text-foreground">
                     Marcar como Tarea Obligatoria
                   </span>
                 </label>
@@ -499,7 +370,7 @@ export function TareasPanel() {
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-[#726C60] mb-1">
+              <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">
                 Instrucciones / Procedimiento para el Impulsador
               </label>
               <textarea
@@ -507,7 +378,7 @@ export function TareasPanel() {
                 value={form.descripcion}
                 onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
                 placeholder="Instrucciones claras sobre qué revisar, cómo acomodar los productos y criterios de aceptación..."
-                className="w-full p-2.5 rounded-lg border bg-white text-sm"
+                className="w-full p-2.5 rounded-lg border bg-surface-raised text-sm"
                 style={{ borderColor: TOKENS.line }}
               />
             </div>
@@ -525,9 +396,9 @@ export function TareasPanel() {
                       fotosObligatorias: e.target.checked ? form.fotosObligatorias : false,
                     })
                   }
-                  className="w-4 h-4 rounded border-[#DAD5C9] text-[#1E2320]"
+                  className="w-4 h-4 rounded border-[#DAD5C9] text-foreground"
                 />
-                <span className="text-xs font-bold text-[#1E2320] inline-flex items-center gap-1.5">
+                <span className="text-xs font-bold text-foreground inline-flex items-center gap-1.5">
                   <IconoCamara className="w-3.5 h-3.5" />
                   <span>Exigir Registro Fotográfico (Evidencia)</span>
                 </span>
@@ -552,7 +423,7 @@ export function TareasPanel() {
 
             {/* Alcance de Locales */}
             <div className="space-y-2">
-              <label className="block text-xs font-bold uppercase tracking-wider text-[#726C60]">
+              <label className="block text-xs font-bold uppercase tracking-wider text-muted">
                 Alcance Geográfico
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -561,8 +432,8 @@ export function TareasPanel() {
                   onClick={() => setForm({ ...form, todosLocales: true, localIds: [] })}
                   className={`p-3 rounded-lg border text-left text-xs font-bold transition-all inline-flex items-center gap-1.5 ${
                     form.todosLocales
-                      ? "bg-white border-[#1E2320] ring-1 ring-[#1E2320]"
-                      : "bg-[#ECE9E2]/50 border-[#DAD5C9] text-[#726C60]"
+                      ? "bg-surface-raised border-[#1E2320] ring-1 ring-[#1E2320]"
+                      : "bg-[#ECE9E2]/50 border-[#DAD5C9] text-muted"
                   }`}
                 >
                   <IconoGlobo className="w-3.5 h-3.5" />
@@ -573,8 +444,8 @@ export function TareasPanel() {
                   onClick={() => setForm({ ...form, todosLocales: false })}
                   className={`p-3 rounded-lg border text-left text-xs font-bold transition-all inline-flex items-center gap-1.5 ${
                     !form.todosLocales
-                      ? "bg-white border-[#1E2320] ring-1 ring-[#1E2320]"
-                      : "bg-[#ECE9E2]/50 border-[#DAD5C9] text-[#726C60]"
+                      ? "bg-surface-raised border-[#1E2320] ring-1 ring-[#1E2320]"
+                      : "bg-[#ECE9E2]/50 border-[#DAD5C9] text-muted"
                   }`}
                 >
                   <IconoPin className="w-3.5 h-3.5" />
@@ -584,7 +455,7 @@ export function TareasPanel() {
 
               {/* Selector de locales específicos si no es global */}
               {!form.todosLocales && (
-                <div className="p-3 rounded-xl border bg-white space-y-2" style={{ borderColor: TOKENS.line }}>
+                <div className="p-3 rounded-xl border bg-surface-raised space-y-2" style={{ borderColor: TOKENS.line }}>
                   <input
                     type="text"
                     value={busquedaLocal}
@@ -623,7 +494,7 @@ export function TareasPanel() {
                               className="w-3.5 h-3.5 rounded"
                             />
                             <span>{loc.nombre}</span>
-                            <span className="text-[#726C60] font-mono text-[10px]">
+                            <span className="text-muted font-mono text-[10px]">
                               ({loc.cliente.nombre})
                             </span>
                           </label>
@@ -631,7 +502,7 @@ export function TareasPanel() {
                       })}
                   </div>
 
-                  <p className="text-[11px] font-mono text-[#726C60]">
+                  <p className="text-[11px] font-mono text-muted">
                     {form.localIds.length} locales seleccionados
                   </p>
                 </div>
@@ -641,7 +512,7 @@ export function TareasPanel() {
             {/* Vigencia */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-[#726C60] mb-1">
+                <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">
                   Vigencia Desde *
                 </label>
                 <input
@@ -649,32 +520,32 @@ export function TareasPanel() {
                   required
                   value={form.fechaDesde}
                   onChange={(e) => setForm({ ...form, fechaDesde: e.target.value })}
-                  className="w-full p-2.5 rounded-lg border bg-white text-sm font-mono"
+                  className="w-full p-2.5 rounded-lg border bg-surface-raised text-sm font-mono"
                   style={{ borderColor: TOKENS.line }}
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-[#726C60] mb-1">
+                <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">
                   Vigencia Hasta (Opcional)
                 </label>
                 <input
                   type="date"
                   value={form.fechaHasta}
                   onChange={(e) => setForm({ ...form, fechaHasta: e.target.value })}
-                  className="w-full p-2.5 rounded-lg border bg-white text-sm font-mono"
+                  className="w-full p-2.5 rounded-lg border bg-surface-raised text-sm font-mono"
                   style={{ borderColor: TOKENS.line }}
                 />
               </div>
             </div>
 
             <div className="flex items-center gap-3 pt-2">
-              <label className="flex items-center gap-2 cursor-pointer text-sm font-semibold text-[#1E2320]">
+              <label className="flex items-center gap-2 cursor-pointer text-sm font-semibold text-foreground">
                 <input
                   type="checkbox"
                   checked={form.activo}
                   onChange={(e) => setForm({ ...form, activo: e.target.checked })}
-                  className="w-4 h-4 rounded border-[#DAD5C9] text-[#1E2320]"
+                  className="w-4 h-4 rounded border-[#DAD5C9] text-foreground"
                 />
                 <span>Tarea Activa en Plataforma</span>
               </label>
@@ -684,7 +555,7 @@ export function TareasPanel() {
               <button
                 type="button"
                 onClick={() => setForm(null)}
-                className="px-4 py-2 rounded-lg border text-xs font-bold uppercase tracking-wider bg-white hover:bg-gray-50"
+                className="px-4 py-2 rounded-lg border text-xs font-bold uppercase tracking-wider bg-surface-raised hover:bg-gray-50"
                 style={{ borderColor: TOKENS.line }}
               >
                 Cancelar

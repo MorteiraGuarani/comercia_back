@@ -102,5 +102,5 @@ export const VISITA_CAMPO_SELECT = {
   asignacion: {
     select: { usuario: { select: { id: true, nombre: true, apellido: true } } },
   },
-  _count: { select: { cumplimientos: true } },
+  _count: { select: { cumplimientos: { where: { NOT: { completadaAt: null } } } } },
 } as const;

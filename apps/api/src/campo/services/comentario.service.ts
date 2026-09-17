@@ -1,6 +1,7 @@
 import {
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -10,9 +11,11 @@ import {
 } from '../dto/comentario-tarea.dto';
 import { verificarAccesoCumplimiento, esLiderDe } from '../utils/autorizacion';
 import { NotificacionService } from './notificacion.service';
+import { prepararEvidencia, tareaParaEvidencia } from '../utils/evidencia-tarea';
 
 @Injectable()
 export class ComentarioService {
+  private readonly logger = new Logger(ComentarioService.name);
   constructor(
     private prisma: PrismaService,
     private notificacionService: NotificacionService,
@@ -46,15 +49,17 @@ export class ComentarioService {
       },
     });
 
-    if (!cumplimiento) {
-      throw new NotFoundException('Tarea no completada');
-    }
-
     // Verificar que el usuario es el dueño de la visita
-    if (cumplimiento.visita.usuarioId !== usuarioId) {
+    if (cumplimiento && cumplimiento.visita.usuarioId !== usuarioId) {
       throw new ForbiddenException(
         'Solo puedes comentar en tus propias tareas',
       );
+    }
+    let nombreTarea = cumplimiento?.nombreTarea;
+    if (!cumplimiento) {
+      const tarea = await tareaParaEvidencia(this.prisma, usuarioId, empresaId, visitaId, tareaId);
+      await prepararEvidencia(this.prisma, visitaId, tareaId, tarea.nombre);
+      nombreTarea = tarea.nombre;
     }
 
     // Crear el comentario
@@ -82,12 +87,13 @@ export class ComentarioService {
     });
 
     // Crear notificación para el líder
-    await this.notificacionService.crearNotificacionComentario(
-      empresaId,
-      usuarioId,
-      comentario.id,
-      cumplimiento.nombreTarea,
-    );
+    try {
+      await this.notificacionService.crearNotificacionComentario(
+        empresaId, usuarioId, comentario.id, nombreTarea!,
+      );
+    } catch {
+      this.logger.warn('Comentario guardado; no se pudo generar su notificación');
+    }
 
     return {
       id: comentario.id,

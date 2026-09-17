@@ -1,3 +1,9 @@
+import type { RespuestaPaginada } from './paginacion';
+
+export interface RespuestaCatalogoTareasCampo extends RespuestaPaginada<TareaCampo> {
+  resumen: { total: number; obligatorias: number; conFotos: number };
+}
+
 export interface ClienteCampo {
   id: number;
   nombre: string;
@@ -110,6 +116,8 @@ export interface TareaJornadaCampo {
   descripcion: string;
   requiereFotos: boolean;
   fotosObligatorias: boolean;
+  categoria?: string;
+  esObligatoria?: boolean;
   visitasCompletadas: number[];
   completada?: boolean;
   completadaAt?: string;
@@ -422,4 +430,3 @@ export interface ColaboradorDetalleData {
   tareasCategorias: CategoriaTareasColaborador[];
   novedades: NovedadColaboradorItem[];
 }
-

@@ -50,6 +50,7 @@ import {
 } from './dto/novedad.dto';
 import { CrearAvisoDto } from './dto/aviso.dto';
 import { ConsultaSupervisionDto } from './dto/supervision.dto';
+import { ConsultaTareasCampoDto } from './dto/consulta-tareas.dto';
 import { multerConfigFotosTareas, multerConfigLogoCliente } from './utils/multer-config';
 import { createReadStream, existsSync } from 'fs';
 
@@ -156,7 +157,7 @@ export class CampoController {
 
   @Get('tareas') tareas(
     @Req() r: RequestConUsuario,
-    @Query() q: ConsultaCampoDto,
+    @Query() q: ConsultaTareasCampoDto,
   ) {
     return this.catalogo.tareas(r.usuarioId, q);
   }
@@ -374,10 +375,11 @@ export class CampoController {
 
   @Get('fotos/:id')
   async servirFoto(
+    @Req() r: RequestConUsuario,
     @Param('id', ParseIntPipe) id: number,
     @Res() res: Response,
   ) {
-    const foto = await this.fotoService.obtenerPorId(id);
+    const foto = await this.fotoService.obtenerPorId(r.usuarioId, r.empresaId, id);
 
     if (!foto || !existsSync(foto.rutaArchivo)) {
       return res.status(404).json({ message: 'Foto no encontrada' });
@@ -463,6 +465,11 @@ export class CampoController {
     @Query() q: ListarNovedadesDto,
   ) {
     return this.novedadService.listar(r.usuarioId, r.empresaId, q);
+  }
+
+  @Get('novedades/locales')
+  localesNovedad(@Req() r: RequestConUsuario, @Query() q: ConsultaCampoDto) {
+    return this.novedadService.locales(r.usuarioId, r.empresaId, q);
   }
 
   @Get('novedades/:id')

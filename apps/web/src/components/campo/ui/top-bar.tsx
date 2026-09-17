@@ -1,5 +1,4 @@
 import React from "react";
-import { TOKENS } from "../tokens";
 
 interface TopBarProps {
   title: string;
@@ -18,17 +17,14 @@ export function TopBar({
 }: TopBarProps) {
   return (
     <div
-      className={`flex flex-col sm:flex-row sm:items-center justify-between px-5 sm:px-8 py-3.5 sm:py-4 shrink-0 gap-3 border-b border-[#33362F] ${className}`}
-      style={{
-        background: TOKENS.ink,
-      }}
+      className={`flex min-w-0 flex-wrap items-start justify-between gap-3 border-b border-line bg-surface-raised px-4 py-3 sm:items-center sm:px-6 sm:py-4 lg:px-8 ${className}`}
     >
-      <div className="flex items-center gap-3 min-w-0">
+      <div className="flex flex-1 items-center gap-3 min-w-[min(100%,12rem)]">
         {onBack && (
           <button
             type="button"
             onClick={onBack}
-            className="p-1.5 -ml-1 rounded-full text-white hover:bg-white/10 active:opacity-60 transition cursor-pointer shrink-0"
+            className="-ml-2 grid h-11 w-11 shrink-0 place-items-center rounded-md text-foreground transition-colors hover:bg-surface-soft active:bg-surface-soft"
             aria-label="Volver atrás"
           >
             <svg
@@ -40,6 +36,7 @@ export function TopBar({
               strokeWidth="2.2"
               strokeLinecap="round"
               strokeLinejoin="round"
+              aria-hidden="true"
             >
               <line x1="19" y1="12" x2="5" y2="12" />
               <polyline points="11 6 5 12 11 18" />
@@ -47,18 +44,18 @@ export function TopBar({
           </button>
         )}
         <div className="min-w-0">
-          <h1 className="ft-display text-xl sm:text-2xl font-bold tracking-tight text-white leading-tight">
+          <h1 className="ft-display text-2xl font-semibold leading-tight text-foreground sm:text-3xl">
             {title}
           </h1>
           {subtitle && (
-            <p className="ft-body text-xs sm:text-sm text-zinc-300 font-normal mt-0.5 leading-normal max-w-2xl">
+            <p className="ft-body mt-1 hidden max-w-2xl text-sm leading-normal text-muted sm:block">
               {subtitle}
             </p>
           )}
         </div>
       </div>
       {right && (
-        <div className="flex items-center gap-2.5 shrink-0">{right}</div>
+        <div className="flex min-w-0 flex-wrap items-center gap-2 self-start sm:self-auto">{right}</div>
       )}
     </div>
   );

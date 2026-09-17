@@ -1,203 +1,97 @@
 "use client";
 
-import { useState } from "react";
-import { subirFoto, eliminarFoto, obtenerUrlFoto } from "@/lib/api-tareas";
-import type { MomentoFoto, FotoTarea } from "@/types/campo";
+import { useEffect, useState } from "react";
+import { subirFoto, eliminarFoto, obtenerFotos, obtenerUrlFoto } from "@/lib/api-tareas";
+import type { MomentoFoto, FotosTareaResponse } from "@/types/campo";
 import { mostrarToast } from "@/components/toast/toast-controller";
+import { PantallaCarga } from "@/components/pantalla-carga";
 
 interface SubidorFotosProps {
   visitaId: number;
   tareaId: number;
-  fotoAntes?: FotoTarea;
-  fotoDespues?: FotoTarea;
   obligatorio: boolean;
   onFotosActualizadas: () => void;
 }
 
-export function SubidorFotos({
-  visitaId,
-  tareaId,
-  fotoAntes,
-  fotoDespues,
-  obligatorio,
-  onFotosActualizadas,
-}: SubidorFotosProps) {
-  const [subiendo, setSubiendo] = useState<MomentoFoto | null>(null);
+export function SubidorFotos({ visitaId, tareaId, obligatorio, onFotosActualizadas }: SubidorFotosProps) {
+  const [fotos, setFotos] = useState<FotosTareaResponse | null>(null);
+  const [error, setError] = useState("");
+  const [intento, setIntento] = useState(0);
+  const [operacion, setOperacion] = useState("");
 
-  const handleSubir = async (momento: MomentoFoto, archivo: File) => {
-    // Validar tamaño
-    if (archivo.size > 5 * 1024 * 1024) {
-      mostrarToast("error", "La imagen no puede superar 5 MB");
+  useEffect(() => {
+    let vigente = true;
+    obtenerFotos(visitaId, tareaId).then((resultado) => {
+      if (vigente) { setFotos(resultado); setError(""); }
+    }).catch((problema: unknown) => {
+      if (vigente) setError(problema instanceof Error ? problema.message : "No se pudieron cargar las fotos");
+    });
+    return () => { vigente = false; };
+  }, [visitaId, tareaId, intento]);
+
+  async function actualizar(momento: MomentoFoto, archivo?: File) {
+    if (operacion) return;
+    if (archivo && archivo.size > 5 * 1024 * 1024) {
+      setError("La imagen no puede superar 5 MB");
       return;
     }
-
-    // Validar tipo
-    if (!["image/jpeg", "image/png", "image/webp"].includes(archivo.type)) {
-      mostrarToast("error", "Solo se permiten imágenes JPG, PNG o WebP");
+    if (archivo && !["image/jpeg", "image/png", "image/webp"].includes(archivo.type)) {
+      setError("Solo se permiten imágenes JPG, PNG o WebP");
       return;
     }
-
-    setSubiendo(momento);
+    if (!archivo && !confirm("¿Eliminar esta foto?")) return;
+    setOperacion(archivo ? "Subiendo foto" : "Eliminando foto");
+    setError("");
     try {
-      await subirFoto(visitaId, tareaId, momento, archivo);
-      mostrarToast("exito", `Foto ${momento.toLowerCase()} subida correctamente`);
+      if (archivo) {
+        const foto = await subirFoto(visitaId, tareaId, momento, archivo);
+        setFotos((actuales) => ({ ...actuales, [momento === "ANTES" ? "antes" : "despues"]: foto }));
+      } else {
+        await eliminarFoto(visitaId, tareaId, momento);
+        setFotos((actuales) => ({ ...actuales, [momento === "ANTES" ? "antes" : "despues"]: undefined }));
+      }
+      mostrarToast("exito", archivo ? "Foto guardada" : "Foto eliminada");
       onFotosActualizadas();
-    } catch (error) {
-      mostrarToast("error", error instanceof Error ? error.message : "Error al subir foto");
+    } catch (problema) {
+      setError(problema instanceof Error ? problema.message : "No se pudo guardar el cambio");
     } finally {
-      setSubiendo(null);
+      setOperacion("");
     }
-  };
-
-  const handleEliminar = async (momento: MomentoFoto) => {
-    if (obligatorio) {
-      mostrarToast("error", "No puedes eliminar fotos obligatorias");
-      return;
-    }
-
-    if (!confirm(`¿Eliminar foto ${momento.toLowerCase()}?`)) return;
-
-    try {
-      await eliminarFoto(visitaId, tareaId, momento);
-      mostrarToast("exito", "Foto eliminada");
-      onFotosActualizadas();
-    } catch (error) {
-      mostrarToast("error", error instanceof Error ? error.message : "Error al eliminar foto");
-    }
-  };
+  }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      {/* Foto ANTES */}
-      <TarjetaFoto
-        momento="ANTES"
-        foto={fotoAntes}
-        subiendo={subiendo === "ANTES"}
-        obligatorio={obligatorio}
-        onSubir={(archivo) => handleSubir("ANTES", archivo)}
-        onEliminar={() => handleEliminar("ANTES")}
-      />
-
-      {/* Foto DESPUÉS */}
-      <TarjetaFoto
-        momento="DESPUES"
-        foto={fotoDespues}
-        subiendo={subiendo === "DESPUES"}
-        obligatorio={obligatorio}
-        onSubir={(archivo) => handleSubir("DESPUES", archivo)}
-        onEliminar={() => handleEliminar("DESPUES")}
-      />
-    </div>
-  );
-}
-
-interface TarjetaFotoProps {
-  momento: MomentoFoto;
-  foto?: FotoTarea;
-  subiendo: boolean;
-  obligatorio: boolean;
-  onSubir: (archivo: File) => void;
-  onEliminar: () => void;
-}
-
-function TarjetaFoto({
-  momento,
-  foto,
-  subiendo,
-  obligatorio,
-  onSubir,
-  onEliminar,
-}: TarjetaFotoProps) {
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const archivo = e.target.files?.[0];
-    if (archivo) {
-      onSubir(archivo);
-    }
-    e.target.value = "";
-  };
-
-  const labelMomento = momento === "ANTES" ? "Antes" : "Después";
-
-  return (
-    <div className="border border-gray-300 dark:border-gray-600 rounded-lg p-4 bg-white dark:bg-gray-800">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="font-medium text-gray-900 dark:text-white">
-          Foto {labelMomento}
-          {obligatorio && <span className="text-red-500 ml-1">*</span>}
-        </h3>
-        {foto && !obligatorio && (
-          <button
-            type="button"
-            onClick={onEliminar}
-            className="text-sm text-red-600 dark:text-red-400 hover:underline"
-            aria-label={`Eliminar foto ${labelMomento.toLowerCase()}`}
-          >
-            Eliminar
-          </button>
-        )}
-      </div>
-
-      {foto ? (
-        <div className="space-y-3">
-          <img
-            src={obtenerUrlFoto(foto.id)}
-            alt={`Foto ${labelMomento.toLowerCase()}`}
-            className="w-full h-48 object-cover rounded border border-gray-200 dark:border-gray-700"
-          />
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            {new Date(foto.creadoAt).toLocaleString("es-PY")}
-            {" · "}
-            {(foto.tamanioBytes / 1024).toFixed(0)} KB
-          </p>
-          <label className="block">
-            <span className="sr-only">Cambiar foto {labelMomento.toLowerCase()}</span>
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={handleChange}
-              disabled={subiendo}
-              className="block w-full text-sm text-gray-500 dark:text-gray-400
-                file:mr-4 file:py-2 file:px-4
-                file:rounded file:border-0
-                file:text-sm file:font-medium
-                file:bg-blue-50 file:text-blue-700
-                dark:file:bg-blue-900 dark:file:text-blue-300
-                hover:file:bg-blue-100 dark:hover:file:bg-blue-800
-                disabled:opacity-50 disabled:cursor-not-allowed
-                cursor-pointer"
-            />
-          </label>
-        </div>
+    <div className="space-y-3 text-foreground">
+      <PantallaCarga visible={!!operacion} mensaje={operacion} />
+      <p className="text-sm text-muted">{obligatorio ? "Subí ambas fotos antes de completar la tarea." : "Podés adjuntar fotos del antes y del después."}</p>
+      {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-200">{error}</p>}
+      {!fotos ? (
+        error ? <button type="button" className="min-h-11 rounded-lg border border-line px-4 hover:bg-surface-soft" onClick={() => setIntento((n) => n + 1)}>Reintentar</button>
+          : <p role="status" className="py-6 text-sm text-muted">Cargando fotos…</p>
       ) : (
-        <div className="space-y-3">
-          <div className="w-full h-48 bg-gray-100 dark:bg-gray-700 rounded border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center">
-            {subiendo ? (
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Subiendo...</p>
+        <div className="grid min-w-0 grid-cols-2 gap-3">
+          {(["ANTES", "DESPUES"] as const).map((momento) => {
+            const foto = momento === "ANTES" ? fotos.antes : fotos.despues;
+            const nombre = momento === "ANTES" ? "Antes" : "Después";
+            return (
+              <div key={momento} className="min-w-0 rounded-lg border border-line bg-surface-raised p-2 sm:p-3">
+                <h3 className="mb-2 text-sm font-semibold">{nombre}</h3>
+                {foto ? (
+                  // Las fotos privadas se sirven con la cookie de sesión.
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={obtenerUrlFoto(foto.id) + "?v=" + encodeURIComponent(foto.creadoAt)} alt={"Foto " + nombre.toLowerCase()} className="h-32 w-full rounded object-cover sm:h-44" />
+                ) : <div className="grid h-32 place-items-center rounded bg-surface-soft text-xs text-muted sm:h-44">Sin foto</div>}
+                <label className="relative mt-2 flex min-h-11 cursor-pointer items-center justify-center rounded-md border border-line px-2 text-sm font-medium hover:bg-surface-soft focus-within:ring-2 focus-within:ring-brand-600">
+                  {foto ? "Cambiar" : "Subir foto"}
+                  <input type="file" accept="image/jpeg,image/png,image/webp" aria-label={(foto ? "Cambiar" : "Subir") + " foto " + nombre.toLowerCase()} disabled={!!operacion} className="absolute inset-0 w-full cursor-pointer opacity-0" onChange={(e) => {
+                    const archivo = e.target.files?.[0];
+                    if (archivo) void actualizar(momento, archivo);
+                    e.target.value = "";
+                  }} />
+                </label>
+                {foto && !obligatorio && <button type="button" disabled={!!operacion} className="mt-1 min-h-11 w-full rounded-md text-sm text-red-700 hover:bg-surface-soft dark:text-red-300" onClick={() => void actualizar(momento)}>Eliminar</button>}
               </div>
-            ) : (
-              <p className="text-sm text-gray-500 dark:text-gray-400">Sin foto</p>
-            )}
-          </div>
-          <label className="block">
-            <span className="sr-only">Subir foto {labelMomento.toLowerCase()}</span>
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={handleChange}
-              disabled={subiendo}
-              className="block w-full text-sm text-gray-500 dark:text-gray-400
-                file:mr-4 file:py-2 file:px-4
-                file:rounded file:border-0
-                file:text-sm file:font-medium
-                file:bg-blue-50 file:text-blue-700
-                dark:file:bg-blue-900 dark:file:text-blue-300
-                hover:file:bg-blue-100 dark:hover:file:bg-blue-800
-                disabled:opacity-50 disabled:cursor-not-allowed
-                cursor-pointer"
-            />
-          </label>
+            );
+          })}
         </div>
       )}
     </div>

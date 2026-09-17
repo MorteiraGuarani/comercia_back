@@ -268,10 +268,20 @@ export class JornadaCampoService {
           id: true,
           nombre: true,
           descripcion: true,
+          requiereFotos: true,
+          fotosObligatorias: true,
+          categoria: true,
+          esObligatoria: true,
           cumplimientos: {
+            // Incluye borradores para que el impulsador pueda ver las
+            // evidencias cargadas antes de completar la tarea.
             where: { visita: { usuarioId, asignacionId, fecha } },
             take: 21,
-            select: { visitaId: true },
+            select: {
+              visitaId: true,
+              completadaAt: true,
+              fotos: { select: { momento: true }, take: 2 },
+            },
           },
         },
         orderBy: [{ nombre: 'asc' }, { id: 'asc' }],
@@ -282,7 +292,15 @@ export class JornadaCampoService {
     return respuestaPaginada(
       items.map(({ cumplimientos, ...t }) => ({
         ...t,
-        visitasCompletadas: cumplimientos.map((c) => c.visitaId),
+        visitasCompletadas: cumplimientos
+          .filter((c) => c.completadaAt !== null)
+          .map((c) => c.visitaId),
+        tieneAntes: cumplimientos.some((c) =>
+          c.fotos.some((foto) => foto.momento === 'ANTES'),
+        ),
+        tieneDespues: cumplimientos.some((c) =>
+          c.fotos.some((foto) => foto.momento === 'DESPUES'),
+        ),
       })),
       total,
       page,
@@ -336,6 +354,7 @@ export class JornadaCampoService {
             cumplimientoTareaId: tareaId,
           },
           select: { momento: true },
+          take: 2,
         });
 
         const tieneAntes = fotos.some((f) => f.momento === 'ANTES');
@@ -367,7 +386,7 @@ export class JornadaCampoService {
           nombreTarea: tarea.nombre,
           fotosValidadas,
         },
-        update: { fotosValidadas },
+        update: { fotosValidadas, completadaAt: new Date() },
         select: { tareaId: true },
       });
       return { ok: true };
