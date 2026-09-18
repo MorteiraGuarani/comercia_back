@@ -54,7 +54,7 @@ export function MapaLocal({
   }, [lat, lng, local.direccion, local.nombre, temaOscuro]);
 
   return (
-    <Modal titulo={local.nombre} abierto onCerrar={cerrar} ancho="lg">
+    <Modal titulo={local.nombre} abierto onCerrar={cerrar} ancho="xl">
       <div className="campo-screen space-y-3">
         <p className="text-sm text-muted">
           {local.direccion} · {lat}, {lng}
@@ -62,7 +62,7 @@ export function MapaLocal({
         <div className="campo-map overflow-hidden rounded-xl border border-line bg-surface-soft">
           <div
             ref={contenedorRef}
-            className="h-80 w-full"
+            className="h-[min(56dvh,30rem)] min-h-80 w-full"
             aria-label={`Mapa de ubicación de ${local.nombre}`}
           />
         </div>

@@ -302,7 +302,9 @@ export function RutaImpulsadorPanel() {
                       <button
                         type="button"
                         onClick={() => setNovedadLocal(a.local)}
-                        className="px-2.5 py-1 rounded text-xs font-medium text-amber-700 bg-amber-50 border border-amber-300 hover:bg-amber-100 transition cursor-pointer"
+                        className="!min-h-8 rounded-md bg-surface-soft px-2.5 py-1 text-[11px] font-semibold text-foreground transition hover:bg-accent-soft hover:text-accent-ink active:translate-y-px cursor-pointer"
+                        aria-label={`Reportar novedad en ${a.local.nombre}`}
+                        title={`Reportar novedad en ${a.local.nombre}`}
                       >
                         Novedad
                       </button>
