@@ -605,8 +605,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/app/panel/page.tsx": {
-    "mtime": 1789663778.571746,
-    "ast_hash": "9cf4675c518912d9f4ccb1e584e639a0",
+    "mtime": 1789738593.774833,
+    "ast_hash": "56c8b7d79ea3d6c9a7f2eddd6ee32c70",
     "semantic_hash": ""
   },
   "apps/web/src/app/panel/usuarios/page.tsx": {
