@@ -84,8 +84,8 @@ jobs:
           file: apps/api/Dockerfile
           push: true
           tags: |
-            ghcr.io/mschuf/comercia-api:latest
-            ghcr.io/mschuf/comercia-api:${{ github.sha }}
+            ghcr.io/morteiraguarani/comercia-api:latest
+            ghcr.io/morteiraguarani/comercia-api:${{ github.sha }}
           cache-from: type=gha,scope=api
           cache-to: type=gha,mode=max,scope=api
 
@@ -109,8 +109,8 @@ jobs:
           build-args: |
             NEXT_DEPLOYMENT_ID=${{ github.sha }}
           tags: |
-            ghcr.io/mschuf/comercia-web:latest
-            ghcr.io/mschuf/comercia-web:${{ github.sha }}
+            ghcr.io/morteiraguarani/comercia-web:latest
+            ghcr.io/morteiraguarani/comercia-web:${{ github.sha }}
           cache-from: type=gha,scope=web
           cache-to: type=gha,mode=max,scope=web
 

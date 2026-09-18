@@ -7,7 +7,7 @@ set -euo pipefail
 
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COMPOSE="docker compose -f $APP_DIR/docker-compose.prod.yml"
-IMAGES="ghcr.io/mschuf/comercia-api:latest ghcr.io/mschuf/comercia-web:latest"
+IMAGES="ghcr.io/morteiraguarani/comercia-api:latest ghcr.io/morteiraguarani/comercia-web:latest"
 
 # Lock: si ya hay un deploy corriendo, salir en silencio
 exec 9>/tmp/comercia-autodeploy.lock

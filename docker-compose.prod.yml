@@ -36,7 +36,7 @@ services:
 
   # Ejecuta las migraciones de Prisma y termina; la API espera a que finalice OK.
   migrate:
-    image: ghcr.io/mschuf/comercia-api:${API_TAG:-latest}
+    image: ghcr.io/morteiraguarani/comercia-api:${API_TAG:-latest}
     command: ["npm", "run", "prisma:deploy"]
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-comercia}?schema=public
@@ -49,7 +49,7 @@ services:
     logging: *default-logging
 
   api:
-    image: ghcr.io/mschuf/comercia-api:${API_TAG:-latest}
+    image: ghcr.io/morteiraguarani/comercia-api:${API_TAG:-latest}
     restart: unless-stopped
     # Modo LAN (sin dominio): la API se expone directo en este puerto del host
     ports:
@@ -81,7 +81,7 @@ services:
     logging: *default-logging
 
   web:
-    image: ghcr.io/mschuf/comercia-web:${WEB_TAG:-latest}
+    image: ghcr.io/morteiraguarani/comercia-web:${WEB_TAG:-latest}
     restart: unless-stopped
     # Modo LAN (sin dominio): el front se expone directo en este puerto del host
     ports:
