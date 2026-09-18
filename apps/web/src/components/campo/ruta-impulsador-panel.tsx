@@ -4,6 +4,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { apiFetch } from "@/lib/api";
 import { useListaCampo, useOperacionCampo } from "@/hooks/use-lista-campo";
 import { fechaEnZonaIso, formatoFechaHora } from "@/utils/fechas";
+import { mensajeError } from "@/utils/error";
 import { TOKENS } from "./tokens";
 import { StatusStamp } from "./ui/status-stamp";
 import { StatChip } from "./ui/stat-chip";
@@ -20,6 +21,8 @@ import type {
   FormNovedadCampo,
   TipoNovedad,
 } from "@/types/campo";
+
+type LocalParaNovedad = Pick<LocalCampo, "id" | "nombre">;
 
 export function RutaImpulsadorPanel() {
   const hoyStr = fechaEnZonaIso(new Date());
@@ -47,7 +50,7 @@ export function RutaImpulsadorPanel() {
   } | null>(null);
 
   // Modal para reportar novedad en un local
-  const [novedadLocal, setNovedadLocal] = useState<LocalCampo | null>(null);
+  const [novedadLocal, setNovedadLocal] = useState<LocalParaNovedad | null>(null);
   const [tipoNovedad, setTipoNovedad] = useState<TipoNovedad>("INCIDENCIA");
   const [tituloNovedad, setTituloNovedad] = useState("");
   const [descNovedad, setDescNovedad] = useState("");
@@ -112,8 +115,8 @@ export function RutaImpulsadorPanel() {
         setDescNovedad("");
         setNovedadExito(false);
       }, 1400);
-    } catch (e: any) {
-      alert("Error al reportar novedad: " + e.message);
+    } catch (e) {
+      alert("Error al reportar novedad: " + mensajeError(e, "Error inesperado"));
     } finally {
       setGuardandoNovedad(false);
     }
@@ -171,7 +174,7 @@ export function RutaImpulsadorPanel() {
             <div className="flex gap-2">
               <button
                 type="button"
-                onClick={() => setNovedadLocal(abierta.local as any)}
+                onClick={() => setNovedadLocal(abierta.local)}
                 className="cursor-pointer rounded-lg border border-accent-ink bg-accent-soft px-3 py-2 text-xs font-semibold text-accent-ink transition hover:bg-surface-soft"
               >
                 + Reportar Novedad
@@ -496,7 +499,7 @@ function ModalMarcaPresencia({
 
   useEffect(() => {
     if (!navigator.geolocation) {
-      setObteniendo(false);
+      queueMicrotask(() => setObteniendo(false));
       return;
     }
     navigator.geolocation.getCurrentPosition(

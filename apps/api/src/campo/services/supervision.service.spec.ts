@@ -11,7 +11,9 @@ describe('SupervisionService', () => {
   it('calcula métricas de presentismo y resumen de equipo', async () => {
     const prisma = {
       usuario: {
-        findUnique: jest.fn().mockImplementation(({ where }) => {
+        findUnique: jest
+          .fn()
+          .mockImplementation(({ where }: { where: { id: number } }) => {
           if (where.id === 1) {
             return Promise.resolve({
               id: 1,
@@ -21,7 +23,7 @@ describe('SupervisionService', () => {
             });
           }
           return Promise.resolve({ id: where.id, rol: null });
-        }),
+          }),
         findMany: jest.fn().mockResolvedValue([
           {
             id: 2,

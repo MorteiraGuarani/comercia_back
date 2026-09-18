@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
+import { mensajeError } from "@/utils/error";
 import { TOKENS } from "./tokens";
 import { StatusStamp } from "./ui/status-stamp";
 import { TopBar } from "./ui/top-bar";
@@ -45,7 +46,7 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
     try {
       const res = await apiFetch<AvisoRecibidoItem[]>("/campo/avisos/recibidos");
       setRecibidos(Array.isArray(res) ? res : []);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error("Error cargando avisos recibidos:", e);
     }
   };
@@ -55,7 +56,7 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
     try {
       const res = await apiFetch<AvisoEnviadoItem[]>("/campo/avisos/enviados");
       setEnviados(Array.isArray(res) ? res : []);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error("Error cargando avisos enviados:", e);
     }
   };
@@ -71,7 +72,7 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
           setFormDestinatarioId(res.colaboradores[0].id);
         }
       }
-    } catch (e) {
+    } catch {
       // Ignorar si falla
     }
   };
@@ -81,15 +82,15 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
     setError("");
     try {
       await Promise.all([cargarRecibidos(), !esImpulsador ? cargarEnviados() : null, !esImpulsador ? cargarColaboradores() : null]);
-    } catch (e: any) {
-      setError(e.message ?? "Error al cargar avisos");
+    } catch (e) {
+      setError(mensajeError(e, "Error al cargar avisos"));
     } finally {
       setCargando(false);
     }
   };
 
   useEffect(() => {
-    inicializar();
+    void Promise.resolve().then(inicializar);
   }, [esImpulsador]);
 
   // Enviar nuevo aviso
@@ -121,8 +122,8 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
       setExito("Aviso transmitido con éxito al equipo de campo.");
       await cargarEnviados();
       setTab("enviados");
-    } catch (err: any) {
-      setError(err.message ?? "Error al enviar aviso.");
+    } catch (err) {
+      setError(mensajeError(err, "Error al enviar aviso."));
     } finally {
       setEnviando(false);
     }
@@ -137,7 +138,7 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
       setRecibidos((prev) =>
         prev.map((a) => (a.id === id ? { ...a, leido: true, leidoAt: new Date().toISOString() } : a))
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error al marcar aviso como leído:", err);
     }
   };

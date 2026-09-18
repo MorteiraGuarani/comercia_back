@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return -- Partial Prisma mocks are intentionally cast at the service boundary. */
+
 import { BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import type { PrismaService } from '../../prisma/prisma.service';
 import type { CampoAccesoService } from '../campo-acceso.service';

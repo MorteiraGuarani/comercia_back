@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState, useRef } from "react";
 import { apiFetch } from "@/lib/api";
+import { mensajeError } from "@/utils/error";
 import { useListaCampo, useOperacionCampo } from "@/hooks/use-lista-campo";
 import { Modal } from "@/components/modal";
 import { PantallaCarga } from "@/components/pantalla-carga";
@@ -102,8 +103,8 @@ export function ClientesPanel() {
       });
 
       setForm((prev) => (prev ? { ...prev, logoUrl: res.url } : null));
-    } catch (err: any) {
-      alert("Error al subir imagen de logo: " + (err.message ?? "Error inesperado"));
+    } catch (err) {
+      alert("Error al subir imagen de logo: " + mensajeError(err, "Error inesperado"));
     } finally {
       setSubiendoLogo(false);
       if (fileInputRef.current) fileInputRef.current.value = "";

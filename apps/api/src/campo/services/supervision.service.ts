@@ -10,6 +10,7 @@ import {
   ConsultaSupervisionDto,
   SupervisionResumenDto,
 } from '../dto/supervision.dto';
+import { ParadaRuta } from '../interfaces/parada-ruta.interface';
 import { fechaCampo, relojCampo } from '../utils/calendario';
 import { obtenerEquipoCompleto } from '../utils/autorizacion';
 
@@ -379,7 +380,7 @@ export class SupervisionService {
     });
 
     // Armar la ruta del día ordenada
-    const paradasMap = new Map<number, any>();
+    const paradasMap = new Map<number, ParadaRuta>();
 
     // Primero asignaciones
     for (const a of asignaciones) {
@@ -392,7 +393,7 @@ export class SupervisionService {
         local: a.local.nombre,
         tipo: 'supermercado', // default semántico
         ventana,
-        estado: 'pendiente' as 'completado' | 'en_curso' | 'pendiente',
+        estado: 'pendiente',
         checkin: null,
         checkout: null,
       });
@@ -403,7 +404,9 @@ export class SupervisionService {
       const existing = paradasMap.get(v.local.id);
       const h = v.local.horarios[0];
       const ventana = h ? `${h.entrada} – ${h.salida}` : '08:00 – 18:00';
-      const estado = v.salida ? 'completado' : 'en_curso';
+      const estado: ParadaRuta['estado'] = v.salida
+        ? 'completado'
+        : 'en_curso';
 
       paradasMap.set(v.local.id, {
         id: `visita-${v.id}`,

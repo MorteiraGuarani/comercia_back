@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
+import { mensajeError } from "@/utils/error";
 import { fechaEnZonaIso } from "@/utils/fechas";
 import { TOKENS } from "./tokens";
 import { StatusStamp } from "./ui/status-stamp";
@@ -190,15 +191,15 @@ export function SupervisionPanel({
         `/campo/supervision/resumen${query}`,
       );
       setResumen(data);
-    } catch (e: any) {
-      setError(e.message ?? "Error al cargar datos de supervisión");
+    } catch (e) {
+      setError(mensajeError(e, "Error al cargar datos de supervisión"));
     } finally {
       setCargando(false);
     }
   };
 
   useEffect(() => {
-    cargarResumen();
+    void Promise.resolve().then(cargarResumen);
   }, [periodo]);
 
   // Cargar detalle de colaborador
@@ -215,8 +216,8 @@ export function SupervisionPanel({
         `/campo/supervision/colaboradores/${id}?fecha=${queryFecha}`,
       );
       setDetalleColab(data);
-    } catch (e: any) {
-      alert("Error al cargar detalle del colaborador: " + e.message);
+    } catch (e) {
+      alert("Error al cargar detalle del colaborador: " + mensajeError(e, "Error inesperado"));
       setColaboradorId(null);
     } finally {
       setCargandoDetalle(false);

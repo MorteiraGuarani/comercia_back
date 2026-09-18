@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState, useMemo } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { apiFetch } from "@/lib/api";
+import { mensajeError } from "@/utils/error";
 import { TOKENS } from "./tokens";
 import { CAPA_MAPA_CLARA, CAPA_MAPA_OSCURA, useTemaOscuroMapa } from "./ui/use-tema-mapa";
 import { IconoBuscar, IconoCruz, IconoCheck, IconoAlerta, IconoChevronAbajo, IconoPin } from "./ui/iconos-campo";
@@ -48,16 +49,19 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
 
   // Sincronizar cuando cambia la prop clienteSeleccionadoId
   useEffect(() => {
-    if (clienteSeleccionadoId) {
-      const match = clientes.find((c) => c.id === clienteSeleccionadoId);
-      if (match) {
-        setClienteSeleccionado(match);
-        setBusquedaClienteInput(match.nombre);
+    const sincronizar = window.setTimeout(() => {
+      if (clienteSeleccionadoId) {
+        const match = clientes.find((c) => c.id === clienteSeleccionadoId);
+        if (match) {
+          setClienteSeleccionado(match);
+          setBusquedaClienteInput(match.nombre);
+        }
+      } else if (clienteSeleccionadoId === null) {
+        setClienteSeleccionado(null);
+        setBusquedaClienteInput("");
       }
-    } else if (clienteSeleccionadoId === null) {
-      setClienteSeleccionado(null);
-      setBusquedaClienteInput("");
-    }
+    }, 0);
+    return () => window.clearTimeout(sincronizar);
   }, [clienteSeleccionadoId, clientes]);
 
   // Cerrar dropdown al hacer click afuera
@@ -83,7 +87,7 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
         if (montado) {
           setLocales(data.items || []);
         }
-      } catch (e: any) {
+      } catch (e) {
         console.error("Error al cargar locales:", e);
         // Si falla por limit, intentar con el límite estándar
         try {
@@ -91,8 +95,8 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
           if (montado) {
             setLocales(fallbackData.items || []);
           }
-        } catch (e2: any) {
-          if (montado) setError(e2.message ?? "Error al cargar locales en el mapa");
+        } catch (e2) {
+          if (montado) setError(mensajeError(e2, "Error al cargar locales en el mapa"));
         }
       } finally {
         if (montado) setCargando(false);
@@ -261,9 +265,9 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
 
           <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:8px;border-top:1px dashed #DAD5C9;">
             <span style="font-size:11px;font-family:monospace;color:#666;">${lat.toFixed(4)}, ${lng.toFixed(4)}</span>
-            <a 
-              href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" 
-              target="_blank" 
+            <a
+              href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}"
+              target="_blank"
               rel="noreferrer"
               style="font-size:12px;font-weight:bold;color:#8B2635;text-decoration:none;background:#F8F7F4;padding:4px 10px;border-radius:8px;border:1px solid #DAD5C9;"
             >

@@ -14,7 +14,6 @@ function Base({ children, className }: Props & { children: React.ReactNode }) {
     </svg>
   );
 }
-
 export function IconoTienda({ className }: Props) {
   return (
     <Base className={className}>

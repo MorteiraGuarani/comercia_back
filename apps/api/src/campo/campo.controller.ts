@@ -97,7 +97,7 @@ export class CampoController {
 
   @Post('clientes/subir-logo')
   @UseInterceptors(FileInterceptor('logo', multerConfigLogoCliente))
-  async subirLogoCliente(
+  subirLogoCliente(
     @UploadedFile() file?: Express.Multer.File,
   ) {
     if (!file) {
@@ -107,7 +107,7 @@ export class CampoController {
   }
 
   @Get('clientes/logos/:filename')
-  async servirLogoCliente(
+  servirLogoCliente(
     @Param('filename') filename: string,
     @Res() res: Response,
   ) {

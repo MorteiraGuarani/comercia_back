@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment -- Partial Prisma mocks are intentionally cast at the service boundary. */
+
 import { NotFoundException, ForbiddenException } from '@nestjs/common';
 import type { PrismaService } from '../../prisma/prisma.service';
 import type { NotificacionService } from './notificacion.service';
@@ -96,7 +98,7 @@ describe('NovedadService', () => {
 
   it('impide a un líder filtrar novedades de usuarios ajenos a su equipo', async () => {
     const prisma = {
-      usuario: { findUnique: jest.fn().mockImplementation(({ where }) => Promise.resolve(
+      usuario: { findUnique: jest.fn().mockImplementation(({ where }: { where: { id: number } }) => Promise.resolve(
         where.id === 1 ? { id: 1, rol: { hijos: [{ usuarios: [{ id: 2 }] }] } } : { id: 2, rol: null },
       )) },
     };

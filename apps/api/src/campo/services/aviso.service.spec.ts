@@ -32,7 +32,9 @@ describe('AvisoService', () => {
   it('crea aviso de equipo y notifica a los miembros', async () => {
     const prisma = {
       usuario: {
-        findUnique: jest.fn().mockImplementation(({ where }) => {
+        findUnique: jest
+          .fn()
+          .mockImplementation(({ where }: { where: { id: number } }) => {
           if (where.id === 1) {
             return Promise.resolve({
               id: 1,
@@ -42,7 +44,7 @@ describe('AvisoService', () => {
             });
           }
           return Promise.resolve({ id: where.id, rol: null });
-        }),
+          }),
       },
       avisoCampo: {
         create: jest.fn().mockResolvedValue({

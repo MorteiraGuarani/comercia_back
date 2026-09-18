@@ -35,22 +35,30 @@ export function SelectorClienteCombobox({
 
   // Sincronizar clientes iniciales si cambian
   useEffect(() => {
-    if (clientesIniciales.length > 0) {
-      setClientes(clientesIniciales);
-    }
+    if (clientesIniciales.length === 0) return;
+    const sincronizar = window.setTimeout(() => setClientes(clientesIniciales), 0);
+    return () => window.clearTimeout(sincronizar);
   }, [clientesIniciales]);
 
   // Si no hay clientes cargados, cargamos catálogo amplio del backend (hasta 1000)
   useEffect(() => {
-    if (clientes.length === 0 && !disabled) {
+    if (clientes.length !== 0 || disabled) return;
+    let montado = true;
+    const cargar = async () => {
       setCargando(true);
-      apiFetch<{ items: ClienteCampo[] }>("/campo/clientes?limit=1000")
-        .then((res) => {
-          if (res?.items) setClientes(res.items);
-        })
-        .catch(() => undefined)
-        .finally(() => setCargando(false));
-    }
+      try {
+        const res = await apiFetch<{ items: ClienteCampo[] }>("/campo/clientes?limit=1000");
+        if (montado && res?.items) setClientes(res.items);
+      } catch {
+        // El selector conserva las opciones disponibles si la carga falla.
+      } finally {
+        if (montado) setCargando(false);
+      }
+    };
+    void cargar();
+    return () => {
+      montado = false;
+    };
   }, [clientes.length, disabled]);
 
   // Cerrar dropdown al hacer click fuera

@@ -69,7 +69,7 @@ CREATE INDEX IF NOT EXISTS "campo_aviso_lecturas_usuario_id_idx" ON "campo_aviso
 -- Registrar las nuevas páginas en los módulos
 INSERT INTO paginas(modulo_id, nombre, ruta, orden, activo, updated_at, icono)
 SELECT m.id, p.nombre, p.ruta, p.orden, true, CURRENT_TIMESTAMP, p.icono FROM modulos m
-CROSS JOIN (VALUES 
+CROSS JOIN (VALUES
   ('Novedades del equipo', 'novedades', 5, 'alerta'),
   ('Avisos al equipo', 'avisos', 6, 'comunicacion')
 ) AS p(nombre,ruta,orden,icono)
@@ -77,7 +77,7 @@ WHERE m.ruta = 'gestion-campo' ON CONFLICT (modulo_id,ruta) DO NOTHING;
 
 INSERT INTO paginas(modulo_id, nombre, ruta, orden, activo, updated_at, icono)
 SELECT m.id, p.nombre, p.ruta, p.orden, true, CURRENT_TIMESTAMP, p.icono FROM modulos m
-CROSS JOIN (VALUES 
+CROSS JOIN (VALUES
   ('Mis novedades', 'novedades', 3, 'alerta'),
   ('Mis avisos', 'avisos', 4, 'comunicacion')
 ) AS p(nombre,ruta,orden,icono)
