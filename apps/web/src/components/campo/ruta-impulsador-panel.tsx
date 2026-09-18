@@ -8,6 +8,7 @@ import { TOKENS } from "./tokens";
 import { StatusStamp } from "./ui/status-stamp";
 import { StatChip } from "./ui/stat-chip";
 import { TopBar } from "./ui/top-bar";
+import { SelectorFechaFiltro, type PeriodoFiltro } from "./ui/selector-fecha-filtro";
 import { Modal } from "@/components/modal";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { MapaLocal } from "./mapa-local";
@@ -21,7 +22,15 @@ import type {
 } from "@/types/campo";
 
 export function RutaImpulsadorPanel() {
-  const [fecha, setFecha] = useState(fechaEnZonaIso(new Date()));
+  const hoyStr = fechaEnZonaIso(new Date());
+  const [periodo, setPeriodo] = useState<PeriodoFiltro>({
+    clave: "hoy",
+    etiqueta: "Hoy",
+    fecha: hoyStr,
+    fechaInicio: hoyStr,
+    fechaFin: hoyStr,
+  });
+  const fecha = periodo.fecha ?? periodo.fechaFin ?? periodo.fechaInicio ?? hoyStr;
   const lista = useListaCampo<AgendaCampo>(`/campo/jornada?fecha=${fecha}`);
   const [abierta, setAbierta] = useState<VisitaCampo | null>(null);
   const [revision, setRevision] = useState(0);
@@ -122,15 +131,7 @@ export function RutaImpulsadorPanel() {
         title="Locales a Visitar"
         subtitle="Tu ruta comercial y registro de presencias del día"
         right={
-          <div className="flex items-center gap-1.5 bg-zinc-900 px-2 py-1 rounded-md border border-zinc-700 text-xs">
-            <span className="text-muted">Fecha:</span>
-            <input
-              type="date"
-              value={fecha}
-              onChange={(e) => setFecha(e.target.value)}
-              className="bg-transparent text-white ft-mono text-xs outline-none cursor-pointer"
-            />
-          </div>
+          <SelectorFechaFiltro valorActual={periodo} onChange={setPeriodo} />
         }
       />
 
@@ -171,7 +172,7 @@ export function RutaImpulsadorPanel() {
               <button
                 type="button"
                 onClick={() => setNovedadLocal(abierta.local as any)}
-                className="px-3 py-2 rounded-lg text-xs font-semibold border border-amber-600 text-amber-700 bg-amber-50 hover:bg-amber-100 transition cursor-pointer"
+                className="cursor-pointer rounded-lg border border-accent-ink bg-accent-soft px-3 py-2 text-xs font-semibold text-accent-ink transition hover:bg-surface-soft"
               >
                 + Reportar Novedad
               </button>

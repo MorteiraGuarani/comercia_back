@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { TOKENS } from "../tokens";
 import { fechaEnZonaIso } from "@/utils/fechas";
 
 export interface PeriodoFiltro {
@@ -158,10 +157,11 @@ export function SelectorFechaFiltro({ valorActual, onChange }: SelectorFechaFilt
       <button
         type="button"
         onClick={() => setAbierto((prev) => !prev)}
-        className="flex items-center gap-2 rounded-lg px-3 py-2 bg-zinc-900 border border-zinc-700 text-white text-xs hover:border-zinc-500 transition-all cursor-pointer shadow-sm"
+        aria-expanded={abierto}
+        className="flex min-h-11 items-center gap-2 rounded-lg border border-line bg-surface-raised px-3 py-2 text-xs text-foreground shadow-sm transition-colors hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40"
         title="Cambiar fecha o período de visualización"
       >
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#C9A54A" strokeWidth="2">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent-ink">
           <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
           <line x1="16" y1="2" x2="16" y2="6" />
           <line x1="8" y1="2" x2="8" y2="6" />
@@ -169,10 +169,10 @@ export function SelectorFechaFiltro({ valorActual, onChange }: SelectorFechaFilt
         </svg>
 
         <div className="flex flex-col text-left">
-          <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 leading-none">
+          <span className="text-[10px] uppercase font-bold tracking-wider text-muted leading-none">
             Período:
           </span>
-          <span className="ft-mono font-bold text-xs text-white leading-tight mt-0.5">
+          <span className="ft-mono font-bold text-xs text-foreground leading-tight mt-0.5">
             {valorActual.etiqueta}
           </span>
         </div>
@@ -184,7 +184,7 @@ export function SelectorFechaFiltro({ valorActual, onChange }: SelectorFechaFilt
           fill="none"
           stroke="currentColor"
           strokeWidth="2"
-          className={`text-zinc-400 transition-transform ${abierto ? "rotate-180" : ""}`}
+          className={`text-muted transition-transform ${abierto ? "rotate-180" : ""}`}
         >
           <polyline points="6 9 12 15 18 9" />
         </svg>
@@ -193,19 +193,14 @@ export function SelectorFechaFiltro({ valorActual, onChange }: SelectorFechaFilt
       {/* Popover Desplegable */}
       {abierto && (
         <div
-          className="absolute right-0 mt-2 w-72 sm:w-80 rounded-xl border shadow-2xl p-3 z-50 animate-in fade-in zoom-in-95 duration-100"
-          style={{
-            background: "#1E2320",
-            borderColor: "#33362F",
-            color: "#ECE9E2",
-          }}
+          className="absolute right-0 z-50 mt-2 w-72 rounded-xl border border-line bg-surface-raised p-3 text-foreground shadow-2xl animate-in fade-in zoom-in-95 duration-100 sm:w-80"
         >
           {/* Header del Popover */}
-          <div className="flex items-center justify-between pb-2 mb-2 border-b border-zinc-800">
-            <span className="ft-display text-xs font-bold uppercase tracking-wider text-[#C9A54A]">
+          <div className="mb-2 flex items-center justify-between border-b border-line pb-2">
+            <span className="ft-display text-xs font-bold uppercase tracking-wider text-accent-ink">
               Filtro Temporal
             </span>
-            <span className="text-[11px] text-zinc-400 font-mono">
+            <span className="text-[11px] text-muted font-mono">
               {valorActual.fechaInicio && valorActual.fechaFin
                 ? `${valorActual.fechaInicio} — ${valorActual.fechaFin}`
                 : valorActual.fecha ?? hoyStr}
@@ -213,21 +208,21 @@ export function SelectorFechaFiltro({ valorActual, onChange }: SelectorFechaFilt
           </div>
 
           {/* Selector de Fecha Puntual (Calendario Nativo) */}
-          <div className="mb-3 p-2 rounded-lg bg-zinc-900 border border-zinc-800">
-            <label className="block text-[11px] text-zinc-400 mb-1 font-medium">
+          <div className="mb-3 rounded-lg border border-line bg-surface-soft p-2">
+            <label className="mb-1 block text-[11px] font-medium text-muted">
               Elegir fecha específica (Calendario):
             </label>
             <input
               type="date"
               value={valorActual.fecha ?? valorActual.fechaInicio ?? hoyStr}
               onChange={(e) => seleccionarFechaDirecta(e.target.value)}
-              className="w-full bg-zinc-800 border border-zinc-700 rounded px-2 py-1.5 text-xs text-white ft-mono outline-none focus:border-[#C9A54A] cursor-pointer"
+              className="w-full cursor-pointer rounded border border-line bg-surface-raised px-2 py-1.5 text-xs text-foreground outline-none focus:border-accent-ink focus:ring-2 focus:ring-brand-600/30 ft-mono"
             />
           </div>
 
           {/* Accesos Rápidos Predefinidos */}
           <div>
-            <p className="text-[11px] text-zinc-400 uppercase font-semibold tracking-wider mb-2">
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted">
               Rangos Predefinidos:
             </p>
             <div className="grid grid-cols-2 gap-1.5">
@@ -240,13 +235,13 @@ export function SelectorFechaFiltro({ valorActual, onChange }: SelectorFechaFilt
                     onClick={() => seleccionarPreset(p)}
                     className={`text-left px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center justify-between cursor-pointer ${
                       esActivo
-                        ? "bg-[#C9A54A] text-black font-bold shadow"
-                        : "bg-zinc-900 text-zinc-300 hover:bg-zinc-800 hover:text-white border border-zinc-800"
+                        ? "bg-accent-ink text-background font-bold shadow"
+                        : "border border-line bg-surface-raised text-foreground hover:bg-surface-soft"
                     }`}
                   >
                     <span>{p.etiqueta}</span>
                     {esActivo && (
-                      <svg className="w-3 h-3 text-black shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                      <svg className="h-3 w-3 shrink-0 text-background" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
                       </svg>
                     )}

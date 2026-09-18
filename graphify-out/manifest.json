@@ -1985,13 +1985,13 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/mapa-local.tsx": {
-    "mtime": 1788876460.0495036,
-    "ast_hash": "5912fe249c8afd327ed93b642a197775",
+    "mtime": 1789734594.6593874,
+    "ast_hash": "4fe30b4c4f123da8158fa205c4e87db1",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/plan-local.tsx": {
-    "mtime": 1789652113.6288166,
-    "ast_hash": "96fd987b5d9d609f509fed06adf5b0a5",
+    "mtime": 1789732503.712406,
+    "ast_hash": "84fcd9c35dc0f16e90a6c75ef4df0922",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/tabla-campo.tsx": {
@@ -2025,8 +2025,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/selector-ubicacion.tsx": {
-    "mtime": 1789651981.334998,
-    "ast_hash": "1c67684f4e02f9ec41c6864e866b09b4",
+    "mtime": 1789734530.5113719,
+    "ast_hash": "a2ddc135b3cf5f62805208ca373ae5e4",
     "semantic_hash": ""
   },
   "apps/api/prisma/migrations/20260911153000_integracion_ucheck/migration.sql": {
@@ -2225,23 +2225,23 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/avisos-panel.tsx": {
-    "mtime": 1789652154.3498049,
-    "ast_hash": "0912c1d2540d4c1cf0d4e2740575d795",
+    "mtime": 1789732426.5936458,
+    "ast_hash": "16e38817b09b2b08f685929812ad37bf",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/clientes-panel.tsx": {
-    "mtime": 1789651930.5860758,
-    "ast_hash": "c1804f5b6d072407a3e5d20d25d141ad",
+    "mtime": 1789733486.6543858,
+    "ast_hash": "32dbe59ffc98fe1100be135b7bfef139",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/locales-panel.tsx": {
-    "mtime": 1789652363.3258097,
-    "ast_hash": "34d18471a70b58e72cddefd3b40f3e7b",
+    "mtime": 1789733485.8485725,
+    "ast_hash": "2fac8aea75439bf16818126046581980",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/mapa-clientes.tsx": {
-    "mtime": 1789652014.2968314,
-    "ast_hash": "109fee1c83db6741c1a7c784e8976f65",
+    "mtime": 1789734529.7335145,
+    "ast_hash": "ccdb13176a6354525233b8472db23dfd",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/novedades-panel.tsx": {
@@ -2250,8 +2250,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/ruta-impulsador-panel.tsx": {
-    "mtime": 1789678258.2766988,
-    "ast_hash": "72fd21e63905f2b81c16396c3bfebed0",
+    "mtime": 1789735426.4429488,
+    "ast_hash": "387646f1a949eab4488d8d71ddf9ac66",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/selector-cliente-combobox.tsx": {
@@ -2260,13 +2260,13 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/supervision-panel.tsx": {
-    "mtime": 1789678258.2786973,
-    "ast_hash": "6f11b6229c23376c04109d4e588a76bb",
+    "mtime": 1789734012.1022086,
+    "ast_hash": "e9706bf3f6677cc5e47003102e15b889",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/tareas-impulsador-panel.tsx": {
-    "mtime": 1789678492.1219852,
-    "ast_hash": "afdaf28e6beae5288b2814f197b98888",
+    "mtime": 1789735427.2864957,
+    "ast_hash": "13608c34dc52816b16c01edc70620aba",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/tokens.ts": {
@@ -2300,8 +2300,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/ui/selector-fecha-filtro.tsx": {
-    "mtime": 1789652307.455195,
-    "ast_hash": "0707512eefc53827d74df40f999c1c4a",
+    "mtime": 1789732136.6513476,
+    "ast_hash": "07224973b08b38064ebf9c69eef64e87",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/ui/stat-chip.tsx": {
@@ -2317,6 +2317,11 @@
   "apps/web/src/components/campo/ui/top-bar.tsx": {
     "mtime": 1789678256.833114,
     "ast_hash": "c3c236c21acabadb38b42474241ff198",
+    "semantic_hash": ""
+  },
+  "apps/web/src/components/campo/ui/use-tema-mapa.ts": {
+    "mtime": 1789734529.028865,
+    "ast_hash": "e6c0128cea5c867a5cad9c8ec35de1e8",
     "semantic_hash": ""
   }
 }

@@ -116,7 +116,7 @@ export function ClientesPanel() {
 
   return (
     <div
-      className="min-h-screen text-[13px] font-sans pb-16"
+      className="campo-screen min-h-screen min-w-0 w-full text-[13px] font-sans pb-16"
       style={{ backgroundColor: TOKENS.bone, color: TOKENS.ink }}
     >
       <TopBar
@@ -125,14 +125,14 @@ export function ClientesPanel() {
         right={
           <div className="flex items-center gap-2">
             {/* Toggle de Vista: Tabla vs Mapa */}
-            <div className="flex items-center p-1 rounded-lg bg-zinc-900 border border-zinc-700">
+            <div className="flex items-center rounded-lg border border-line bg-surface-soft p-1">
               <button
                 type="button"
                 onClick={() => setVista("tabla")}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
                   vista === "tabla"
-                    ? "bg-[#C9A54A] text-black shadow-xs"
-                    : "text-zinc-400 hover:text-white"
+                    ? "bg-surface-raised text-foreground shadow-xs"
+                    : "text-muted hover:text-foreground"
                 }`}
               >
                 <IconoCliente className="w-3.5 h-3.5" />
@@ -146,8 +146,8 @@ export function ClientesPanel() {
                 }}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
                   vista === "mapa"
-                    ? "bg-[#C9A54A] text-black shadow-xs"
-                    : "text-zinc-400 hover:text-white"
+                    ? "bg-surface-raised text-foreground shadow-xs"
+                    : "text-muted hover:text-foreground"
                 }`}
               >
                 <IconoMapa className="w-3.5 h-3.5" />
@@ -202,11 +202,11 @@ export function ClientesPanel() {
           <>
             {/* Buscador & Filtros de Estado */}
             <div
-              className="p-3.5 rounded-xl border flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between shadow-xs bg-white"
+              className="grid grid-cols-2 items-stretch gap-2 rounded-xl border p-3.5 shadow-xs bg-white md:flex md:items-center md:gap-3 md:justify-between"
               style={{ borderColor: TOKENS.line }}
             >
               {/* Input de Búsqueda */}
-              <div className="relative flex-1">
+              <div className="relative min-w-0 md:flex-1">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-zinc-400 pointer-events-none">
                   <IconoBuscar className="w-4 h-4" />
                 </span>
@@ -234,7 +234,7 @@ export function ClientesPanel() {
 
               {/* Segmented Filter */}
               <div
-                className="flex items-center gap-1 p-1 rounded-lg border bg-[#ECE9E2]/60 shrink-0"
+                className="flex min-w-0 items-center gap-1 overflow-x-auto rounded-lg border bg-[#ECE9E2]/60 p-1 md:shrink-0"
                 style={{ borderColor: TOKENS.line }}
               >
                 {(["todos", "activos", "inactivos"] as const).map((filtro) => {
@@ -244,7 +244,7 @@ export function ClientesPanel() {
                       key={filtro}
                       type="button"
                       onClick={() => setFiltroEstado(filtro)}
-                      className={`px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                        className={`whitespace-nowrap rounded-md px-2 py-1.5 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer sm:px-3 ${
                         activo ? "bg-[#1E2320] text-white shadow-xs" : "text-[#726C60] hover:text-[#1E2320]"
                       }`}
                     >
@@ -368,8 +368,8 @@ export function ClientesPanel() {
 
                             {/* Puntos de Venta (Locales) */}
                             <td className="py-2.5 px-3.5 text-center whitespace-nowrap">
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-zinc-100 text-zinc-700 border border-zinc-200">
-                                <IconoTienda className="w-2.5 h-2.5 text-zinc-500" />
+                              <span className="inline-flex items-center gap-1 rounded-full border border-line bg-surface-soft px-2 py-0.5 text-[11px] font-bold text-foreground">
+                                <IconoTienda className="h-2.5 w-2.5 text-muted" />
                                 <span>{localesCount}</span>
                               </span>
                             </td>

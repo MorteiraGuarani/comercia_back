@@ -5,6 +5,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { apiFetch } from "@/lib/api";
 import { TOKENS } from "./tokens";
+import { CAPA_MAPA_CLARA, CAPA_MAPA_OSCURA, useTemaOscuroMapa } from "./ui/use-tema-mapa";
 import { IconoBuscar, IconoCruz, IconoCheck, IconoAlerta, IconoChevronAbajo, IconoPin } from "./ui/iconos-campo";
 import type { ClienteCampo, LocalCampo } from "@/types/campo";
 
@@ -43,6 +44,7 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
 
   const [busquedaTexto, setBusquedaTexto] = useState("");
   const [obteniendoGps, setObteniendoGps] = useState(false);
+  const temaOscuro = useTemaOscuroMapa();
 
   // Sincronizar cuando cambia la prop clienteSeleccionadoId
   useEffect(() => {
@@ -136,7 +138,7 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
 
     mapaRef.current = map;
 
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    L.tileLayer(temaOscuro ? CAPA_MAPA_OSCURA : CAPA_MAPA_CLARA, {
       maxZoom: 19,
       attribution:
         '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a>',
@@ -156,7 +158,7 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
       mapaRef.current = null;
       markersLayerRef.current = null;
     };
-  }, []);
+  }, [temaOscuro]);
 
   // Filtrar locales según cliente seleccionado y búsqueda de texto
   const localesFiltrados = useMemo(() => {

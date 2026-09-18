@@ -164,7 +164,7 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
 
   return (
     <div
-      className="min-h-screen text-[14px] font-sans"
+      className="campo-screen min-h-screen min-w-0 w-full text-[14px] font-sans"
       style={{ backgroundColor: TOKENS.bone, color: TOKENS.ink }}
     >
       <TopBar
@@ -192,7 +192,7 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
           <div
             className="p-4 rounded-xl border text-base font-semibold flex items-center justify-between"
             style={{
-              backgroundColor: "#FFF2F2",
+              backgroundColor: "var(--campo-error-surface)",
               borderColor: TOKENS.critico,
               color: TOKENS.critico,
             }}
@@ -212,7 +212,7 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
           <div
             className="p-4 rounded-xl border text-base font-semibold flex items-center justify-between"
             style={{
-              backgroundColor: "#F0FDF4",
+              backgroundColor: "var(--campo-success-surface)",
               borderColor: TOKENS.fresco,
               color: TOKENS.fresco,
             }}
@@ -492,7 +492,7 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                             className="text-[10px] font-mono uppercase px-2 py-0.5 rounded font-bold inline-flex items-center gap-1"
                             style={{
                               backgroundColor:
-                                aviso.tipo === "EQUIPO" ? "#EAF0F6" : "#F6ECEC",
+                                aviso.tipo === "EQUIPO" ? "var(--accent-soft)" : TOKENS.bone,
                               color:
                                 aviso.tipo === "EQUIPO" ? TOKENS.frio : TOKENS.carne,
                             }}
@@ -590,7 +590,7 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                           : "opacity-90"
                       }`}
                       style={{
-                        backgroundColor: noLeido ? "#FFFFFF" : TOKENS.canvas,
+                        backgroundColor: TOKENS.canvas,
                         borderColor: noLeido ? TOKENS.alerta : TOKENS.line,
                       }}
                     >
@@ -600,7 +600,7 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                             className="text-[10px] font-mono uppercase px-2 py-0.5 rounded font-bold inline-flex items-center gap-1"
                             style={{
                               backgroundColor:
-                                aviso.tipo === "EQUIPO" ? "#EAF0F6" : "#F6ECEC",
+                                aviso.tipo === "EQUIPO" ? "var(--accent-soft)" : TOKENS.bone,
                               color:
                                 aviso.tipo === "EQUIPO" ? TOKENS.frio : TOKENS.carne,
                             }}

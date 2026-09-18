@@ -39,11 +39,11 @@ export function PlanLocal({
       onCerrar={cerrar}
       ancho="xl"
     >
-      <div className="space-y-5">
+      <div className="campo-screen space-y-5">
         {/* Banner de Contexto */}
         <div
           className="p-3.5 rounded-xl border flex flex-wrap items-center justify-between gap-2"
-          style={{ backgroundColor: "#ECE9E2", borderColor: TOKENS.line }}
+          style={{ backgroundColor: TOKENS.canvas, borderColor: TOKENS.line }}
         >
           <div>
             <span className="text-xs font-bold uppercase tracking-wider text-[#726C60]">
@@ -491,7 +491,7 @@ function AsignacionesLocal({ localId }: { localId: number }) {
                     <div
                       className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs border"
                       style={{
-                        backgroundColor: "#ECE9E2",
+                        backgroundColor: TOKENS.bone,
                         borderColor: TOKENS.line,
                         color: TOKENS.ink,
                       }}

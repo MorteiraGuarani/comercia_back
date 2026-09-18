@@ -304,39 +304,13 @@ export function SupervisionPanel({
             {/* ==================== TAB 1: RESUMEN OPERATIVO ==================== */}
             {tab === "resumen" && resumen && (
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 flex-1 w-full">
-                {/* Header de bienvenida con período activo */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#DAD5C9]/70 gap-2.5">
-                  <div>
-                    <p
-                      className="ft-body text-xs font-bold uppercase tracking-wider"
-                      style={{ color: TOKENS.sub }}
-                    >
-                      Período de observación:{" "}
-                      <span className="font-extrabold text-foreground">
-                        {periodo.etiqueta}
-                      </span>
-                    </p>
-                    <h2
-                      className="ft-display text-xl sm:text-2xl font-black tracking-tight mt-0.5"
-                      style={{ color: TOKENS.ink }}
-                    >
-                      Presentismo y Control de Jornada
-                    </h2>
-                  </div>
-                  <div className="flex items-center gap-2 self-start sm:self-auto">
-                    <span className="ft-mono text-sm sm:text-base font-extrabold px-4 py-2 rounded-xl bg-zinc-200/80 text-foreground border border-line">
-                      {resumen.colaboradores.length} Colaboradores
-                    </span>
-                  </div>
-                </div>
-
                 {/* Tarjetas de Métricas de Presentismo */}
                 <div>
                   <p
                     className="ft-display text-2xl sm:text-3xl tracking-wide font-black mb-4"
                     style={{ color: TOKENS.ink }}
                   >
-                    Estado actual del equipo
+                    Presentismo
                   </p>
                   <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 mb-6 sm:grid sm:grid-cols-4 sm:overflow-visible">
                     <div className="min-w-[8.25rem] flex-1"><StatChip
@@ -366,14 +340,14 @@ export function SupervisionPanel({
                   </div>
 
                   {/* Barras de avance globales de Rutas y Tareas */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
+                  <div className="grid grid-cols-2 gap-2 sm:gap-5 mb-8">
                     <div
-                      className="rounded-2xl p-5 sm:p-6 transition-all shadow-sm bg-surface-raised"
+                      className="rounded-2xl p-3 sm:p-6 transition-all shadow-sm bg-surface-raised"
                       style={{ border: `1px solid ${TOKENS.line}` }}
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <p className="ft-body text-sm sm:text-base font-bold text-foreground">
-                          Avance global de rutas
+                        <p className="ft-body text-xs sm:text-base font-bold text-foreground">
+                          Rutas
                         </p>
                         <span className="ft-mono text-xs sm:text-sm font-extrabold px-3 py-1 rounded-lg bg-blue-50 text-blue-800 border border-blue-200">
                           {resumen.rutas.completadas} / {resumen.rutas.total}{" "}
@@ -409,7 +383,7 @@ export function SupervisionPanel({
                           className="ft-body text-xs sm:text-sm font-semibold"
                           style={{ color: TOKENS.sub }}
                         >
-                          Cumplimiento de tareas asignadas
+                          Tareas
                         </p>
                         <span className="ft-mono text-xs font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
                           {resumen.tareas.completadas} / {resumen.tareas.total}{" "}
@@ -442,25 +416,8 @@ export function SupervisionPanel({
                   </div>
                 </div>
 
-                {/* Lista de Colaboradores e Inicio/Fin de Jornada */}
+                {/* Lista de Colaboradores */}
                 <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <p
-                      className="ft-display text-2xl sm:text-3xl tracking-wide font-black"
-                      style={{ color: TOKENS.ink }}
-                    >
-                      Detalle por Colaborador
-                    </p>
-                    <span className="ft-body text-xs sm:text-sm font-medium text-muted">
-                      Tocá cualquier colaborador para ver su ruta y tareas al
-                      detalle
-                    </span>
-                  </div>
-                  <p className="ft-body text-sm text-muted mb-5">
-                    Horario de inicio = primer Check-In registrado · Fin =
-                    Check-Out del último local.
-                  </p>
-
                   {resumen.colaboradores.length === 0 ? (
                     <div
                       className="rounded-2xl p-12 text-center bg-surface-raised"

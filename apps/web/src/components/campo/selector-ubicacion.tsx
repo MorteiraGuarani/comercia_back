@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { TOKENS } from "./tokens";
+import { CAPA_MAPA_CLARA, CAPA_MAPA_OSCURA, useTemaOscuroMapa } from "./ui/use-tema-mapa";
 
 export default function SelectorUbicacion({
   latitud,
@@ -22,6 +23,7 @@ export default function SelectorUbicacion({
   const [error, setError] = useState<string | null>(null);
   const [obteniendoGps, setObteniendoGps] = useState(false);
   const [gpsMensaje, setGpsMensaje] = useState<string | null>(null);
+  const temaOscuro = useTemaOscuroMapa();
 
   useEffect(() => {
     cambiar.current = onChange;
@@ -43,7 +45,7 @@ export default function SelectorUbicacion({
 
     mapa.current = instancia;
 
-    const tiles = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    const tiles = L.tileLayer(temaOscuro ? CAPA_MAPA_OSCURA : CAPA_MAPA_CLARA, {
       maxZoom: 19,
       attribution:
         '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a>',
@@ -102,7 +104,7 @@ export default function SelectorUbicacion({
       mapa.current = null;
       marcador.current = null;
     };
-  }, []);
+  }, [temaOscuro]);
 
   // Sincronizar marcador si las coordenadas cambian externamente
   useEffect(() => {

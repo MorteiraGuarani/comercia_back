@@ -113,7 +113,7 @@ export function LocalesPanel() {
 
   return (
     <div
-      className="min-h-screen text-[13px] font-sans pb-16"
+      className="campo-screen min-h-screen min-w-0 w-full text-[13px] font-sans pb-16"
       style={{ backgroundColor: TOKENS.bone, color: TOKENS.ink }}
     >
       <TopBar
@@ -133,8 +133,19 @@ export function LocalesPanel() {
       />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
-        {/* StatChips Bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5">
+        {/* KPI: compacto y cerrado por defecto en móvil */}
+        <details className="rounded-xl border border-line bg-surface-raised sm:hidden">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-foreground [&::-webkit-details-marker]:hidden">
+            <span>Resumen de locales</span>
+            <span className="text-xs font-mono text-muted">{totalRegistros} puntos de venta</span>
+          </summary>
+          <div className="grid grid-cols-3 gap-2 border-t border-line p-2">
+            <StatChip label="Total" value={totalRegistros} color="ink" />
+            <StatChip label="Activos" value={totalActivos} color="fresco" />
+            <StatChip label="Inactivos" value={totalInactivos} color="alerta" />
+          </div>
+        </details>
+        <div className="hidden grid-cols-3 gap-3.5 sm:grid">
           <StatChip
             label="Total Puntos de Venta"
             value={totalRegistros}
@@ -157,11 +168,11 @@ export function LocalesPanel() {
 
         {/* Buscador & Filtros de Estado */}
         <div
-          className="p-3.5 rounded-xl border flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between shadow-xs bg-white"
+          className="grid grid-cols-2 items-stretch gap-2 rounded-xl border p-3.5 shadow-xs bg-white md:flex md:items-center md:gap-3 md:justify-between"
           style={{ borderColor: TOKENS.line }}
         >
           {/* Input de Búsqueda */}
-          <div className="relative flex-1">
+          <div className="relative min-w-0 md:flex-1">
             <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-zinc-400 pointer-events-none">
               <IconoBuscar className="w-4 h-4" />
             </span>
@@ -188,7 +199,7 @@ export function LocalesPanel() {
           </div>
 
           {/* Filtro por Cliente */}
-          <div className="w-full md:w-64">
+          <div className="min-w-0 md:w-64">
             <select
               value={clienteFiltro}
               onChange={(e) => {
@@ -209,7 +220,7 @@ export function LocalesPanel() {
 
           {/* Segmented Filter */}
           <div
-            className="flex items-center gap-1 p-1 rounded-lg border bg-[#ECE9E2]/60 shrink-0"
+            className="col-span-2 flex min-w-0 items-center gap-1 overflow-x-auto rounded-lg border bg-[#ECE9E2]/60 p-1 md:col-span-1 md:shrink-0"
             style={{ borderColor: TOKENS.line }}
           >
             {(["todos", "activos", "inactivos"] as const).map((filtro) => {

@@ -383,6 +383,8 @@ body {
   --campo-canvas: var(--surface-raised);
   --campo-line: var(--border);
   --campo-sub: var(--muted);
+  --campo-error-surface: #fff2f2;
+  --campo-success-surface: #f0fdf4;
 }
 .dark .campo-screen {
   --campo-carne: #e5a2ae;
@@ -391,6 +393,8 @@ body {
   --campo-alerta: #ebbb8c;
   --campo-critico: #f1a2a2;
   --campo-plum: #c1afd9;
+  --campo-error-surface: #3b2024;
+  --campo-success-surface: #1c3527;
 }
 
 /* Controls in the operational screens stay usable on touch devices. */
@@ -403,4 +407,58 @@ body {
 .campo-screen :where(button:disabled) {
   cursor: not-allowed;
   opacity: 0.5;
+}
+
+/* Legacy Campo panels still contain a few light utility classes. Keep their
+   surfaces and table chrome on the active theme while they are being migrated
+   to the shared semantic tokens. */
+.dark .campo-screen :where(.bg-white, .bg-gray-50, .bg-gray-100, .bg-zinc-50, .bg-zinc-100) {
+  background-color: var(--surface-raised) !important;
+}
+.dark .campo-screen :where(.bg-gray-50\/80, .bg-zinc-50\/60, .bg-zinc-50\/70, .bg-zinc-50\/80, .bg-zinc-100\/60, .bg-\[\#ECE9E2\]\/60) {
+  background-color: var(--surface-soft) !important;
+}
+.dark .campo-screen :where(.bg-gray-200, .bg-zinc-200) {
+  background-color: var(--surface-soft) !important;
+}
+.dark .campo-screen :where(.text-gray-900, .text-gray-800, .text-gray-700, .text-zinc-900, .text-zinc-800, .text-zinc-700, .text-\[\#1E2320\]) {
+  color: var(--foreground) !important;
+}
+.dark .campo-screen :where(.text-gray-600, .text-gray-500, .text-gray-400, .text-zinc-600, .text-zinc-500, .text-zinc-400, .text-\[\#726C60\]) {
+  color: var(--muted) !important;
+}
+.dark .campo-screen :where(.border-gray-100, .border-gray-200, .border-zinc-100, .border-zinc-200, .border-zinc-300) {
+  border-color: var(--border) !important;
+}
+.dark .campo-screen :where(.divide-gray-100, .divide-zinc-100) > :not(:last-child) {
+  border-color: var(--border) !important;
+}
+.dark .campo-screen :where(.hover\:bg-gray-50, .hover\:bg-zinc-50\/70, .hover\:bg-zinc-50\/80):hover {
+  background-color: var(--surface-soft) !important;
+}
+.dark .campo-screen input[type="date"] {
+  color-scheme: dark;
+}
+
+/* Leaflet chrome follows the application theme instead of its white default. */
+.dark .campo-screen .leaflet-container {
+  background: var(--surface-soft);
+}
+.dark .campo-screen .leaflet-control-zoom a,
+.dark .campo-screen .leaflet-control-attribution,
+.dark .campo-screen .leaflet-popup-content-wrapper,
+.dark .campo-screen .leaflet-popup-tip {
+  background: var(--surface-raised) !important;
+  color: var(--foreground) !important;
+  border-color: var(--border) !important;
+}
+.dark .campo-screen .leaflet-popup-content h4,
+.dark .campo-screen .leaflet-popup-content p {
+  color: var(--foreground) !important;
+}
+.dark .campo-screen .leaflet-popup-content a {
+  color: var(--accent-ink) !important;
+}
+.dark .campo-screen .leaflet-control-zoom a + a {
+  border-top-color: var(--border) !important;
 }

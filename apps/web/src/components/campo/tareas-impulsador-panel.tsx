@@ -7,6 +7,7 @@ import { TOKENS } from "./tokens";
 import { StatusStamp } from "./ui/status-stamp";
 import { StatChip } from "./ui/stat-chip";
 import { TopBar } from "./ui/top-bar";
+import { SelectorFechaFiltro, type PeriodoFiltro } from "./ui/selector-fecha-filtro";
 import { Modal } from "@/components/modal";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { SubidorFotos } from "./subidor-fotos";
@@ -22,7 +23,15 @@ import type {
 } from "@/types/campo";
 
 export function TareasImpulsadorPanel() {
-  const [fecha, setFecha] = useState(fechaEnZonaIso(new Date()));
+  const hoyStr = fechaEnZonaIso(new Date());
+  const [periodo, setPeriodo] = useState<PeriodoFiltro>({
+    clave: "hoy",
+    etiqueta: "Hoy",
+    fecha: hoyStr,
+    fechaInicio: hoyStr,
+    fechaFin: hoyStr,
+  });
+  const fecha = periodo.fecha ?? periodo.fechaFin ?? periodo.fechaInicio ?? hoyStr;
   const [agendas, setAgendas] = useState<AgendaCampo[]>([]);
   const [abierta, setAbierta] = useState<VisitaCampo | null>(null);
   const [revision, setRevision] = useState(0);
@@ -163,15 +172,14 @@ export function TareasImpulsadorPanel() {
         title="Mis Tareas del Día"
         subtitle="Cumplimiento y registro de actividades operativas"
         right={
-          <div className="flex items-center gap-1.5 bg-zinc-900 px-2 py-1 rounded-md border border-zinc-700 text-xs">
-            <span className="text-muted">Fecha:</span>
-            <input
-              type="date"
-              value={fecha}
-              onChange={(e) => { setFecha(e.target.value); setPagina(1); setPaginasTareas({}); }}
-              className="bg-transparent text-white ft-mono text-xs outline-none cursor-pointer"
-            />
-          </div>
+          <SelectorFechaFiltro
+            valorActual={periodo}
+            onChange={(siguiente) => {
+              setPeriodo(siguiente);
+              setPagina(1);
+              setPaginasTareas({});
+            }}
+          />
         }
       />
 
@@ -207,6 +215,8 @@ export function TareasImpulsadorPanel() {
           agendas.map((ag) => {
             const datosTareas = tareasPorLocal[ag.id];
             const tareas = datosTareas?.items ?? [];
+            const totalTareas = datosTareas?.total ?? 0;
+            const totalPaginasTareas = datosTareas?.totalPages ?? 1;
             const estaEnVisita = abierta?.asignacionId === ag.id && abierta.fecha.slice(0, 10) === fecha;
 
             return (
@@ -276,7 +286,7 @@ export function TareasImpulsadorPanel() {
                                   nombreTarea: t.nombre,
                                 });
                               }}
-                              className="px-2 py-1 rounded text-[11px] font-medium text-amber-700 bg-amber-50 border border-amber-300 hover:bg-amber-100 transition cursor-pointer"
+                              className="cursor-pointer rounded border border-accent-ink bg-accent-soft px-2 py-1 text-[11px] font-medium text-accent-ink transition hover:bg-surface-soft"
                               title="Reportar novedad sobre esta tarea"
                             >
                               Novedad
@@ -340,12 +350,46 @@ export function TareasImpulsadorPanel() {
                     })}
                   </div>
                 )}
-                <Paginacion page={datosTareas?.page ?? 1} limit={limitesTareas[ag.id] ?? 7} total={datosTareas?.total ?? 0} totalPages={datosTareas?.totalPages ?? 1} onPageChange={(n) => setPaginasTareas((p) => ({ ...p, [ag.id]: n }))} onLimitChange={(n) => { setLimitesTareas((p) => ({ ...p, [ag.id]: n })); setPaginasTareas((p) => ({ ...p, [ag.id]: 1 })); }} />
+                {totalPaginasTareas > 1 && (
+                  <div className="border-t border-line pt-3">
+                    <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted">
+                      Tareas de este local
+                    </p>
+                    <Paginacion
+                      page={datosTareas?.page ?? 1}
+                      limit={limitesTareas[ag.id] ?? 7}
+                      total={totalTareas}
+                      totalPages={totalPaginasTareas}
+                      onPageChange={(n) => setPaginasTareas((p) => ({ ...p, [ag.id]: n }))}
+                      onLimitChange={(n) => {
+                        setLimitesTareas((p) => ({ ...p, [ag.id]: n }));
+                        setPaginasTareas((p) => ({ ...p, [ag.id]: 1 }));
+                      }}
+                    />
+                  </div>
+                )}
               </div>
             );
           })
         )}
-        <Paginacion page={pagina} limit={limite} total={paginacion.total} totalPages={paginacion.totalPages} onPageChange={setPagina} onLimitChange={(n) => { setLimite(n); setPagina(1); }} />
+        {paginacion.totalPages > 1 && (
+          <div className="border-t border-line pt-3">
+            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted">
+              Locales de la ruta
+            </p>
+            <Paginacion
+              page={pagina}
+              limit={limite}
+              total={paginacion.total}
+              totalPages={paginacion.totalPages}
+              onPageChange={setPagina}
+              onLimitChange={(n) => {
+                setLimite(n);
+                setPagina(1);
+              }}
+            />
+          </div>
+        )}
       </div>
       <PantallaCarga visible={!!completandoId || guardandoNovedad} mensaje={guardandoNovedad ? "Enviando novedad" : "Completando tarea"} />
 
