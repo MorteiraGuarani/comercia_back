@@ -6,6 +6,8 @@ import "leaflet/dist/leaflet.css";
 import { apiFetch } from "@/lib/api";
 import { mensajeError } from "@/utils/error";
 import { TOKENS } from "./tokens";
+import { montarCapaUsuario, type CapaUsuarioMapa } from "./ui/marcador-usuario-mapa";
+import { useGeolocalizacionMapa } from "./ui/use-geolocalizacion-mapa";
 import { CAPA_MAPA_CLARA, CAPA_MAPA_OSCURA, useTemaOscuroMapa } from "./ui/use-tema-mapa";
 import { IconoBuscar, IconoCruz, IconoCheck, IconoAlerta, IconoChevronAbajo, IconoPin } from "./ui/iconos-campo";
 import type { ClienteCampo, LocalCampo } from "@/types/campo";
@@ -44,8 +46,14 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const [busquedaTexto, setBusquedaTexto] = useState("");
-  const [obteniendoGps, setObteniendoGps] = useState(false);
+  const gps = useGeolocalizacionMapa();
+  const capaUsuarioRef = useRef<CapaUsuarioMapa | null>(null);
+  const posicionGpsRef = useRef(gps.posicion);
   const temaOscuro = useTemaOscuroMapa();
+
+  useEffect(() => {
+    posicionGpsRef.current = gps.posicion;
+  }, [gps.posicion]);
 
   // Sincronizar cuando cambia la prop clienteSeleccionadoId
   useEffect(() => {
@@ -150,6 +158,10 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
 
     const layerGroup = L.layerGroup().addTo(map);
     markersLayerRef.current = layerGroup;
+    const yo = posicionGpsRef.current;
+    if (yo) {
+      capaUsuarioRef.current = montarCapaUsuario(map, L, yo.latitud, yo.longitud, yo.precision);
+    }
 
     const observer = new ResizeObserver(() => {
       map.invalidateSize();
@@ -158,6 +170,7 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
 
     return () => {
       observer.disconnect();
+      capaUsuarioRef.current = null;
       map.remove();
       mapaRef.current = null;
       markersLayerRef.current = null;
@@ -303,27 +316,30 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
     setDropdownAbierto(false);
   };
 
-  // Centrar en ubicación GPS del usuario
+  useEffect(() => {
+    const mapa = mapaRef.current;
+    if (!mapa || !gps.posicion) return;
+    const { latitud, longitud, precision } = gps.posicion;
+    if (!capaUsuarioRef.current) {
+      capaUsuarioRef.current = montarCapaUsuario(mapa, L, latitud, longitud, precision);
+      mapa.flyTo([latitud, longitud], 15, { animate: true, duration: 1.1 });
+    } else {
+      capaUsuarioRef.current.actualizar(latitud, longitud, precision);
+    }
+  }, [gps.posicion]);
+
   const centrarEnMiUbicacion = () => {
-    if (!("geolocation" in navigator)) {
-      alert("Tu navegador no soporta geolocalización.");
+    if (gps.posicion && mapaRef.current) {
+      mapaRef.current.flyTo([gps.posicion.latitud, gps.posicion.longitud], 16, {
+        animate: true,
+        duration: 0.9,
+      });
       return;
     }
-    setObteniendoGps(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setObteniendoGps(false);
-        const { latitude, longitude } = pos.coords;
-        if (mapaRef.current) {
-          mapaRef.current.flyTo([latitude, longitude], 15, { animate: true, duration: 1.2 });
-        }
-      },
-      () => {
-        setObteniendoGps(false);
-        alert("No se pudo obtener tu ubicación actual.");
-      },
-      { enableHighAccuracy: true, timeout: 10000 },
-    );
+    gps.iniciar();
+    if (gps.estado === "error") {
+      alert("No se pudo obtener tu ubicación actual.");
+    }
   };
 
   return (
@@ -331,7 +347,8 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
       {/* Inyectar estilo para anular el fondo blanco y bordes de Leaflet divIcon */}
       <style>{`
         .custom-cliente-marker-clean,
-        .leaflet-marker-icon.custom-cliente-marker-clean {
+        .leaflet-marker-icon.custom-cliente-marker-clean,
+        .leaflet-marker-icon.campo-marcador-usuario {
           background: transparent !important;
           border: none !important;
           box-shadow: none !important;
@@ -567,18 +584,19 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
           <button
             type="button"
             onClick={centrarEnMiUbicacion}
-            disabled={obteniendoGps}
+            disabled={gps.estado === "loading"}
             title="Centrar en mi ubicación GPS"
             className="flex items-center gap-2.5 px-5 py-3 rounded-xl text-sm font-bold uppercase tracking-wider bg-white text-[#1E2320] border border-[#DAD5C9] shadow-xl hover:bg-zinc-50 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
           >
-            {obteniendoGps ? (
+            {gps.estado === "loading" ? (
               <span className="w-4 h-4 border-2 border-[#1E2320] border-t-transparent rounded-full animate-spin" />
             ) : (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8B2635" strokeWidth="2.5">
-                <polygon points="3 11 22 2 13 21 11 13 3 11" />
-              </svg>
+              <span className="campo-usuario campo-usuario--boton" aria-hidden="true">
+                <span className="campo-usuario__pulso" />
+                <span className="campo-usuario__punto" />
+              </span>
             )}
-            <span>Mi Ubicación</span>
+            <span>{gps.estado === "live" ? "Estás aquí" : "Mi Ubicación"}</span>
           </button>
         </div>
 

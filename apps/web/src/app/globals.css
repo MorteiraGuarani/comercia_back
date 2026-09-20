@@ -462,3 +462,45 @@ body {
 .dark .campo-screen .leaflet-control-zoom a + a {
   border-top-color: var(--border) !important;
 }
+
+.campo-marcador-usuario {
+  background: transparent !important;
+  border: none !important;
+}
+.campo-usuario {
+  position: relative;
+  width: 28px;
+  height: 28px;
+}
+.campo-usuario--boton {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.campo-usuario__pulso,
+.campo-usuario__punto {
+  position: absolute;
+  border-radius: 50%;
+}
+.campo-usuario__pulso {
+  inset: 0;
+  background: rgb(14 101 216 / 0.28);
+  animation: campo-usuario-pulso 1.8s ease-out infinite;
+}
+.campo-usuario__punto {
+  inset: 7px;
+  background: #0e65d8;
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 2px rgb(14 101 216 / 0.28), 0 2px 8px rgb(7 29 73 / 0.35);
+}
+.campo-usuario--boton .campo-usuario__punto {
+  inset: 4px;
+  border-width: 2px;
+}
+@keyframes campo-usuario-pulso {
+  from { transform: scale(0.45); opacity: 0.85; }
+  to { transform: scale(1.55); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .campo-usuario__pulso { animation: none; opacity: 0.4; }
+}

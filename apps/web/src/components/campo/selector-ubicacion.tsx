@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { TOKENS } from "./tokens";
+import { montarCapaUsuario, type CapaUsuarioMapa } from "./ui/marcador-usuario-mapa";
 import { CAPA_MAPA_CLARA, CAPA_MAPA_OSCURA, useTemaOscuroMapa } from "./ui/use-tema-mapa";
 
 export default function SelectorUbicacion({
@@ -18,6 +19,8 @@ export default function SelectorUbicacion({
   const contenedor = useRef<HTMLDivElement>(null);
   const mapa = useRef<L.Map | null>(null);
   const marcador = useRef<L.Marker | null>(null);
+  const capaUsuario = useRef<CapaUsuarioMapa | null>(null);
+  const watchGps = useRef<number | null>(null);
   const cambiar = useRef(onChange);
 
   const [error, setError] = useState<string | null>(null);
@@ -100,6 +103,9 @@ export default function SelectorUbicacion({
 
     return () => {
       observer.disconnect();
+      if (watchGps.current != null) navigator.geolocation.clearWatch(watchGps.current);
+      watchGps.current = null;
+      capaUsuario.current = null;
       instancia.remove();
       mapa.current = null;
       marcador.current = null;
@@ -139,8 +145,26 @@ export default function SelectorUbicacion({
         onChange(cLat, cLng);
         marcador.current?.setLatLng([cLat, cLng]);
         mapa.current?.flyTo([cLat, cLng], 17, { animate: true, duration: 1 });
+        if (mapa.current && !capaUsuario.current) {
+          capaUsuario.current = montarCapaUsuario(mapa.current, L, cLat, cLng, pos.coords.accuracy);
+        } else {
+          capaUsuario.current?.actualizar(cLat, cLng, pos.coords.accuracy);
+        }
+        if (watchGps.current == null) {
+          watchGps.current = navigator.geolocation.watchPosition(
+            (siguiente) => {
+              capaUsuario.current?.actualizar(
+                siguiente.coords.latitude,
+                siguiente.coords.longitude,
+                siguiente.coords.accuracy,
+              );
+            },
+            () => undefined,
+            { enableHighAccuracy: true, maximumAge: 4000 },
+          );
+        }
 
-        setGpsMensaje(`Ubicación detectada (precisión ±${precision}m)`);
+        setGpsMensaje(`Ubicación detectada (precisión ±${precision}m). El punto azul sos vos.`);
         setObteniendoGps(false);
       },
       (err) => {
@@ -209,9 +233,10 @@ export default function SelectorUbicacion({
               </>
             ) : (
               <>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8B2635" strokeWidth="2.5">
-                  <polygon points="3 11 22 2 13 21 11 13 3 11" />
-                </svg>
+                <span className="campo-usuario campo-usuario--boton" aria-hidden="true">
+                  <span className="campo-usuario__pulso" />
+                  <span className="campo-usuario__punto" />
+                </span>
                 <span>Mi Ubicación</span>
               </>
             )}
