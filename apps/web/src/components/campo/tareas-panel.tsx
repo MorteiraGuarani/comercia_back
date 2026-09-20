@@ -89,6 +89,15 @@ export function TareasPanel() {
     });
   }
 
+  async function desactivar(tarea: TareaCampo) {
+    if (!tarea.activo) return;
+    if (!window.confirm(`¿Desactivar la tarea «${tarea.nombre}»?`)) return;
+    await op.ejecutar("Desactivando tarea", async () => {
+      await apiFetch(`/campo/tareas/${tarea.id}`, { method: "DELETE" });
+      lista.refrescar();
+    });
+  }
+
   return (
     <div
       className="campo-screen min-w-0 w-full min-h-screen text-[13px] font-sans pb-16"
@@ -199,6 +208,7 @@ export function TareasPanel() {
         </div>
 
         {lista.error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-200">{lista.error}</p>}
+        {op.error && !form && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-200">{op.error}</p>}
         {lista.cargando ? (
           <p role="status" className="py-8 text-center text-sm text-muted">Cargando tareas…</p>
         ) : lista.items.length === 0 ? (
@@ -213,7 +223,10 @@ export function TareasPanel() {
                       <p className="text-xs text-muted">{tarea.categoria || "Góndola"}</p>
                       <h3 className="mt-1 text-sm font-semibold text-foreground">{tarea.nombre}</h3>
                     </div>
-                    <button type="button" onClick={() => abrir(tarea)} aria-label={"Editar " + tarea.nombre} className="grid h-11 w-11 shrink-0 place-items-center rounded-md border border-line text-foreground hover:bg-surface-soft"><IconoEditar className="h-4 w-4" /></button>
+                    <div className="flex shrink-0 gap-1">
+                      <button type="button" onClick={() => abrir(tarea)} aria-label={"Editar " + tarea.nombre} className="grid h-11 w-11 place-items-center rounded-md border border-line text-foreground hover:bg-surface-soft"><IconoEditar className="h-4 w-4" /></button>
+                      <button type="button" onClick={() => void desactivar(tarea)} disabled={!tarea.activo || !!op.mensaje} className="min-h-11 rounded-md border border-red-200 px-2 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950">Quitar</button>
+                    </div>
                   </div>
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted">
                     <StatusStamp tone={!tarea.activo ? "sub" : tarea.esObligatoria ? "carne" : "fresco"}>{!tarea.activo ? "Inactiva" : tarea.esObligatoria ? "Obligatoria" : "Activa"}</StatusStamp>
@@ -238,7 +251,12 @@ export function TareasPanel() {
                       <td className="p-4"><StatusStamp tone={!tarea.activo ? "sub" : tarea.esObligatoria ? "carne" : "fresco"}>{!tarea.activo ? "Inactiva" : tarea.esObligatoria ? "Obligatoria" : "Activa"}</StatusStamp></td>
                       <td className="p-4 text-muted">{tarea.requiereFotos ? (tarea.fotosObligatorias ? "Antes y después · obligatorias" : "Antes y después · opcionales") : "Sin fotos"}</td>
                       <td className="p-4 text-muted">{tarea.todosLocales ? "Todos los locales" : (tarea.locales?.length ?? 0) + " locales"}</td>
-                      <td className="p-4"><button type="button" onClick={() => abrir(tarea)} className="min-h-11 rounded-md border border-line px-3 text-foreground hover:bg-surface-soft">Editar</button></td>
+                  <td className="p-4">
+                    <div className="flex flex-wrap gap-2">
+                      <button type="button" onClick={() => abrir(tarea)} className="min-h-11 rounded-md border border-line px-3 text-foreground hover:bg-surface-soft">Editar</button>
+                      <button type="button" onClick={() => void desactivar(tarea)} disabled={!tarea.activo || !!op.mensaje} className="min-h-11 rounded-md border border-red-200 px-3 text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950">Quitar</button>
+                    </div>
+                  </td>
                     </tr>
                   ))}
                 </tbody>
@@ -267,7 +285,10 @@ export function TareasPanel() {
                 await op.ejecutar(id ? "Actualizando tarea" : "Creando tarea", () =>
                   apiFetch(`/campo/tareas${id ? `/${id}` : ""}`, {
                     method: id ? "PUT" : "POST",
-                    body: JSON.stringify(form),
+                    body: JSON.stringify({
+                      ...form,
+                      fechaHasta: form.fechaHasta || null,
+                    }),
                   }),
                 )
               ) {
@@ -531,6 +552,7 @@ export function TareasPanel() {
                 </label>
                 <input
                   type="date"
+                  min={form.fechaDesde}
                   value={form.fechaHasta}
                   onChange={(e) => setForm({ ...form, fechaHasta: e.target.value })}
                   className="w-full p-2.5 rounded-lg border bg-surface-raised text-sm font-mono"
@@ -551,7 +573,7 @@ export function TareasPanel() {
               </label>
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-4 border-t" style={{ borderColor: TOKENS.line }}>
+            <div className="flex flex-col-reverse gap-3 pt-4 border-t sm:flex-row sm:items-center sm:justify-end" style={{ borderColor: TOKENS.line }}>
               <button
                 type="button"
                 onClick={() => setForm(null)}

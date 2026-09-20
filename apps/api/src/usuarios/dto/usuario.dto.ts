@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsBoolean,
   IsDateString,
@@ -34,11 +34,14 @@ export class AsignarUsuarioLocalDto {
   @Max(MAX_INT4)
   localId!: number;
 
-  @IsDateString({ strict: true })
+  @IsDateString({ strict: false })
   fechaDesde!: string;
 
+  @Transform(({ value }: { value: unknown }) =>
+    value === '' ? null : value,
+  )
   @IsOptional()
-  @IsDateString({ strict: true })
+  @IsDateString({ strict: false })
   fechaHasta?: string | null;
 }
 

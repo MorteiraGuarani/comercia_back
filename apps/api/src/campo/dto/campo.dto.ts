@@ -52,7 +52,10 @@ export class ConsultaCampoDto extends PaginacionDto {
   @IsOptional() @IsString() @MaxLength(120) buscar?: string;
   @IsOptional()
   @Matches(/^\d{4}-\d{2}-\d{2}$/)
-  @IsDateString({ strict: true })
+  // Los filtros de campo usan fechas de calendario (YYYY-MM-DD), no
+  // timestamps. `strict: true` rechaza algunos valores date-only según la
+  // versión de class-validator y termina duplicando el mensaje de Matches.
+  @IsDateString({ strict: false })
   fecha?: string;
 }
 
@@ -94,11 +97,14 @@ export class LocalCampoDto {
 
 export class VigenciaCampoDto {
   @Matches(/^\d{4}-\d{2}-\d{2}$/)
-  @IsDateString({ strict: true })
+  @IsDateString({ strict: false })
   fechaDesde!: string;
+  @Transform(({ value }: { value: unknown }) =>
+    value === '' ? null : value,
+  )
   @IsOptional()
   @Matches(/^\d{4}-\d{2}-\d{2}$/)
-  @IsDateString({ strict: true })
+  @IsDateString({ strict: false })
   fechaHasta?: string | null;
 }
 

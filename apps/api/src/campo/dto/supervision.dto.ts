@@ -4,17 +4,17 @@ import { PaginacionDto } from '../../common/utils/paginacion';
 export class ConsultaSupervisionDto extends PaginacionDto {
   @IsOptional()
   @Matches(/^\d{4}-\d{2}-\d{2}$/)
-  @IsDateString({ strict: true })
+  @IsDateString({ strict: false })
   fecha?: string;
 
   @IsOptional()
   @Matches(/^\d{4}-\d{2}-\d{2}$/)
-  @IsDateString({ strict: true })
+  @IsDateString({ strict: false })
   fechaInicio?: string;
 
   @IsOptional()
   @Matches(/^\d{4}-\d{2}-\d{2}$/)
-  @IsDateString({ strict: true })
+  @IsDateString({ strict: false })
   fechaFin?: string;
 }
 
