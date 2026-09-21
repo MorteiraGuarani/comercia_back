@@ -3,7 +3,14 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { apiFetch } from "@/lib/api";
 import { useListaCampo, useOperacionCampo } from "@/hooks/use-lista-campo";
-import { fechaEnZonaIso, formatoFechaHora, queryFechasCampo } from "@/utils/fechas";
+import { Paginacion } from "@/components/paginacion";
+import { fechaEnZonaIso, queryFechasCampo } from "@/utils/fechas";
+import { formatoDistancia, metrosEntre } from "@/utils/distancia";
+import {
+  ordenarParadasPorRuta,
+  urlGoogleMapsRuta,
+  type CoordenadaCampo,
+} from "@/utils/ruta-recomendada";
 import { mensajeError } from "@/utils/error";
 import { TOKENS } from "./tokens";
 import { StatusStamp } from "./ui/status-stamp";
@@ -34,7 +41,7 @@ export function RutaImpulsadorPanel() {
     fechaFin: hoyStr,
   });
   const qsFecha = queryFechasCampo(periodo) || `fecha=${hoyStr}`;
-  const lista = useListaCampo<AgendaCampo>(`/campo/jornada?${qsFecha}`);
+  const lista = useListaCampo<AgendaCampo>(`/campo/jornada?${qsFecha}`, 0, 7);
   const [abierta, setAbierta] = useState<VisitaCampo | null>(null);
   const [revision, setRevision] = useState(0);
   const [error, setError] = useState("");
@@ -56,6 +63,11 @@ export function RutaImpulsadorPanel() {
   const [descNovedad, setDescNovedad] = useState("");
   const [guardandoNovedad, setGuardandoNovedad] = useState(false);
   const [novedadExito, setNovedadExito] = useState(false);
+  const [origenGps, setOrigenGps] = useState<CoordenadaCampo | null>(null);
+  const [ordenRuta, setOrdenRuta] = useState<number[] | null>(null);
+  const [paradasMaps, setParadasMaps] = useState<CoordenadaCampo[]>([]);
+  const [calculandoRuta, setCalculandoRuta] = useState(false);
+  const [avisoRuta, setAvisoRuta] = useState("");
 
   const op = useOperacionCampo();
 
@@ -79,20 +91,129 @@ export function RutaImpulsadorPanel() {
   }
 
   const itemsFiltrados = useMemo(() => {
-    if (!busqueda.trim()) return lista.items;
-    const q = busqueda.toLowerCase();
-    return lista.items.filter(
-      (a) =>
-        a.local.nombre.toLowerCase().includes(q) ||
-        a.local.cliente.nombre.toLowerCase().includes(q) ||
-        a.local.direccion.toLowerCase().includes(q),
-    );
-  }, [lista.items, busqueda]);
+    const q = busqueda.trim().toLowerCase();
+    const base = q
+      ? lista.items.filter(
+          (a) =>
+            a.local.nombre.toLowerCase().includes(q) ||
+            a.local.cliente.nombre.toLowerCase().includes(q) ||
+            a.local.direccion.toLowerCase().includes(q),
+        )
+      : lista.items;
+    if (!ordenRuta?.length) return base;
+    const peso = new Map(ordenRuta.map((id, i) => [id, i]));
+    return [...base].sort((a, b) => {
+      const pa = peso.get(a.id) ?? 10_000;
+      const pb = peso.get(b.id) ?? 10_000;
+      return pa - pb;
+    });
+  }, [lista.items, busqueda, ordenRuta]);
 
   const totalParadas = lista.items.length;
   const visitadas = lista.items.filter((a) => a.visitas.some((v) => v.salida)).length;
   const enCurso = abierta ? 1 : 0;
   const pendientes = Math.max(0, totalParadas - visitadas - enCurso);
+
+  useEffect(() => {
+    setOrdenRuta(null);
+    setParadasMaps([]);
+    setOrigenGps(null);
+    setAvisoRuta("");
+  }, [qsFecha]);
+
+  function ventanaDe(a: AgendaCampo) {
+    const horarios = a.local.horarios;
+    return horarios.length
+      ? { entrada: horarios[0].entrada, salida: horarios[0].salida }
+      : { entrada: "08:00", salida: "18:00" };
+  }
+
+  function pendientesParaRuta(items: AgendaCampo[]) {
+    return items.filter(
+      (a) =>
+        !a.visitas.some((v) => v.salida) &&
+        abierta?.local.id !== a.local.id &&
+        Number.isFinite(a.local.latitud) &&
+        Number.isFinite(a.local.longitud),
+    );
+  }
+
+  async function posicionGps(): Promise<CoordenadaCampo | null> {
+    if (!navigator.geolocation) return null;
+    return new Promise((resolve) => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) =>
+          resolve({
+            latitud: pos.coords.latitude,
+            longitud: pos.coords.longitude,
+          }),
+        () => resolve(null),
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 30_000 },
+      );
+    });
+  }
+
+  async function calcularRuta() {
+    if (calculandoRuta) return;
+    setCalculandoRuta(true);
+    setAvisoRuta("");
+    try {
+      const todas = await apiFetch<{ items: AgendaCampo[] }>(
+        `/campo/jornada?${qsFecha}&page=1&limit=50`,
+      );
+      const pendientes = pendientesParaRuta(todas.items);
+      if (!pendientes.length) {
+        setAvisoRuta("No hay locales pendientes con ubicación para armar la ruta.");
+        setOrdenRuta(null);
+        return;
+      }
+      let origen = await posicionGps();
+      if (!origen) {
+        origen = {
+          latitud: pendientes[0].local.latitud,
+          longitud: pendientes[0].local.longitud,
+        };
+        setAvisoRuta("Sin GPS: ordenamos desde el primer local con horario.");
+      } else {
+        setAvisoRuta("Ruta sugerida según tu GPS, horarios y distancia.");
+      }
+      setOrigenGps(origen);
+      const orden = ordenarParadasPorRuta(
+        origen,
+        pendientes.map((a) => {
+          const ventana = ventanaDe(a);
+          return {
+            id: a.id,
+            latitud: a.local.latitud,
+            longitud: a.local.longitud,
+            entrada: ventana.entrada,
+            salida: ventana.salida,
+          };
+        }),
+      );
+      setOrdenRuta(orden.map((p) => p.id));
+      setParadasMaps(
+        orden.map((p) => ({ latitud: p.latitud, longitud: p.longitud })),
+      );
+    } catch (e) {
+      setAvisoRuta(mensajeError(e, "No se pudo calcular la ruta."));
+    } finally {
+      setCalculandoRuta(false);
+    }
+  }
+
+  function iniciarEnMaps() {
+    if (!origenGps || !paradasMaps.length) {
+      setAvisoRuta("Calculá la ruta antes de iniciar el recorrido.");
+      return;
+    }
+    const url = urlGoogleMapsRuta(origenGps, paradasMaps);
+    if (!url) {
+      setAvisoRuta("No hay coordenadas para abrir Google Maps.");
+      return;
+    }
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
 
   const enviarNovedad = async () => {
     if (!novedadLocal || !tituloNovedad.trim() || !descNovedad.trim() || guardandoNovedad) return;
@@ -197,6 +318,30 @@ export function RutaImpulsadorPanel() {
           </div>
         )}
 
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <button
+            type="button"
+            onClick={() => void calcularRuta()}
+            disabled={calculandoRuta || lista.cargando}
+            className="h-11 min-h-11 flex-1 cursor-pointer rounded-lg border border-line bg-surface-raised px-3 text-xs font-bold text-foreground transition hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40 disabled:cursor-not-allowed dark:border-line"
+          >
+            Calcular ruta
+          </button>
+          <button
+            type="button"
+            onClick={iniciarEnMaps}
+            disabled={!paradasMaps.length}
+            className="h-11 min-h-11 flex-1 cursor-pointer rounded-lg bg-[#1E2320] px-3 text-xs font-bold text-white transition hover:bg-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40 disabled:cursor-not-allowed dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
+          >
+            Iniciar en Maps
+          </button>
+        </div>
+        {avisoRuta ? (
+          <p className="rounded-lg border border-line bg-surface-soft px-3 py-2 text-xs text-foreground dark:border-line">
+            {avisoRuta}
+          </p>
+        ) : null}
+
         {/* Buscador de locales */}
         <div className="relative">
           <input
@@ -247,6 +392,7 @@ export function RutaImpulsadorPanel() {
               const ventana = horarios.length
                 ? `${horarios[0].entrada} – ${horarios[0].salida}`
                 : "08:00 – 18:00";
+              const ordenNumero = ordenRuta?.indexOf(a.id) ?? -1;
 
               return (
                 <div
@@ -259,8 +405,8 @@ export function RutaImpulsadorPanel() {
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-start gap-2.5 min-w-0">
-                      <span className="ft-display text-xs font-bold w-6 h-6 rounded-full bg-zinc-200 text-foreground flex items-center justify-center shrink-0 mt-0.5">
-                        {i + 1}
+                      <span className="ft-display text-xs font-bold w-6 h-6 rounded-full bg-zinc-200 text-foreground flex items-center justify-center shrink-0 mt-0.5 dark:bg-zinc-700 dark:text-zinc-100">
+                        {ordenNumero >= 0 ? ordenNumero + 1 : i + 1}
                       </span>
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5">
@@ -298,28 +444,39 @@ export function RutaImpulsadorPanel() {
                       )}
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setNovedadLocal(a.local)}
-                        className="!min-h-8 rounded-md bg-surface-soft px-2.5 py-1 text-[11px] font-semibold text-foreground transition hover:bg-accent-soft hover:text-accent-ink active:translate-y-px cursor-pointer"
-                        aria-label={`Reportar novedad en ${a.local.nombre}`}
-                        title={`Reportar novedad en ${a.local.nombre}`}
-                      >
-                        Novedad
-                      </button>
-
+                    <div className="flex items-center gap-1.5">
+                      {origenGps && Number.isFinite(a.local.latitud) ? (
+                        <span className="ft-mono hidden text-[10px] text-muted sm:inline">
+                          {formatoDistancia(
+                            metrosEntre(origenGps, {
+                              latitud: a.local.latitud,
+                              longitud: a.local.longitud,
+                            }),
+                          )}
+                        </span>
+                      ) : null}
                       <button
                         type="button"
                         onClick={() => setMapa(a.local)}
-                        className="p-1 rounded text-muted hover:text-black border border-line hover:bg-surface-soft transition cursor-pointer"
+                        className="grid h-11 w-11 min-h-11 min-w-11 shrink-0 place-items-center rounded-lg border border-line bg-surface-raised text-foreground transition hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40 cursor-pointer dark:border-line"
+                        aria-label={`Ver mapa de ${a.local.nombre}`}
                         title="Ver mapa"
                       >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
                           <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
                           <line x1="8" y1="2" x2="8" y2="18" />
                           <line x1="16" y1="6" x2="16" y2="22" />
                         </svg>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setNovedadLocal(a.local)}
+                        className="h-11 min-h-11 shrink-0 rounded-lg border border-line bg-surface-raised px-2.5 text-[11px] font-semibold text-foreground transition hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40 cursor-pointer dark:border-line"
+                        aria-label={`Reportar novedad en ${a.local.nombre}`}
+                        title={`Reportar novedad en ${a.local.nombre}`}
+                      >
+                        Novedad
                       </button>
 
                       {!estaEnCurso && !tieneVisitaCerrada && !abierta && (
@@ -332,9 +489,9 @@ export function RutaImpulsadorPanel() {
                               nombre: a.local.nombre,
                             })
                           }
-                          className="px-3 py-1 rounded text-xs font-bold text-white bg-zinc-900 hover:bg-black transition cursor-pointer shadow-sm"
+                          className="h-11 min-h-11 shrink-0 rounded-lg bg-zinc-900 px-2.5 text-[11px] font-bold text-white transition hover:bg-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40 cursor-pointer dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
                         >
-                          Check-In
+                          Check-in
                         </button>
                       )}
 
@@ -348,9 +505,9 @@ export function RutaImpulsadorPanel() {
                               nombre: a.local.nombre,
                             })
                           }
-                          className="px-3 py-1 rounded text-xs font-bold text-white bg-red-600 hover:bg-red-700 transition cursor-pointer shadow-sm"
+                          className="h-11 min-h-11 shrink-0 rounded-lg bg-red-600 px-2.5 text-[11px] font-bold text-white transition hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40 cursor-pointer dark:bg-red-500"
                         >
-                          Check-Out
+                          Check-out
                         </button>
                       )}
                     </div>
@@ -360,7 +517,18 @@ export function RutaImpulsadorPanel() {
             })
           )}
         </div>
+        {lista.datos && lista.datos.totalPages > 0 ? (
+          <Paginacion
+            page={lista.page}
+            totalPages={lista.datos.totalPages}
+            total={lista.datos.total}
+            limit={lista.limit}
+            onPageChange={lista.setPage}
+            onLimitChange={lista.setLimit}
+          />
+        ) : null}
       </div>
+      <PantallaCarga visible={calculandoRuta} mensaje="Calculando mejor ruta" detalle="Usamos tu GPS, los horarios y la distancia entre locales." />
 
       {/* Modal de Mapa */}
       {mapa && (
