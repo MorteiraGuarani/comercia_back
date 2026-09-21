@@ -16,6 +16,7 @@ import { PanelProvider } from "@/components/panel/contexto";
 import { IconoModulo, resolverIconoPagina } from "@/components/panel/iconos";
 import { btnGhost } from "@/components/ui";
 import { EVENTO_PLATAFORMA_ACTUALIZADA } from "@/lib/eventos-plataforma";
+import { BotonSubir } from "@/components/boton-subir";
 import {
   etiquetaPaginaMenu,
   rutaInicialImpulsador,
@@ -297,6 +298,7 @@ export default function PanelLayout({
             {children}
           </main>
         </div>
+        <BotonSubir />
 
         {/* Bottom navbar (mobile) — máximo 5 accesos */}
         <nav
