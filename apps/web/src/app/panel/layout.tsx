@@ -17,10 +17,7 @@ import { IconoModulo, resolverIconoPagina } from "@/components/panel/iconos";
 import { btnGhost } from "@/components/ui";
 import { EVENTO_PLATAFORMA_ACTUALIZADA } from "@/lib/eventos-plataforma";
 import { BotonSubir } from "@/components/boton-subir";
-import {
-  etiquetaPaginaMenu,
-  rutaInicialImpulsador,
-} from "@/utils/nombres-menu";
+import { etiquetaPaginaMenu } from "@/utils/nombres-menu";
 
 export default function PanelLayout({
   children,
@@ -98,12 +95,6 @@ export default function PanelLayout({
     () => (usuario ? { usuario, modulos } : null),
     [usuario, modulos],
   );
-
-  useEffect(() => {
-    if (pathname !== "/panel" || usuario?.esSuperadmin) return;
-    const destino = rutaInicialImpulsador(modulos);
-    if (destino) router.replace(destino);
-  }, [pathname, modulos, usuario, router]);
 
   if (cargando || !usuario || !valorPanel) {
     return <PantallaCarga visible mensaje="Cargando tu panel" />;
