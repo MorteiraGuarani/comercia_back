@@ -8,7 +8,9 @@ export function condicionAgenda(
   fecha: string,
   fechaFin = fecha,
 ) {
-  const dia = Prisma.sql`d.dia`;
+  // generate_series(date, date, interval) devuelve timestamp; hay que castear
+  // a date para que (dia - fecha_desde) sea entero y % intervalo funcione.
+  const dia = Prisma.sql`(d.dia::date)`;
   return Prisma.sql`
     c.empresa_id = ${empresaId} AND c.activo AND l.activo AND a.activo
     AND a.fecha_desde <= ${fechaFin}::date AND (a.fecha_hasta IS NULL OR a.fecha_hasta >= ${fecha}::date)
