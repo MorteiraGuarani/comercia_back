@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState, useMemo } from "react";
 import { apiFetch } from "@/lib/api";
-import { useListaCampo, useOperacionCampo } from "@/hooks/use-lista-campo";
-import { Paginacion } from "@/components/paginacion";
+import { useJornadaCompleta } from "@/hooks/use-jornada-completa";
+import { useOperacionCampo } from "@/hooks/use-lista-campo";
 import { fechaEnZonaIso, queryFechasCampo } from "@/utils/fechas";
 import { formatoDistancia, metrosEntre } from "@/utils/distancia";
 import {
@@ -23,9 +23,7 @@ import { MapaLocal } from "./mapa-local";
 import type {
   AgendaCampo,
   LocalCampo,
-  MarcaCampo,
   VisitaCampo,
-  FormNovedadCampo,
   TipoNovedad,
 } from "@/types/campo";
 
@@ -41,9 +39,9 @@ export function RutaImpulsadorPanel() {
     fechaFin: hoyStr,
   });
   const qsFecha = queryFechasCampo(periodo) || `fecha=${hoyStr}`;
-  const lista = useListaCampo<AgendaCampo>(`/campo/jornada?${qsFecha}`, 0, 7);
-  const [abierta, setAbierta] = useState<VisitaCampo | null>(null);
   const [revision, setRevision] = useState(0);
+  const lista = useJornadaCompleta<AgendaCampo>(qsFecha, revision);
+  const [abierta, setAbierta] = useState<VisitaCampo | null>(null);
   const [error, setError] = useState("");
   const [mapa, setMapa] = useState<LocalCampo | null>(null);
   const [busqueda, setBusqueda] = useState("");
@@ -76,8 +74,6 @@ export function RutaImpulsadorPanel() {
   const ordenRuta = rutaCalc?.qs === qsFecha ? rutaCalc.ids : null;
   const paradasMaps = rutaCalc?.qs === qsFecha ? rutaCalc.paradas : [];
 
-  const op = useOperacionCampo();
-
   useEffect(() => {
     let vigente = true;
     apiFetch<VisitaCampo | null>("/campo/jornada/abierta")
@@ -107,16 +103,22 @@ export function RutaImpulsadorPanel() {
             a.local.direccion.toLowerCase().includes(q),
         )
       : lista.items;
-    if (!ordenRuta?.length) return base;
+    const visitado = (a: AgendaCampo) => a.visitas.some((v) => v.salida);
+    if (!ordenRuta?.length) {
+      return [...base].sort((a, b) => Number(visitado(a)) - Number(visitado(b)));
+    }
     const peso = new Map(ordenRuta.map((id, i) => [id, i]));
     return [...base].sort((a, b) => {
+      const va = visitado(a);
+      const vb = visitado(b);
+      if (va !== vb) return Number(va) - Number(vb);
       const pa = peso.get(a.id) ?? 10_000;
       const pb = peso.get(b.id) ?? 10_000;
       return pa - pb;
     });
   }, [lista.items, busqueda, ordenRuta]);
 
-  const totalParadas = lista.items.length;
+  const totalParadas = lista.total || lista.items.length;
   const visitadas = lista.items.filter((a) => a.visitas.some((v) => v.salida)).length;
   const enCurso = abierta ? 1 : 0;
   const pendientes = Math.max(0, totalParadas - visitadas - enCurso);
@@ -158,10 +160,7 @@ export function RutaImpulsadorPanel() {
     setCalculandoRuta(true);
     setAvisoRuta("");
     try {
-      const todas = await apiFetch<{ items: AgendaCampo[] }>(
-        `/campo/jornada?${qsFecha}&page=1&limit=50`,
-      );
-      const pendientes = pendientesParaRuta(todas.items);
+      const pendientes = pendientesParaRuta(lista.items);
       if (!pendientes.length) {
         setRutaCalc(null);
         setAvisoRuta("No hay locales pendientes con ubicación para armar la ruta.");
@@ -320,7 +319,7 @@ export function RutaImpulsadorPanel() {
           </div>
         )}
 
-        <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="flex flex-row gap-2">
           <button
             type="button"
             onClick={() => void calcularRuta()}
@@ -365,8 +364,10 @@ export function RutaImpulsadorPanel() {
         </div>
 
         {/* Lista de paradas de la ruta */}
-        <div className="space-y-2.5">
-          {itemsFiltrados.length === 0 ? (
+        <div className="space-y-2.5 pb-16">
+          {lista.cargando ? (
+            <p className="py-8 text-center text-xs text-muted">Cargando tu ruta…</p>
+          ) : itemsFiltrados.length === 0 ? (
             <div
               className="rounded-lg p-8 text-center"
               style={{ background: TOKENS.canvas, border: `1px solid ${TOKENS.line}` }}
@@ -394,7 +395,11 @@ export function RutaImpulsadorPanel() {
               const ventana = horarios.length
                 ? `${horarios[0].entrada} – ${horarios[0].salida}`
                 : "08:00 – 18:00";
-              const ordenNumero = ordenRuta?.indexOf(a.id) ?? -1;
+              const ordenNumero = ordenRuta
+                ? ordenRuta.indexOf(a.id)
+                : itemsFiltrados
+                    .filter((x) => !x.visitas.some((v) => v.salida))
+                    .findIndex((x) => x.id === a.id);
 
               return (
                 <div
@@ -408,7 +413,7 @@ export function RutaImpulsadorPanel() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-start gap-2.5 min-w-0">
                       <span className="ft-display text-xs font-bold w-6 h-6 rounded-full bg-zinc-200 text-foreground flex items-center justify-center shrink-0 mt-0.5 dark:bg-zinc-700 dark:text-zinc-100">
-                        {ordenNumero >= 0 ? ordenNumero + 1 : i + 1}
+                        {tieneVisitaCerrada ? "✓" : ordenNumero >= 0 ? ordenNumero + 1 : i + 1}
                       </span>
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5">
@@ -448,7 +453,7 @@ export function RutaImpulsadorPanel() {
 
                     <div className="flex items-center gap-1.5">
                       {origenGps && Number.isFinite(a.local.latitud) ? (
-                        <span className="ft-mono hidden text-[10px] text-muted sm:inline">
+                        <span className="ft-mono text-[10px] text-muted">
                           {formatoDistancia(
                             metrosEntre(origenGps, {
                               latitud: a.local.latitud,
@@ -519,15 +524,10 @@ export function RutaImpulsadorPanel() {
             })
           )}
         </div>
-        {lista.datos && lista.datos.totalPages > 0 ? (
-          <Paginacion
-            page={lista.page}
-            totalPages={lista.datos.totalPages}
-            total={lista.datos.total}
-            limit={lista.limit}
-            onPageChange={lista.setPage}
-            onLimitChange={lista.setLimit}
-          />
+        {lista.error || error ? (
+          <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
+            {lista.error || error}
+          </p>
         ) : null}
       </div>
       <PantallaCarga visible={calculandoRuta} mensaje="Calculando mejor ruta" detalle="Usamos tu GPS, los horarios y la distancia entre locales." />
