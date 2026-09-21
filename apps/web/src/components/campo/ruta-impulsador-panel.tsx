@@ -63,11 +63,18 @@ export function RutaImpulsadorPanel() {
   const [descNovedad, setDescNovedad] = useState("");
   const [guardandoNovedad, setGuardandoNovedad] = useState(false);
   const [novedadExito, setNovedadExito] = useState(false);
-  const [origenGps, setOrigenGps] = useState<CoordenadaCampo | null>(null);
-  const [ordenRuta, setOrdenRuta] = useState<number[] | null>(null);
-  const [paradasMaps, setParadasMaps] = useState<CoordenadaCampo[]>([]);
+  const [rutaCalc, setRutaCalc] = useState<{
+    qs: string;
+    origen: CoordenadaCampo;
+    ids: number[];
+    paradas: CoordenadaCampo[];
+    aviso: string;
+  } | null>(null);
   const [calculandoRuta, setCalculandoRuta] = useState(false);
   const [avisoRuta, setAvisoRuta] = useState("");
+  const origenGps = rutaCalc?.qs === qsFecha ? rutaCalc.origen : null;
+  const ordenRuta = rutaCalc?.qs === qsFecha ? rutaCalc.ids : null;
+  const paradasMaps = rutaCalc?.qs === qsFecha ? rutaCalc.paradas : [];
 
   const op = useOperacionCampo();
 
@@ -114,13 +121,6 @@ export function RutaImpulsadorPanel() {
   const enCurso = abierta ? 1 : 0;
   const pendientes = Math.max(0, totalParadas - visitadas - enCurso);
 
-  useEffect(() => {
-    setOrdenRuta(null);
-    setParadasMaps([]);
-    setOrigenGps(null);
-    setAvisoRuta("");
-  }, [qsFecha]);
-
   function ventanaDe(a: AgendaCampo) {
     const horarios = a.local.horarios;
     return horarios.length
@@ -163,21 +163,19 @@ export function RutaImpulsadorPanel() {
       );
       const pendientes = pendientesParaRuta(todas.items);
       if (!pendientes.length) {
+        setRutaCalc(null);
         setAvisoRuta("No hay locales pendientes con ubicación para armar la ruta.");
-        setOrdenRuta(null);
         return;
       }
       let origen = await posicionGps();
+      let aviso = "Ruta sugerida según tu GPS, horarios y distancia.";
       if (!origen) {
         origen = {
           latitud: pendientes[0].local.latitud,
           longitud: pendientes[0].local.longitud,
         };
-        setAvisoRuta("Sin GPS: ordenamos desde el primer local con horario.");
-      } else {
-        setAvisoRuta("Ruta sugerida según tu GPS, horarios y distancia.");
+        aviso = "Sin GPS: ordenamos desde el primer local con horario.";
       }
-      setOrigenGps(origen);
       const orden = ordenarParadasPorRuta(
         origen,
         pendientes.map((a) => {
@@ -191,10 +189,14 @@ export function RutaImpulsadorPanel() {
           };
         }),
       );
-      setOrdenRuta(orden.map((p) => p.id));
-      setParadasMaps(
-        orden.map((p) => ({ latitud: p.latitud, longitud: p.longitud })),
-      );
+      setRutaCalc({
+        qs: qsFecha,
+        origen,
+        ids: orden.map((p) => p.id),
+        paradas: orden.map((p) => ({ latitud: p.latitud, longitud: p.longitud })),
+        aviso,
+      });
+      setAvisoRuta(aviso);
     } catch (e) {
       setAvisoRuta(mensajeError(e, "No se pudo calcular la ruta."));
     } finally {
@@ -336,9 +338,9 @@ export function RutaImpulsadorPanel() {
             Iniciar en Maps
           </button>
         </div>
-        {avisoRuta ? (
+        {(rutaCalc?.qs === qsFecha ? rutaCalc.aviso : avisoRuta) ? (
           <p className="rounded-lg border border-line bg-surface-soft px-3 py-2 text-xs text-foreground dark:border-line">
-            {avisoRuta}
+            {rutaCalc?.qs === qsFecha ? rutaCalc.aviso : avisoRuta}
           </p>
         ) : null}
 
