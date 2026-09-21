@@ -131,8 +131,8 @@ export function RutaImpulsadorPanel() {
       }}
     >
       <TopBar
-        title="Locales a Visitar"
-        subtitle="Tu ruta comercial y registro de presencias del día"
+        title="Mi Ruta"
+        subtitle="Locales que tenés que visitar hoy y registro de entrada y salida"
         right={
           <SelectorFechaFiltro valorActual={periodo} onChange={setPeriodo} />
         }

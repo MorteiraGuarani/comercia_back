@@ -6,6 +6,7 @@ import { usePanel } from "@/components/panel/contexto";
 import { IconoFlechaDer } from "@/components/campo/ui/iconos-campo";
 import { apiFetch } from "@/lib/api";
 import { fechaEnZonaIso } from "@/utils/fechas";
+import { etiquetaPaginaMenu } from "@/utils/nombres-menu";
 import type { AgendaCampo, SupervisionResumenData } from "@/types/campo";
 import type { RespuestaPaginada } from "@/types/paginacion";
 
@@ -52,7 +53,7 @@ export default function PanelInicioPage() {
               <Acceso
                 key={pagina.id}
                 href={`/panel/${modulo.ruta}/${pagina.ruta}`}
-                titulo={pagina.nombre}
+                titulo={etiquetaPaginaMenu(modulo.ruta, pagina.ruta, pagina.nombre)}
                 descripcion={descripcionPagina(modulo.ruta, pagina.ruta)}
               />
             ))}
@@ -234,7 +235,7 @@ function descripcionPagina(modulo: string, pagina: string) {
     "gestion-campo/clientes": "Cuentas comerciales y cobertura geográfica.",
     "gestion-campo/locales": "Puntos de venta, rutas y planificación operativa.",
     "gestion-campo/tareas": "Protocolos y tareas asignadas al equipo.",
-    "mi-jornada/locales": "Locales asignados y registro de entrada y salida.",
+    "mi-jornada/locales": "Tu ruta de hoy: locales a visitar y registro de entrada y salida.",
     "mi-jornada/tareas": "Actividades por local y registro de fotos.",
     "mi-jornada/novedades": "Reportá un imprevisto y consultá la respuesta.",
     "mi-jornada/avisos": "Indicaciones recibidas de tu team leader.",

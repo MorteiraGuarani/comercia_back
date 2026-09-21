@@ -6,6 +6,8 @@ import { PantallaCarga } from "@/components/pantalla-carga";
 import { inputBase, labelBase } from "@/components/ui";
 import { apiFetch, ApiError } from "@/lib/api";
 import type { UsuarioSesion } from "@/types/usuario";
+import type { ModuloMenu } from "@/types/plataforma";
+import { rutaInicialImpulsador } from "@/utils/nombres-menu";
 
 export function LoginForm() {
   const router = useRouter();
@@ -26,7 +28,10 @@ export function LoginForm() {
         method: "POST",
         body: JSON.stringify({ identificador: identificador.trim(), password }),
       });
-      router.push("/panel");
+      const menu = await apiFetch<{ modulos: ModuloMenu[] }>("/mi-plataforma").catch(
+        () => ({ modulos: [] as ModuloMenu[] }),
+      );
+      router.push(rutaInicialImpulsador(menu.modulos) ?? "/panel");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Error inesperado");
       setEnviando(false);
