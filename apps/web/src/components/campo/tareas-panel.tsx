@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { apiFetch } from "@/lib/api";
 import { useListaCampo, useOperacionCampo } from "@/hooks/use-lista-campo";
-import { fechaEnZonaIso } from "@/utils/fechas";
+import { fechaCalendario, fechaEnZonaIso } from "@/utils/fechas";
 import { Modal } from "@/components/modal";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { Paginacion } from "@/components/paginacion";
@@ -16,6 +16,7 @@ import {
   IconoBuscar,
   IconoCruz,
   IconoEditar,
+  IconoEliminar,
   IconoCamara,
   IconoGlobo,
   IconoPin,
@@ -81,18 +82,22 @@ export function TareasPanel() {
       estado: t?.estado ?? "ABIERTA",
       todosLocales: t?.todosLocales ?? true,
       activo: t?.activo ?? true,
-      fechaDesde: t?.fechaDesde.slice(0, 10) ?? fechaEnZonaIso(new Date()),
-      fechaHasta: t?.fechaHasta?.slice(0, 10) ?? "",
+      fechaDesde: fechaCalendario(t?.fechaDesde) ?? fechaEnZonaIso(new Date()),
+      fechaHasta: fechaCalendario(t?.fechaHasta) ?? "",
       localIds: t?.locales.map((x) => x.local.id) ?? [],
       requiereFotos: t?.requiereFotos ?? false,
       fotosObligatorias: t?.fotosObligatorias ?? false,
     });
   }
 
-  async function desactivar(tarea: TareaCampo) {
-    if (!tarea.activo) return;
-    if (!window.confirm(`¿Desactivar la tarea «${tarea.nombre}»?`)) return;
-    await op.ejecutar("Desactivando tarea", async () => {
+  async function eliminar(tarea: TareaCampo) {
+    if (
+      !window.confirm(
+        `¿Eliminar la tarea «${tarea.nombre}» del catálogo? Esta acción no se puede deshacer.`,
+      )
+    )
+      return;
+    await op.ejecutar("Eliminando tarea", async () => {
       await apiFetch(`/campo/tareas/${tarea.id}`, { method: "DELETE" });
       lista.refrescar();
     });
@@ -225,7 +230,7 @@ export function TareasPanel() {
                     </div>
                     <div className="flex shrink-0 gap-1">
                       <button type="button" onClick={() => abrir(tarea)} aria-label={"Editar " + tarea.nombre} className="grid h-11 w-11 place-items-center rounded-md border border-line text-foreground hover:bg-surface-soft"><IconoEditar className="h-4 w-4" /></button>
-                      <button type="button" onClick={() => void desactivar(tarea)} disabled={!tarea.activo || !!op.mensaje} className="min-h-11 rounded-md border border-red-200 px-2 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950">Quitar</button>
+                      <button type="button" onClick={() => void eliminar(tarea)} disabled={!!op.mensaje} aria-label={"Eliminar " + tarea.nombre} className="grid h-11 w-11 place-items-center rounded-md border border-red-200 text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950"><IconoEliminar className="h-4 w-4" /></button>
                     </div>
                   </div>
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted">
@@ -254,7 +259,7 @@ export function TareasPanel() {
                   <td className="p-4">
                     <div className="flex flex-wrap gap-2">
                       <button type="button" onClick={() => abrir(tarea)} className="min-h-11 rounded-md border border-line px-3 text-foreground hover:bg-surface-soft">Editar</button>
-                      <button type="button" onClick={() => void desactivar(tarea)} disabled={!tarea.activo || !!op.mensaje} className="min-h-11 rounded-md border border-red-200 px-3 text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950">Quitar</button>
+                      <button type="button" onClick={() => void eliminar(tarea)} disabled={!!op.mensaje} className="min-h-11 rounded-md border border-red-200 px-3 text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950">Eliminar</button>
                     </div>
                   </td>
                     </tr>
@@ -287,7 +292,8 @@ export function TareasPanel() {
                     method: id ? "PUT" : "POST",
                     body: JSON.stringify({
                       ...form,
-                      fechaHasta: form.fechaHasta || null,
+                      fechaDesde: fechaCalendario(form.fechaDesde) ?? form.fechaDesde,
+                      fechaHasta: fechaCalendario(form.fechaHasta),
                     }),
                   }),
                 )

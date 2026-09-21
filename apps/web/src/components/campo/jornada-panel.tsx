@@ -2,7 +2,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { useListaCampo, useOperacionCampo } from "@/hooks/use-lista-campo";
-import { fechaEnZonaIso, formatoFechaHora } from "@/utils/fechas";
+import { fechaEnZonaIso, formatoFechaHora, queryFechasCampo } from "@/utils/fechas";
+import { SelectorFechaFiltro, type PeriodoFiltro } from "./ui/selector-fecha-filtro";
 import { Modal } from "@/components/modal";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { btnGhost, btnPrimary, errorBox } from "@/components/ui";
@@ -18,28 +19,30 @@ import type {
 } from "@/types/campo";
 
 export function JornadaPanel({ tareas = false }: { tareas?: boolean }) {
-  const [fecha, setFecha] = useState(fechaEnZonaIso(new Date()));
+  const hoyStr = fechaEnZonaIso(new Date());
+  const [periodo, setPeriodo] = useState<PeriodoFiltro>({
+    clave: "hoy",
+    etiqueta: "Hoy",
+    fecha: hoyStr,
+    fechaInicio: hoyStr,
+    fechaFin: hoyStr,
+  });
+  const qsFecha = queryFechasCampo(periodo) || `fecha=${hoyStr}`;
   return (
     <>
       <CabeceraCampo
         titulo={tareas ? "Mis tareas del día" : "Mis locales"}
         detalle="Tu agenda y reemplazos. Podés registrar presencia aunque el local no tenga tareas."
       />
-      <div className="mb-4 max-w-xs">
-        <CampoTexto
-          titulo="Fecha"
-          type="date"
-          required
-          value={fecha}
-          onChange={setFecha}
-        />
+      <div className="mb-4">
+        <SelectorFechaFiltro valorActual={periodo} onChange={setPeriodo} />
       </div>
-      {fecha ? <AgendaDelDia key={fecha} fecha={fecha} /> : null}
+      <AgendaDelDia key={qsFecha} qsFecha={qsFecha} />
     </>
   );
 }
-function AgendaDelDia({ fecha }: { fecha: string }) {
-  const lista = useListaCampo<AgendaCampo>(`/campo/jornada?fecha=${fecha}`);
+function AgendaDelDia({ qsFecha }: { qsFecha: string }) {
+  const lista = useListaCampo<AgendaCampo>(`/campo/jornada?${qsFecha}`);
   const [abierta, setAbierta] = useState<VisitaCampo | null>(null);
   const [revision, setRevision] = useState(0);
   const [error, setError] = useState("");
@@ -72,7 +75,8 @@ function AgendaDelDia({ fecha }: { fecha: string }) {
     setRevision((n) => n + 1);
   }
 
-  const hoy = fecha === fechaEnZonaIso(new Date());
+  const hoyStr = fechaEnZonaIso(new Date());
+  const hoy = qsFecha.includes(hoyStr);
 
   // Filtrado de items por búsqueda
   const itemsFiltrados = useMemo(() => {
@@ -567,13 +571,13 @@ function AgendaDelDia({ fecha }: { fecha: string }) {
         )}
       />
       <div className="mt-7">
-        <VisitasPanel key={`visitas-${revision}`} fechaInicial={fecha} propia />
+        <VisitasPanel key={`visitas-${revision}`} fechaInicial={hoyStr} propia />
       </div>
       {mapa ? <MapaLocal local={mapa} cerrar={() => setMapa(null)} /> : null}
       {tareas ? (
         <TareasDeLocal
           agenda={tareas}
-          fecha={fecha}
+          qsFecha={qsFecha}
           abierta={abierta}
           cerrar={() => setTareas(null)}
         />
@@ -705,23 +709,20 @@ function ModalMarca({
 }
 function TareasDeLocal({
   agenda,
-  fecha,
+  qsFecha,
   abierta,
   cerrar,
 }: {
   agenda: AgendaCampo;
-  fecha: string;
+  qsFecha: string;
   abierta: VisitaCampo | null;
   cerrar: () => void;
 }) {
   const lista = useListaCampo<TareaJornadaCampo>(
-    `/campo/jornada/asignaciones/${agenda.id}/tareas?fecha=${fecha}`,
+    `/campo/jornada/asignaciones/${agenda.id}/tareas?${qsFecha}`,
   );
   const op = useOperacionCampo();
-  const visita =
-    abierta?.asignacionId === agenda.id && abierta.fecha.slice(0, 10) === fecha
-      ? abierta
-      : null;
+  const visita = abierta?.asignacionId === agenda.id ? abierta : null;
   return (
     <Modal
       titulo={`Tareas · ${agenda.local.nombre}`}

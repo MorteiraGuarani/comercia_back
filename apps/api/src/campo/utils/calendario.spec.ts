@@ -1,6 +1,7 @@
 import {
   fechaCampo,
   ocurreHorario,
+  rangoConsulta,
   validarHorario,
   vigenciaCampo,
 } from './calendario';
@@ -43,5 +44,13 @@ describe('Calendario de campo', () => {
     expect(() => vigenciaCampo('2026-10-01', '2026-09-01')).toThrow();
     expect(() => validarHorario({ ...regla, salida: '07:00' })).toThrow();
     expect(() => validarHorario({ ...regla, diasSemana: [] })).toThrow();
+  });
+  it('conserva lunes a domingo de la semana pasada como rango', () => {
+    expect(
+      rangoConsulta({
+        fechaInicio: '2026-09-14',
+        fechaFin: '2026-09-20',
+      }),
+    ).toEqual({ desde: '2026-09-14', hasta: '2026-09-20' });
   });
 });

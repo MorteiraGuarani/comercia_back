@@ -235,11 +235,20 @@ export class CatalogoCampoService {
   }
   async eliminarTarea(usuarioId: number, id: number) {
     const u = await this.acceso.gestionar(usuarioId, 'tareas');
-    const resultado = await this.prisma.tareaCampo.updateMany({
+    const tarea = await this.prisma.tareaCampo.findFirst({
       where: { id, empresaId: u.empresaId },
-      data: { activo: false },
+      select: { id: true },
     });
-    if (!resultado.count) throw new NotFoundException('Tarea no disponible');
+    if (!tarea) throw new NotFoundException('Tarea no disponible');
+    await this.prisma.$transaction(async (tx) => {
+      await tx.novedadCampo.updateMany({
+        where: { tareaId: id },
+        data: { tareaId: null },
+      });
+      await tx.cumplimientoCampo.deleteMany({ where: { tareaId: id } });
+      await tx.tareaLocalCampo.deleteMany({ where: { tareaId: id } });
+      await tx.tareaCampo.delete({ where: { id } });
+    });
     return { ok: true };
   }
 }

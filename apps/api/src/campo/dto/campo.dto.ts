@@ -15,6 +15,7 @@ import {
   MaxLength,
   Min,
   MinLength,
+  ValidateIf,
 } from 'class-validator';
 import {
   EstadoTareaCampo,
@@ -57,6 +58,14 @@ export class ConsultaCampoDto extends PaginacionDto {
   // versión de class-validator y termina duplicando el mensaje de Matches.
   @IsDateString({ strict: false })
   fecha?: string;
+  @IsOptional()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/)
+  @IsDateString({ strict: false })
+  fechaInicio?: string;
+  @IsOptional()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/)
+  @IsDateString({ strict: false })
+  fechaFin?: string;
 }
 
 export class ClienteCampoDto {
@@ -95,14 +104,25 @@ export class LocalCampoDto {
   @IsBoolean() activo = true;
 }
 
+function fechaHastaCalendario(value: unknown): string | null {
+  if (value == null) return null;
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toISOString().slice(0, 10);
+  }
+  if (typeof value !== 'string') return null;
+  const texto = value.trim();
+  if (!texto) return null;
+  const dia = texto.slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(dia) ? dia : texto;
+}
+
 export class VigenciaCampoDto {
   @Matches(/^\d{4}-\d{2}-\d{2}$/)
   @IsDateString({ strict: false })
   fechaDesde!: string;
-  @Transform(({ value }: { value: unknown }) =>
-    value === '' ? null : value,
-  )
+  @Transform(({ value }: { value: unknown }) => fechaHastaCalendario(value))
   @IsOptional()
+  @ValidateIf((_, value) => value != null && value !== '')
   @Matches(/^\d{4}-\d{2}-\d{2}$/)
   @IsDateString({ strict: false })
   fechaHasta?: string | null;

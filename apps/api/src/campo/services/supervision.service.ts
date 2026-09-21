@@ -11,7 +11,7 @@ import {
   SupervisionResumenDto,
 } from '../dto/supervision.dto';
 import { ParadaRuta } from '../interfaces/parada-ruta.interface';
-import { fechaCampo, relojCampo } from '../utils/calendario';
+import { fechaCampo, rangoConsulta, relojCampo } from '../utils/calendario';
 import { obtenerEquipoCompleto } from '../utils/autorizacion';
 
 @Injectable()
@@ -289,8 +289,9 @@ export class SupervisionService {
     query: ConsultaSupervisionDto,
   ) {
     const u = await this.acceso.gestionar(usuarioId, 'visitas');
-    const fechaTexto = query.fecha ?? relojCampo().fecha;
-    const fecha = fechaCampo(fechaTexto);
+    const { desde, hasta } = rangoConsulta(query);
+    const fechaDesde = fechaCampo(desde);
+    const fechaHasta = fechaCampo(hasta);
 
     const equipoIds = await obtenerEquipoCompleto(this.prisma, u.id);
     if (!equipoIds.includes(colaboradorId) && colaboradorId !== u.id) {
@@ -313,14 +314,13 @@ export class SupervisionService {
       throw new NotFoundException('Colaborador no encontrado');
     }
 
-    // Asignaciones del colaborador para hoy
     const asignaciones = await this.prisma.asignacionCampo.findMany({
       where: {
         activo: true,
-        fechaDesde: { lte: fecha },
+        fechaDesde: { lte: fechaHasta },
         local: { activo: true, cliente: { empresaId: u.empresaId, activo: true } },
         AND: [
-          { OR: [{ fechaHasta: null }, { fechaHasta: { gte: fecha } }] },
+          { OR: [{ fechaHasta: null }, { fechaHasta: { gte: fechaDesde } }] },
           {
             OR: [
               { usuarioId: user.id },
@@ -329,8 +329,8 @@ export class SupervisionService {
                   some: {
                     usuarioId: user.id,
                     activo: true,
-                    fechaDesde: { lte: fecha },
-                    fechaHasta: { gte: fecha },
+                    fechaDesde: { lte: fechaHasta },
+                    fechaHasta: { gte: fechaDesde },
                   },
                 },
               },
@@ -353,11 +353,10 @@ export class SupervisionService {
       },
     });
 
-    // Visitas de hoy
     const visitas = await this.prisma.visitaCampo.findMany({
       where: {
         usuarioId: user.id,
-        fecha,
+        fecha: { gte: fechaDesde, lte: fechaHasta },
       },
       include: {
         local: {
@@ -443,8 +442,8 @@ export class SupervisionService {
       where: {
         empresaId: u.empresaId,
         activo: true,
-        fechaDesde: { lte: fecha },
-        OR: [{ fechaHasta: null }, { fechaHasta: { gte: fecha } }],
+        fechaDesde: { lte: fechaHasta },
+        OR: [{ fechaHasta: null }, { fechaHasta: { gte: fechaDesde } }],
         AND: [
           {
             OR: [
@@ -498,8 +497,8 @@ export class SupervisionService {
       where: {
         usuarioId: user.id,
         creadoAt: {
-          gte: new Date(fechaTexto + 'T00:00:00.000Z'),
-          lte: new Date(fechaTexto + 'T23:59:59.999Z'),
+          gte: new Date(desde + 'T00:00:00.000Z'),
+          lte: new Date(hasta + 'T23:59:59.999Z'),
         },
       },
       include: {

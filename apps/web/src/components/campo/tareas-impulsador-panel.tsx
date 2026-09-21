@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
-import { fechaEnZonaIso } from "@/utils/fechas";
+import { fechaEnZonaIso, queryFechasCampo } from "@/utils/fechas";
 import { TOKENS } from "./tokens";
 import { StatusStamp } from "./ui/status-stamp";
 import { StatChip } from "./ui/stat-chip";
@@ -31,7 +31,7 @@ export function TareasImpulsadorPanel() {
     fechaInicio: hoyStr,
     fechaFin: hoyStr,
   });
-  const fecha = periodo.fecha ?? periodo.fechaFin ?? periodo.fechaInicio ?? hoyStr;
+  const qsFecha = queryFechasCampo(periodo) || `fecha=${hoyStr}`;
   const [agendas, setAgendas] = useState<AgendaCampo[]>([]);
   const [abierta, setAbierta] = useState<VisitaCampo | null>(null);
   const [revision, setRevision] = useState(0);
@@ -76,7 +76,7 @@ export function TareasImpulsadorPanel() {
   const [tareasPorLocal, setTareasPorLocal] = useState<Record<number, RespuestaPaginada<TareaJornadaCampo>>>({});
   const [completandoId, setCompletandoId] = useState<number | null>(null);
 
-  const consulta = JSON.stringify([fecha, pagina, limite, paginasTareas, limitesTareas, revision]);
+  const consulta = JSON.stringify([qsFecha, pagina, limite, paginasTareas, limitesTareas, revision]);
   const cargando = consulta !== consultaTerminada;
   const cargarDatos = () => setRevision((n) => n + 1);
   useEffect(() => {
@@ -84,11 +84,11 @@ export function TareasImpulsadorPanel() {
     async function cargar() {
       try {
         const [dataAgenda, dataAbierta] = await Promise.all([
-          apiFetch<RespuestaPaginada<AgendaCampo>>(`/campo/jornada?fecha=${fecha}&page=${pagina}&limit=${limite}`),
+          apiFetch<RespuestaPaginada<AgendaCampo>>(`/campo/jornada?${qsFecha}&page=${pagina}&limit=${limite}`),
           apiFetch<VisitaCampo | null>("/campo/jornada/abierta"),
         ]);
         const tareas = await Promise.all(dataAgenda.items.map(async (ag) => {
-          const datos = await apiFetch<RespuestaPaginada<TareaJornadaCampo>>(`/campo/jornada/asignaciones/${ag.id}/tareas?fecha=${fecha}&page=${paginasTareas[ag.id] ?? 1}&limit=${limitesTareas[ag.id] ?? 7}`);
+          const datos = await apiFetch<RespuestaPaginada<TareaJornadaCampo>>(`/campo/jornada/asignaciones/${ag.id}/tareas?${qsFecha}&page=${paginasTareas[ag.id] ?? 1}&limit=${limitesTareas[ag.id] ?? 7}`);
           return [ag.id, datos] as const;
         }));
         if (!vigente) return;
@@ -105,7 +105,7 @@ export function TareasImpulsadorPanel() {
     }
     void cargar();
     return () => { vigente = false; };
-  }, [fecha, pagina, limite, paginasTareas, limitesTareas, consulta]);
+  }, [qsFecha, pagina, limite, paginasTareas, limitesTareas, consulta]);
 
   // Completar tarea
   const completarTarea = async (localId: number, tareaId: number) => {
@@ -217,7 +217,7 @@ export function TareasImpulsadorPanel() {
             const tareas = datosTareas?.items ?? [];
             const totalTareas = datosTareas?.total ?? 0;
             const totalPaginasTareas = datosTareas?.totalPages ?? 1;
-            const estaEnVisita = abierta?.asignacionId === ag.id && abierta.fecha.slice(0, 10) === fecha;
+            const estaEnVisita = abierta?.asignacionId === ag.id;
 
             return (
               <div

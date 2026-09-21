@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { apiFetch } from "@/lib/api";
 import { useListaCampo, useOperacionCampo } from "@/hooks/use-lista-campo";
-import { fechaEnZonaIso, formatoFechaHora } from "@/utils/fechas";
+import { fechaEnZonaIso, formatoFechaHora, queryFechasCampo } from "@/utils/fechas";
 import { mensajeError } from "@/utils/error";
 import { TOKENS } from "./tokens";
 import { StatusStamp } from "./ui/status-stamp";
@@ -33,8 +33,8 @@ export function RutaImpulsadorPanel() {
     fechaInicio: hoyStr,
     fechaFin: hoyStr,
   });
-  const fecha = periodo.fecha ?? periodo.fechaFin ?? periodo.fechaInicio ?? hoyStr;
-  const lista = useListaCampo<AgendaCampo>(`/campo/jornada?fecha=${fecha}`);
+  const qsFecha = queryFechasCampo(periodo) || `fecha=${hoyStr}`;
+  const lista = useListaCampo<AgendaCampo>(`/campo/jornada?${qsFecha}`);
   const [abierta, setAbierta] = useState<VisitaCampo | null>(null);
   const [revision, setRevision] = useState(0);
   const [error, setError] = useState("");

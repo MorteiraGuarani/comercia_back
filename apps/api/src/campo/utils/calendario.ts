@@ -37,6 +37,33 @@ export function vigenciaCampo(desde: string, hasta?: string | null) {
     );
   return { fechaDesde, fechaHasta };
 }
+
+export function rangoConsulta(query: {
+  fecha?: string;
+  fechaInicio?: string;
+  fechaFin?: string;
+}): { desde: string; hasta: string } {
+  const desde = query.fechaInicio ?? query.fecha ?? relojCampo().fecha;
+  const hasta = query.fechaFin ?? query.fecha ?? desde;
+  if (hasta < desde)
+    throw new BadRequestException(
+      'La fecha hasta debe ser igual o posterior a desde',
+    );
+  fechaCampo(desde);
+  fechaCampo(hasta);
+  return { desde, hasta };
+}
+
+export function ocurreHorarioEnRango(
+  h: ReglaHorario,
+  desde: Date,
+  hasta: Date,
+): boolean {
+  for (let t = desde.getTime(); t <= hasta.getTime(); t += 86_400_000) {
+    if (ocurreHorario(h, new Date(t))) return true;
+  }
+  return false;
+}
 export function ocurreHorario(h: ReglaHorario, fecha: Date): boolean {
   if (fecha < h.fechaDesde || (h.fechaHasta && fecha > h.fechaHasta))
     return false;

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { mensajeError } from "@/utils/error";
-import { fechaEnZonaIso } from "@/utils/fechas";
+import { fechaEnZonaIso, queryFechasCampo } from "@/utils/fechas";
 import { TOKENS } from "./tokens";
 import { StatusStamp } from "./ui/status-stamp";
 import { StatChip } from "./ui/stat-chip";
@@ -181,14 +181,9 @@ export function SupervisionPanel({
     try {
       setCargando(true);
       setError(null);
-      let query = "";
-      if (periodo.fechaInicio && periodo.fechaFin) {
-        query = `?fechaInicio=${periodo.fechaInicio}&fechaFin=${periodo.fechaFin}`;
-      } else if (periodo.fecha) {
-        query = `?fecha=${periodo.fecha}`;
-      }
+      const query = queryFechasCampo(periodo);
       const data = await apiFetch<SupervisionResumenData>(
-        `/campo/supervision/resumen${query}`,
+        `/campo/supervision/resumen${query ? `?${query}` : ""}`,
       );
       setResumen(data);
     } catch (e) {
@@ -211,9 +206,9 @@ export function SupervisionPanel({
     setSubTabColab(sub);
     try {
       setCargandoDetalle(true);
-      const queryFecha = periodo.fecha ?? periodo.fechaInicio ?? hoyStr;
+      const queryFecha = queryFechasCampo(periodo) || `fecha=${hoyStr}`;
       const data = await apiFetch<ColaboradorDetalleData>(
-        `/campo/supervision/colaboradores/${id}?fecha=${queryFecha}`,
+        `/campo/supervision/colaboradores/${id}?${queryFecha}`,
       );
       setDetalleColab(data);
     } catch (e) {

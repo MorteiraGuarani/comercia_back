@@ -245,7 +245,7 @@ function HorariosLocal({ localId }: { localId: number }) {
                   // usa null para representar una vigencia sin vencimiento.
                   body: JSON.stringify({
                     ...form,
-                    fechaHasta: form.fechaHasta || null,
+                    fechaHasta: form.fechaHasta?.trim() ? form.fechaHasta.slice(0, 10) : null,
                   }),
                 }),
               )

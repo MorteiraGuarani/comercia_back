@@ -13,7 +13,13 @@ import {
   EntradaCampoDto,
   MarcaCampoDto,
 } from './dto/campo.dto';
-import { fechaCampo, ocurreHorario, relojCampo } from './utils/calendario';
+import {
+  fechaCampo,
+  ocurreHorario,
+  ocurreHorarioEnRango,
+  rangoConsulta,
+  relojCampo,
+} from './utils/calendario';
 import { condicionAgenda } from './utils/agenda-sql';
 import {
   HORARIO_CAMPO_SELECT,
@@ -68,10 +74,11 @@ export class JornadaCampoService {
   }
   async agenda(usuarioId: number, query: ConsultaCampoDto) {
     const u = await this.acceso.ejecutar(usuarioId);
-    const fechaTexto = query.fecha ?? relojCampo().fecha;
-    const fecha = fechaCampo(fechaTexto);
+    const { desde, hasta } = rangoConsulta(query);
+    const fechaDesde = fechaCampo(desde);
+    const fechaHasta = fechaCampo(hasta);
     const { skip, take, page, limit } = rangoPaginacion(query);
-    const condicion = condicionAgenda(u.empresaId, u.id, fechaTexto);
+    const condicion = condicionAgenda(u.empresaId, u.id, desde, hasta);
     const base = Prisma.sql`FROM campo_asignaciones a JOIN campo_locales l ON l.id = a.local_id JOIN campo_clientes c ON c.id = l.cliente_id WHERE ${condicion}`;
     const [conteo, ids] = await Promise.all([
       this.prisma.$queryRaw<TotalAgenda[]>(
@@ -100,8 +107,11 @@ export class JornadaCampoService {
           },
         },
         visitas: {
-          where: { usuarioId, fecha },
-          take: 21,
+          where: {
+            usuarioId,
+            fecha: { gte: fechaDesde, lte: fechaHasta },
+          },
+          take: 200,
           select: { id: true, horarioId: true, entrada: true, salida: true },
         },
       },
@@ -118,7 +128,7 @@ export class JornadaCampoService {
               local: {
                 ...a.local,
                 horarios: a.local.horarios.filter((h) =>
-                  ocurreHorario(h, fecha),
+                  ocurreHorarioEnRango(h, fechaDesde, fechaHasta),
                 ),
               },
               visitas: a.visitas,
@@ -237,20 +247,44 @@ export class JornadaCampoService {
     query: ConsultaCampoDto,
   ) {
     const u = await this.acceso.ejecutar(usuarioId);
-    const fecha = fechaCampo(query.fecha ?? relojCampo().fecha);
-    const a = await this.asignacionEfectiva(
-      this.prisma,
-      u.empresaId,
-      u.id,
-      asignacionId,
-      fecha,
-    );
+    const { desde, hasta } = rangoConsulta(query);
+    const fechaDesde = fechaCampo(desde);
+    const fechaHasta = fechaCampo(hasta);
+    const a = await this.prisma.asignacionCampo.findFirst({
+      where: {
+        id: asignacionId,
+        activo: true,
+        fechaDesde: { lte: fechaHasta },
+        OR: [{ fechaHasta: null }, { fechaHasta: { gte: fechaDesde } }],
+        local: { activo: true, cliente: { empresaId: u.empresaId, activo: true } },
+      },
+      select: {
+        id: true,
+        localId: true,
+        usuarioId: true,
+        backups: {
+          where: {
+            activo: true,
+            fechaDesde: { lte: fechaHasta },
+            fechaHasta: { gte: fechaDesde },
+          },
+          select: { usuarioId: true },
+        },
+      },
+    });
+    if (
+      !a ||
+      (a.usuarioId !== u.id && !a.backups.some((b) => b.usuarioId === u.id))
+    )
+      throw new NotFoundException('Asignación no disponible para esta fecha');
     const where: Prisma.TareaCampoWhereInput = {
       empresaId: u.empresaId,
       activo: true,
-      fechaDesde: { lte: fecha },
+      fechaDesde: { lte: fechaHasta },
       AND: [
-        { OR: [{ fechaHasta: null }, { fechaHasta: { gte: fecha } }] },
+        {
+          OR: [{ fechaHasta: null }, { fechaHasta: { gte: fechaDesde } }],
+        },
         {
           OR: [
             { todosLocales: true },
@@ -275,7 +309,13 @@ export class JornadaCampoService {
           cumplimientos: {
             // Incluye borradores para que el impulsador pueda ver las
             // evidencias cargadas antes de completar la tarea.
-            where: { visita: { usuarioId, asignacionId, fecha } },
+            where: {
+              visita: {
+                usuarioId,
+                asignacionId,
+                fecha: { gte: fechaDesde, lte: fechaHasta },
+              },
+            },
             take: 21,
             select: {
               visitaId: true,
@@ -396,9 +436,9 @@ export class JornadaCampoService {
     const u = equipo
       ? await this.acceso.gestionar(usuarioId, 'visitas')
       : await this.acceso.ejecutar(usuarioId);
-    const fecha = fechaCampo(query.fecha ?? relojCampo().fecha);
+    const { desde, hasta } = rangoConsulta(query);
     const where: Prisma.VisitaCampoWhereInput = {
-      fecha,
+      fecha: { gte: fechaCampo(desde), lte: fechaCampo(hasta) },
       localId: query.localId,
       local: { cliente: { empresaId: u.empresaId } },
       ...(equipo
