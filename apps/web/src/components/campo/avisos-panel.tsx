@@ -8,6 +8,7 @@ import { StatusStamp } from "./ui/status-stamp";
 import { TopBar } from "./ui/top-bar";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { IconoMegafono, IconoContacto, IconoCheck } from "./ui/iconos-campo";
+import type { RespuestaPaginada } from "@/types/paginacion";
 import type {
   AvisoEnviadoItem,
   AvisoRecibidoItem,
@@ -16,6 +17,12 @@ import type {
   ColaboradorResumenItem,
   SupervisionResumenData,
 } from "@/types/campo";
+
+function itemsDeLista<T>(res: T[] | RespuestaPaginada<T> | null | undefined): T[] {
+  if (Array.isArray(res)) return res;
+  if (res && Array.isArray(res.items)) return res.items;
+  return [];
+}
 
 interface AvisosPanelProps {
   esImpulsador?: boolean;
@@ -44,8 +51,10 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
   // Cargar avisos recibidos
   const cargarRecibidos = async () => {
     try {
-      const res = await apiFetch<AvisoRecibidoItem[]>("/campo/avisos/recibidos");
-      setRecibidos(Array.isArray(res) ? res : []);
+      const res = await apiFetch<RespuestaPaginada<AvisoRecibidoItem>>(
+        "/campo/avisos/recibidos?page=1&limit=50",
+      );
+      setRecibidos(itemsDeLista(res));
     } catch (e: unknown) {
       console.error("Error cargando avisos recibidos:", e);
     }
@@ -54,8 +63,10 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
   // Cargar avisos enviados
   const cargarEnviados = async () => {
     try {
-      const res = await apiFetch<AvisoEnviadoItem[]>("/campo/avisos/enviados");
-      setEnviados(Array.isArray(res) ? res : []);
+      const res = await apiFetch<RespuestaPaginada<AvisoEnviadoItem>>(
+        "/campo/avisos/enviados?page=1&limit=50",
+      );
+      setEnviados(itemsDeLista(res));
     } catch (e: unknown) {
       console.error("Error cargando avisos enviados:", e);
     }

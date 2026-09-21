@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
+import { useJornadaCompleta } from "@/hooks/use-jornada-completa";
 import { fechaEnZonaIso, queryFechasCampo } from "@/utils/fechas";
 import { TOKENS } from "./tokens";
 import { StatusStamp } from "./ui/status-stamp";
@@ -32,15 +33,13 @@ export function TareasImpulsadorPanel() {
     fechaFin: hoyStr,
   });
   const qsFecha = queryFechasCampo(periodo) || `fecha=${hoyStr}`;
-  const [agendas, setAgendas] = useState<AgendaCampo[]>([]);
-  const [abierta, setAbierta] = useState<VisitaCampo | null>(null);
   const [revision, setRevision] = useState(0);
+  const jornada = useJornadaCompleta<AgendaCampo>(qsFecha, revision);
+  const agendas = jornada.items;
+  const [abierta, setAbierta] = useState<VisitaCampo | null>(null);
   const [consultaTerminada, setConsultaTerminada] = useState("");
-  const [pagina, setPagina] = useState(1);
-  const [limite, setLimite] = useState(7);
   const [paginasTareas, setPaginasTareas] = useState<Record<number, number>>({});
   const [limitesTareas, setLimitesTareas] = useState<Record<number, number>>({});
-  const [paginacion, setPaginacion] = useState({ total: 0, totalPages: 1 });
   const [error, setError] = useState("");
 
   // Modal para fotos
@@ -76,27 +75,28 @@ export function TareasImpulsadorPanel() {
   const [tareasPorLocal, setTareasPorLocal] = useState<Record<number, RespuestaPaginada<TareaJornadaCampo>>>({});
   const [completandoId, setCompletandoId] = useState<number | null>(null);
 
-  const consulta = JSON.stringify([qsFecha, pagina, limite, paginasTareas, limitesTareas, revision]);
-  const cargando = consulta !== consultaTerminada;
+  const idsAgenda = agendas.map((ag) => ag.id).join(",");
+  const consulta = JSON.stringify([qsFecha, idsAgenda, paginasTareas, limitesTareas, revision]);
+  const cargando = jornada.cargando || consulta !== consultaTerminada;
   const cargarDatos = () => setRevision((n) => n + 1);
   useEffect(() => {
+    if (jornada.cargando) return;
     let vigente = true;
     async function cargar() {
       try {
-        const [dataAgenda, dataAbierta] = await Promise.all([
-          apiFetch<RespuestaPaginada<AgendaCampo>>(`/campo/jornada?${qsFecha}&page=${pagina}&limit=${limite}`),
-          apiFetch<VisitaCampo | null>("/campo/jornada/abierta"),
-        ]);
-        const tareas = await Promise.all(dataAgenda.items.map(async (ag) => {
-          const datos = await apiFetch<RespuestaPaginada<TareaJornadaCampo>>(`/campo/jornada/asignaciones/${ag.id}/tareas?${qsFecha}&page=${paginasTareas[ag.id] ?? 1}&limit=${limitesTareas[ag.id] ?? 7}`);
-          return [ag.id, datos] as const;
-        }));
+        const dataAbierta = await apiFetch<VisitaCampo | null>("/campo/jornada/abierta");
+        const tareas = await Promise.all(
+          agendas.map(async (ag) => {
+            const datos = await apiFetch<RespuestaPaginada<TareaJornadaCampo>>(
+              `/campo/jornada/asignaciones/${ag.id}/tareas?${qsFecha}&page=${paginasTareas[ag.id] ?? 1}&limit=${limitesTareas[ag.id] ?? 7}`,
+            );
+            return [ag.id, datos] as const;
+          }),
+        );
         if (!vigente) return;
-        setAgendas(dataAgenda.items);
-        setPaginacion({ total: dataAgenda.total, totalPages: dataAgenda.totalPages });
         setAbierta(dataAbierta);
         setTareasPorLocal(Object.fromEntries(tareas));
-        setError("");
+        setError(jornada.error ?? "");
       } catch (e) {
         if (vigente) setError(e instanceof Error ? e.message : "Error al cargar tareas");
       } finally {
@@ -104,8 +104,10 @@ export function TareasImpulsadorPanel() {
       }
     }
     void cargar();
-    return () => { vigente = false; };
-  }, [qsFecha, pagina, limite, paginasTareas, limitesTareas, consulta]);
+    return () => {
+      vigente = false;
+    };
+  }, [jornada.cargando, jornada.error, qsFecha, idsAgenda, paginasTareas, limitesTareas, consulta, agendas]);
 
   // Completar tarea
   const completarTarea = async (localId: number, tareaId: number) => {
@@ -176,7 +178,6 @@ export function TareasImpulsadorPanel() {
             valorActual={periodo}
             onChange={(siguiente) => {
               setPeriodo(siguiente);
-              setPagina(1);
               setPaginasTareas({});
             }}
           />
@@ -372,24 +373,11 @@ export function TareasImpulsadorPanel() {
             );
           })
         )}
-        {paginacion.totalPages > 1 && (
-          <div className="border-t border-line pt-3">
-            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted">
-              Locales de la ruta
-            </p>
-            <Paginacion
-              page={pagina}
-              limit={limite}
-              total={paginacion.total}
-              totalPages={paginacion.totalPages}
-              onPageChange={setPagina}
-              onLimitChange={(n) => {
-                setLimite(n);
-                setPagina(1);
-              }}
-            />
-          </div>
-        )}
+        {jornada.error ? (
+          <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
+            {jornada.error}
+          </p>
+        ) : null}
       </div>
       <PantallaCarga visible={!!completandoId || guardandoNovedad} mensaje={guardandoNovedad ? "Enviando novedad" : "Completando tarea"} />
 
