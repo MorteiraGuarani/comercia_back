@@ -596,7 +596,7 @@ function AsignacionesLocal({ localId }: { localId: number }) {
               Seleccionar Colaborador *
             </label>
             <SelectorPaginado
-              url="/campo/subordinados"
+              url="/campo/equipo"
               etiqueta="Colaborador"
               value={usuarioId}
               onChange={(val: number | "") => setUsuarioId(val)}
@@ -815,7 +815,7 @@ function ModalBackups({
                 Colaborador Suplente *
               </label>
               <SelectorPaginado
-                url="/campo/subordinados"
+                url="/campo/equipo"
                 etiqueta="Colaborador Suplente"
                 value={usuarioId}
                 onChange={(val: number | "") => setUsuarioId(val)}

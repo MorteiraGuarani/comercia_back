@@ -520,6 +520,6 @@ export class CampoController {
     @Req() r: RequestConUsuario,
     @Param('id', ParseIntPipe) id: number,
   ) {
-    return this.avisoService.marcarLeido(r.usuarioId, id);
+    return this.avisoService.marcarLeido(r.usuarioId, r.empresaId, id);
   }
 }

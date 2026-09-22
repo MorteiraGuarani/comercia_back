@@ -12,7 +12,7 @@ import {
   rangoPaginacion,
   respuestaPaginada,
 } from '../../common/utils/paginacion';
-import { obtenerEquipoCompleto } from '../utils/autorizacion';
+import { Prisma } from '../../../generated/prisma/client';
 
 @Injectable()
 export class AvisoService {
@@ -20,6 +20,48 @@ export class AvisoService {
     private readonly prisma: PrismaService,
     private readonly notificaciones: NotificacionService,
   ) {}
+
+  private async colaboradoresActivos(
+    liderId: number,
+    empresaId: number,
+  ): Promise<number[]> {
+    const colaboradores = await this.prisma.usuario.findMany({
+      where: {
+        empresaId,
+        superiorId: liderId,
+        isActive: true,
+        esSuperadmin: false,
+      },
+      select: { id: true },
+    });
+    return colaboradores.map((colaborador) => colaborador.id);
+  }
+
+  private async filtroRecibidos(
+    usuarioId: number,
+    empresaId: number,
+  ): Promise<Prisma.AvisoCampoWhereInput> {
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      select: { superiorId: true },
+    });
+
+    const destinatarios: Prisma.AvisoCampoWhereInput[] = [
+      {
+        destinatarioId: usuarioId,
+        emisorId: { not: usuarioId },
+      },
+    ];
+
+    if (usuario?.superiorId) {
+      destinatarios.push({
+        tipo: 'EQUIPO',
+        emisorId: usuario.superiorId,
+      });
+    }
+
+    return { empresaId, OR: destinatarios };
+  }
 
   /**
    * Enviar aviso a un impulsador específico o a todo el equipo
@@ -29,14 +71,14 @@ export class AvisoService {
     empresaId: number,
     dto: CrearAvisoDto,
   ) {
-    const equipoIds = await obtenerEquipoCompleto(this.prisma, usuarioId);
-    const subordinados = equipoIds.filter((id) => id !== usuarioId);
+    if (dto.tipo === 'INDIVIDUAL' && !dto.destinatarioId) {
+      throw new BadRequestException('Debes especificar el destinatario del aviso');
+    }
+
+    const subordinados = await this.colaboradoresActivos(usuarioId, empresaId);
 
     if (dto.tipo === 'INDIVIDUAL') {
-      if (!dto.destinatarioId) {
-        throw new BadRequestException('Debés especificar el destinatario del aviso');
-      }
-      if (!subordinados.includes(dto.destinatarioId) && subordinados.length > 0) {
+      if (!subordinados.includes(dto.destinatarioId!)) {
         throw new ForbiddenException('El destinatario no pertenece a tu equipo');
       }
 
@@ -48,6 +90,10 @@ export class AvisoService {
       if (!dest) {
         throw new NotFoundException('Destinatario no encontrado o inactivo');
       }
+    } else if (subordinados.length === 0) {
+      throw new ForbiddenException(
+        'No tienes colaboradores activos para recibir el comunicado',
+      );
     }
 
     const aviso = await this.prisma.avisoCampo.create({
@@ -104,8 +150,9 @@ export class AvisoService {
     const { skip, take, page, limit } = rangoPaginacion(query);
     const where = { empresaId, emisorId: usuarioId };
 
-    const equipoIds = await obtenerEquipoCompleto(this.prisma, usuarioId);
-    const totalSubordinados = equipoIds.filter((id) => id !== usuarioId).length;
+    const subordinados = await this.colaboradoresActivos(usuarioId, empresaId);
+    const subordinadosSet = new Set(subordinados);
+    const totalSubordinados = subordinados.length;
 
     const [items, total] = await Promise.all([
       this.prisma.avisoCampo.findMany({
@@ -134,14 +181,17 @@ export class AvisoService {
           leidoAt: lectura?.leidoAt ?? null,
         };
       } else {
+        const lecturasDelEquipo = a.lecturas.filter((lectura) =>
+          subordinadosSet.has(lectura.usuarioId),
+        );
         return {
           id: a.id,
           tipo: a.tipo,
           mensaje: a.mensaje,
           destinatario: null,
           creadoAt: a.creadoAt,
-          leidoPor: a.lecturas.length,
-          total: totalSubordinados || a.lecturas.length || 1,
+          leidoPor: lecturasDelEquipo.length,
+          total: totalSubordinados,
         };
       }
     });
@@ -159,22 +209,7 @@ export class AvisoService {
   ) {
     const { skip, take, page, limit } = rangoPaginacion(query);
 
-    // Obtener superior directo si existe
-    const usuario = await this.prisma.usuario.findUnique({
-      where: { id: usuarioId },
-      select: { superiorId: true },
-    });
-
-    const where = {
-      empresaId,
-      OR: [
-        { destinatarioId: usuarioId },
-        {
-          tipo: 'EQUIPO' as const,
-          ...(usuario?.superiorId ? { emisorId: usuario.superiorId } : {}),
-        },
-      ],
-    };
+    const where = await this.filtroRecibidos(usuarioId, empresaId);
 
     const [items, total] = await Promise.all([
       this.prisma.avisoCampo.findMany({
@@ -209,7 +244,18 @@ export class AvisoService {
   /**
    * Marcar aviso como leído por el usuario
    */
-  async marcarLeido(usuarioId: number, avisoId: number) {
+  async marcarLeido(usuarioId: number, empresaId: number, avisoId: number) {
+    const aviso = await this.prisma.avisoCampo.findFirst({
+      where: {
+        id: avisoId,
+        ...(await this.filtroRecibidos(usuarioId, empresaId)),
+      },
+      select: { id: true },
+    });
+    if (!aviso) {
+      throw new ForbiddenException('No tienes acceso a este aviso');
+    }
+
     const lectura = await this.prisma.avisoLecturaCampo.upsert({
       where: {
         avisoId_usuarioId: {

@@ -18,6 +18,7 @@ import {
   HORARIO_CAMPO_SELECT,
 } from './utils/selectores';
 import { validarHorario, vigenciaCampo } from './utils/calendario';
+import { Prisma } from '../../generated/prisma/client';
 
 @Injectable()
 export class PlanificacionCampoService {
@@ -28,11 +29,21 @@ export class PlanificacionCampoService {
 
   async equipo(usuarioId: number, query: ConsultaCampoDto) {
     const u = await this.acceso.gestionar(usuarioId, 'locales');
-    const where = {
+    const buscar = query.buscar?.trim();
+    const where: Prisma.UsuarioWhereInput = {
       empresaId: u.empresaId,
       superiorId: u.id,
       isActive: true,
       esSuperadmin: false,
+      ...(buscar
+        ? {
+            OR: [
+              { nombre: { contains: buscar, mode: 'insensitive' } },
+              { apellido: { contains: buscar, mode: 'insensitive' } },
+              { nombreLogin: { contains: buscar, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
     };
     const { skip, take, page, limit } = rangoPaginacion(query);
     const [total, usuarios] = await Promise.all([
