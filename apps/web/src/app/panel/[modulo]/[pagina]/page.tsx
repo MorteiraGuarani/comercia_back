@@ -13,13 +13,6 @@ const LocalesPanel = dynamic(() =>
 const TareasPanel = dynamic(() =>
   import("@/components/campo/tareas-panel").then((m) => m.TareasPanel),
 );
-const JornadaPanel = dynamic(() =>
-  import("@/components/campo/jornada-panel").then((m) => m.JornadaPanel),
-);
-const VisitasPanel = dynamic(() =>
-  import("@/components/campo/jornada-panel").then((m) => m.VisitasPanel),
-);
-
 // Nuevos paneles modulares con el diseño editorial y paridad Desktop/Mobile
 const SupervisionPanel = dynamic(() =>
   import("@/components/campo/supervision-panel").then((m) => m.SupervisionPanel),
@@ -73,7 +66,7 @@ export default function PaginaModulo({
     if (pagina === "tareas") return <TareasImpulsadorPanel />;
     if (pagina === "novedades") return <NovedadesPanel esImpulsador={true} />;
     if (pagina === "avisos") return <AvisosPanel esImpulsador={true} />;
-    if (pagina === "agenda") return <JornadaPanel />;
+    if (pagina === "agenda") return <RutaImpulsadorPanel />;
   }
 
   return (

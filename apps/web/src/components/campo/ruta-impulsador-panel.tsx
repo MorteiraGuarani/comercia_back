@@ -3,7 +3,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { apiFetch } from "@/lib/api";
 import { useJornadaCompleta } from "@/hooks/use-jornada-completa";
-import { useOperacionCampo } from "@/hooks/use-lista-campo";
 import { fechaEnZonaIso, queryFechasCampo } from "@/utils/fechas";
 import { formatoDistancia, metrosEntre } from "@/utils/distancia";
 import {
@@ -39,20 +38,11 @@ export function RutaImpulsadorPanel() {
     fechaFin: hoyStr,
   });
   const qsFecha = queryFechasCampo(periodo) || `fecha=${hoyStr}`;
-  const [revision, setRevision] = useState(0);
-  const lista = useJornadaCompleta<AgendaCampo>(qsFecha, revision);
+  const lista = useJornadaCompleta<AgendaCampo>(qsFecha);
   const [abierta, setAbierta] = useState<VisitaCampo | null>(null);
   const [error, setError] = useState("");
   const [mapa, setMapa] = useState<LocalCampo | null>(null);
   const [busqueda, setBusqueda] = useState("");
-
-  // Marca de entrada / salida
-  const [marca, setMarca] = useState<{
-    asignacionId: number;
-    horarioId?: number;
-    visitaId?: number;
-    nombre: string;
-  } | null>(null);
 
   // Modal para reportar novedad en un local
   const [novedadLocal, setNovedadLocal] = useState<LocalParaNovedad | null>(null);
@@ -86,12 +76,7 @@ export function RutaImpulsadorPanel() {
     return () => {
       vigente = false;
     };
-  }, [revision]);
-
-  function actualizar() {
-    lista.refrescar();
-    setRevision((n) => n + 1);
-  }
+  }, []);
 
   const itemsFiltrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
@@ -254,13 +239,20 @@ export function RutaImpulsadorPanel() {
     >
       <TopBar
         title="Mi Ruta"
-        subtitle="Locales que tenés que visitar hoy y registro de entrada y salida"
+        subtitle="Locales, horarios y avance de tu recorrido"
         right={
           <SelectorFechaFiltro valorActual={periodo} onChange={setPeriodo} />
         }
       />
 
       <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto w-full space-y-6 flex-1 overflow-y-auto">
+        <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-950 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-100">
+          <p className="font-semibold">Las entradas y salidas se registran únicamente desde UCHECK.</p>
+          <p className="mt-1 text-xs text-blue-800 dark:text-blue-200">
+            En Comercia podés consultar tu ruta, revisar horarios, abrir el mapa y reportar novedades.
+          </p>
+        </div>
+
         {/* StatChips estilo editorial */}
         <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 sm:grid sm:grid-cols-4 sm:overflow-visible">
           <div className="min-w-[8.25rem] flex-1"><StatChip label="Total paradas" value={totalParadas} tone="ink" /></div>
@@ -288,7 +280,7 @@ export function RutaImpulsadorPanel() {
                   Visita en curso · {abierta.local.nombre}
                 </p>
                 <p className="ft-mono text-xs text-muted">
-                  Check-In: {new Date(abierta.entrada).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
+                  Entrada registrada: {new Date(abierta.entrada).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
                 </p>
               </div>
             </div>
@@ -300,20 +292,6 @@ export function RutaImpulsadorPanel() {
                 className="cursor-pointer rounded-lg border border-accent-ink bg-accent-soft px-3 py-2 text-xs font-semibold text-accent-ink transition hover:bg-surface-soft"
               >
                 + Reportar Novedad
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  setMarca({
-                    asignacionId: abierta.asignacionId,
-                    visitaId: abierta.id,
-                    nombre: abierta.local.nombre,
-                  })
-                }
-                className="px-4 py-2 rounded-lg text-xs font-bold text-white shadow-sm transition cursor-pointer"
-                style={{ background: TOKENS.critico }}
-              >
-                Marcar Salida (Check-Out)
               </button>
             </div>
           </div>
@@ -441,12 +419,12 @@ export function RutaImpulsadorPanel() {
                       <span className="ft-mono">{ventana}</span>
                       {ultimaVisita?.entrada && (
                         <span className="ft-mono font-medium text-foreground">
-                          In {new Date(ultimaVisita.entrada).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
+                          Entrada {new Date(ultimaVisita.entrada).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
                         </span>
                       )}
                       {ultimaVisita?.salida && (
                         <span className="ft-mono font-medium text-foreground">
-                          Out {new Date(ultimaVisita.salida).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
+                          Salida {new Date(ultimaVisita.salida).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
                         </span>
                       )}
                     </div>
@@ -485,38 +463,6 @@ export function RutaImpulsadorPanel() {
                       >
                         Novedad
                       </button>
-
-                      {!estaEnCurso && !tieneVisitaCerrada && !abierta && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setMarca({
-                              asignacionId: a.id,
-                              horarioId: a.local.horarios[0]?.id,
-                              nombre: a.local.nombre,
-                            })
-                          }
-                          className="h-11 min-h-11 shrink-0 rounded-lg bg-zinc-900 px-2.5 text-[11px] font-bold text-white transition hover:bg-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40 cursor-pointer dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
-                        >
-                          Check-in
-                        </button>
-                      )}
-
-                      {estaEnCurso && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setMarca({
-                              asignacionId: a.id,
-                              visitaId: abierta.id,
-                              nombre: a.local.nombre,
-                            })
-                          }
-                          className="h-11 min-h-11 shrink-0 rounded-lg bg-red-600 px-2.5 text-[11px] font-bold text-white transition hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40 cursor-pointer dark:bg-red-500"
-                        >
-                          Check-out
-                        </button>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -549,17 +495,6 @@ export function RutaImpulsadorPanel() {
             cliente: { id: 0, nombre: "" },
           }}
           cerrar={() => setMapa(null)}
-        />
-      )}
-
-      {/* Modal de Registro de Presencia (GPS) */}
-      {marca && (
-        <ModalMarcaPresencia
-          marca={marca}
-          cerrar={() => {
-            setMarca(null);
-            actualizar();
-          }}
         />
       )}
 
@@ -648,123 +583,5 @@ export function RutaImpulsadorPanel() {
         </Modal>
       )}
     </div>
-  );
-}
-
-// Modal para marcar entrada / salida con geolocalización
-function ModalMarcaPresencia({
-  marca,
-  cerrar,
-}: {
-  marca: {
-    asignacionId: number;
-    horarioId?: number;
-    visitaId?: number;
-    nombre: string;
-  };
-  cerrar: () => void;
-}) {
-  const [gps, setGps] = useState<{ latitud?: number; longitud?: number } | null>(null);
-  const [motivo, setMotivo] = useState("");
-  const [obteniendo, setObteniendo] = useState(true);
-  const op = useOperacionCampo();
-
-  useEffect(() => {
-    if (!navigator.geolocation) {
-      queueMicrotask(() => setObteniendo(false));
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setGps({ latitud: pos.coords.latitude, longitud: pos.coords.longitude });
-        setObteniendo(false);
-      },
-      () => {
-        setObteniendo(false);
-      },
-      { timeout: 8000 },
-    );
-  }, []);
-
-  const confirmar = async () => {
-    await op.ejecutar(marca.visitaId ? "Registrando salida" : "Registrando entrada", async () => {
-      if (marca.visitaId) {
-        await apiFetch(`/campo/jornada/visitas/${marca.visitaId}/salida`, {
-          method: "POST",
-          body: JSON.stringify({
-            latitud: gps?.latitud,
-            longitud: gps?.longitud,
-            nota: motivo.trim(),
-          }),
-        });
-      } else {
-        await apiFetch(`/campo/jornada/entrada`, {
-          method: "POST",
-          body: JSON.stringify({
-            asignacionId: marca.asignacionId,
-            horarioId: marca.horarioId,
-            latitud: gps?.latitud,
-            longitud: gps?.longitud,
-            nota: motivo.trim(),
-          }),
-        });
-      }
-      cerrar();
-    });
-  };
-
-  return (
-    <Modal
-      titulo={`${marca.visitaId ? "Marcar Salida" : "Marcar Entrada"} · ${marca.nombre}`}
-      abierto
-      onCerrar={cerrar}
-      ancho="md"
-    >
-      <div className="space-y-3">
-        <div className="p-3 rounded-lg bg-surface-soft border text-xs text-foreground">
-          <p className="font-semibold">
-            {obteniendo
-              ? "Obteniendo ubicación GPS..."
-              : gps
-                ? `Ubicación GPS fijada (${gps.latitud?.toFixed(4)}, ${gps.longitud?.toFixed(4)})`
-                : "No se pudo obtener coordenadas GPS automáticas."}
-          </p>
-        </div>
-
-        {!gps && !obteniendo && (
-          <div>
-            <label className="block text-xs font-semibold text-foreground mb-1">
-              Motivo de registrar sin GPS:
-            </label>
-            <input
-              type="text"
-              value={motivo}
-              onChange={(e) => setMotivo(e.target.value)}
-              placeholder="Ej: Sin señal en subsuelo"
-              className="w-full text-xs p-2 rounded-md border border-line"
-            />
-          </div>
-        )}
-
-        <div className="flex gap-2 pt-2">
-          <button
-            type="button"
-            onClick={cerrar}
-            className="flex-1 py-2 text-xs font-semibold border rounded-lg text-foreground"
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={confirmar}
-            disabled={(!gps && motivo.trim().length < 3) || !!op.mensaje}
-            className="flex-1 py-2 text-xs font-bold bg-[#1E2320] text-white rounded-lg hover:bg-black transition disabled:opacity-50 cursor-pointer"
-          >
-            Confirmar
-          </button>
-        </div>
-      </div>
-      <PantallaCarga visible={!!op.mensaje} mensaje={op.mensaje} />
-    </Modal>
   );
 }

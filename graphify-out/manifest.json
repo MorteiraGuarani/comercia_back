@@ -590,8 +590,8 @@
     "semantic_hash": "d9f771f7f9842dc2363d611826f66eb7"
   },
   "apps/web/src/app/panel/[modulo]/[pagina]/page.tsx": {
-    "mtime": 1789646414.144838,
-    "ast_hash": "a8b356294201a8090e9cf694c3827ceb",
+    "mtime": 1790102095.8882816,
+    "ast_hash": "bcde8ef1baf7875a8cdaa61681d4731d",
     "semantic_hash": ""
   },
   "apps/web/src/app/panel/admin/page.tsx": {
@@ -605,8 +605,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/app/panel/page.tsx": {
-    "mtime": 1790000857.6195853,
-    "ast_hash": "41f6b8541470b5f87c8b525ac852505d",
+    "mtime": 1790102041.8851411,
+    "ast_hash": "eacf4ffd99b94df4a50677afe85919f4",
     "semantic_hash": ""
   },
   "apps/web/src/app/panel/usuarios/page.tsx": {
@@ -2250,8 +2250,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/ruta-impulsador-panel.tsx": {
-    "mtime": 1790003933.6765234,
-    "ast_hash": "4ada48c1aaccf7cddacaf6888262ff59",
+    "mtime": 1790102039.3687923,
+    "ast_hash": "42fa79567f0557fc4d6d0c930c98fb6e",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/selector-cliente-combobox.tsx": {

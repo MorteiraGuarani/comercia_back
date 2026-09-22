@@ -439,8 +439,8 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "apps_api_package_dependencies_nestjs_jwt",
-      "community": 37,
-      "community_name": "dependencies",
+      "community": 53,
+      "community_name": "@nestjs/jwt",
       "norm_label": "@nestjs/jwt"
     },
     {
@@ -450,8 +450,8 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "nestjs_jwt",
-      "community": 37,
-      "community_name": "dependencies",
+      "community": 53,
+      "community_name": "@nestjs/jwt",
       "norm_label": "@nestjs/jwt"
     },
     {
@@ -461,8 +461,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "apps_api_package_dependencies_nestjs_platform_express",
-      "community": 37,
-      "community_name": "dependencies",
+      "community": 98,
+      "community_name": "@nestjs/platform-express",
       "norm_label": "@nestjs/platform-express"
     },
     {
@@ -472,8 +472,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "nestjs_platform_express",
-      "community": 37,
-      "community_name": "dependencies",
+      "community": 98,
+      "community_name": "@nestjs/platform-express",
       "norm_label": "@nestjs/platform-express"
     },
     {
@@ -505,8 +505,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "apps_api_package_dependencies_nestjs_terminus",
-      "community": 345,
-      "community_name": "@nestjs/terminus",
+      "community": 37,
+      "community_name": "dependencies",
       "norm_label": "@nestjs/terminus"
     },
     {
@@ -516,8 +516,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "nestjs_terminus",
-      "community": 345,
-      "community_name": "@nestjs/terminus",
+      "community": 37,
+      "community_name": "dependencies",
       "norm_label": "@nestjs/terminus"
     },
     {
@@ -527,8 +527,8 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "apps_api_package_dependencies_nestjs_throttler",
-      "community": 37,
-      "community_name": "dependencies",
+      "community": 104,
+      "community_name": "@nestjs/throttler",
       "norm_label": "@nestjs/throttler"
     },
     {
@@ -538,8 +538,8 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "nestjs_throttler",
-      "community": 37,
-      "community_name": "dependencies",
+      "community": 104,
+      "community_name": "@nestjs/throttler",
       "norm_label": "@nestjs/throttler"
     },
     {
@@ -549,8 +549,8 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "apps_api_package_dependencies_prisma_adapter_pg",
-      "community": 37,
-      "community_name": "dependencies",
+      "community": 227,
+      "community_name": "@prisma/adapter-pg",
       "norm_label": "@prisma/adapter-pg"
     },
     {
@@ -560,8 +560,8 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "prisma_adapter_pg",
-      "community": 37,
-      "community_name": "dependencies",
+      "community": 227,
+      "community_name": "@prisma/adapter-pg",
       "norm_label": "@prisma/adapter-pg"
     },
     {
@@ -571,8 +571,8 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "apps_api_package_dependencies_prisma_client",
-      "community": 37,
-      "community_name": "dependencies",
+      "community": 228,
+      "community_name": "@prisma/client",
       "norm_label": "@prisma/client"
     },
     {
@@ -582,8 +582,8 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "prisma_client",
-      "community": 37,
-      "community_name": "dependencies",
+      "community": 228,
+      "community_name": "@prisma/client",
       "norm_label": "@prisma/client"
     },
     {
@@ -725,8 +725,8 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "apps_api_package_dependencies_libphonenumber_js",
-      "community": 344,
-      "community_name": "libphonenumber-js",
+      "community": 37,
+      "community_name": "dependencies",
       "norm_label": "libphonenumber-js"
     },
     {
@@ -736,8 +736,8 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "apps_api_package_json_libphonenumber_js",
-      "community": 344,
-      "community_name": "libphonenumber-js",
+      "community": 37,
+      "community_name": "dependencies",
       "norm_label": "libphonenumber-js"
     },
     {
@@ -769,8 +769,8 @@
       "source_location": "L46",
       "_origin": "ast",
       "id": "apps_api_package_dependencies_prisma",
-      "community": 331,
-      "community_name": "prisma",
+      "community": 60,
+      "community_name": "jornada-campo.service.ts",
       "norm_label": "prisma"
     },
     {
@@ -780,8 +780,8 @@
       "source_location": "L46",
       "_origin": "ast",
       "id": "prisma",
-      "community": 331,
-      "community_name": "prisma",
+      "community": 60,
+      "community_name": "jornada-campo.service.ts",
       "norm_label": "prisma"
     },
     {
@@ -791,8 +791,8 @@
       "source_location": "L47",
       "_origin": "ast",
       "id": "apps_api_package_dependencies_reflect_metadata",
-      "community": 37,
-      "community_name": "dependencies",
+      "community": 327,
+      "community_name": "reflect-metadata",
       "norm_label": "reflect-metadata"
     },
     {
@@ -802,8 +802,8 @@
       "source_location": "L47",
       "_origin": "ast",
       "id": "reflect_metadata",
-      "community": 37,
-      "community_name": "dependencies",
+      "community": 327,
+      "community_name": "reflect-metadata",
       "norm_label": "reflect-metadata"
     },
     {
@@ -813,8 +813,8 @@
       "source_location": "L48",
       "_origin": "ast",
       "id": "apps_api_package_dependencies_rxjs",
-      "community": 346,
-      "community_name": "rxjs",
+      "community": 37,
+      "community_name": "dependencies",
       "norm_label": "rxjs"
     },
     {
@@ -824,8 +824,8 @@
       "source_location": "L48",
       "_origin": "ast",
       "id": "rxjs",
-      "community": 346,
-      "community_name": "rxjs",
+      "community": 37,
+      "community_name": "dependencies",
       "norm_label": "rxjs"
     },
     {
@@ -835,8 +835,8 @@
       "source_location": "L49",
       "_origin": "ast",
       "id": "apps_api_package_dependencies_uuid",
-      "community": 347,
-      "community_name": "uuid",
+      "community": 37,
+      "community_name": "dependencies",
       "norm_label": "uuid"
     },
     {
@@ -846,8 +846,8 @@
       "source_location": "L49",
       "_origin": "ast",
       "id": "uuid",
-      "community": 347,
-      "community_name": "uuid",
+      "community": 37,
+      "community_name": "dependencies",
       "norm_label": "uuid"
     },
     {
@@ -1198,8 +1198,8 @@
       "source_location": "L67",
       "_origin": "ast",
       "id": "apps_api_package_devdependencies_eslint_config_prettier",
-      "community": 53,
-      "community_name": "eslint-config-prettier",
+      "community": 35,
+      "community_name": "devDependencies",
       "norm_label": "eslint-config-prettier"
     },
     {
@@ -1209,8 +1209,8 @@
       "source_location": "L67",
       "_origin": "ast",
       "id": "eslint_config_prettier",
-      "community": 53,
-      "community_name": "eslint-config-prettier",
+      "community": 35,
+      "community_name": "devDependencies",
       "norm_label": "eslint-config-prettier"
     },
     {
@@ -1220,8 +1220,8 @@
       "source_location": "L68",
       "_origin": "ast",
       "id": "apps_api_package_devdependencies_eslint_plugin_prettier",
-      "community": 35,
-      "community_name": "devDependencies",
+      "community": 331,
+      "community_name": "eslint-plugin-prettier",
       "norm_label": "eslint-plugin-prettier"
     },
     {
@@ -1231,8 +1231,8 @@
       "source_location": "L68",
       "_origin": "ast",
       "id": "eslint_plugin_prettier",
-      "community": 35,
-      "community_name": "devDependencies",
+      "community": 331,
+      "community_name": "eslint-plugin-prettier",
       "norm_label": "eslint-plugin-prettier"
     },
     {
@@ -3618,8 +3618,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_src_auth_dto_login_dto",
-      "community": 41,
-      "community_name": "numeros.ts",
+      "community": 92,
+      "community_name": "RegisterDto",
       "norm_label": "login.dto.ts"
     },
     {
@@ -3684,8 +3684,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_src_auth_dto_register_dto",
-      "community": 41,
-      "community_name": "numeros.ts",
+      "community": 92,
+      "community_name": "RegisterDto",
       "norm_label": "register.dto.ts"
     },
     {
@@ -4422,7 +4422,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_campo_acceso_service_campoaccesoservice_ejecutar",
       "community": 60,
-      "community_name": "JornadaCampoService",
+      "community_name": "jornada-campo.service.ts",
       "norm_label": ".ejecutar()"
     },
     {
@@ -4454,7 +4454,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_src_campo_campo_controller",
-      "community": 12,
+      "community": 36,
       "community_name": "campo.controller.ts",
       "norm_label": "campo.controller.ts"
     },
@@ -4619,8 +4619,8 @@
       "source_location": "L60",
       "_origin": "ast",
       "id": "apps_api_src_campo_campo_controller_campocontroller_constructor",
-      "community": 60,
-      "community_name": "JornadaCampoService",
+      "community": 36,
+      "community_name": "campo.controller.ts",
       "norm_label": ".constructor()"
     },
     {
@@ -5235,7 +5235,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_src_campo_campo_module",
-      "community": 7,
+      "community": 50,
       "community_name": "rangoPaginacion",
       "norm_label": "campo.module.ts"
     },
@@ -5279,8 +5279,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_src_campo_catalogo_campo_service",
-      "community": 7,
-      "community_name": "rangoPaginacion",
+      "community": 12,
+      "community_name": "ConsultaCampoDto",
       "norm_label": "catalogo-campo.service.ts"
     },
     {
@@ -5323,7 +5323,7 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "apps_api_src_campo_catalogo_campo_service_catalogocamposervice_clientes",
-      "community": 7,
+      "community": 50,
       "community_name": "rangoPaginacion",
       "norm_label": ".clientes()"
     },
@@ -5389,7 +5389,7 @@
       "source_location": "L156",
       "_origin": "ast",
       "id": "apps_api_src_campo_catalogo_campo_service_catalogocamposervice_tareas",
-      "community": 7,
+      "community": 50,
       "community_name": "rangoPaginacion",
       "norm_label": ".tareas()"
     },
@@ -5533,7 +5533,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_campo_dto_spec",
       "community": 12,
-      "community_name": "campo.controller.ts",
+      "community_name": "ConsultaCampoDto",
       "norm_label": "campo.dto.spec.ts"
     },
     {
@@ -5544,7 +5544,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_campo_dto_spec_horario",
       "community": 12,
-      "community_name": "campo.controller.ts",
+      "community_name": "ConsultaCampoDto",
       "norm_label": "horario()"
     },
     {
@@ -5555,7 +5555,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_campo_dto",
       "community": 12,
-      "community_name": "campo.controller.ts",
+      "community_name": "ConsultaCampoDto",
       "norm_label": "campo.dto.ts"
     },
     {
@@ -5566,7 +5566,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_campo_dto_consultacampodto",
       "community": 12,
-      "community_name": "campo.controller.ts",
+      "community_name": "ConsultaCampoDto",
       "norm_label": "consultacampodto"
     },
     {
@@ -5577,7 +5577,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_campo_dto_ts_isoptional",
       "community": 12,
-      "community_name": "campo.controller.ts",
+      "community_name": "ConsultaCampoDto",
       "norm_label": "isoptional"
     },
     {
@@ -5588,7 +5588,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_campo_dto_ts_type",
       "community": 12,
-      "community_name": "campo.controller.ts",
+      "community_name": "ConsultaCampoDto",
       "norm_label": "type"
     },
     {
@@ -5599,7 +5599,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_campo_dto_ts_isint",
       "community": 12,
-      "community_name": "campo.controller.ts",
+      "community_name": "ConsultaCampoDto",
       "norm_label": "isint"
     },
     {
@@ -5610,7 +5610,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_campo_dto_ts_min",
       "community": 12,
-      "community_name": "campo.controller.ts",
+      "community_name": "ConsultaCampoDto",
       "norm_label": "min"
     },
     {
@@ -5621,7 +5621,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_campo_dto_ts_max",
       "community": 12,
-      "community_name": "campo.controller.ts",
+      "community_name": "ConsultaCampoDto",
       "norm_label": "max"
     },
     {
@@ -5632,7 +5632,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_campo_dto_ts_isstring",
       "community": 12,
-      "community_name": "campo.controller.ts",
+      "community_name": "ConsultaCampoDto",
       "norm_label": "isstring"
     },
     {
@@ -5643,7 +5643,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_campo_dto_ts_maxlength",
       "community": 12,
-      "community_name": "campo.controller.ts",
+      "community_name": "ConsultaCampoDto",
       "norm_label": "maxlength"
     },
     {
@@ -5654,7 +5654,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_campo_dto_ts_matches",
       "community": 12,
-      "community_name": "campo.controller.ts",
+      "community_name": "ConsultaCampoDto",
       "norm_label": "matches"
     },
     {
@@ -5665,7 +5665,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_campo_dto_ts_isdatestring",
       "community": 12,
-      "community_name": "campo.controller.ts",
+      "community_name": "ConsultaCampoDto",
       "norm_label": "isdatestring"
     },
     {
@@ -5676,7 +5676,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_campo_dto_clientecampodto",
       "community": 12,
-      "community_name": "campo.controller.ts",
+      "community_name": "ConsultaCampoDto",
       "norm_label": "clientecampodto"
     },
     {
@@ -5687,7 +5687,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_campo_dto_ts_transform",
       "community": 12,
-      "community_name": "campo.controller.ts",
+      "community_name": "ConsultaCampoDto",
       "norm_label": "transform"
     },
     {
@@ -5698,7 +5698,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_campo_dto_ts_minlength",
       "community": 12,
-      "community_name": "campo.controller.ts",
+      "community_name": "ConsultaCampoDto",
       "norm_label": "minlength"
     },
     {
@@ -5709,7 +5709,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_campo_dto_ts_isboolean",
       "community": 12,
-      "community_name": "campo.controller.ts",
+      "community_name": "ConsultaCampoDto",
       "norm_label": "isboolean"
     },
     {
@@ -5720,7 +5720,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_campo_dto_localcampodto",
       "community": 12,
-      "community_name": "campo.controller.ts",
+      "community_name": "ConsultaCampoDto",
       "norm_label": "localcampodto"
     },
     {
@@ -5731,7 +5731,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_campo_dto_ts_isnumber",
       "community": 12,
-      "community_name": "campo.controller.ts",
+      "community_name": "ConsultaCampoDto",
       "norm_label": "isnumber"
     },
     {
@@ -5742,7 +5742,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_campo_dto_fechahastacalendario",
       "community": 12,
-      "community_name": "campo.controller.ts",
+      "community_name": "ConsultaCampoDto",
       "norm_label": "fechahastacalendario()"
     },
     {
@@ -5753,7 +5753,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_campo_dto_vigenciacampodto",
       "community": 12,
-      "community_name": "campo.controller.ts",
+      "community_name": "ConsultaCampoDto",
       "norm_label": "vigenciacampodto"
     },
     {
@@ -5764,7 +5764,7 @@
       "_origin": "ast",
       "id": "validateif",
       "community": 12,
-      "community_name": "campo.controller.ts",
+      "community_name": "ConsultaCampoDto",
       "norm_label": "validateif"
     },
     {
@@ -5775,7 +5775,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_campo_dto_horariocampodto",
       "community": 12,
-      "community_name": "campo.controller.ts",
+      "community_name": "ConsultaCampoDto",
       "norm_label": "horariocampodto"
     },
     {
@@ -5786,7 +5786,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_campo_dto_ts_isenum",
       "community": 12,
-      "community_name": "campo.controller.ts",
+      "community_name": "ConsultaCampoDto",
       "norm_label": "isenum"
     },
     {
@@ -5797,7 +5797,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_campo_dto_ts_isarray",
       "community": 12,
-      "community_name": "campo.controller.ts",
+      "community_name": "ConsultaCampoDto",
       "norm_label": "isarray"
     },
     {
@@ -5808,7 +5808,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_campo_dto_ts_arrayunique",
       "community": 12,
-      "community_name": "campo.controller.ts",
+      "community_name": "ConsultaCampoDto",
       "norm_label": "arrayunique"
     },
     {
@@ -5819,7 +5819,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_campo_dto_ts_arraymaxsize",
       "community": 12,
-      "community_name": "campo.controller.ts",
+      "community_name": "ConsultaCampoDto",
       "norm_label": "arraymaxsize"
     },
     {
@@ -5830,7 +5830,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_campo_dto_asignacioncampodto",
       "community": 12,
-      "community_name": "campo.controller.ts",
+      "community_name": "ConsultaCampoDto",
       "norm_label": "asignacioncampodto"
     },
     {
@@ -5841,7 +5841,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_campo_dto_backupcampodto",
       "community": 12,
-      "community_name": "campo.controller.ts",
+      "community_name": "ConsultaCampoDto",
       "norm_label": "backupcampodto"
     },
     {
@@ -5852,7 +5852,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_campo_dto_tareacampodto",
       "community": 12,
-      "community_name": "campo.controller.ts",
+      "community_name": "ConsultaCampoDto",
       "norm_label": "tareacampodto"
     },
     {
@@ -5863,7 +5863,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_campo_dto_marcacampodto",
       "community": 12,
-      "community_name": "campo.controller.ts",
+      "community_name": "ConsultaCampoDto",
       "norm_label": "marcacampodto"
     },
     {
@@ -5874,7 +5874,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_campo_dto_entradacampodto",
       "community": 12,
-      "community_name": "campo.controller.ts",
+      "community_name": "ConsultaCampoDto",
       "norm_label": "entradacampodto"
     },
     {
@@ -5885,7 +5885,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_comentario_tarea_dto",
       "community": 36,
-      "community_name": "foto.service.ts",
+      "community_name": "campo.controller.ts",
       "norm_label": "comentario-tarea.dto.ts"
     },
     {
@@ -5896,7 +5896,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_comentario_tarea_dto_crearcomentariotareadto",
       "community": 36,
-      "community_name": "foto.service.ts",
+      "community_name": "campo.controller.ts",
       "norm_label": "crearcomentariotareadto"
     },
     {
@@ -5907,7 +5907,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_comentario_tarea_dto_ts_isnotempty",
       "community": 36,
-      "community_name": "foto.service.ts",
+      "community_name": "campo.controller.ts",
       "norm_label": "isnotempty"
     },
     {
@@ -5918,7 +5918,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_comentario_tarea_dto_ts_isstring",
       "community": 36,
-      "community_name": "foto.service.ts",
+      "community_name": "campo.controller.ts",
       "norm_label": "isstring"
     },
     {
@@ -5929,7 +5929,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_comentario_tarea_dto_ts_maxlength",
       "community": 36,
-      "community_name": "foto.service.ts",
+      "community_name": "campo.controller.ts",
       "norm_label": "maxlength"
     },
     {
@@ -5940,7 +5940,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_comentario_tarea_dto_comentariotareadto",
       "community": 36,
-      "community_name": "foto.service.ts",
+      "community_name": "campo.controller.ts",
       "norm_label": "comentariotareadto"
     },
     {
@@ -5951,7 +5951,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_consulta_tareas_dto",
       "community": 12,
-      "community_name": "campo.controller.ts",
+      "community_name": "ConsultaCampoDto",
       "norm_label": "consulta-tareas.dto.ts"
     },
     {
@@ -5962,7 +5962,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_consulta_tareas_dto_consultatareascampodto",
       "community": 12,
-      "community_name": "campo.controller.ts",
+      "community_name": "ConsultaCampoDto",
       "norm_label": "consultatareascampodto"
     },
     {
@@ -5973,7 +5973,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_consulta_tareas_dto_ts_isoptional",
       "community": 12,
-      "community_name": "campo.controller.ts",
+      "community_name": "ConsultaCampoDto",
       "norm_label": "isoptional"
     },
     {
@@ -5984,7 +5984,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_consulta_tareas_dto_ts_isstring",
       "community": 12,
-      "community_name": "campo.controller.ts",
+      "community_name": "ConsultaCampoDto",
       "norm_label": "isstring"
     },
     {
@@ -5995,7 +5995,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_consulta_tareas_dto_ts_maxlength",
       "community": 12,
-      "community_name": "campo.controller.ts",
+      "community_name": "ConsultaCampoDto",
       "norm_label": "maxlength"
     },
     {
@@ -6006,7 +6006,7 @@
       "_origin": "ast",
       "id": "isin",
       "community": 12,
-      "community_name": "campo.controller.ts",
+      "community_name": "ConsultaCampoDto",
       "norm_label": "isin"
     },
     {
@@ -6017,7 +6017,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_foto_tarea_dto",
       "community": 36,
-      "community_name": "foto.service.ts",
+      "community_name": "campo.controller.ts",
       "norm_label": "foto-tarea.dto.ts"
     },
     {
@@ -6028,7 +6028,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_foto_tarea_dto_momentofotodto",
       "community": 36,
-      "community_name": "foto.service.ts",
+      "community_name": "campo.controller.ts",
       "norm_label": "momentofotodto"
     },
     {
@@ -6039,7 +6039,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_foto_tarea_dto_subirfototareadto",
       "community": 36,
-      "community_name": "foto.service.ts",
+      "community_name": "campo.controller.ts",
       "norm_label": "subirfototareadto"
     },
     {
@@ -6050,7 +6050,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_foto_tarea_dto_ts_isnotempty",
       "community": 36,
-      "community_name": "foto.service.ts",
+      "community_name": "campo.controller.ts",
       "norm_label": "isnotempty"
     },
     {
@@ -6061,7 +6061,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_foto_tarea_dto_ts_isenum",
       "community": 36,
-      "community_name": "foto.service.ts",
+      "community_name": "campo.controller.ts",
       "norm_label": "isenum"
     },
     {
@@ -6072,7 +6072,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_foto_tarea_dto_fototareadto",
       "community": 36,
-      "community_name": "foto.service.ts",
+      "community_name": "campo.controller.ts",
       "norm_label": "fototareadto"
     },
     {
@@ -6083,7 +6083,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_foto_tarea_dto_fotostarearesponsedto",
       "community": 36,
-      "community_name": "foto.service.ts",
+      "community_name": "campo.controller.ts",
       "norm_label": "fotostarearesponsedto"
     },
     {
@@ -6094,7 +6094,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_notificacion_dto",
       "community": 50,
-      "community_name": "NotificacionService",
+      "community_name": "rangoPaginacion",
       "norm_label": "notificacion.dto.ts"
     },
     {
@@ -6105,7 +6105,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_notificacion_dto_listarnotificacionesdto",
       "community": 50,
-      "community_name": "NotificacionService",
+      "community_name": "rangoPaginacion",
       "norm_label": "listarnotificacionesdto"
     },
     {
@@ -6116,7 +6116,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_notificacion_dto_ts_isoptional",
       "community": 50,
-      "community_name": "NotificacionService",
+      "community_name": "rangoPaginacion",
       "norm_label": "isoptional"
     },
     {
@@ -6127,7 +6127,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_notificacion_dto_ts_isboolean",
       "community": 50,
-      "community_name": "NotificacionService",
+      "community_name": "rangoPaginacion",
       "norm_label": "isboolean"
     },
     {
@@ -6138,7 +6138,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_notificacion_dto_ts_transform",
       "community": 50,
-      "community_name": "NotificacionService",
+      "community_name": "rangoPaginacion",
       "norm_label": "transform"
     },
     {
@@ -6149,7 +6149,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_notificacion_dto_notificaciondto",
       "community": 50,
-      "community_name": "NotificacionService",
+      "community_name": "rangoPaginacion",
       "norm_label": "notificaciondto"
     },
     {
@@ -6160,7 +6160,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_notificacion_dto_contadornoleidasdto",
       "community": 50,
-      "community_name": "NotificacionService",
+      "community_name": "rangoPaginacion",
       "norm_label": "contadornoleidasdto"
     },
     {
@@ -6171,7 +6171,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_notificacion_dto_marcartodasleidasdto",
       "community": 50,
-      "community_name": "NotificacionService",
+      "community_name": "rangoPaginacion",
       "norm_label": "marcartodasleidasdto"
     },
     {
@@ -6181,8 +6181,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_novedad_dto",
-      "community": 43,
-      "community_name": "novedad.service.ts",
+      "community": 50,
+      "community_name": "rangoPaginacion",
       "norm_label": "novedad.dto.ts"
     },
     {
@@ -6192,8 +6192,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_novedad_dto_crearnovedaddto",
-      "community": 43,
-      "community_name": "novedad.service.ts",
+      "community": 50,
+      "community_name": "rangoPaginacion",
       "norm_label": "crearnovedaddto"
     },
     {
@@ -6203,8 +6203,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_novedad_dto_ts_type",
-      "community": 43,
-      "community_name": "novedad.service.ts",
+      "community": 50,
+      "community_name": "rangoPaginacion",
       "norm_label": "type"
     },
     {
@@ -6214,8 +6214,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_novedad_dto_ts_isint",
-      "community": 43,
-      "community_name": "novedad.service.ts",
+      "community": 50,
+      "community_name": "rangoPaginacion",
       "norm_label": "isint"
     },
     {
@@ -6225,8 +6225,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_novedad_dto_ts_min",
-      "community": 43,
-      "community_name": "novedad.service.ts",
+      "community": 50,
+      "community_name": "rangoPaginacion",
       "norm_label": "min"
     },
     {
@@ -6236,8 +6236,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_novedad_dto_ts_isoptional",
-      "community": 43,
-      "community_name": "novedad.service.ts",
+      "community": 50,
+      "community_name": "rangoPaginacion",
       "norm_label": "isoptional"
     },
     {
@@ -6247,8 +6247,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_novedad_dto_ts_isenum",
-      "community": 43,
-      "community_name": "novedad.service.ts",
+      "community": 50,
+      "community_name": "rangoPaginacion",
       "norm_label": "isenum"
     },
     {
@@ -6258,8 +6258,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_novedad_dto_ts_isstring",
-      "community": 43,
-      "community_name": "novedad.service.ts",
+      "community": 50,
+      "community_name": "rangoPaginacion",
       "norm_label": "isstring"
     },
     {
@@ -6269,8 +6269,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_novedad_dto_ts_minlength",
-      "community": 43,
-      "community_name": "novedad.service.ts",
+      "community": 50,
+      "community_name": "rangoPaginacion",
       "norm_label": "minlength"
     },
     {
@@ -6280,8 +6280,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_novedad_dto_ts_maxlength",
-      "community": 43,
-      "community_name": "novedad.service.ts",
+      "community": 50,
+      "community_name": "rangoPaginacion",
       "norm_label": "maxlength"
     },
     {
@@ -6291,8 +6291,8 @@
       "source_location": "L54",
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_novedad_dto_listarnovedadesdto",
-      "community": 43,
-      "community_name": "novedad.service.ts",
+      "community": 50,
+      "community_name": "rangoPaginacion",
       "norm_label": "listarnovedadesdto"
     },
     {
@@ -6302,8 +6302,8 @@
       "source_location": "L78",
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_novedad_dto_actualizarestadonovedaddto",
-      "community": 43,
-      "community_name": "novedad.service.ts",
+      "community": 50,
+      "community_name": "rangoPaginacion",
       "norm_label": "actualizarestadonovedaddto"
     },
     {
@@ -6314,7 +6314,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_supervision_dto",
       "community": 62,
-      "community_name": "PaginacionDto",
+      "community_name": "supervision.service.ts",
       "norm_label": "supervision.dto.ts"
     },
     {
@@ -6325,7 +6325,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_supervision_dto_consultasupervisiondto",
       "community": 62,
-      "community_name": "PaginacionDto",
+      "community_name": "supervision.service.ts",
       "norm_label": "consultasupervisiondto"
     },
     {
@@ -6336,7 +6336,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_supervision_dto_ts_isoptional",
       "community": 62,
-      "community_name": "PaginacionDto",
+      "community_name": "supervision.service.ts",
       "norm_label": "isoptional"
     },
     {
@@ -6347,7 +6347,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_supervision_dto_ts_matches",
       "community": 62,
-      "community_name": "PaginacionDto",
+      "community_name": "supervision.service.ts",
       "norm_label": "matches"
     },
     {
@@ -6358,7 +6358,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_supervision_dto_ts_isdatestring",
       "community": 62,
-      "community_name": "PaginacionDto",
+      "community_name": "supervision.service.ts",
       "norm_label": "isdatestring"
     },
     {
@@ -6369,7 +6369,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_supervision_dto_colaboradorresumenitem",
       "community": 62,
-      "community_name": "PaginacionDto",
+      "community_name": "supervision.service.ts",
       "norm_label": "colaboradorresumenitem"
     },
     {
@@ -6380,7 +6380,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_dto_supervision_dto_supervisionresumendto",
       "community": 62,
-      "community_name": "PaginacionDto",
+      "community_name": "supervision.service.ts",
       "norm_label": "supervisionresumendto"
     },
     {
@@ -6391,7 +6391,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_interfaces_calendario_interface",
       "community": 60,
-      "community_name": "JornadaCampoService",
+      "community_name": "jornada-campo.service.ts",
       "norm_label": "calendario.interface.ts"
     },
     {
@@ -6402,7 +6402,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_interfaces_calendario_interface_reglahorario",
       "community": 60,
-      "community_name": "JornadaCampoService",
+      "community_name": "jornada-campo.service.ts",
       "norm_label": "reglahorario"
     },
     {
@@ -6413,7 +6413,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_interfaces_calendario_interface_filaagendaid",
       "community": 60,
-      "community_name": "JornadaCampoService",
+      "community_name": "jornada-campo.service.ts",
       "norm_label": "filaagendaid"
     },
     {
@@ -6424,7 +6424,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_interfaces_calendario_interface_totalagenda",
       "community": 60,
-      "community_name": "JornadaCampoService",
+      "community_name": "jornada-campo.service.ts",
       "norm_label": "totalagenda"
     },
     {
@@ -6435,7 +6435,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_interfaces_parada_ruta_interface",
       "community": 62,
-      "community_name": "PaginacionDto",
+      "community_name": "supervision.service.ts",
       "norm_label": "parada-ruta.interface.ts"
     },
     {
@@ -6446,7 +6446,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_interfaces_parada_ruta_interface_paradaruta",
       "community": 62,
-      "community_name": "PaginacionDto",
+      "community_name": "supervision.service.ts",
       "norm_label": "paradaruta"
     },
     {
@@ -6456,8 +6456,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_src_campo_jornada_campo_service",
-      "community": 7,
-      "community_name": "rangoPaginacion",
+      "community": 60,
+      "community_name": "jornada-campo.service.ts",
       "norm_label": "jornada-campo.service.ts"
     },
     {
@@ -6468,7 +6468,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_jornada_campo_service_jornadacamposervice",
       "community": 60,
-      "community_name": "JornadaCampoService",
+      "community_name": "jornada-campo.service.ts",
       "norm_label": "jornadacamposervice"
     },
     {
@@ -6479,7 +6479,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_jornada_campo_service_ts_injectable",
       "community": 60,
-      "community_name": "JornadaCampoService",
+      "community_name": "jornada-campo.service.ts",
       "norm_label": "injectable"
     },
     {
@@ -6501,7 +6501,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_jornada_campo_service_jornadacamposervice_asignacionefectiva",
       "community": 60,
-      "community_name": "JornadaCampoService",
+      "community_name": "jornada-campo.service.ts",
       "norm_label": ".asignacionefectiva()"
     },
     {
@@ -6512,7 +6512,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_jornada_campo_service_jornadacamposervice_agenda",
       "community": 60,
-      "community_name": "JornadaCampoService",
+      "community_name": "jornada-campo.service.ts",
       "norm_label": ".agenda()"
     },
     {
@@ -6523,7 +6523,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_jornada_campo_service_jornadacamposervice_validarmarca",
       "community": 60,
-      "community_name": "JornadaCampoService",
+      "community_name": "jornada-campo.service.ts",
       "norm_label": ".validarmarca()"
     },
     {
@@ -6534,7 +6534,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_jornada_campo_service_jornadacamposervice_entrada",
       "community": 60,
-      "community_name": "JornadaCampoService",
+      "community_name": "jornada-campo.service.ts",
       "norm_label": ".entrada()"
     },
     {
@@ -6545,7 +6545,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_jornada_campo_service_jornadacamposervice_abierta",
       "community": 60,
-      "community_name": "JornadaCampoService",
+      "community_name": "jornada-campo.service.ts",
       "norm_label": ".abierta()"
     },
     {
@@ -6556,7 +6556,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_jornada_campo_service_jornadacamposervice_salida",
       "community": 60,
-      "community_name": "JornadaCampoService",
+      "community_name": "jornada-campo.service.ts",
       "norm_label": ".salida()"
     },
     {
@@ -6567,7 +6567,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_jornada_campo_service_jornadacamposervice_tareas",
       "community": 60,
-      "community_name": "JornadaCampoService",
+      "community_name": "jornada-campo.service.ts",
       "norm_label": ".tareas()"
     },
     {
@@ -6578,7 +6578,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_jornada_campo_service_jornadacamposervice_completar",
       "community": 60,
-      "community_name": "JornadaCampoService",
+      "community_name": "jornada-campo.service.ts",
       "norm_label": ".completar()"
     },
     {
@@ -6589,7 +6589,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_jornada_campo_service_jornadacamposervice_visitas",
       "community": 60,
-      "community_name": "JornadaCampoService",
+      "community_name": "jornada-campo.service.ts",
       "norm_label": ".visitas()"
     },
     {
@@ -6610,8 +6610,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_src_campo_planificacion_campo_service",
-      "community": 7,
-      "community_name": "rangoPaginacion",
+      "community": 12,
+      "community_name": "ConsultaCampoDto",
       "norm_label": "planificacion-campo.service.ts"
     },
     {
@@ -6654,8 +6654,8 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "apps_api_src_campo_planificacion_campo_service_planificacioncamposervice_equipo",
-      "community": 24,
-      "community_name": ".gestionar",
+      "community": 50,
+      "community_name": "rangoPaginacion",
       "norm_label": ".equipo()"
     },
     {
@@ -6786,7 +6786,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_src_campo_services_aviso_service",
-      "community": 7,
+      "community": 50,
       "community_name": "rangoPaginacion",
       "norm_label": "aviso.service.ts"
     },
@@ -6863,7 +6863,7 @@
       "source_location": "L145",
       "_origin": "ast",
       "id": "apps_api_src_campo_services_aviso_service_avisoservice_listarenviados",
-      "community": 7,
+      "community": 50,
       "community_name": "rangoPaginacion",
       "norm_label": ".listarenviados()"
     },
@@ -6897,7 +6897,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_services_comentario_service",
       "community": 36,
-      "community_name": "foto.service.ts",
+      "community_name": "campo.controller.ts",
       "norm_label": "comentario.service.ts"
     },
     {
@@ -6908,7 +6908,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_services_comentario_service_comentarioservice",
       "community": 36,
-      "community_name": "foto.service.ts",
+      "community_name": "campo.controller.ts",
       "norm_label": "comentarioservice"
     },
     {
@@ -6919,7 +6919,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_services_comentario_service_ts_injectable",
       "community": 36,
-      "community_name": "foto.service.ts",
+      "community_name": "campo.controller.ts",
       "norm_label": "injectable"
     },
     {
@@ -6930,7 +6930,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_services_comentario_service_comentarioservice_constructor",
       "community": 36,
-      "community_name": "foto.service.ts",
+      "community_name": "campo.controller.ts",
       "norm_label": ".constructor()"
     },
     {
@@ -6941,7 +6941,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_services_comentario_service_comentarioservice_crear",
       "community": 36,
-      "community_name": "foto.service.ts",
+      "community_name": "campo.controller.ts",
       "norm_label": ".crear()"
     },
     {
@@ -6952,7 +6952,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_services_comentario_service_comentarioservice_listar",
       "community": 36,
-      "community_name": "foto.service.ts",
+      "community_name": "campo.controller.ts",
       "norm_label": ".listar()"
     },
     {
@@ -6963,7 +6963,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_services_comentario_service_comentarioservice_marcarleido",
       "community": 36,
-      "community_name": "foto.service.ts",
+      "community_name": "campo.controller.ts",
       "norm_label": ".marcarleido()"
     },
     {
@@ -6974,7 +6974,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_services_comentario_service_comentarioservice_contarnoleidos",
       "community": 36,
-      "community_name": "foto.service.ts",
+      "community_name": "campo.controller.ts",
       "norm_label": ".contarnoleidos()"
     },
     {
@@ -6984,8 +6984,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_src_campo_services_foto_service_spec",
-      "community": 36,
-      "community_name": "foto.service.ts",
+      "community": 5,
+      "community_name": "PrismaService",
       "norm_label": "foto.service.spec.ts"
     },
     {
@@ -6995,8 +6995,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "apps_api_src_campo_services_foto_service_spec_contexto",
-      "community": 36,
-      "community_name": "foto.service.ts",
+      "community": 5,
+      "community_name": "PrismaService",
       "norm_label": "contexto()"
     },
     {
@@ -7007,7 +7007,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_services_foto_service",
       "community": 36,
-      "community_name": "foto.service.ts",
+      "community_name": "campo.controller.ts",
       "norm_label": "foto.service.ts"
     },
     {
@@ -7018,7 +7018,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_services_foto_service_fotoservice",
       "community": 36,
-      "community_name": "foto.service.ts",
+      "community_name": "campo.controller.ts",
       "norm_label": "fotoservice"
     },
     {
@@ -7029,7 +7029,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_services_foto_service_ts_injectable",
       "community": 36,
-      "community_name": "foto.service.ts",
+      "community_name": "campo.controller.ts",
       "norm_label": "injectable"
     },
     {
@@ -7040,7 +7040,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_services_foto_service_fotoservice_constructor",
       "community": 36,
-      "community_name": "foto.service.ts",
+      "community_name": "campo.controller.ts",
       "norm_label": ".constructor()"
     },
     {
@@ -7051,7 +7051,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_services_foto_service_fotoservice_subir",
       "community": 36,
-      "community_name": "foto.service.ts",
+      "community_name": "campo.controller.ts",
       "norm_label": ".subir()"
     },
     {
@@ -7062,7 +7062,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_services_foto_service_fotoservice_obtener",
       "community": 36,
-      "community_name": "foto.service.ts",
+      "community_name": "campo.controller.ts",
       "norm_label": ".obtener()"
     },
     {
@@ -7073,7 +7073,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_services_foto_service_fotoservice_obtenerporid",
       "community": 36,
-      "community_name": "foto.service.ts",
+      "community_name": "campo.controller.ts",
       "norm_label": ".obtenerporid()"
     },
     {
@@ -7084,7 +7084,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_services_foto_service_fotoservice_eliminar",
       "community": 36,
-      "community_name": "foto.service.ts",
+      "community_name": "campo.controller.ts",
       "norm_label": ".eliminar()"
     },
     {
@@ -7095,7 +7095,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_services_foto_service_fotoservice_validarfotosobligatorias",
       "community": 36,
-      "community_name": "foto.service.ts",
+      "community_name": "campo.controller.ts",
       "norm_label": ".validarfotosobligatorias()"
     },
     {
@@ -7106,7 +7106,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_services_notificacion_service",
       "community": 50,
-      "community_name": "NotificacionService",
+      "community_name": "rangoPaginacion",
       "norm_label": "notificacion.service.ts"
     },
     {
@@ -7117,7 +7117,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_services_notificacion_service_notificacionservice",
       "community": 50,
-      "community_name": "NotificacionService",
+      "community_name": "rangoPaginacion",
       "norm_label": "notificacionservice"
     },
     {
@@ -7128,7 +7128,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_services_notificacion_service_ts_injectable",
       "community": 50,
-      "community_name": "NotificacionService",
+      "community_name": "rangoPaginacion",
       "norm_label": "injectable"
     },
     {
@@ -7139,7 +7139,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_services_notificacion_service_notificacionservice_constructor",
       "community": 50,
-      "community_name": "NotificacionService",
+      "community_name": "rangoPaginacion",
       "norm_label": ".constructor()"
     },
     {
@@ -7150,7 +7150,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_services_notificacion_service_notificacionservice_crearnotificacioncomentario",
       "community": 50,
-      "community_name": "NotificacionService",
+      "community_name": "rangoPaginacion",
       "norm_label": ".crearnotificacioncomentario()"
     },
     {
@@ -7161,7 +7161,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_services_notificacion_service_notificacionservice_crearnotificacionfoto",
       "community": 50,
-      "community_name": "NotificacionService",
+      "community_name": "rangoPaginacion",
       "norm_label": ".crearnotificacionfoto()"
     },
     {
@@ -7172,7 +7172,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_services_notificacion_service_notificacionservice_crearnotificacionnovedad",
       "community": 50,
-      "community_name": "NotificacionService",
+      "community_name": "rangoPaginacion",
       "norm_label": ".crearnotificacionnovedad()"
     },
     {
@@ -7182,8 +7182,8 @@
       "source_location": "L151",
       "_origin": "ast",
       "id": "apps_api_src_campo_services_notificacion_service_notificacionservice_crearnotificacionnovedadactualizada",
-      "community": 43,
-      "community_name": "novedad.service.ts",
+      "community": 50,
+      "community_name": "rangoPaginacion",
       "norm_label": ".crearnotificacionnovedadactualizada()"
     },
     {
@@ -7204,7 +7204,7 @@
       "source_location": "L211",
       "_origin": "ast",
       "id": "apps_api_src_campo_services_notificacion_service_notificacionservice_listar",
-      "community": 7,
+      "community": 50,
       "community_name": "rangoPaginacion",
       "norm_label": ".listar()"
     },
@@ -7216,7 +7216,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_services_notificacion_service_notificacionservice_marcarleida",
       "community": 50,
-      "community_name": "NotificacionService",
+      "community_name": "rangoPaginacion",
       "norm_label": ".marcarleida()"
     },
     {
@@ -7227,7 +7227,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_services_notificacion_service_notificacionservice_marcartodasleidas",
       "community": 50,
-      "community_name": "NotificacionService",
+      "community_name": "rangoPaginacion",
       "norm_label": ".marcartodasleidas()"
     },
     {
@@ -7238,7 +7238,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_services_notificacion_service_notificacionservice_contadornoleidas",
       "community": 50,
-      "community_name": "NotificacionService",
+      "community_name": "rangoPaginacion",
       "norm_label": ".contadornoleidas()"
     },
     {
@@ -7248,8 +7248,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_src_campo_services_novedad_service_spec",
-      "community": 5,
-      "community_name": "PrismaService",
+      "community": 50,
+      "community_name": "rangoPaginacion",
       "norm_label": "novedad.service.spec.ts"
     },
     {
@@ -7259,8 +7259,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_src_campo_services_novedad_service",
-      "community": 43,
-      "community_name": "novedad.service.ts",
+      "community": 50,
+      "community_name": "rangoPaginacion",
       "norm_label": "novedad.service.ts"
     },
     {
@@ -7270,8 +7270,8 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "apps_api_src_campo_services_novedad_service_novedadservice",
-      "community": 43,
-      "community_name": "novedad.service.ts",
+      "community": 50,
+      "community_name": "rangoPaginacion",
       "norm_label": "novedadservice"
     },
     {
@@ -7281,8 +7281,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "apps_api_src_campo_services_novedad_service_ts_injectable",
-      "community": 43,
-      "community_name": "novedad.service.ts",
+      "community": 50,
+      "community_name": "rangoPaginacion",
       "norm_label": "injectable"
     },
     {
@@ -7292,8 +7292,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "apps_api_src_campo_services_novedad_service_novedadservice_constructor",
-      "community": 43,
-      "community_name": "novedad.service.ts",
+      "community": 50,
+      "community_name": "rangoPaginacion",
       "norm_label": ".constructor()"
     },
     {
@@ -7303,7 +7303,7 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "apps_api_src_campo_services_novedad_service_novedadservice_locales",
-      "community": 7,
+      "community": 50,
       "community_name": "rangoPaginacion",
       "norm_label": ".locales()"
     },
@@ -7315,7 +7315,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_services_novedad_service_novedadservice_crear",
       "community": 50,
-      "community_name": "NotificacionService",
+      "community_name": "rangoPaginacion",
       "norm_label": ".crear()"
     },
     {
@@ -7325,7 +7325,7 @@
       "source_location": "L127",
       "_origin": "ast",
       "id": "apps_api_src_campo_services_novedad_service_novedadservice_listar",
-      "community": 7,
+      "community": 50,
       "community_name": "rangoPaginacion",
       "norm_label": ".listar()"
     },
@@ -7336,8 +7336,8 @@
       "source_location": "L195",
       "_origin": "ast",
       "id": "apps_api_src_campo_services_novedad_service_novedadservice_obtenerporid",
-      "community": 43,
-      "community_name": "novedad.service.ts",
+      "community": 62,
+      "community_name": "supervision.service.ts",
       "norm_label": ".obtenerporid()"
     },
     {
@@ -7347,8 +7347,8 @@
       "source_location": "L221",
       "_origin": "ast",
       "id": "apps_api_src_campo_services_novedad_service_novedadservice_actualizarestado",
-      "community": 43,
-      "community_name": "novedad.service.ts",
+      "community": 50,
+      "community_name": "rangoPaginacion",
       "norm_label": ".actualizarestado()"
     },
     {
@@ -7370,7 +7370,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_services_supervision_service",
       "community": 62,
-      "community_name": "PaginacionDto",
+      "community_name": "supervision.service.ts",
       "norm_label": "supervision.service.ts"
     },
     {
@@ -7380,8 +7380,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "apps_api_src_campo_services_supervision_service_supervisionservice",
-      "community": 60,
-      "community_name": "JornadaCampoService",
+      "community": 62,
+      "community_name": "supervision.service.ts",
       "norm_label": "supervisionservice"
     },
     {
@@ -7391,8 +7391,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "apps_api_src_campo_services_supervision_service_ts_injectable",
-      "community": 60,
-      "community_name": "JornadaCampoService",
+      "community": 62,
+      "community_name": "supervision.service.ts",
       "norm_label": "injectable"
     },
     {
@@ -7413,8 +7413,8 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "apps_api_src_campo_services_supervision_service_supervisionservice_formatohora",
-      "community": 60,
-      "community_name": "JornadaCampoService",
+      "community": 62,
+      "community_name": "supervision.service.ts",
       "norm_label": ".formatohora()"
     },
     {
@@ -7424,8 +7424,8 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "apps_api_src_campo_services_supervision_service_supervisionservice_resumen",
-      "community": 60,
-      "community_name": "JornadaCampoService",
+      "community": 62,
+      "community_name": "supervision.service.ts",
       "norm_label": ".resumen()"
     },
     {
@@ -7435,8 +7435,8 @@
       "source_location": "L286",
       "_origin": "ast",
       "id": "apps_api_src_campo_services_supervision_service_supervisionservice_detallecolaborador",
-      "community": 60,
-      "community_name": "JornadaCampoService",
+      "community": 62,
+      "community_name": "supervision.service.ts",
       "norm_label": ".detallecolaborador()"
     },
     {
@@ -7446,8 +7446,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_src_campo_utils_agenda_sql",
-      "community": 331,
-      "community_name": "prisma",
+      "community": 60,
+      "community_name": "jornada-campo.service.ts",
       "norm_label": "agenda-sql.ts"
     },
     {
@@ -7457,8 +7457,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "apps_api_src_campo_utils_agenda_sql_condicionhorario",
-      "community": 331,
-      "community_name": "prisma",
+      "community": 60,
+      "community_name": "jornada-campo.service.ts",
       "norm_label": "condicionhorario()"
     },
     {
@@ -7468,8 +7468,8 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "apps_api_src_campo_utils_agenda_sql_condicionagenda",
-      "community": 331,
-      "community_name": "prisma",
+      "community": 60,
+      "community_name": "jornada-campo.service.ts",
       "norm_label": "condicionagenda()"
     },
     {
@@ -7480,7 +7480,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_utils_autorizacion",
       "community": 36,
-      "community_name": "foto.service.ts",
+      "community_name": "campo.controller.ts",
       "norm_label": "autorizacion.ts"
     },
     {
@@ -7491,7 +7491,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_utils_autorizacion_esliderde",
       "community": 36,
-      "community_name": "foto.service.ts",
+      "community_name": "campo.controller.ts",
       "norm_label": "esliderde()"
     },
     {
@@ -7501,8 +7501,8 @@
       "source_location": "L47",
       "_origin": "ast",
       "id": "apps_api_src_campo_utils_autorizacion_obtenerequipocompleto",
-      "community": 43,
-      "community_name": "novedad.service.ts",
+      "community": 62,
+      "community_name": "supervision.service.ts",
       "norm_label": "obtenerequipocompleto()"
     },
     {
@@ -7513,7 +7513,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_utils_autorizacion_obtenerliderdirecto",
       "community": 50,
-      "community_name": "NotificacionService",
+      "community_name": "rangoPaginacion",
       "norm_label": "obtenerliderdirecto()"
     },
     {
@@ -7524,7 +7524,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_utils_autorizacion_verificaraccesovisita",
       "community": 36,
-      "community_name": "foto.service.ts",
+      "community_name": "campo.controller.ts",
       "norm_label": "verificaraccesovisita()"
     },
     {
@@ -7535,7 +7535,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_utils_autorizacion_verificaraccesocumplimiento",
       "community": 36,
-      "community_name": "foto.service.ts",
+      "community_name": "campo.controller.ts",
       "norm_label": "verificaraccesocumplimiento()"
     },
     {
@@ -7546,7 +7546,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_utils_calendario_spec",
       "community": 60,
-      "community_name": "JornadaCampoService",
+      "community_name": "jornada-campo.service.ts",
       "norm_label": "calendario.spec.ts"
     },
     {
@@ -7557,7 +7557,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_utils_calendario_spec_regla",
       "community": 60,
-      "community_name": "JornadaCampoService",
+      "community_name": "jornada-campo.service.ts",
       "norm_label": "regla"
     },
     {
@@ -7568,7 +7568,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_utils_calendario",
       "community": 60,
-      "community_name": "JornadaCampoService",
+      "community_name": "jornada-campo.service.ts",
       "norm_label": "calendario.ts"
     },
     {
@@ -7579,7 +7579,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_utils_calendario_relojcampo",
       "community": 60,
-      "community_name": "JornadaCampoService",
+      "community_name": "jornada-campo.service.ts",
       "norm_label": "relojcampo()"
     },
     {
@@ -7590,7 +7590,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_utils_calendario_fechacampo",
       "community": 60,
-      "community_name": "JornadaCampoService",
+      "community_name": "jornada-campo.service.ts",
       "norm_label": "fechacampo()"
     },
     {
@@ -7600,8 +7600,8 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "apps_api_src_campo_utils_calendario_vigenciacampo",
-      "community": 24,
-      "community_name": ".gestionar",
+      "community": 60,
+      "community_name": "jornada-campo.service.ts",
       "norm_label": "vigenciacampo()"
     },
     {
@@ -7612,7 +7612,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_utils_calendario_rangoconsulta",
       "community": 60,
-      "community_name": "JornadaCampoService",
+      "community_name": "jornada-campo.service.ts",
       "norm_label": "rangoconsulta()"
     },
     {
@@ -7623,7 +7623,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_utils_calendario_ocurrehorarioenrango",
       "community": 60,
-      "community_name": "JornadaCampoService",
+      "community_name": "jornada-campo.service.ts",
       "norm_label": "ocurrehorarioenrango()"
     },
     {
@@ -7634,7 +7634,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_utils_calendario_ocurrehorario",
       "community": 60,
-      "community_name": "JornadaCampoService",
+      "community_name": "jornada-campo.service.ts",
       "norm_label": "ocurrehorario()"
     },
     {
@@ -7645,7 +7645,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_utils_calendario_validarhorario",
       "community": 60,
-      "community_name": "JornadaCampoService",
+      "community_name": "jornada-campo.service.ts",
       "norm_label": "validarhorario()"
     },
     {
@@ -7656,7 +7656,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_utils_evidencia_tarea",
       "community": 36,
-      "community_name": "foto.service.ts",
+      "community_name": "campo.controller.ts",
       "norm_label": "evidencia-tarea.ts"
     },
     {
@@ -7667,7 +7667,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_utils_evidencia_tarea_tareaparaevidencia",
       "community": 36,
-      "community_name": "foto.service.ts",
+      "community_name": "campo.controller.ts",
       "norm_label": "tareaparaevidencia()"
     },
     {
@@ -7678,7 +7678,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_utils_evidencia_tarea_prepararevidencia",
       "community": 36,
-      "community_name": "foto.service.ts",
+      "community_name": "campo.controller.ts",
       "norm_label": "prepararevidencia()"
     },
     {
@@ -7689,7 +7689,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_utils_locales_novedad",
       "community": 60,
-      "community_name": "JornadaCampoService",
+      "community_name": "jornada-campo.service.ts",
       "norm_label": "locales-novedad.ts"
     },
     {
@@ -7700,7 +7700,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_utils_locales_novedad_localesparanovedad",
       "community": 60,
-      "community_name": "JornadaCampoService",
+      "community_name": "jornada-campo.service.ts",
       "norm_label": "localesparanovedad()"
     },
     {
@@ -7711,7 +7711,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_utils_multer_config",
       "community": 36,
-      "community_name": "foto.service.ts",
+      "community_name": "campo.controller.ts",
       "norm_label": "multer-config.ts"
     },
     {
@@ -7722,7 +7722,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_utils_multer_config_allowed_mime_types",
       "community": 36,
-      "community_name": "foto.service.ts",
+      "community_name": "campo.controller.ts",
       "norm_label": "allowed_mime_types"
     },
     {
@@ -7733,7 +7733,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_utils_multer_config_multerconfigfotostareas",
       "community": 36,
-      "community_name": "foto.service.ts",
+      "community_name": "campo.controller.ts",
       "norm_label": "multerconfigfotostareas"
     },
     {
@@ -7744,7 +7744,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_utils_multer_config_multerconfiglogocliente",
       "community": 36,
-      "community_name": "foto.service.ts",
+      "community_name": "campo.controller.ts",
       "norm_label": "multerconfiglogocliente"
     },
     {
@@ -7755,7 +7755,7 @@
       "_origin": "ast",
       "id": "apps_api_src_campo_utils_multer_config_validararchivoimagen",
       "community": 36,
-      "community_name": "foto.service.ts",
+      "community_name": "campo.controller.ts",
       "norm_label": "validararchivoimagen()"
     },
     {
@@ -7765,8 +7765,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_src_campo_utils_selectores",
-      "community": 7,
-      "community_name": "rangoPaginacion",
+      "community": 12,
+      "community_name": "ConsultaCampoDto",
       "norm_label": "selectores.ts"
     },
     {
@@ -7776,8 +7776,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_src_campo_utils_selectores_cliente_campo_select",
-      "community": 7,
-      "community_name": "rangoPaginacion",
+      "community": 12,
+      "community_name": "ConsultaCampoDto",
       "norm_label": "cliente_campo_select"
     },
     {
@@ -7787,8 +7787,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "apps_api_src_campo_utils_selectores_local_campo_select",
-      "community": 7,
-      "community_name": "rangoPaginacion",
+      "community": 12,
+      "community_name": "ConsultaCampoDto",
       "norm_label": "local_campo_select"
     },
     {
@@ -7798,8 +7798,8 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "apps_api_src_campo_utils_selectores_horario_campo_select",
-      "community": 7,
-      "community_name": "rangoPaginacion",
+      "community": 12,
+      "community_name": "ConsultaCampoDto",
       "norm_label": "horario_campo_select"
     },
     {
@@ -7809,8 +7809,8 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "apps_api_src_campo_utils_selectores_asignacion_campo_select",
-      "community": 7,
-      "community_name": "rangoPaginacion",
+      "community": 12,
+      "community_name": "ConsultaCampoDto",
       "norm_label": "asignacion_campo_select"
     },
     {
@@ -7820,8 +7820,8 @@
       "source_location": "L48",
       "_origin": "ast",
       "id": "apps_api_src_campo_utils_selectores_backup_campo_select",
-      "community": 7,
-      "community_name": "rangoPaginacion",
+      "community": 12,
+      "community_name": "ConsultaCampoDto",
       "norm_label": "backup_campo_select"
     },
     {
@@ -7831,8 +7831,8 @@
       "source_location": "L58",
       "_origin": "ast",
       "id": "apps_api_src_campo_utils_selectores_tarea_campo_select",
-      "community": 7,
-      "community_name": "rangoPaginacion",
+      "community": 12,
+      "community_name": "ConsultaCampoDto",
       "norm_label": "tarea_campo_select"
     },
     {
@@ -7842,8 +7842,8 @@
       "source_location": "L76",
       "_origin": "ast",
       "id": "apps_api_src_campo_utils_selectores_visita_campo_select",
-      "community": 7,
-      "community_name": "rangoPaginacion",
+      "community": 12,
+      "community_name": "ConsultaCampoDto",
       "norm_label": "visita_campo_select"
     },
     {
@@ -7930,8 +7930,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_src_common_utils_numeros",
-      "community": 41,
-      "community_name": "numeros.ts",
+      "community": 92,
+      "community_name": "RegisterDto",
       "norm_label": "numeros.ts"
     },
     {
@@ -7941,8 +7941,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "apps_api_src_common_utils_numeros_redondear1decimal",
-      "community": 41,
-      "community_name": "numeros.ts",
+      "community": 92,
+      "community_name": "RegisterDto",
       "norm_label": "redondear1decimal()"
     },
     {
@@ -7952,7 +7952,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_src_common_utils_paginacion",
-      "community": 7,
+      "community": 50,
       "community_name": "rangoPaginacion",
       "norm_label": "utils/paginacion.ts"
     },
@@ -7963,8 +7963,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "apps_api_src_common_utils_paginacion_paginaciondto",
-      "community": 62,
-      "community_name": "PaginacionDto",
+      "community": 50,
+      "community_name": "rangoPaginacion",
       "norm_label": "paginaciondto"
     },
     {
@@ -7974,8 +7974,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "apps_api_src_common_utils_paginacion_ts_isoptional",
-      "community": 62,
-      "community_name": "PaginacionDto",
+      "community": 50,
+      "community_name": "rangoPaginacion",
       "norm_label": "isoptional"
     },
     {
@@ -7985,8 +7985,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "apps_api_src_common_utils_paginacion_ts_type",
-      "community": 62,
-      "community_name": "PaginacionDto",
+      "community": 50,
+      "community_name": "rangoPaginacion",
       "norm_label": "type"
     },
     {
@@ -7996,8 +7996,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "apps_api_src_common_utils_paginacion_ts_isint",
-      "community": 62,
-      "community_name": "PaginacionDto",
+      "community": 50,
+      "community_name": "rangoPaginacion",
       "norm_label": "isint"
     },
     {
@@ -8007,8 +8007,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "apps_api_src_common_utils_paginacion_ts_min",
-      "community": 62,
-      "community_name": "PaginacionDto",
+      "community": 50,
+      "community_name": "rangoPaginacion",
       "norm_label": "min"
     },
     {
@@ -8018,8 +8018,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "apps_api_src_common_utils_paginacion_ts_max",
-      "community": 62,
-      "community_name": "PaginacionDto",
+      "community": 50,
+      "community_name": "rangoPaginacion",
       "norm_label": "max"
     },
     {
@@ -8029,7 +8029,7 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "apps_api_src_common_utils_paginacion_respuestapaginada",
-      "community": 7,
+      "community": 50,
       "community_name": "rangoPaginacion",
       "norm_label": "respuestapaginada"
     },
@@ -8040,7 +8040,7 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "apps_api_src_common_utils_paginacion_rangopaginacion",
-      "community": 7,
+      "community": 50,
       "community_name": "rangoPaginacion",
       "norm_label": "rangopaginacion()"
     },
@@ -8117,8 +8117,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_src_common_utils_transforms",
-      "community": 41,
-      "community_name": "numeros.ts",
+      "community": 92,
+      "community_name": "RegisterDto",
       "norm_label": "transforms.ts"
     },
     {
@@ -8128,8 +8128,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "apps_api_src_common_utils_transforms_trimstring",
-      "community": 41,
-      "community_name": "numeros.ts",
+      "community": 92,
+      "community_name": "RegisterDto",
       "norm_label": "trimstring()"
     },
     {
@@ -8139,8 +8139,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "apps_api_src_common_utils_transforms_lowertrimstring",
-      "community": 41,
-      "community_name": "numeros.ts",
+      "community": 92,
+      "community_name": "RegisterDto",
       "norm_label": "lowertrimstring()"
     },
     {
@@ -8667,7 +8667,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_src_empresas_empresas_controller",
-      "community": 7,
+      "community": 50,
       "community_name": "rangoPaginacion",
       "norm_label": "empresas.controller.ts"
     },
@@ -8679,7 +8679,7 @@
       "_origin": "ast",
       "id": "apps_api_src_empresas_empresas_controller_empresascontroller",
       "community": 7,
-      "community_name": "rangoPaginacion",
+      "community_name": "EmpresasController",
       "norm_label": "empresascontroller"
     },
     {
@@ -8690,7 +8690,7 @@
       "_origin": "ast",
       "id": "apps_api_src_empresas_empresas_controller_ts_apitags",
       "community": 7,
-      "community_name": "rangoPaginacion",
+      "community_name": "EmpresasController",
       "norm_label": "apitags"
     },
     {
@@ -8701,7 +8701,7 @@
       "_origin": "ast",
       "id": "apps_api_src_empresas_empresas_controller_ts_controller",
       "community": 7,
-      "community_name": "rangoPaginacion",
+      "community_name": "EmpresasController",
       "norm_label": "controller"
     },
     {
@@ -8712,7 +8712,7 @@
       "_origin": "ast",
       "id": "apps_api_src_empresas_empresas_controller_ts_useguards",
       "community": 7,
-      "community_name": "rangoPaginacion",
+      "community_name": "EmpresasController",
       "norm_label": "useguards"
     },
     {
@@ -8722,7 +8722,7 @@
       "source_location": "",
       "_origin": "ast",
       "id": "apps_api_src_empresas_empresas_controller_ts_get",
-      "community": 7,
+      "community": 50,
       "community_name": "rangoPaginacion",
       "norm_label": "get"
     },
@@ -8733,7 +8733,7 @@
       "source_location": "",
       "_origin": "ast",
       "id": "apps_api_src_empresas_empresas_controller_ts_apioperation",
-      "community": 7,
+      "community": 50,
       "community_name": "rangoPaginacion",
       "norm_label": "apioperation"
     },
@@ -8744,7 +8744,7 @@
       "source_location": "",
       "_origin": "ast",
       "id": "apps_api_src_empresas_empresas_controller_ts_query",
-      "community": 7,
+      "community": 50,
       "community_name": "rangoPaginacion",
       "norm_label": "query"
     },
@@ -8756,7 +8756,7 @@
       "_origin": "ast",
       "id": "apps_api_src_empresas_empresas_controller_empresascontroller_constructor",
       "community": 7,
-      "community_name": "rangoPaginacion",
+      "community_name": "EmpresasController",
       "norm_label": ".constructor()"
     },
     {
@@ -8766,7 +8766,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "apps_api_src_empresas_empresas_controller_empresascontroller_listar",
-      "community": 7,
+      "community": 50,
       "community_name": "rangoPaginacion",
       "norm_label": ".listar()"
     },
@@ -8887,8 +8887,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "apps_api_src_health_health_controller_healthcontroller",
-      "community": 79,
-      "community_name": "AppController",
+      "community": 41,
+      "community_name": "HealthController",
       "norm_label": "healthcontroller"
     },
     {
@@ -8898,8 +8898,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "apps_api_src_health_health_controller_ts_apitags",
-      "community": 79,
-      "community_name": "AppController",
+      "community": 41,
+      "community_name": "HealthController",
       "norm_label": "apitags"
     },
     {
@@ -8909,8 +8909,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "apps_api_src_health_health_controller_ts_controller",
-      "community": 79,
-      "community_name": "AppController",
+      "community": 41,
+      "community_name": "HealthController",
       "norm_label": "controller"
     },
     {
@@ -8920,8 +8920,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "apps_api_src_health_health_controller_ts_get",
-      "community": 79,
-      "community_name": "AppController",
+      "community": 41,
+      "community_name": "HealthController",
       "norm_label": "get"
     },
     {
@@ -8931,8 +8931,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "healthcheck",
-      "community": 79,
-      "community_name": "AppController",
+      "community": 41,
+      "community_name": "HealthController",
       "norm_label": "healthcheck"
     },
     {
@@ -8942,8 +8942,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "apps_api_src_health_health_controller_ts_apioperation",
-      "community": 79,
-      "community_name": "AppController",
+      "community": 41,
+      "community_name": "HealthController",
       "norm_label": "apioperation"
     },
     {
@@ -8953,8 +8953,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "apps_api_src_health_health_controller_healthcontroller_constructor",
-      "community": 79,
-      "community_name": "AppController",
+      "community": 41,
+      "community_name": "HealthController",
       "norm_label": ".constructor()"
     },
     {
@@ -8964,8 +8964,8 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "apps_api_src_health_health_controller_healthcontroller_check",
-      "community": 79,
-      "community_name": "AppController",
+      "community": 41,
+      "community_name": "HealthController",
       "norm_label": ".check()"
     },
     {
@@ -10053,8 +10053,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_src_plataforma_dto_modulo_dto",
-      "community": 41,
-      "community_name": "numeros.ts",
+      "community": 92,
+      "community_name": "RegisterDto",
       "norm_label": "modulo.dto.ts"
     },
     {
@@ -10064,8 +10064,8 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "apps_api_src_plataforma_dto_modulo_dto_crearmodulodto",
-      "community": 15,
-      "community_name": "ActualizarModuloDto",
+      "community": 4,
+      "community_name": "ModulosService",
       "norm_label": "crearmodulodto"
     },
     {
@@ -10075,8 +10075,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "apps_api_src_plataforma_dto_modulo_dto_ts_isstring",
-      "community": 15,
-      "community_name": "ActualizarModuloDto",
+      "community": 4,
+      "community_name": "ModulosService",
       "norm_label": "isstring"
     },
     {
@@ -10086,8 +10086,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "apps_api_src_plataforma_dto_modulo_dto_ts_transform",
-      "community": 15,
-      "community_name": "ActualizarModuloDto",
+      "community": 4,
+      "community_name": "ModulosService",
       "norm_label": "transform"
     },
     {
@@ -10097,8 +10097,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "apps_api_src_plataforma_dto_modulo_dto_ts_length",
-      "community": 15,
-      "community_name": "ActualizarModuloDto",
+      "community": 4,
+      "community_name": "ModulosService",
       "norm_label": "length"
     },
     {
@@ -10108,8 +10108,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "apps_api_src_plataforma_dto_modulo_dto_ts_matches",
-      "community": 15,
-      "community_name": "ActualizarModuloDto",
+      "community": 4,
+      "community_name": "ModulosService",
       "norm_label": "matches"
     },
     {
@@ -10119,8 +10119,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "apps_api_src_plataforma_dto_modulo_dto_ts_isoptional",
-      "community": 15,
-      "community_name": "ActualizarModuloDto",
+      "community": 4,
+      "community_name": "ModulosService",
       "norm_label": "isoptional"
     },
     {
@@ -10130,8 +10130,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "apps_api_src_plataforma_dto_modulo_dto_ts_isint",
-      "community": 15,
-      "community_name": "ActualizarModuloDto",
+      "community": 4,
+      "community_name": "ModulosService",
       "norm_label": "isint"
     },
     {
@@ -10141,8 +10141,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "apps_api_src_plataforma_dto_modulo_dto_ts_min",
-      "community": 15,
-      "community_name": "ActualizarModuloDto",
+      "community": 4,
+      "community_name": "ModulosService",
       "norm_label": "min"
     },
     {
@@ -10152,8 +10152,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "apps_api_src_plataforma_dto_modulo_dto_ts_max",
-      "community": 15,
-      "community_name": "ActualizarModuloDto",
+      "community": 4,
+      "community_name": "ModulosService",
       "norm_label": "max"
     },
     {
@@ -10163,8 +10163,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "apps_api_src_plataforma_dto_modulo_dto_ts_isboolean",
-      "community": 15,
-      "community_name": "ActualizarModuloDto",
+      "community": 4,
+      "community_name": "ModulosService",
       "norm_label": "isboolean"
     },
     {
@@ -10174,8 +10174,8 @@
       "source_location": "L48",
       "_origin": "ast",
       "id": "apps_api_src_plataforma_dto_modulo_dto_actualizarmodulodto",
-      "community": 15,
-      "community_name": "ActualizarModuloDto",
+      "community": 4,
+      "community_name": "ModulosService",
       "norm_label": "actualizarmodulodto"
     },
     {
@@ -10185,8 +10185,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_src_plataforma_dto_pagina_dto",
-      "community": 41,
-      "community_name": "numeros.ts",
+      "community": 92,
+      "community_name": "RegisterDto",
       "norm_label": "pagina.dto.ts"
     },
     {
@@ -10845,8 +10845,8 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "apps_api_src_plataforma_plataforma_controller_miplataformacontroller",
-      "community": 16,
-      "community_name": "AdminPlataformaController",
+      "community": 54,
+      "community_name": "MiPlataformaService",
       "norm_label": "miplataformacontroller"
     },
     {
@@ -10856,8 +10856,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "apps_api_src_plataforma_plataforma_controller_ts_apitags",
-      "community": 16,
-      "community_name": "AdminPlataformaController",
+      "community": 54,
+      "community_name": "MiPlataformaService",
       "norm_label": "apitags"
     },
     {
@@ -10867,8 +10867,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "apps_api_src_plataforma_plataforma_controller_ts_controller",
-      "community": 16,
-      "community_name": "AdminPlataformaController",
+      "community": 54,
+      "community_name": "MiPlataformaService",
       "norm_label": "controller"
     },
     {
@@ -10878,8 +10878,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "apps_api_src_plataforma_plataforma_controller_ts_useguards",
-      "community": 16,
-      "community_name": "AdminPlataformaController",
+      "community": 54,
+      "community_name": "MiPlataformaService",
       "norm_label": "useguards"
     },
     {
@@ -10900,8 +10900,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "apps_api_src_plataforma_plataforma_controller_ts_req",
-      "community": 16,
-      "community_name": "AdminPlataformaController",
+      "community": 54,
+      "community_name": "MiPlataformaService",
       "norm_label": "req"
     },
     {
@@ -10922,8 +10922,8 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "apps_api_src_plataforma_plataforma_controller_miplataformacontroller_menu",
-      "community": 16,
-      "community_name": "AdminPlataformaController",
+      "community": 54,
+      "community_name": "MiPlataformaService",
       "norm_label": ".menu()"
     },
     {
@@ -11736,8 +11736,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_src_roles_roles_service_spec",
-      "community": 5,
-      "community_name": "PrismaService",
+      "community": 0,
+      "community_name": "roles.service.ts",
       "norm_label": "roles.service.spec.ts"
     },
     {
@@ -11890,8 +11890,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_src_usuarios_admin_usuarios_controller",
-      "community": 31,
-      "community_name": "usuarios.service.ts",
+      "community": 88,
+      "community_name": "plataforma.controller.ts",
       "norm_label": "admin-usuarios.controller.ts"
     },
     {
@@ -12154,8 +12154,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_src_usuarios_dto_usuario_dto",
-      "community": 31,
-      "community_name": "usuarios.service.ts",
+      "community": 92,
+      "community_name": "RegisterDto",
       "norm_label": "usuario.dto.ts"
     },
     {
@@ -12374,8 +12374,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_src_usuarios_usuarios_controller",
-      "community": 31,
-      "community_name": "usuarios.service.ts",
+      "community": 88,
+      "community_name": "plataforma.controller.ts",
       "norm_label": "usuarios.controller.ts"
     },
     {
@@ -13881,8 +13881,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_app_layout",
-      "community": 38,
-      "community_name": "toast-provider.tsx",
+      "community": 30,
+      "community_name": "api-tareas.ts",
       "norm_label": "app/layout.tsx"
     },
     {
@@ -13892,8 +13892,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "apps_web_src_app_layout_manrope",
-      "community": 38,
-      "community_name": "toast-provider.tsx",
+      "community": 30,
+      "community_name": "api-tareas.ts",
       "norm_label": "manrope"
     },
     {
@@ -13903,8 +13903,8 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "apps_web_src_app_layout_metadata",
-      "community": 38,
-      "community_name": "toast-provider.tsx",
+      "community": 30,
+      "community_name": "api-tareas.ts",
       "norm_label": "metadata"
     },
     {
@@ -13914,8 +13914,8 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "apps_web_src_app_layout_viewport",
-      "community": 38,
-      "community_name": "toast-provider.tsx",
+      "community": 30,
+      "community_name": "api-tareas.ts",
       "norm_label": "viewport"
     },
     {
@@ -13925,8 +13925,8 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "apps_web_src_app_layout_rootlayout",
-      "community": 38,
-      "community_name": "toast-provider.tsx",
+      "community": 30,
+      "community_name": "api-tareas.ts",
       "norm_label": "rootlayout()"
     },
     {
@@ -13980,8 +13980,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_app_panel_modulo_pagina_page",
-      "community": 47,
-      "community_name": "panel/layout.tsx",
+      "community": 38,
+      "community_name": "[pagina]/page.tsx",
       "norm_label": "[pagina]/page.tsx"
     },
     {
@@ -13991,8 +13991,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "apps_web_src_app_panel_modulo_pagina_page_clientespanel",
-      "community": 47,
-      "community_name": "panel/layout.tsx",
+      "community": 38,
+      "community_name": "[pagina]/page.tsx",
       "norm_label": "clientespanel"
     },
     {
@@ -14002,8 +14002,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "apps_web_src_app_panel_modulo_pagina_page_localespanel",
-      "community": 47,
-      "community_name": "panel/layout.tsx",
+      "community": 38,
+      "community_name": "[pagina]/page.tsx",
       "norm_label": "localespanel"
     },
     {
@@ -14013,92 +14013,70 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "apps_web_src_app_panel_modulo_pagina_page_tareaspanel",
-      "community": 47,
-      "community_name": "panel/layout.tsx",
+      "community": 38,
+      "community_name": "[pagina]/page.tsx",
       "norm_label": "tareaspanel"
-    },
-    {
-      "label": "JornadaPanel",
-      "file_type": "code",
-      "source_file": "apps/web/src/app/panel/[modulo]/[pagina]/page.tsx",
-      "source_location": "L16",
-      "_origin": "ast",
-      "id": "apps_web_src_app_panel_modulo_pagina_page_jornadapanel",
-      "community": 47,
-      "community_name": "panel/layout.tsx",
-      "norm_label": "jornadapanel"
-    },
-    {
-      "label": "VisitasPanel",
-      "file_type": "code",
-      "source_file": "apps/web/src/app/panel/[modulo]/[pagina]/page.tsx",
-      "source_location": "L19",
-      "_origin": "ast",
-      "id": "apps_web_src_app_panel_modulo_pagina_page_visitaspanel",
-      "community": 47,
-      "community_name": "panel/layout.tsx",
-      "norm_label": "visitaspanel"
     },
     {
       "label": "SupervisionPanel",
       "file_type": "code",
       "source_file": "apps/web/src/app/panel/[modulo]/[pagina]/page.tsx",
-      "source_location": "L24",
+      "source_location": "L17",
       "_origin": "ast",
       "id": "apps_web_src_app_panel_modulo_pagina_page_supervisionpanel",
-      "community": 47,
-      "community_name": "panel/layout.tsx",
+      "community": 38,
+      "community_name": "[pagina]/page.tsx",
       "norm_label": "supervisionpanel"
     },
     {
       "label": "RutaImpulsadorPanel",
       "file_type": "code",
       "source_file": "apps/web/src/app/panel/[modulo]/[pagina]/page.tsx",
-      "source_location": "L27",
+      "source_location": "L20",
       "_origin": "ast",
       "id": "apps_web_src_app_panel_modulo_pagina_page_rutaimpulsadorpanel",
-      "community": 47,
-      "community_name": "panel/layout.tsx",
+      "community": 38,
+      "community_name": "[pagina]/page.tsx",
       "norm_label": "rutaimpulsadorpanel"
     },
     {
       "label": "TareasImpulsadorPanel",
       "file_type": "code",
       "source_file": "apps/web/src/app/panel/[modulo]/[pagina]/page.tsx",
-      "source_location": "L30",
+      "source_location": "L23",
       "_origin": "ast",
       "id": "apps_web_src_app_panel_modulo_pagina_page_tareasimpulsadorpanel",
-      "community": 47,
-      "community_name": "panel/layout.tsx",
+      "community": 38,
+      "community_name": "[pagina]/page.tsx",
       "norm_label": "tareasimpulsadorpanel"
     },
     {
       "label": "NovedadesPanel",
       "file_type": "code",
       "source_file": "apps/web/src/app/panel/[modulo]/[pagina]/page.tsx",
-      "source_location": "L33",
+      "source_location": "L26",
       "_origin": "ast",
       "id": "apps_web_src_app_panel_modulo_pagina_page_novedadespanel",
-      "community": 47,
-      "community_name": "panel/layout.tsx",
+      "community": 38,
+      "community_name": "[pagina]/page.tsx",
       "norm_label": "novedadespanel"
     },
     {
       "label": "AvisosPanel",
       "file_type": "code",
       "source_file": "apps/web/src/app/panel/[modulo]/[pagina]/page.tsx",
-      "source_location": "L36",
+      "source_location": "L29",
       "_origin": "ast",
       "id": "apps_web_src_app_panel_modulo_pagina_page_avisospanel",
-      "community": 47,
-      "community_name": "panel/layout.tsx",
+      "community": 38,
+      "community_name": "[pagina]/page.tsx",
       "norm_label": "avisospanel"
     },
     {
       "label": "PaginaModulo()",
       "file_type": "code",
       "source_file": "apps/web/src/app/panel/[modulo]/[pagina]/page.tsx",
-      "source_location": "L40",
+      "source_location": "L33",
       "_origin": "ast",
       "id": "apps_web_src_app_panel_modulo_pagina_page_paginamodulo",
       "community": 47,
@@ -14134,8 +14112,8 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "apps_web_src_app_panel_admin_page_adminpage",
-      "community": 21,
-      "community_name": "apiFetch",
+      "community": 47,
+      "community_name": "panel/layout.tsx",
       "norm_label": "adminpage()"
     },
     {
@@ -14211,8 +14189,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_app_panel_page",
-      "community": 25,
-      "community_name": "campo.ts",
+      "community": 47,
+      "community_name": "panel/layout.tsx",
       "norm_label": "panel/page.tsx"
     },
     {
@@ -14222,8 +14200,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "apps_web_src_app_panel_page_paneliniciopage",
-      "community": 25,
-      "community_name": "campo.ts",
+      "community": 47,
+      "community_name": "panel/layout.tsx",
       "norm_label": "paneliniciopage()"
     },
     {
@@ -14233,8 +14211,8 @@
       "source_location": "L73",
       "_origin": "ast",
       "id": "apps_web_src_app_panel_page_inicioresumen",
-      "community": 25,
-      "community_name": "campo.ts",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "inicioresumen()"
     },
     {
@@ -14244,8 +14222,8 @@
       "source_location": "L186",
       "_origin": "ast",
       "id": "apps_web_src_app_panel_page_kpiinicio",
-      "community": 25,
-      "community_name": "campo.ts",
+      "community": 47,
+      "community_name": "panel/layout.tsx",
       "norm_label": "kpiinicio()"
     },
     {
@@ -14255,8 +14233,8 @@
       "source_location": "L218",
       "_origin": "ast",
       "id": "apps_web_src_app_panel_page_acceso",
-      "community": 25,
-      "community_name": "campo.ts",
+      "community": 47,
+      "community_name": "panel/layout.tsx",
       "norm_label": "acceso()"
     },
     {
@@ -14266,8 +14244,8 @@
       "source_location": "L230",
       "_origin": "ast",
       "id": "apps_web_src_app_panel_page_descripcionpagina",
-      "community": 25,
-      "community_name": "campo.ts",
+      "community": 47,
+      "community_name": "panel/layout.tsx",
       "norm_label": "descripcionpagina()"
     },
     {
@@ -14299,8 +14277,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_components_actualizador_despliegue",
-      "community": 38,
-      "community_name": "toast-provider.tsx",
+      "community": 30,
+      "community_name": "api-tareas.ts",
       "norm_label": "actualizador-despliegue.tsx"
     },
     {
@@ -14310,8 +14288,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "apps_web_src_components_actualizador_despliegue_deploymentiddelhtml",
-      "community": 38,
-      "community_name": "toast-provider.tsx",
+      "community": 30,
+      "community_name": "api-tareas.ts",
       "norm_label": "deploymentiddelhtml()"
     },
     {
@@ -14321,8 +14299,8 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "apps_web_src_components_actualizador_despliegue_obtenerdeploymentid",
-      "community": 38,
-      "community_name": "toast-provider.tsx",
+      "community": 30,
+      "community_name": "api-tareas.ts",
       "norm_label": "obtenerdeploymentid()"
     },
     {
@@ -14332,8 +14310,8 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "apps_web_src_components_actualizador_despliegue_actualizadordespliegue",
-      "community": 38,
-      "community_name": "toast-provider.tsx",
+      "community": 30,
+      "community_name": "api-tareas.ts",
       "norm_label": "actualizadordespliegue()"
     },
     {
@@ -14398,8 +14376,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_components_admin_empresas_panel",
-      "community": 17,
-      "community_name": "modulos-panel.tsx",
+      "community": 21,
+      "community_name": "apiFetch",
       "norm_label": "empresas-panel.tsx"
     },
     {
@@ -14420,8 +14398,8 @@
       "source_location": "L295",
       "_origin": "ast",
       "id": "apps_web_src_components_admin_empresas_panel_selectorroles",
-      "community": 17,
-      "community_name": "modulos-panel.tsx",
+      "community": 21,
+      "community_name": "apiFetch",
       "norm_label": "selectorroles()"
     },
     {
@@ -14431,8 +14409,8 @@
       "source_location": "L362",
       "_origin": "ast",
       "id": "apps_web_src_components_admin_empresas_panel_selectorpaginas",
-      "community": 17,
-      "community_name": "modulos-panel.tsx",
+      "community": 21,
+      "community_name": "apiFetch",
       "norm_label": "selectorpaginas()"
     },
     {
@@ -14794,8 +14772,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_catalogo_panel",
-      "community": 21,
-      "community_name": "apiFetch",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "catalogo-panel.tsx"
     },
     {
@@ -14805,8 +14783,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_clientes_panel",
-      "community": 14,
-      "community_name": "locales-panel.tsx",
+      "community": 28,
+      "community_name": "supervision-panel.tsx",
       "norm_label": "clientes-panel.tsx"
     },
     {
@@ -14816,8 +14794,8 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_clientes_panel_clientespanel",
-      "community": 21,
-      "community_name": "apiFetch",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "clientespanel()"
     },
     {
@@ -14893,8 +14871,8 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_jornada_panel_jornadapanel",
-      "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "jornadapanel()"
     },
     {
@@ -14904,8 +14882,8 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_jornada_panel_agendadeldia",
-      "community": 21,
-      "community_name": "apiFetch",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "agendadeldia()"
     },
     {
@@ -14926,8 +14904,8 @@
       "source_location": "L710",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_jornada_panel_tareasdelocal",
-      "community": 21,
-      "community_name": "apiFetch",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "tareasdelocal()"
     },
     {
@@ -14981,8 +14959,8 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_locales_panel_localespanel",
-      "community": 21,
-      "community_name": "apiFetch",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "localespanel()"
     },
     {
@@ -15047,8 +15025,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_novedades_panel",
-      "community": 25,
-      "community_name": "campo.ts",
+      "community": 21,
+      "community_name": "apiFetch",
       "norm_label": "novedades-panel.tsx"
     },
     {
@@ -15058,8 +15036,8 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_novedades_panel_novedadespanel",
-      "community": 25,
-      "community_name": "campo.ts",
+      "community": 21,
+      "community_name": "apiFetch",
       "norm_label": "novedadespanel()"
     },
     {
@@ -15102,8 +15080,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_plan_local",
-      "community": 21,
-      "community_name": "apiFetch",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "plan-local.tsx"
     },
     {
@@ -15113,8 +15091,8 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_plan_local_planlocal",
-      "community": 14,
-      "community_name": "locales-panel.tsx",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "planlocal()"
     },
     {
@@ -15124,8 +15102,8 @@
       "source_location": "L103",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_plan_local_horarioslocal",
-      "community": 21,
-      "community_name": "apiFetch",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "horarioslocal()"
     },
     {
@@ -15135,8 +15113,8 @@
       "source_location": "L444",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_plan_local_asignacioneslocal",
-      "community": 21,
-      "community_name": "apiFetch",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "asignacioneslocal()"
     },
     {
@@ -15146,8 +15124,8 @@
       "source_location": "L680",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_plan_local_modalbackups",
-      "community": 21,
-      "community_name": "apiFetch",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "modalbackups()"
     },
     {
@@ -15157,7 +15135,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ruta_impulsador_panel",
-      "community": 28,
+      "community": 15,
       "community_name": "ruta-impulsador-panel.tsx",
       "norm_label": "ruta-impulsador-panel.tsx"
     },
@@ -15165,10 +15143,10 @@
       "label": "LocalParaNovedad",
       "file_type": "code",
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L30",
+      "source_location": "L29",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ruta_impulsador_panel_localparanovedad",
-      "community": 28,
+      "community": 15,
       "community_name": "ruta-impulsador-panel.tsx",
       "norm_label": "localparanovedad"
     },
@@ -15176,23 +15154,12 @@
       "label": "RutaImpulsadorPanel()",
       "file_type": "code",
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L32",
+      "source_location": "L31",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ruta_impulsador_panel_rutaimpulsadorpanel",
-      "community": 28,
+      "community": 15,
       "community_name": "ruta-impulsador-panel.tsx",
       "norm_label": "rutaimpulsadorpanel()"
-    },
-    {
-      "label": "ModalMarcaPresencia()",
-      "file_type": "code",
-      "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L655",
-      "_origin": "ast",
-      "id": "apps_web_src_components_campo_ruta_impulsador_panel_modalmarcapresencia",
-      "community": 21,
-      "community_name": "apiFetch",
-      "norm_label": "modalmarcapresencia()"
     },
     {
       "label": "selector-cliente-combobox.tsx",
@@ -15290,7 +15257,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_campo_supervision_panel",
       "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community_name": "supervision-panel.tsx",
       "norm_label": "supervision-panel.tsx"
     },
     {
@@ -15301,7 +15268,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_campo_supervision_panel_usersicon",
       "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community_name": "supervision-panel.tsx",
       "norm_label": "usersicon()"
     },
     {
@@ -15312,7 +15279,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_campo_supervision_panel_navigationicon",
       "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community_name": "supervision-panel.tsx",
       "norm_label": "navigationicon()"
     },
     {
@@ -15323,7 +15290,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_campo_supervision_panel_listchecksicon",
       "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community_name": "supervision-panel.tsx",
       "norm_label": "listchecksicon()"
     },
     {
@@ -15334,7 +15301,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_campo_supervision_panel_alertoctagonicon",
       "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community_name": "supervision-panel.tsx",
       "norm_label": "alertoctagonicon()"
     },
     {
@@ -15345,7 +15312,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_campo_supervision_panel_storeicon",
       "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community_name": "supervision-panel.tsx",
       "norm_label": "storeicon()"
     },
     {
@@ -15356,7 +15323,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_campo_supervision_panel_tabtype",
       "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community_name": "supervision-panel.tsx",
       "norm_label": "tabtype"
     },
     {
@@ -15367,7 +15334,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_campo_supervision_panel_supervisionpanelprops",
       "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community_name": "supervision-panel.tsx",
       "norm_label": "supervisionpanelprops"
     },
     {
@@ -15378,7 +15345,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_campo_supervision_panel_supervisionpanel",
       "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community_name": "supervision-panel.tsx",
       "norm_label": "supervisionpanel()"
     },
     {
@@ -15388,8 +15355,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_tabla_campo",
-      "community": 9,
-      "community_name": "jornada-panel.tsx",
+      "community": 21,
+      "community_name": "apiFetch",
       "norm_label": "tabla-campo.tsx"
     },
     {
@@ -15411,7 +15378,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_campo_tareas_impulsador_panel",
       "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community_name": "supervision-panel.tsx",
       "norm_label": "tareas-impulsador-panel.tsx"
     },
     {
@@ -15421,8 +15388,8 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_tareas_impulsador_panel_tareasimpulsadorpanel",
-      "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "tareasimpulsadorpanel()"
     },
     {
@@ -15432,8 +15399,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_tareas_panel",
-      "community": 14,
-      "community_name": "locales-panel.tsx",
+      "community": 28,
+      "community_name": "supervision-panel.tsx",
       "norm_label": "tareas-panel.tsx"
     },
     {
@@ -15443,8 +15410,8 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_tareas_panel_categorias_preset",
-      "community": 14,
-      "community_name": "locales-panel.tsx",
+      "community": 28,
+      "community_name": "supervision-panel.tsx",
       "norm_label": "categorias_preset"
     },
     {
@@ -15454,8 +15421,8 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_tareas_panel_tareaspanel",
-      "community": 21,
-      "community_name": "apiFetch",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "tareaspanel()"
     },
     {
@@ -15466,7 +15433,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_campo_tokens",
       "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community_name": "supervision-panel.tsx",
       "norm_label": "tokens.ts"
     },
     {
@@ -15477,7 +15444,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_campo_tokens_tokens",
       "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community_name": "supervision-panel.tsx",
       "norm_label": "tokens"
     },
     {
@@ -15488,7 +15455,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_campo_tokens_tokencolor",
       "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community_name": "supervision-panel.tsx",
       "norm_label": "tokencolor"
     },
     {
@@ -15499,7 +15466,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_big_progress",
       "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community_name": "supervision-panel.tsx",
       "norm_label": "big-progress.tsx"
     },
     {
@@ -15510,7 +15477,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_big_progress_bigprogressprops",
       "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community_name": "supervision-panel.tsx",
       "norm_label": "bigprogressprops"
     },
     {
@@ -15521,7 +15488,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_big_progress_bigprogress",
       "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community_name": "supervision-panel.tsx",
       "norm_label": "bigprogress()"
     },
     {
@@ -15532,7 +15499,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_bottom_nav",
       "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community_name": "supervision-panel.tsx",
       "norm_label": "bottom-nav.tsx"
     },
     {
@@ -15543,7 +15510,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_bottom_nav_navitem",
       "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community_name": "supervision-panel.tsx",
       "norm_label": "navitem"
     },
     {
@@ -15554,7 +15521,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_bottom_nav_bottomnavprops",
       "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community_name": "supervision-panel.tsx",
       "norm_label": "bottomnavprops"
     },
     {
@@ -15565,7 +15532,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_bottom_nav_bottomnav",
       "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community_name": "supervision-panel.tsx",
       "norm_label": "bottomnav()"
     },
     {
@@ -15576,7 +15543,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_collaborator_row",
       "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community_name": "supervision-panel.tsx",
       "norm_label": "collaborator-row.tsx"
     },
     {
@@ -15587,7 +15554,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_collaborator_row_collaboratorrowprops",
       "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community_name": "supervision-panel.tsx",
       "norm_label": "collaboratorrowprops"
     },
     {
@@ -15598,7 +15565,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_collaborator_row_collaboratorrow",
       "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community_name": "supervision-panel.tsx",
       "norm_label": "collaboratorrow()"
     },
     {
@@ -15685,8 +15652,8 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_iconos_campo_iconocalendario",
-      "community": 14,
-      "community_name": "locales-panel.tsx",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "iconocalendario()"
     },
     {
@@ -15707,8 +15674,8 @@
       "source_location": "L81",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_iconos_campo_iconocheck",
-      "community": 25,
-      "community_name": "campo.ts",
+      "community": 14,
+      "community_name": "locales-panel.tsx",
       "norm_label": "iconocheck()"
     },
     {
@@ -15729,8 +15696,8 @@
       "source_location": "L105",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_iconos_campo_iconoeditar",
-      "community": 14,
-      "community_name": "locales-panel.tsx",
+      "community": 28,
+      "community_name": "supervision-panel.tsx",
       "norm_label": "iconoeditar()"
     },
     {
@@ -15740,8 +15707,8 @@
       "source_location": "L114",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_iconos_campo_iconoeliminar",
-      "community": 14,
-      "community_name": "locales-panel.tsx",
+      "community": 28,
+      "community_name": "supervision-panel.tsx",
       "norm_label": "iconoeliminar()"
     },
     {
@@ -15795,8 +15762,8 @@
       "source_location": "L166",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_iconos_campo_iconoflechader",
-      "community": 25,
-      "community_name": "campo.ts",
+      "community": 47,
+      "community_name": "panel/layout.tsx",
       "norm_label": "iconoflechader()"
     },
     {
@@ -15839,8 +15806,8 @@
       "source_location": "L210",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_iconos_campo_iconocamara",
-      "community": 14,
-      "community_name": "locales-panel.tsx",
+      "community": 28,
+      "community_name": "supervision-panel.tsx",
       "norm_label": "iconocamara()"
     },
     {
@@ -15905,8 +15872,8 @@
       "source_location": "L270",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_iconos_campo_iconoequipo",
-      "community": 14,
-      "community_name": "locales-panel.tsx",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "iconoequipo()"
     },
     {
@@ -15916,8 +15883,8 @@
       "source_location": "L278",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_iconos_campo_iconoglobo",
-      "community": 14,
-      "community_name": "locales-panel.tsx",
+      "community": 28,
+      "community_name": "supervision-panel.tsx",
       "norm_label": "iconoglobo()"
     },
     {
@@ -15938,8 +15905,8 @@
       "source_location": "L303",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_iconos_campo_iconorefrescar",
-      "community": 14,
-      "community_name": "locales-panel.tsx",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "iconorefrescar()"
     },
     {
@@ -15983,7 +15950,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_seg_tabs",
       "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community_name": "supervision-panel.tsx",
       "norm_label": "seg-tabs.tsx"
     },
     {
@@ -15994,7 +15961,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_seg_tabs_tabitem",
       "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community_name": "supervision-panel.tsx",
       "norm_label": "tabitem"
     },
     {
@@ -16005,7 +15972,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_seg_tabs_segtabsprops",
       "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community_name": "supervision-panel.tsx",
       "norm_label": "segtabsprops"
     },
     {
@@ -16016,7 +15983,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_seg_tabs_segtabs",
       "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community_name": "supervision-panel.tsx",
       "norm_label": "segtabs()"
     },
     {
@@ -16026,8 +15993,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_selector_fecha_filtro",
-      "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "selector-fecha-filtro.tsx"
     },
     {
@@ -16038,7 +16005,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_selector_fecha_filtro_periodofiltro",
       "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community_name": "supervision-panel.tsx",
       "norm_label": "periodofiltro"
     },
     {
@@ -16048,8 +16015,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_selector_fecha_filtro_selectorfechafiltroprops",
-      "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "selectorfechafiltroprops"
     },
     {
@@ -16059,8 +16026,8 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_selector_fecha_filtro_periodosdesdehoy",
-      "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "periodosdesdehoy()"
     },
     {
@@ -16070,8 +16037,8 @@
       "source_location": "L81",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_selector_fecha_filtro_selectorfechafiltro",
-      "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "selectorfechafiltro()"
     },
     {
@@ -16082,7 +16049,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_stat_chip",
       "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community_name": "supervision-panel.tsx",
       "norm_label": "stat-chip.tsx"
     },
     {
@@ -16093,7 +16060,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_stat_chip_statchipprops",
       "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community_name": "supervision-panel.tsx",
       "norm_label": "statchipprops"
     },
     {
@@ -16104,7 +16071,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_stat_chip_statchip",
       "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community_name": "supervision-panel.tsx",
       "norm_label": "statchip()"
     },
     {
@@ -16115,7 +16082,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_status_stamp",
       "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community_name": "supervision-panel.tsx",
       "norm_label": "status-stamp.tsx"
     },
     {
@@ -16126,7 +16093,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_status_stamp_statusstampprops",
       "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community_name": "supervision-panel.tsx",
       "norm_label": "statusstampprops"
     },
     {
@@ -16137,7 +16104,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_status_stamp_statusstamp",
       "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community_name": "supervision-panel.tsx",
       "norm_label": "statusstamp()"
     },
     {
@@ -16148,7 +16115,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_top_bar",
       "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community_name": "supervision-panel.tsx",
       "norm_label": "top-bar.tsx"
     },
     {
@@ -16159,7 +16126,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_top_bar_topbarprops",
       "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community_name": "supervision-panel.tsx",
       "norm_label": "topbarprops"
     },
     {
@@ -16170,7 +16137,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_top_bar_topbar",
       "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community_name": "supervision-panel.tsx",
       "norm_label": "topbar()"
     },
     {
@@ -16268,8 +16235,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_components_login_form",
-      "community": 9,
-      "community_name": "jornada-panel.tsx",
+      "community": 47,
+      "community_name": "panel/layout.tsx",
       "norm_label": "login-form.tsx"
     },
     {
@@ -16290,8 +16257,8 @@
       "source_location": "L136",
       "_origin": "ast",
       "id": "apps_web_src_components_login_form_iconomostrar",
-      "community": 9,
-      "community_name": "jornada-panel.tsx",
+      "community": 47,
+      "community_name": "panel/layout.tsx",
       "norm_label": "iconomostrar()"
     },
     {
@@ -16301,8 +16268,8 @@
       "source_location": "L144",
       "_origin": "ast",
       "id": "apps_web_src_components_login_form_iconoocultar",
-      "community": 9,
-      "community_name": "jornada-panel.tsx",
+      "community": 47,
+      "community_name": "panel/layout.tsx",
       "norm_label": "iconoocultar()"
     },
     {
@@ -16312,8 +16279,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_components_modal",
-      "community": 14,
-      "community_name": "locales-panel.tsx",
+      "community": 28,
+      "community_name": "supervision-panel.tsx",
       "norm_label": "modal.tsx"
     },
     {
@@ -16323,8 +16290,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "apps_web_src_components_modal_modal",
-      "community": 14,
-      "community_name": "locales-panel.tsx",
+      "community": 28,
+      "community_name": "supervision-panel.tsx",
       "norm_label": "modal()"
     },
     {
@@ -16499,8 +16466,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_components_pantalla_carga",
-      "community": 9,
-      "community_name": "jornada-panel.tsx",
+      "community": 21,
+      "community_name": "apiFetch",
       "norm_label": "pantalla-carga.tsx"
     },
     {
@@ -16510,8 +16477,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "apps_web_src_components_pantalla_carga_pantallacarga",
-      "community": 9,
-      "community_name": "jornada-panel.tsx",
+      "community": 21,
+      "community_name": "apiFetch",
       "norm_label": "pantallacarga()"
     },
     {
@@ -16598,8 +16565,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "apps_web_src_components_toast_toast_controller_registrarlistenertoast",
-      "community": 38,
-      "community_name": "toast-provider.tsx",
+      "community": 30,
+      "community_name": "api-tareas.ts",
       "norm_label": "registrarlistenertoast()"
     },
     {
@@ -16620,8 +16587,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_components_toast_toast_provider",
-      "community": 38,
-      "community_name": "toast-provider.tsx",
+      "community": 30,
+      "community_name": "api-tareas.ts",
       "norm_label": "toast-provider.tsx"
     },
     {
@@ -16631,8 +16598,8 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "apps_web_src_components_toast_toast_provider_contextotoast",
-      "community": 38,
-      "community_name": "toast-provider.tsx",
+      "community": 30,
+      "community_name": "api-tareas.ts",
       "norm_label": "contextotoast"
     },
     {
@@ -16642,8 +16609,8 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "apps_web_src_components_toast_toast_provider_estilos",
-      "community": 38,
-      "community_name": "toast-provider.tsx",
+      "community": 30,
+      "community_name": "api-tareas.ts",
       "norm_label": "estilos"
     },
     {
@@ -16653,8 +16620,8 @@
       "source_location": "L54",
       "_origin": "ast",
       "id": "apps_web_src_components_toast_toast_provider_iconotoast",
-      "community": 38,
-      "community_name": "toast-provider.tsx",
+      "community": 30,
+      "community_name": "api-tareas.ts",
       "norm_label": "iconotoast()"
     },
     {
@@ -16664,8 +16631,8 @@
       "source_location": "L84",
       "_origin": "ast",
       "id": "apps_web_src_components_toast_toast_provider_toast",
-      "community": 38,
-      "community_name": "toast-provider.tsx",
+      "community": 30,
+      "community_name": "api-tareas.ts",
       "norm_label": "toast()"
     },
     {
@@ -16675,8 +16642,8 @@
       "source_location": "L141",
       "_origin": "ast",
       "id": "apps_web_src_components_toast_toast_provider_toastprovider",
-      "community": 38,
-      "community_name": "toast-provider.tsx",
+      "community": 30,
+      "community_name": "api-tareas.ts",
       "norm_label": "toastprovider()"
     },
     {
@@ -16686,8 +16653,8 @@
       "source_location": "L231",
       "_origin": "ast",
       "id": "apps_web_src_components_toast_toast_provider_usetoast",
-      "community": 38,
-      "community_name": "toast-provider.tsx",
+      "community": 30,
+      "community_name": "api-tareas.ts",
       "norm_label": "usetoast()"
     },
     {
@@ -16697,8 +16664,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_components_ui",
-      "community": 9,
-      "community_name": "jornada-panel.tsx",
+      "community": 21,
+      "community_name": "apiFetch",
       "norm_label": "ui.ts"
     },
     {
@@ -16807,7 +16774,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "apps_web_src_hooks_use_jornada_completa_usejornadacompleta",
-      "community": 28,
+      "community": 15,
       "community_name": "ruta-impulsador-panel.tsx",
       "norm_label": "usejornadacompleta()"
     },
@@ -16829,8 +16796,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "apps_web_src_hooks_use_lista_campo_uselistacampo",
-      "community": 21,
-      "community_name": "apiFetch",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "uselistacampo()"
     },
     {
@@ -16840,8 +16807,8 @@
       "source_location": "L58",
       "_origin": "ast",
       "id": "apps_web_src_hooks_use_lista_campo_useoperacioncampo",
-      "community": 21,
-      "community_name": "apiFetch",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "useoperacioncampo()"
     },
     {
@@ -17071,8 +17038,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "apps_web_src_types_campo_respuestacatalogotareascampo",
-      "community": 14,
-      "community_name": "locales-panel.tsx",
+      "community": 28,
+      "community_name": "supervision-panel.tsx",
       "norm_label": "respuestacatalogotareascampo"
     },
     {
@@ -17104,8 +17071,8 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "apps_web_src_types_campo_horariocampo",
-      "community": 25,
-      "community_name": "campo.ts",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "horariocampo"
     },
     {
@@ -17126,8 +17093,8 @@
       "source_location": "L48",
       "_origin": "ast",
       "id": "apps_web_src_types_campo_asignacioncampo",
-      "community": 25,
-      "community_name": "campo.ts",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "asignacioncampo"
     },
     {
@@ -17137,8 +17104,8 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "apps_web_src_types_campo_backupcampo",
-      "community": 25,
-      "community_name": "campo.ts",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "backupcampo"
     },
     {
@@ -17148,8 +17115,8 @@
       "source_location": "L67",
       "_origin": "ast",
       "id": "apps_web_src_types_campo_tareacampo",
-      "community": 14,
-      "community_name": "locales-panel.tsx",
+      "community": 28,
+      "community_name": "supervision-panel.tsx",
       "norm_label": "tareacampo"
     },
     {
@@ -17159,8 +17126,8 @@
       "source_location": "L82",
       "_origin": "ast",
       "id": "apps_web_src_types_campo_visitacampo",
-      "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "visitacampo"
     },
     {
@@ -17170,8 +17137,8 @@
       "source_location": "L101",
       "_origin": "ast",
       "id": "apps_web_src_types_campo_agendacampo",
-      "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community": 47,
+      "community_name": "panel/layout.tsx",
       "norm_label": "agendacampo"
     },
     {
@@ -17192,8 +17159,8 @@
       "source_location": "L128",
       "_origin": "ast",
       "id": "apps_web_src_types_campo_formhorariocampo",
-      "community": 25,
-      "community_name": "campo.ts",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "formhorariocampo"
     },
     {
@@ -17203,8 +17170,8 @@
       "source_location": "L138",
       "_origin": "ast",
       "id": "apps_web_src_types_campo_formtareacampo",
-      "community": 14,
-      "community_name": "locales-panel.tsx",
+      "community": 28,
+      "community_name": "supervision-panel.tsx",
       "norm_label": "formtareacampo"
     },
     {
@@ -17313,8 +17280,8 @@
       "source_location": "L227",
       "_origin": "ast",
       "id": "apps_web_src_types_campo_tiponovedad",
-      "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community": 25,
+      "community_name": "campo.ts",
       "norm_label": "tiponovedad"
     },
     {
@@ -17424,7 +17391,7 @@
       "_origin": "ast",
       "id": "apps_web_src_types_campo_colaboradorresumen",
       "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community_name": "supervision-panel.tsx",
       "norm_label": "colaboradorresumen"
     },
     {
@@ -17445,8 +17412,8 @@
       "source_location": "L358",
       "_origin": "ast",
       "id": "apps_web_src_types_campo_supervisionresumendata",
-      "community": 25,
-      "community_name": "campo.ts",
+      "community": 47,
+      "community_name": "panel/layout.tsx",
       "norm_label": "supervisionresumendata"
     },
     {
@@ -17500,8 +17467,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_types_empresa",
-      "community": 17,
-      "community_name": "modulos-panel.tsx",
+      "community": 21,
+      "community_name": "apiFetch",
       "norm_label": "empresa.ts"
     },
     {
@@ -17511,8 +17478,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "apps_web_src_types_empresa_empresa",
-      "community": 17,
-      "community_name": "modulos-panel.tsx",
+      "community": 21,
+      "community_name": "apiFetch",
       "norm_label": "empresa"
     },
     {
@@ -17522,8 +17489,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "apps_web_src_types_empresa_empresaadmin",
-      "community": 17,
-      "community_name": "modulos-panel.tsx",
+      "community": 21,
+      "community_name": "apiFetch",
       "norm_label": "empresaadmin"
     },
     {
@@ -17797,8 +17764,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_types_toast",
-      "community": 38,
-      "community_name": "toast-provider.tsx",
+      "community": 30,
+      "community_name": "api-tareas.ts",
       "norm_label": "toast.ts"
     },
     {
@@ -17808,8 +17775,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_types_toast_tipotoast",
-      "community": 38,
-      "community_name": "toast-provider.tsx",
+      "community": 30,
+      "community_name": "api-tareas.ts",
       "norm_label": "tipotoast"
     },
     {
@@ -17819,8 +17786,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "apps_web_src_types_toast_toastentrada",
-      "community": 38,
-      "community_name": "toast-provider.tsx",
+      "community": 30,
+      "community_name": "api-tareas.ts",
       "norm_label": "toastentrada"
     },
     {
@@ -17830,8 +17797,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "apps_web_src_types_toast_toastitem",
-      "community": 38,
-      "community_name": "toast-provider.tsx",
+      "community": 30,
+      "community_name": "api-tareas.ts",
       "norm_label": "toastitem"
     },
     {
@@ -17841,8 +17808,8 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "apps_web_src_types_toast_toastcontexto",
-      "community": 38,
-      "community_name": "toast-provider.tsx",
+      "community": 30,
+      "community_name": "api-tareas.ts",
       "norm_label": "toastcontexto"
     },
     {
@@ -17951,7 +17918,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_utils_distancia",
-      "community": 28,
+      "community": 15,
       "community_name": "ruta-impulsador-panel.tsx",
       "norm_label": "distancia.ts"
     },
@@ -17962,7 +17929,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_utils_distancia_formatodistancia",
-      "community": 28,
+      "community": 15,
       "community_name": "ruta-impulsador-panel.tsx",
       "norm_label": "formatodistancia()"
     },
@@ -17973,7 +17940,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "apps_web_src_utils_distancia_metrosentre",
-      "community": 28,
+      "community": 15,
       "community_name": "ruta-impulsador-panel.tsx",
       "norm_label": "metrosentre()"
     },
@@ -18017,7 +17984,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_utils_error",
-      "community": 28,
+      "community": 15,
       "community_name": "ruta-impulsador-panel.tsx",
       "norm_label": "error.ts"
     },
@@ -18028,7 +17995,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_utils_error_mensajeerror",
-      "community": 28,
+      "community": 15,
       "community_name": "ruta-impulsador-panel.tsx",
       "norm_label": "mensajeerror()"
     },
@@ -18039,8 +18006,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_utils_fechas",
-      "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "fechas.ts"
     },
     {
@@ -18050,8 +18017,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "apps_web_src_utils_fechas_fechainputaiso",
-      "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "fechainputaiso()"
     },
     {
@@ -18061,8 +18028,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "apps_web_src_utils_fechas_isoafechainput",
-      "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "isoafechainput()"
     },
     {
@@ -18094,8 +18061,8 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "apps_web_src_utils_fechas_fechaenzonaiso",
-      "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "fechaenzonaiso()"
     },
     {
@@ -18105,8 +18072,8 @@
       "source_location": "L54",
       "_origin": "ast",
       "id": "apps_web_src_utils_fechas_fechacalendario",
-      "community": 14,
-      "community_name": "locales-panel.tsx",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "fechacalendario()"
     },
     {
@@ -18116,8 +18083,8 @@
       "source_location": "L62",
       "_origin": "ast",
       "id": "apps_web_src_utils_fechas_agregardiasiso",
-      "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "agregardiasiso()"
     },
     {
@@ -18127,8 +18094,8 @@
       "source_location": "L69",
       "_origin": "ast",
       "id": "apps_web_src_utils_fechas_lunesdeiso",
-      "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "lunesdeiso()"
     },
     {
@@ -18138,8 +18105,8 @@
       "source_location": "L75",
       "_origin": "ast",
       "id": "apps_web_src_utils_fechas_queryfechascampo",
-      "community": 28,
-      "community_name": "ruta-impulsador-panel.tsx",
+      "community": 9,
+      "community_name": "jornada-panel.tsx",
       "norm_label": "queryfechascampo()"
     },
     {
@@ -18193,8 +18160,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_utils_nombres_menu",
-      "community": 25,
-      "community_name": "campo.ts",
+      "community": 47,
+      "community_name": "panel/layout.tsx",
       "norm_label": "nombres-menu.ts"
     },
     {
@@ -18204,8 +18171,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_utils_nombres_menu_etiquetapaginamenu",
-      "community": 25,
-      "community_name": "campo.ts",
+      "community": 47,
+      "community_name": "panel/layout.tsx",
       "norm_label": "etiquetapaginamenu()"
     },
     {
@@ -18215,8 +18182,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "apps_web_src_utils_nombres_menu_rutainicialimpulsador",
-      "community": 25,
-      "community_name": "campo.ts",
+      "community": 47,
+      "community_name": "panel/layout.tsx",
       "norm_label": "rutainicialimpulsador()"
     },
     {
@@ -18314,8 +18281,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_utils_ruc",
-      "community": 21,
-      "community_name": "apiFetch",
+      "community": 43,
+      "community_name": "src/utils/ruc.ts",
       "norm_label": "src/utils/ruc.ts"
     },
     {
@@ -18325,8 +18292,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "apps_web_src_utils_ruc_calculardvrucpy",
-      "community": 21,
-      "community_name": "apiFetch",
+      "community": 43,
+      "community_name": "src/utils/ruc.ts",
       "norm_label": "calculardvrucpy()"
     },
     {
@@ -18336,8 +18303,8 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "apps_web_src_utils_ruc_normalizarrucpy",
-      "community": 21,
-      "community_name": "apiFetch",
+      "community": 43,
+      "community_name": "src/utils/ruc.ts",
       "norm_label": "normalizarrucpy()"
     },
     {
@@ -18347,8 +18314,8 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "apps_web_src_utils_ruc_esrucparaguayovalido",
-      "community": 21,
-      "community_name": "apiFetch",
+      "community": 43,
+      "community_name": "src/utils/ruc.ts",
       "norm_label": "esrucparaguayovalido()"
     },
     {
@@ -18358,8 +18325,8 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "apps_web_src_utils_ruc_pistarucpy",
-      "community": 21,
-      "community_name": "apiFetch",
+      "community": 43,
+      "community_name": "src/utils/ruc.ts",
       "norm_label": "pistarucpy()"
     },
     {
@@ -18369,7 +18336,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_utils_ruta_recomendada",
-      "community": 28,
+      "community": 15,
       "community_name": "ruta-impulsador-panel.tsx",
       "norm_label": "ruta-recomendada.ts"
     },
@@ -18380,7 +18347,7 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "apps_web_src_utils_ruta_recomendada_coordenadacampo",
-      "community": 28,
+      "community": 15,
       "community_name": "ruta-impulsador-panel.tsx",
       "norm_label": "coordenadacampo"
     },
@@ -18391,7 +18358,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "apps_web_src_utils_ruta_recomendada_paradarutasugerida",
-      "community": 28,
+      "community": 15,
       "community_name": "ruta-impulsador-panel.tsx",
       "norm_label": "paradarutasugerida"
     },
@@ -18402,7 +18369,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "apps_web_src_utils_ruta_recomendada_minutosdehora",
-      "community": 28,
+      "community": 15,
       "community_name": "ruta-impulsador-panel.tsx",
       "norm_label": "minutosdehora()"
     },
@@ -18413,7 +18380,7 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "apps_web_src_utils_ruta_recomendada_minutosenzona",
-      "community": 28,
+      "community": 15,
       "community_name": "ruta-impulsador-panel.tsx",
       "norm_label": "minutosenzona()"
     },
@@ -18424,7 +18391,7 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "apps_web_src_utils_ruta_recomendada_minutosdeviaje",
-      "community": 28,
+      "community": 15,
       "community_name": "ruta-impulsador-panel.tsx",
       "norm_label": "minutosdeviaje()"
     },
@@ -18435,7 +18402,7 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "apps_web_src_utils_ruta_recomendada_ordenarparadasporruta",
-      "community": 28,
+      "community": 15,
       "community_name": "ruta-impulsador-panel.tsx",
       "norm_label": "ordenarparadasporruta()"
     },
@@ -18446,7 +18413,7 @@
       "source_location": "L80",
       "_origin": "ast",
       "id": "apps_web_src_utils_ruta_recomendada_urlgooglemapsruta",
-      "community": 28,
+      "community": 15,
       "community_name": "ruta-impulsador-panel.tsx",
       "norm_label": "urlgooglemapsruta()"
     },
@@ -62714,7 +62681,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/app/panel/[modulo]/[pagina]/page.tsx",
-      "source_location": "L36",
+      "source_location": "L29",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_app_panel_modulo_pagina_page",
@@ -62736,17 +62703,6 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/app/panel/[modulo]/[pagina]/page.tsx",
-      "source_location": "L16",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "apps_web_src_app_panel_modulo_pagina_page",
-      "target": "apps_web_src_app_panel_modulo_pagina_page_jornadapanel",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "apps/web/src/app/panel/[modulo]/[pagina]/page.tsx",
       "source_location": "L10",
       "weight": 1.0,
       "_origin": "ast",
@@ -62758,7 +62714,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/app/panel/[modulo]/[pagina]/page.tsx",
-      "source_location": "L33",
+      "source_location": "L26",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_app_panel_modulo_pagina_page",
@@ -62769,7 +62725,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/app/panel/[modulo]/[pagina]/page.tsx",
-      "source_location": "L40",
+      "source_location": "L33",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_app_panel_modulo_pagina_page",
@@ -62780,7 +62736,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/app/panel/[modulo]/[pagina]/page.tsx",
-      "source_location": "L27",
+      "source_location": "L20",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_app_panel_modulo_pagina_page",
@@ -62791,7 +62747,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/app/panel/[modulo]/[pagina]/page.tsx",
-      "source_location": "L24",
+      "source_location": "L17",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_app_panel_modulo_pagina_page",
@@ -62802,7 +62758,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/app/panel/[modulo]/[pagina]/page.tsx",
-      "source_location": "L30",
+      "source_location": "L23",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_app_panel_modulo_pagina_page",
@@ -62818,17 +62774,6 @@
       "_origin": "ast",
       "source": "apps_web_src_app_panel_modulo_pagina_page",
       "target": "apps_web_src_app_panel_modulo_pagina_page_tareaspanel",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "apps/web/src/app/panel/[modulo]/[pagina]/page.tsx",
-      "source_location": "L19",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "apps_web_src_app_panel_modulo_pagina_page",
-      "target": "apps_web_src_app_panel_modulo_pagina_page_visitaspanel",
       "confidence_score": 1.0
     },
     {
@@ -62861,7 +62806,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/web/src/app/panel/[modulo]/[pagina]/page.tsx",
-      "source_location": "L46",
+      "source_location": "L39",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_app_panel_modulo_pagina_page_paginamodulo",
@@ -67921,7 +67866,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L22",
+      "source_location": "L21",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel",
@@ -67969,7 +67914,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L22",
+      "source_location": "L21",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel",
@@ -68981,7 +68926,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L30",
+      "source_location": "L29",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel",
@@ -68992,18 +68937,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L655",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "apps_web_src_components_campo_ruta_impulsador_panel",
-      "target": "apps_web_src_components_campo_ruta_impulsador_panel_modalmarcapresencia",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L32",
+      "source_location": "L31",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel",
@@ -69015,7 +68949,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L15",
+      "source_location": "L14",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel",
@@ -69027,7 +68961,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L15",
+      "source_location": "L14",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel",
@@ -69039,7 +68973,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L19",
+      "source_location": "L18",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel",
@@ -69051,7 +68985,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L19",
+      "source_location": "L18",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel",
@@ -69063,7 +68997,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L19",
+      "source_location": "L18",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel",
@@ -69075,7 +69009,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L17",
+      "source_location": "L16",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel",
@@ -69087,7 +69021,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L17",
+      "source_location": "L16",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel",
@@ -69099,7 +69033,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L16",
+      "source_location": "L15",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel",
@@ -69111,7 +69045,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L16",
+      "source_location": "L15",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel",
@@ -69123,7 +69057,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L18",
+      "source_location": "L17",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel",
@@ -69135,7 +69069,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L18",
+      "source_location": "L17",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel",
@@ -69147,7 +69081,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L20",
+      "source_location": "L19",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel",
@@ -69159,7 +69093,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L20",
+      "source_location": "L19",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel",
@@ -69171,7 +69105,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L21",
+      "source_location": "L20",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel",
@@ -69183,7 +69117,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L21",
+      "source_location": "L20",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel",
@@ -69219,30 +69153,6 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L6",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "apps_web_src_components_campo_ruta_impulsador_panel",
-      "target": "apps_web_src_hooks_use_lista_campo",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L6",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "apps_web_src_components_campo_ruta_impulsador_panel",
-      "target": "apps_web_src_hooks_use_lista_campo_useoperacioncampo",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
       "source_location": "L4",
       "weight": 1.0,
       "_origin": "ast",
@@ -69267,7 +69177,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L23",
+      "source_location": "L22",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel",
@@ -69279,7 +69189,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L23",
+      "source_location": "L22",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel",
@@ -69291,7 +69201,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L23",
+      "source_location": "L22",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel",
@@ -69303,7 +69213,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L23",
+      "source_location": "L22",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel",
@@ -69315,7 +69225,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L23",
+      "source_location": "L22",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel",
@@ -69327,7 +69237,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L8",
+      "source_location": "L7",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel",
@@ -69339,7 +69249,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L8",
+      "source_location": "L7",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel",
@@ -69351,7 +69261,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L8",
+      "source_location": "L7",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel",
@@ -69363,7 +69273,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L14",
+      "source_location": "L13",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel",
@@ -69375,7 +69285,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L14",
+      "source_location": "L13",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel",
@@ -69387,7 +69297,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L7",
+      "source_location": "L6",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel",
@@ -69399,7 +69309,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L7",
+      "source_location": "L6",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel",
@@ -69411,7 +69321,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L7",
+      "source_location": "L6",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel",
@@ -69423,7 +69333,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L9",
+      "source_location": "L8",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel",
@@ -69435,7 +69345,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L9",
+      "source_location": "L8",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel",
@@ -69447,7 +69357,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L9",
+      "source_location": "L8",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel",
@@ -69459,7 +69369,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L9",
+      "source_location": "L8",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel",
@@ -69472,7 +69382,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L43",
+      "source_location": "L41",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel_rutaimpulsadorpanel",
@@ -69484,7 +69394,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L79",
+      "source_location": "L69",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel_rutaimpulsadorpanel",
@@ -69496,7 +69406,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L457",
+      "source_location": "L435",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel_rutaimpulsadorpanel",
@@ -69508,7 +69418,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L458",
+      "source_location": "L436",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel_rutaimpulsadorpanel",
@@ -69520,7 +69430,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L241",
+      "source_location": "L226",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel_rutaimpulsadorpanel",
@@ -69532,7 +69442,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L33",
+      "source_location": "L32",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel_rutaimpulsadorpanel",
@@ -69544,35 +69454,11 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L41",
+      "source_location": "L40",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel_rutaimpulsadorpanel",
       "target": "apps_web_src_utils_fechas_queryfechascampo"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L670",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "apps_web_src_components_campo_ruta_impulsador_panel_modalmarcapresencia",
-      "target": "apps_web_src_hooks_use_lista_campo_useoperacioncampo"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L692",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "apps_web_src_components_campo_ruta_impulsador_panel_modalmarcapresencia",
-      "target": "apps_web_src_lib_api_apifetch"
     },
     {
       "relation": "contains",
@@ -83349,5 +83235,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "6990cb354cbb027c0eeb699e8cd41a9951ef7e5a"
+  "built_at_commit": "78bab8c7430982db73b56c55063cfa5aea5b8a60"
 }

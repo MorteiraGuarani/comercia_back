@@ -153,7 +153,7 @@ function InicioResumen({ modulo }: { modulo: import("@/types/plataforma").Modulo
             <Link href={href(rutaPagina)} className="block rounded-lg border border-accent-ink bg-surface-raised p-3 hover:bg-surface-soft focus-visible:ring-2 focus-visible:ring-focus">
               <p className="text-xs font-semibold text-accent-ink">Visita abierta{abierta.fecha.slice(0, 10) !== fechaEnZonaIso(new Date()) ? " de una jornada anterior" : ""}</p>
               <p className="mt-1 text-sm font-semibold">{abierta.local.nombre}</p>
-              <p className="mt-1 text-xs text-muted">Continuá tu visita o registrá la salida.</p>
+              <p className="mt-1 text-xs text-muted">Consultá el detalle de la visita. La salida se registra únicamente en UCHECK.</p>
             </Link>
           )}
           <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
@@ -235,11 +235,11 @@ function descripcionPagina(modulo: string, pagina: string) {
     "gestion-campo/clientes": "Cuentas comerciales y cobertura geográfica.",
     "gestion-campo/locales": "Puntos de venta, rutas y planificación operativa.",
     "gestion-campo/tareas": "Protocolos y tareas asignadas al equipo.",
-    "mi-jornada/locales": "Tu ruta de hoy: locales a visitar y registro de entrada y salida.",
+    "mi-jornada/locales": "Tu ruta de hoy: locales, horarios, mapas y novedades.",
     "mi-jornada/tareas": "Actividades por local y registro de fotos.",
     "mi-jornada/novedades": "Reportá un imprevisto y consultá la respuesta.",
     "mi-jornada/avisos": "Indicaciones recibidas de tu team leader.",
-    "mi-jornada/agenda": "Agenda diaria, visitas y reemplazos.",
+    "mi-jornada/agenda": "Agenda diaria de consulta, visitas y reemplazos.",
   };
   return descripciones[`${modulo}/${pagina}`] ?? "Abrí este módulo para consultar su información.";
 }
