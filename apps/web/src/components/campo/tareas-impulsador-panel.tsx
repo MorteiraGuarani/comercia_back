@@ -8,7 +8,10 @@ import { TOKENS } from "./tokens";
 import { StatusStamp } from "./ui/status-stamp";
 import { StatChip } from "./ui/stat-chip";
 import { TopBar } from "./ui/top-bar";
-import { SelectorFechaFiltro, type PeriodoFiltro } from "./ui/selector-fecha-filtro";
+import {
+  SelectorFechaFiltro,
+  type PeriodoFiltro,
+} from "./ui/selector-fecha-filtro";
 import { Modal } from "@/components/modal";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { SubidorFotos } from "./subidor-fotos";
@@ -16,6 +19,8 @@ import { PanelComentarios } from "./panel-comentarios";
 import { Paginacion } from "@/components/paginacion";
 import type { RespuestaPaginada } from "@/types/paginacion";
 import { IconoAlerta, IconoCamara, IconoMensaje } from "./ui/iconos-campo";
+import { crearNovedadCampo } from "@/lib/api-adjuntos-campo";
+import { SelectorFotosCampo } from "./selector-fotos-campo";
 import type {
   AgendaCampo,
   TareaJornadaCampo,
@@ -38,8 +43,12 @@ export function TareasImpulsadorPanel() {
   const agendas = jornada.items;
   const [abierta, setAbierta] = useState<VisitaCampo | null>(null);
   const [consultaTerminada, setConsultaTerminada] = useState("");
-  const [paginasTareas, setPaginasTareas] = useState<Record<number, number>>({});
-  const [limitesTareas, setLimitesTareas] = useState<Record<number, number>>({});
+  const [paginasTareas, setPaginasTareas] = useState<Record<number, number>>(
+    {},
+  );
+  const [limitesTareas, setLimitesTareas] = useState<Record<number, number>>(
+    {},
+  );
   const [error, setError] = useState("");
 
   // Modal para fotos
@@ -66,17 +75,26 @@ export function TareasImpulsadorPanel() {
   const [tipoNovedad, setTipoNovedad] = useState<TipoNovedad>("INCIDENCIA");
   const [tituloNovedad, setTituloNovedad] = useState("");
   const [descNovedad, setDescNovedad] = useState("");
+  const [fotosNovedad, setFotosNovedad] = useState<File[]>([]);
   const [guardandoNovedad, setGuardandoNovedad] = useState(false);
   const [novedadExito, setNovedadExito] = useState(false);
   const [errorNovedad, setErrorNovedad] = useState("");
   const [errorAccion, setErrorAccion] = useState("");
 
   // Tareas por local
-  const [tareasPorLocal, setTareasPorLocal] = useState<Record<number, RespuestaPaginada<TareaJornadaCampo>>>({});
+  const [tareasPorLocal, setTareasPorLocal] = useState<
+    Record<number, RespuestaPaginada<TareaJornadaCampo>>
+  >({});
   const [completandoId, setCompletandoId] = useState<number | null>(null);
 
   const idsAgenda = agendas.map((ag) => ag.id).join(",");
-  const consulta = JSON.stringify([qsFecha, idsAgenda, paginasTareas, limitesTareas, revision]);
+  const consulta = JSON.stringify([
+    qsFecha,
+    idsAgenda,
+    paginasTareas,
+    limitesTareas,
+    revision,
+  ]);
   const cargando = jornada.cargando || consulta !== consultaTerminada;
   const cargarDatos = () => setRevision((n) => n + 1);
   useEffect(() => {
@@ -84,7 +102,9 @@ export function TareasImpulsadorPanel() {
     let vigente = true;
     async function cargar() {
       try {
-        const dataAbierta = await apiFetch<VisitaCampo | null>("/campo/jornada/abierta");
+        const dataAbierta = await apiFetch<VisitaCampo | null>(
+          "/campo/jornada/abierta",
+        );
         const tareas = await Promise.all(
           agendas.map(async (ag) => {
             const datos = await apiFetch<RespuestaPaginada<TareaJornadaCampo>>(
@@ -98,7 +118,8 @@ export function TareasImpulsadorPanel() {
         setTareasPorLocal(Object.fromEntries(tareas));
         setError(jornada.error ?? "");
       } catch (e) {
-        if (vigente) setError(e instanceof Error ? e.message : "Error al cargar tareas");
+        if (vigente)
+          setError(e instanceof Error ? e.message : "Error al cargar tareas");
       } finally {
         if (vigente) setConsultaTerminada(consulta);
       }
@@ -107,7 +128,16 @@ export function TareasImpulsadorPanel() {
     return () => {
       vigente = false;
     };
-  }, [jornada.cargando, jornada.error, qsFecha, idsAgenda, paginasTareas, limitesTareas, consulta, agendas]);
+  }, [
+    jornada.cargando,
+    jornada.error,
+    qsFecha,
+    idsAgenda,
+    paginasTareas,
+    limitesTareas,
+    consulta,
+    agendas,
+  ]);
 
   // Completar tarea
   const completarTarea = async (localId: number, tareaId: number) => {
@@ -121,42 +151,58 @@ export function TareasImpulsadorPanel() {
       // Recargar tareas
       await cargarDatos();
     } catch (e: unknown) {
-      setErrorAccion(e instanceof Error ? e.message : "No se pudo completar la tarea");
+      setErrorAccion(
+        e instanceof Error ? e.message : "No se pudo completar la tarea",
+      );
     } finally {
       setCompletandoId(null);
     }
   };
 
   const enviarNovedad = async () => {
-    if (!novedadTarea || !tituloNovedad.trim() || !descNovedad.trim() || guardandoNovedad) return;
+    if (
+      !novedadTarea ||
+      !tituloNovedad.trim() ||
+      !descNovedad.trim() ||
+      guardandoNovedad
+    )
+      return;
     try {
       setGuardandoNovedad(true);
       setErrorNovedad("");
-      await apiFetch("/campo/novedades", {
-        method: "POST",
-        body: JSON.stringify({
+      await crearNovedadCampo(
+        {
           localId: novedadTarea.localId,
           tareaId: novedadTarea.tareaId,
           tipo: tipoNovedad,
           titulo: tituloNovedad.trim(),
           descripcion: descNovedad.trim(),
-          visitaId: abierta?.local.id === novedadTarea.localId ? abierta.id : undefined,
-        }),
-      });
+          visitaId:
+            abierta?.local.id === novedadTarea.localId ? abierta.id : undefined,
+        },
+        fotosNovedad,
+      );
       setNovedadExito(true);
       setTituloNovedad("");
       setDescNovedad("");
+      setFotosNovedad([]);
     } catch (e: unknown) {
-      setErrorNovedad(e instanceof Error ? e.message : "No se pudo enviar la novedad");
+      setErrorNovedad(
+        e instanceof Error ? e.message : "No se pudo enviar la novedad",
+      );
     } finally {
       setGuardandoNovedad(false);
     }
   };
 
   // Métricas globales
-  const todasLasTareas = Object.values(tareasPorLocal).flatMap((datos) => datos.items);
+  const todasLasTareas = Object.values(tareasPorLocal).flatMap(
+    (datos) => datos.items,
+  );
   const total = todasLasTareas.length;
-  const completadas = todasLasTareas.filter((t) => (t.visitasCompletadas?.length ?? 0) > 0).length;
+  const completadas = todasLasTareas.filter(
+    (t) => (t.visitasCompletadas?.length ?? 0) > 0,
+  ).length;
   const pct = total ? Math.round((completadas / total) * 100) : 0;
   const obligatoriasPendientes = todasLasTareas.filter(
     (t) => t.fotosObligatorias && (t.visitasCompletadas?.length ?? 0) === 0,
@@ -195,21 +241,40 @@ export function TareasImpulsadorPanel() {
         {obligatoriasPendientes > 0 && (
           <p className="flex items-center gap-2 text-xs text-red-700 dark:text-red-300">
             <IconoAlerta className="h-4 w-4 shrink-0" />
-            <span>{obligatoriasPendientes} tareas visibles con fotos obligatorias pendientes.</span>
+            <span>
+              {obligatoriasPendientes} tareas visibles con fotos obligatorias
+              pendientes.
+            </span>
           </p>
         )}
 
-        {errorAccion && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-200">{errorAccion}</p>}
+        {errorAccion && (
+          <p
+            role="alert"
+            className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-200"
+          >
+            {errorAccion}
+          </p>
+        )}
         {cargando ? (
-          <div className="py-12 text-center text-xs text-muted">Cargando tareas del día...</div>
+          <div className="py-12 text-center text-xs text-muted">
+            Cargando tareas del día...
+          </div>
         ) : error ? (
-          <div className="p-4 rounded-lg bg-red-50 text-red-700 text-xs">{error}</div>
+          <div className="p-4 rounded-lg bg-red-50 text-red-700 text-xs">
+            {error}
+          </div>
         ) : agendas.length === 0 ? (
           <div
             className="rounded-lg p-8 text-center"
-            style={{ background: TOKENS.canvas, border: `1px solid ${TOKENS.line}` }}
+            style={{
+              background: TOKENS.canvas,
+              border: `1px solid ${TOKENS.line}`,
+            }}
           >
-            <p className="ft-body text-xs text-muted">No tenés locales asignados para hoy.</p>
+            <p className="ft-body text-xs text-muted">
+              No tenés locales asignados para hoy.
+            </p>
           </div>
         ) : (
           /* Tareas agrupadas por local de visita */
@@ -229,40 +294,61 @@ export function TareasImpulsadorPanel() {
                   border: `1px solid ${estaEnVisita ? TOKENS.frio : TOKENS.line}`,
                 }}
               >
-                <div className="flex items-center justify-between border-b pb-2" style={{ borderColor: TOKENS.line }}>
+                <div
+                  className="flex items-center justify-between border-b pb-2"
+                  style={{ borderColor: TOKENS.line }}
+                >
                   <div>
-                    <h3 className="ft-body font-bold text-sm text-foreground">{ag.local.nombre}</h3>
-                    <p className="ft-body text-xs text-muted">{ag.local.cliente.nombre}</p>
+                    <h3 className="ft-body font-bold text-sm text-foreground">
+                      {ag.local.nombre}
+                    </h3>
+                    <p className="ft-body text-xs text-muted">
+                      {ag.local.cliente.nombre}
+                    </p>
                   </div>
                   {estaEnVisita ? (
                     <StatusStamp tone="frio">EN VISITA</StatusStamp>
                   ) : (
                     <span className="text-[11px] text-muted ft-body">
-                      {ag.visitas.some((v) => v.salida) ? "Visita finalizada" : "Pendiente de visita"}
+                      {ag.visitas.some((v) => v.salida)
+                        ? "Visita finalizada"
+                        : "Pendiente de visita"}
                     </span>
                   )}
                 </div>
 
                 {tareas.length === 0 ? (
-                  <p className="ft-body text-xs text-muted italic">No hay tareas configuradas para este local.</p>
+                  <p className="ft-body text-xs text-muted italic">
+                    No hay tareas configuradas para este local.
+                  </p>
                 ) : (
                   <div className="space-y-2">
                     {tareas.map((t) => {
-                      const cumplida = abierta && t.visitasCompletadas?.includes(abierta.id);
-                      const cumplidaAlgunaVez = (t.visitasCompletadas?.length ?? 0) > 0;
+                      const cumplida =
+                        abierta && t.visitasCompletadas?.includes(abierta.id);
+                      const cumplidaAlgunaVez =
+                        (t.visitasCompletadas?.length ?? 0) > 0;
 
                       return (
                         <div
                           key={t.id}
                           className="p-3 rounded-lg border flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
                           style={{
-                            borderColor: cumplida || cumplidaAlgunaVez ? TOKENS.fresco : TOKENS.line,
-                            background: cumplida || cumplidaAlgunaVez ? `color-mix(in srgb, ${TOKENS.fresco} 8%, ${TOKENS.canvas})` : TOKENS.canvas,
+                            borderColor:
+                              cumplida || cumplidaAlgunaVez
+                                ? TOKENS.fresco
+                                : TOKENS.line,
+                            background:
+                              cumplida || cumplidaAlgunaVez
+                                ? `color-mix(in srgb, ${TOKENS.fresco} 8%, ${TOKENS.canvas})`
+                                : TOKENS.canvas,
                           }}
                         >
                           <div className="min-w-0">
                             <div className="flex items-center gap-2">
-                              <p className="ft-body font-semibold text-sm text-foreground">{t.nombre}</p>
+                              <p className="ft-body font-semibold text-sm text-foreground">
+                                {t.nombre}
+                              </p>
                               {t.fotosObligatorias && (
                                 <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
                                   Fotos obligatorias
@@ -270,7 +356,9 @@ export function TareasImpulsadorPanel() {
                               )}
                             </div>
                             {t.descripcion && (
-                              <p className="ft-body text-[11px] text-muted mt-0.5 leading-snug">{t.descripcion}</p>
+                              <p className="ft-body text-[11px] text-muted mt-0.5 leading-snug">
+                                {t.descripcion}
+                              </p>
                             )}
                           </div>
 
@@ -337,13 +425,19 @@ export function TareasImpulsadorPanel() {
                               <button
                                 type="button"
                                 disabled={completandoId === t.id}
-                                onClick={() => completarTarea(ag.local.id, t.id)}
+                                onClick={() =>
+                                  completarTarea(ag.local.id, t.id)
+                                }
                                 className="px-3 py-1 rounded text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 transition disabled:opacity-50 cursor-pointer shadow-sm"
                               >
-                                {completandoId === t.id ? "Guardando..." : "Completar"}
+                                {completandoId === t.id
+                                  ? "Guardando..."
+                                  : "Completar"}
                               </button>
                             ) : (
-                              <span className="text-[11px] text-muted italic">Check-in requerido</span>
+                              <span className="text-[11px] text-muted italic">
+                                Check-in requerido
+                              </span>
                             )}
                           </div>
                         </div>
@@ -361,7 +455,9 @@ export function TareasImpulsadorPanel() {
                       limit={limitesTareas[ag.id] ?? 7}
                       total={totalTareas}
                       totalPages={totalPaginasTareas}
-                      onPageChange={(n) => setPaginasTareas((p) => ({ ...p, [ag.id]: n }))}
+                      onPageChange={(n) =>
+                        setPaginasTareas((p) => ({ ...p, [ag.id]: n }))
+                      }
                       onLimitChange={(n) => {
                         setLimitesTareas((p) => ({ ...p, [ag.id]: n }));
                         setPaginasTareas((p) => ({ ...p, [ag.id]: 1 }));
@@ -374,12 +470,24 @@ export function TareasImpulsadorPanel() {
           })
         )}
         {jornada.error ? (
-          <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
+          <p
+            role="alert"
+            className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-200"
+          >
             {jornada.error}
           </p>
         ) : null}
       </div>
-      <PantallaCarga visible={!!completandoId || guardandoNovedad} mensaje={guardandoNovedad ? "Enviando novedad" : "Completando tarea"} />
+      <PantallaCarga
+        visible={!!completandoId || guardandoNovedad}
+        mensaje={
+          guardandoNovedad && fotosNovedad.length
+            ? "Enviando novedad y subiendo fotos"
+            : guardandoNovedad
+              ? "Enviando novedad"
+              : "Completando tarea"
+        }
+      />
 
       {/* Modal de Fotos */}
       {fotoModal && (
@@ -407,7 +515,10 @@ export function TareasImpulsadorPanel() {
           onCerrar={() => setComentarioModal(null)}
           ancho="md"
         >
-          <PanelComentarios visitaId={comentarioModal.visitaId} tareaId={comentarioModal.tareaId} />
+          <PanelComentarios
+            visitaId={comentarioModal.visitaId}
+            tareaId={comentarioModal.tareaId}
+          />
         </Modal>
       )}
 
@@ -416,31 +527,54 @@ export function TareasImpulsadorPanel() {
         <Modal
           titulo={`Reportar Novedad · ${novedadTarea.nombreTarea}`}
           abierto={!!novedadTarea}
-          onCerrar={() => { if (!guardandoNovedad) setNovedadTarea(null); }}
+          onCerrar={() => {
+            if (!guardandoNovedad) {
+              setNovedadTarea(null);
+              setFotosNovedad([]);
+            }
+          }}
           ancho="md"
         >
           {novedadExito ? (
             <div className="py-6 text-center text-emerald-700 space-y-2">
-              <p className="ft-display text-xl font-bold">¡Novedad enviada con éxito!</p>
-              <p className="ft-body text-xs text-muted">Tu reporte quedó registrado para el equipo.</p>
+              <p className="ft-display text-xl font-bold">
+                ¡Novedad enviada con éxito!
+              </p>
+              <p className="ft-body text-xs text-muted">
+                Tu reporte quedó registrado para el equipo.
+              </p>
             </div>
           ) : (
             <div className="space-y-3">
-              {errorNovedad && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-200">{errorNovedad}</p>}
+              {errorNovedad && (
+                <p
+                  role="alert"
+                  className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-200"
+                >
+                  {errorNovedad}
+                </p>
+              )}
               <p className="ft-body text-xs text-muted">
-                Detallá el motivo o inconveniente para realizar la tarea «{novedadTarea.nombreTarea}».
+                Detallá el motivo o inconveniente para realizar la tarea «
+                {novedadTarea.nombreTarea}».
               </p>
 
               <div>
-                <label className="block text-xs font-semibold text-foreground mb-1">Tipo:</label>
+                <label className="block text-xs font-semibold text-foreground mb-1">
+                  Tipo:
+                </label>
                 <div className="grid grid-cols-2 gap-1.5">
-                  {(["INCIDENCIA", "RECLAMO", "CONSULTA", "SUGERENCIA"] as const).map((t) => (
+                  {(
+                    ["INCIDENCIA", "RECLAMO", "CONSULTA", "SUGERENCIA"] as const
+                  ).map((t) => (
                     <button
                       key={t}
                       type="button"
                       onClick={() => setTipoNovedad(t)}
                       className={`py-1.5 px-2 rounded-md text-xs font-semibold border transition cursor-pointer ${
-                        tipoNovedad === t ? "bg-zinc-900 text-white border-zinc-900" : "bg-surface-raised text-foreground border-line"
+                        tipoNovedad === t
+                          ? "bg-zinc-900 text-white border-zinc-900"
+                          : "bg-surface-raised text-foreground border-line"
                       }`}
                     >
                       {t}
@@ -450,7 +584,9 @@ export function TareasImpulsadorPanel() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-foreground mb-1">Asunto:</label>
+                <label className="block text-xs font-semibold text-foreground mb-1">
+                  Asunto:
+                </label>
                 <input
                   type="text"
                   value={tituloNovedad}
@@ -461,7 +597,9 @@ export function TareasImpulsadorPanel() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-foreground mb-1">Descripción detallada:</label>
+                <label className="block text-xs font-semibold text-foreground mb-1">
+                  Descripción detallada:
+                </label>
                 <textarea
                   value={descNovedad}
                   onChange={(e) => setDescNovedad(e.target.value)}
@@ -471,10 +609,19 @@ export function TareasImpulsadorPanel() {
                 />
               </div>
 
+              <SelectorFotosCampo
+                archivos={fotosNovedad}
+                onChange={setFotosNovedad}
+                disabled={guardandoNovedad}
+              />
+
               <div className="flex gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => setNovedadTarea(null)}
+                  onClick={() => {
+                    setNovedadTarea(null);
+                    setFotosNovedad([]);
+                  }}
                   className="flex-1 py-2 text-xs font-semibold border rounded-lg text-foreground"
                 >
                   Cancelar
@@ -482,7 +629,11 @@ export function TareasImpulsadorPanel() {
                 <button
                   type="button"
                   onClick={enviarNovedad}
-                  disabled={!tituloNovedad.trim() || !descNovedad.trim() || guardandoNovedad}
+                  disabled={
+                    !tituloNovedad.trim() ||
+                    !descNovedad.trim() ||
+                    guardandoNovedad
+                  }
                   className="flex-1 py-2 text-xs font-bold bg-[#1E2320] text-white rounded-lg hover:bg-black transition disabled:opacity-50 cursor-pointer"
                 >
                   {guardandoNovedad ? "Enviando..." : "Enviar Novedad"}

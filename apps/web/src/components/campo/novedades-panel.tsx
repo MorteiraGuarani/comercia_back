@@ -10,6 +10,9 @@ import { PantallaCarga } from "@/components/pantalla-carga";
 import { SelectorPaginado } from "@/components/selector-paginado";
 import { Paginacion } from "@/components/paginacion";
 import { IconoMas } from "@/components/icono-mas";
+import { crearNovedadCampo } from "@/lib/api-adjuntos-campo";
+import { SelectorFotosCampo } from "./selector-fotos-campo";
+import { GaleriaAdjuntosCampo } from "./galeria-adjuntos-campo";
 import type {
   NovedadCampoItem,
   NovedadesResponse,
@@ -46,6 +49,7 @@ export function NovedadesPanel({
   const [tipo, setTipo] = useState<TipoNovedad>("INCIDENCIA");
   const [titulo, setTitulo] = useState("");
   const [descripcion, setDescripcion] = useState("");
+  const [fotos, setFotos] = useState<File[]>([]);
   const [guardando, setGuardando] = useState(false);
 
   // Modal para resolver novedad (Team Leader)
@@ -58,7 +62,9 @@ export function NovedadesPanel({
   const cargar = () => setRevision((n) => n + 1);
   useEffect(() => {
     let vigente = true;
-    apiFetch<NovedadesResponse>(`/campo/novedades?estado=${filtro}&page=${page}&limit=${limit}`)
+    apiFetch<NovedadesResponse>(
+      `/campo/novedades?estado=${filtro}&page=${page}&limit=${limit}`,
+    )
       .then((res) => {
         if (!vigente) return;
         setNovedades(res.items);
@@ -67,9 +73,18 @@ export function NovedadesPanel({
         setError("");
         if (page > res.totalPages) setPage(res.totalPages);
       })
-      .catch((e: unknown) => { if (vigente) setError(e instanceof Error ? e.message : "Error al cargar novedades"); })
-      .finally(() => { if (vigente) setConsultaTerminada(consulta); });
-    return () => { vigente = false; };
+      .catch((e: unknown) => {
+        if (vigente)
+          setError(
+            e instanceof Error ? e.message : "Error al cargar novedades",
+          );
+      })
+      .finally(() => {
+        if (vigente) setConsultaTerminada(consulta);
+      });
+    return () => {
+      vigente = false;
+    };
   }, [filtro, page, limit, consulta]);
 
   const guardarNueva = async () => {
@@ -83,21 +98,24 @@ export function NovedadesPanel({
     try {
       setGuardando(true);
       setErrorFormulario("");
-      await apiFetch("/campo/novedades", {
-        method: "POST",
-        body: JSON.stringify({
+      await crearNovedadCampo(
+        {
           localId: localSeleccionado,
           tipo,
           titulo: titulo.trim(),
           descripcion: descripcion.trim(),
-        }),
-      });
+        },
+        fotos,
+      );
       setCreando(false);
       setTitulo("");
       setDescripcion("");
+      setFotos([]);
       cargar();
     } catch (e: unknown) {
-      setErrorFormulario(e instanceof Error ? e.message : "No se pudo enviar la novedad");
+      setErrorFormulario(
+        e instanceof Error ? e.message : "No se pudo enviar la novedad",
+      );
     } finally {
       setGuardando(false);
     }
@@ -119,7 +137,9 @@ export function NovedadesPanel({
       setResolucion("");
       cargar();
     } catch (e: unknown) {
-      setErrorFormulario(e instanceof Error ? e.message : "No se pudo guardar la resolución");
+      setErrorFormulario(
+        e instanceof Error ? e.message : "No se pudo guardar la resolución",
+      );
     } finally {
       setGuardando(false);
     }
@@ -144,7 +164,10 @@ export function NovedadesPanel({
           esImpulsador && (
             <button
               type="button"
-              onClick={() => { setErrorFormulario(""); setCreando(true); }}
+              onClick={() => {
+                setErrorFormulario("");
+                setCreando(true);
+              }}
               aria-label="Crear novedad"
               title="Crear novedad"
               className="grid h-11 w-11 place-items-center rounded-lg text-white transition hover:brightness-110"
@@ -182,7 +205,10 @@ export function NovedadesPanel({
               <button
                 key={st}
                 type="button"
-                onClick={() => { setFiltro(st); setPage(1); }}
+                onClick={() => {
+                  setFiltro(st);
+                  setPage(1);
+                }}
                 aria-pressed={isActive}
                 className="min-w-0 flex-1 ft-body text-xs sm:text-sm font-semibold min-h-11 px-1 border-b-2 transition-colors hover:bg-surface-soft"
                 style={{
@@ -270,6 +296,8 @@ export function NovedadesPanel({
                       {n.descripcion}
                     </p>
 
+                    <GaleriaAdjuntosCampo adjuntos={n.adjuntos} />
+
                     {n.resolucion && (
                       <div
                         className="mt-3 p-3 rounded-xl bg-surface-soft border text-sm"
@@ -325,22 +353,60 @@ export function NovedadesPanel({
             })}
           </div>
         )}
-        <Paginacion page={page} limit={limit} total={paginacion.total} totalPages={paginacion.totalPages} onPageChange={setPage} onLimitChange={(n) => { setLimit(n); setPage(1); }} />
+        <Paginacion
+          page={page}
+          limit={limit}
+          total={paginacion.total}
+          totalPages={paginacion.totalPages}
+          onPageChange={setPage}
+          onLimitChange={(n) => {
+            setLimit(n);
+            setPage(1);
+          }}
+        />
       </div>
 
-      <PantallaCarga visible={guardando} mensaje={creando ? "Enviando novedad" : "Guardando resolución"} />
+      <PantallaCarga
+        visible={guardando}
+        mensaje={
+          creando && fotos.length
+            ? "Enviando novedad y subiendo fotos"
+            : creando
+              ? "Enviando novedad"
+              : "Guardando resolución"
+        }
+      />
 
       {/* Modal Crear Novedad */}
       {creando && (
         <Modal
           titulo="Reportar Nueva Novedad"
           abierto={creando}
-          onCerrar={() => { if (!guardando) setCreando(false); }}
+          onCerrar={() => {
+            if (!guardando) {
+              setCreando(false);
+              setFotos([]);
+            }
+          }}
           ancho="md"
         >
           <div className="space-y-3">
-            {errorFormulario && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-200">{errorFormulario}</p>}
-            <SelectorPaginado url="/campo/novedades/locales" etiqueta="Local" buscable required value={localSeleccionado ?? ""} onChange={(id) => setLocalSeleccionado(id === "" ? null : id)} />
+            {errorFormulario && (
+              <p
+                role="alert"
+                className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-200"
+              >
+                {errorFormulario}
+              </p>
+            )}
+            <SelectorPaginado
+              url="/campo/novedades/locales"
+              etiqueta="Local"
+              buscable
+              required
+              value={localSeleccionado ?? ""}
+              onChange={(id) => setLocalSeleccionado(id === "" ? null : id)}
+            />
 
             <div>
               <label className="block text-xs font-semibold text-foreground mb-1">
@@ -394,10 +460,19 @@ export function NovedadesPanel({
               />
             </div>
 
+            <SelectorFotosCampo
+              archivos={fotos}
+              onChange={setFotos}
+              disabled={guardando}
+            />
+
             <div className="flex gap-2 pt-2">
               <button
                 type="button"
-                onClick={() => setCreando(false)}
+                onClick={() => {
+                  setCreando(false);
+                  setFotos([]);
+                }}
                 className="flex-1 py-2 text-xs font-semibold border rounded-lg text-foreground"
               >
                 Cancelar
@@ -405,7 +480,12 @@ export function NovedadesPanel({
               <button
                 type="button"
                 onClick={guardarNueva}
-                disabled={!localSeleccionado || titulo.trim().length < 2 || descripcion.trim().length < 3 || guardando}
+                disabled={
+                  !localSeleccionado ||
+                  titulo.trim().length < 2 ||
+                  descripcion.trim().length < 3 ||
+                  guardando
+                }
                 className="flex-1 py-2 text-xs font-bold bg-[#1E2320] text-white rounded-lg hover:bg-black transition disabled:opacity-50 cursor-pointer"
               >
                 {guardando ? "Enviando..." : "Reportar"}
@@ -420,11 +500,20 @@ export function NovedadesPanel({
         <Modal
           titulo="Resolver Novedad"
           abierto={!!resolviendo}
-          onCerrar={() => { if (!guardando) setResolviendo(null); }}
+          onCerrar={() => {
+            if (!guardando) setResolviendo(null);
+          }}
           ancho="md"
         >
           <div className="space-y-3">
-            {errorFormulario && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-200">{errorFormulario}</p>}
+            {errorFormulario && (
+              <p
+                role="alert"
+                className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-200"
+              >
+                {errorFormulario}
+              </p>
+            )}
             <div className="p-3 rounded-lg bg-surface-soft border text-xs text-foreground">
               <p className="font-bold">{resolviendo.titulo}</p>
               <p className="mt-1">{resolviendo.descripcion}</p>

@@ -1,5 +1,5 @@
 import { diskStorage } from 'multer';
-import { extname } from 'path';
+import { extname, join, resolve } from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { BadRequestException } from '@nestjs/common';
 import { existsSync, mkdirSync } from 'fs';
@@ -10,6 +10,55 @@ const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 // Tamaño máximo: 5 MB
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
+
+function directorioUploads(): string {
+  return process.env.UPLOADS_DIR ?? resolve(process.cwd(), 'uploads');
+}
+
+function filtroImagen(
+  req: Express.Request,
+  file: Express.Multer.File,
+  cb: (error: Error | null, acceptFile: boolean) => void,
+) {
+  if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+    return cb(
+      new BadRequestException('Solo se permiten imágenes JPG, PNG o WebP'),
+      false,
+    );
+  }
+
+  const ext = extname(file.originalname).toLowerCase();
+  if (!['.jpg', '.jpeg', '.png', '.webp'].includes(ext)) {
+    return cb(new BadRequestException('Extensión de archivo no válida'), false);
+  }
+
+  cb(null, true);
+}
+
+/** Configuración compartida para fotos opcionales de novedades y avisos. */
+export const multerConfigAdjuntosCampo: MulterOptions = {
+  storage: diskStorage({
+    destination: (req, file, cb) => {
+      const now = new Date();
+      const dir = join(
+        directorioUploads(),
+        'adjuntos',
+        String(now.getFullYear()),
+        String(now.getMonth() + 1).padStart(2, '0'),
+        String(now.getDate()).padStart(2, '0'),
+      );
+      if (!existsSync(dir)) {
+        mkdirSync(dir, { recursive: true });
+      }
+      cb(null, dir);
+    },
+    filename: (req, file, cb) => {
+      cb(null, `${uuidv4()}${extname(file.originalname).toLowerCase()}`);
+    },
+  }),
+  limits: { fileSize: MAX_FILE_SIZE, files: 5 },
+  fileFilter: filtroImagen,
+};
 
 /**
  * Configuración de Multer para subida de fotos de tareas
@@ -88,7 +137,9 @@ export const multerConfigLogoCliente: MulterOptions = {
     const tipos = [...ALLOWED_MIME_TYPES, 'image/svg+xml'];
     if (!tipos.includes(file.mimetype)) {
       return cb(
-        new BadRequestException('Solo se permiten imágenes JPG, PNG, WebP o SVG'),
+        new BadRequestException(
+          'Solo se permiten imágenes JPG, PNG, WebP o SVG',
+        ),
         false,
       );
     }

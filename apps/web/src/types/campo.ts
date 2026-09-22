@@ -1,4 +1,4 @@
-import type { RespuestaPaginada } from './paginacion';
+import type { RespuestaPaginada } from "./paginacion";
 
 export interface RespuestaCatalogoTareasCampo extends RespuestaPaginada<TareaCampo> {
   resumen: { total: number; obligatorias: number; conFotos: number };
@@ -192,6 +192,14 @@ export interface FotosTareaResponse {
   despues?: FotoTarea;
 }
 
+export interface AdjuntoCampoItem {
+  id: number;
+  nombreOriginal: string;
+  mimeType: string;
+  tamanioBytes: number;
+  creadoAt: string;
+}
+
 // ========== NOTIFICACIONES ==========
 
 export type TipoNotificacion =
@@ -261,6 +269,7 @@ export interface NovedadCampoItem {
   } | null;
   cerradoAt?: string | null;
   creadoAt: string;
+  adjuntos: AdjuntoCampoItem[];
 }
 
 export interface FormNovedadCampo {
@@ -305,6 +314,7 @@ export interface AvisoEnviadoItem {
   leidoAt?: string | null;
   leidoPor?: number;
   total?: number;
+  adjuntos: AdjuntoCampoItem[];
 }
 
 export interface AvisoRecibidoItem {
@@ -319,6 +329,7 @@ export interface AvisoRecibidoItem {
   creadoAt: string;
   leido: boolean;
   leidoAt?: string | null;
+  adjuntos: AdjuntoCampoItem[];
 }
 
 export interface FormAvisoCampo {

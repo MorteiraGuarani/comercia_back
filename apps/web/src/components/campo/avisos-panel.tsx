@@ -8,6 +8,9 @@ import { StatusStamp } from "./ui/status-stamp";
 import { TopBar } from "./ui/top-bar";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { IconoMegafono, IconoContacto, IconoCheck } from "./ui/iconos-campo";
+import { crearAvisoCampo } from "@/lib/api-adjuntos-campo";
+import { SelectorFotosCampo } from "./selector-fotos-campo";
+import { GaleriaAdjuntosCampo } from "./galeria-adjuntos-campo";
 import type { RespuestaPaginada } from "@/types/paginacion";
 import type {
   AvisoEnviadoItem,
@@ -18,7 +21,9 @@ import type {
   SupervisionResumenData,
 } from "@/types/campo";
 
-function itemsDeLista<T>(res: T[] | RespuestaPaginada<T> | null | undefined): T[] {
+function itemsDeLista<T>(
+  res: T[] | RespuestaPaginada<T> | null | undefined,
+): T[] {
   if (Array.isArray(res)) return res;
   if (res && Array.isArray(res.items)) return res.items;
   return [];
@@ -31,12 +36,14 @@ interface AvisosPanelProps {
 export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
   // Tabs: para lider: "recibidos" | "enviados" | "redactar". Para impulsador: "recibidos"
   const [tab, setTab] = useState<"recibidos" | "enviados" | "redactar">(
-    esImpulsador ? "recibidos" : "enviados"
+    esImpulsador ? "recibidos" : "enviados",
   );
 
   const [recibidos, setRecibidos] = useState<AvisoRecibidoItem[]>([]);
   const [enviados, setEnviados] = useState<AvisoEnviadoItem[]>([]);
-  const [colaboradores, setColaboradores] = useState<ColaboradorResumenItem[]>([]);
+  const [colaboradores, setColaboradores] = useState<ColaboradorResumenItem[]>(
+    [],
+  );
 
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
@@ -44,8 +51,11 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
 
   // Estado del formulario
   const [formTipo, setFormTipo] = useState<TipoAviso>("EQUIPO");
-  const [formDestinatarioId, setFormDestinatarioId] = useState<number | undefined>(undefined);
+  const [formDestinatarioId, setFormDestinatarioId] = useState<
+    number | undefined
+  >(undefined);
   const [formMensaje, setFormMensaje] = useState("");
+  const [formFotos, setFormFotos] = useState<File[]>([]);
   const [enviando, setEnviando] = useState(false);
 
   // Cargar avisos recibidos
@@ -76,7 +86,9 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
   const cargarColaboradores = async () => {
     if (esImpulsador) return;
     try {
-      const res = await apiFetch<SupervisionResumenData>("/campo/supervision/resumen");
+      const res = await apiFetch<SupervisionResumenData>(
+        "/campo/supervision/resumen",
+      );
       if (res && res.colaboradores) {
         setColaboradores(res.colaboradores);
         if (res.colaboradores.length > 0 && !formDestinatarioId) {
@@ -92,7 +104,11 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
     setCargando(true);
     setError("");
     try {
-      await Promise.all([cargarRecibidos(), !esImpulsador ? cargarEnviados() : null, !esImpulsador ? cargarColaboradores() : null]);
+      await Promise.all([
+        cargarRecibidos(),
+        !esImpulsador ? cargarEnviados() : null,
+        !esImpulsador ? cargarColaboradores() : null,
+      ]);
     } catch (e) {
       setError(mensajeError(e, "Error al cargar avisos"));
     } finally {
@@ -121,15 +137,14 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
       const payload: FormAvisoCampo = {
         tipo: formTipo,
         mensaje: formMensaje.trim(),
-        destinatarioId: formTipo === "INDIVIDUAL" ? formDestinatarioId : undefined,
+        destinatarioId:
+          formTipo === "INDIVIDUAL" ? formDestinatarioId : undefined,
       };
 
-      await apiFetch("/campo/avisos", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
+      await crearAvisoCampo(payload, formFotos);
 
       setFormMensaje("");
+      setFormFotos([]);
       setExito("Aviso transmitido con éxito al equipo de campo.");
       await cargarEnviados();
       setTab("enviados");
@@ -147,7 +162,11 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
         method: "PUT",
       });
       setRecibidos((prev) =>
-        prev.map((a) => (a.id === id ? { ...a, leido: true, leidoAt: new Date().toISOString() } : a))
+        prev.map((a) =>
+          a.id === id
+            ? { ...a, leido: true, leidoAt: new Date().toISOString() }
+            : a,
+        ),
       );
     } catch (err: unknown) {
       console.error("Error al marcar aviso como leído:", err);
@@ -171,7 +190,12 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
   const noLeidosCount = recibidos.filter((r) => !r.leido).length;
 
   if (cargando) {
-    return <PantallaCarga visible={cargando} mensaje="Sincronizando canal de avisos y novedades..." />;
+    return (
+      <PantallaCarga
+        visible={cargando}
+        mensaje="Sincronizando canal de avisos y novedades..."
+      />
+    );
   }
 
   return (
@@ -195,6 +219,15 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
               {noLeidosCount} NUEVO{noLeidosCount > 1 ? "S" : ""}
             </span>
           ) : undefined
+        }
+      />
+
+      <PantallaCarga
+        visible={enviando}
+        mensaje={
+          formFotos.length
+            ? "Enviando comunicado y subiendo fotos"
+            : "Enviando comunicado"
         }
       />
 
@@ -242,7 +275,10 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
 
         {/* Barra de navegación de pestañas (si es Team Leader) */}
         {!esImpulsador ? (
-          <div className="flex flex-wrap items-center justify-between gap-4 border-b pb-4" style={{ borderColor: TOKENS.line }}>
+          <div
+            className="flex flex-wrap items-center justify-between gap-4 border-b pb-4"
+            style={{ borderColor: TOKENS.line }}
+          >
             <div className="flex gap-3">
               <button
                 type="button"
@@ -252,7 +288,9 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                     ? "bg-[#1E2320] text-white shadow-sm"
                     : "bg-white text-[#726C60] hover:text-[#1E2320] border"
                 }`}
-                style={{ borderColor: tab === "enviados" ? "transparent" : TOKENS.line }}
+                style={{
+                  borderColor: tab === "enviados" ? "transparent" : TOKENS.line,
+                }}
               >
                 Avisos Enviados ({enviados.length})
               </button>
@@ -265,7 +303,9 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                     ? "bg-[#1E2320] text-white shadow-sm"
                     : "bg-white text-[#726C60] hover:text-[#1E2320] border"
                 }`}
-                style={{ borderColor: tab === "redactar" ? "transparent" : TOKENS.line }}
+                style={{
+                  borderColor: tab === "redactar" ? "transparent" : TOKENS.line,
+                }}
               >
                 + Nuevo Comunicado
               </button>
@@ -278,7 +318,10 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                     ? "bg-[#1E2320] text-white shadow-sm"
                     : "bg-white text-[#726C60] hover:text-[#1E2320] border"
                 }`}
-                style={{ borderColor: tab === "recibidos" ? "transparent" : TOKENS.line }}
+                style={{
+                  borderColor:
+                    tab === "recibidos" ? "transparent" : TOKENS.line,
+                }}
               >
                 <span>Bandeja Recibida</span>
                 {noLeidosCount > 0 && (
@@ -293,7 +336,10 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
             </div>
           </div>
         ) : (
-          <div className="flex items-center justify-between border-b pb-3" style={{ borderColor: TOKENS.line }}>
+          <div
+            className="flex items-center justify-between border-b pb-3"
+            style={{ borderColor: TOKENS.line }}
+          >
             <h2 className="text-xl font-bold uppercase tracking-wide ft-display">
               Mensajes y Avisos Recibidos
             </h2>
@@ -311,12 +357,16 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
             className="p-6 rounded-xl border shadow-sm"
             style={{ backgroundColor: TOKENS.canvas, borderColor: TOKENS.line }}
           >
-            <div className="mb-5 border-b pb-3" style={{ borderColor: TOKENS.line }}>
+            <div
+              className="mb-5 border-b pb-3"
+              style={{ borderColor: TOKENS.line }}
+            >
               <h3 className="text-xl font-bold uppercase tracking-wide ft-display">
                 Transmitir Comunicado a Campo
               </h3>
               <p className="text-xs text-[#726C60]">
-                Envía una notificación prioritaria instantánea a todo tu equipo o a un impulsador específico.
+                Envía una notificación prioritaria instantánea a todo tu equipo
+                o a un impulsador específico.
               </p>
             </div>
 
@@ -339,7 +389,8 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                     <div
                       className="w-4 h-4 rounded-full border mt-0.5 flex items-center justify-center"
                       style={{
-                        borderColor: formTipo === "EQUIPO" ? TOKENS.ink : TOKENS.sub,
+                        borderColor:
+                          formTipo === "EQUIPO" ? TOKENS.ink : TOKENS.sub,
                       }}
                     >
                       {formTipo === "EQUIPO" && (
@@ -350,9 +401,12 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                       )}
                     </div>
                     <div>
-                      <div className="font-bold text-sm">Todo el Equipo de Campo</div>
+                      <div className="font-bold text-sm">
+                        Todo el Equipo de Campo
+                      </div>
                       <div className="text-xs text-[#726C60]">
-                        Se transmite a todos los impulsadores asignados a tu supervisión.
+                        Se transmite a todos los impulsadores asignados a tu
+                        supervisión.
                       </div>
                     </div>
                   </button>
@@ -369,7 +423,8 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                     <div
                       className="w-4 h-4 rounded-full border mt-0.5 flex items-center justify-center"
                       style={{
-                        borderColor: formTipo === "INDIVIDUAL" ? TOKENS.ink : TOKENS.sub,
+                        borderColor:
+                          formTipo === "INDIVIDUAL" ? TOKENS.ink : TOKENS.sub,
                       }}
                     >
                       {formTipo === "INDIVIDUAL" && (
@@ -380,7 +435,9 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                       )}
                     </div>
                     <div>
-                      <div className="font-bold text-sm">Colaborador Individual</div>
+                      <div className="font-bold text-sm">
+                        Colaborador Individual
+                      </div>
                       <div className="text-xs text-[#726C60]">
                         Mensaje directo a un impulsador en particular.
                       </div>
@@ -397,7 +454,9 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                   </label>
                   <select
                     value={formDestinatarioId ?? ""}
-                    onChange={(e) => setFormDestinatarioId(Number(e.target.value))}
+                    onChange={(e) =>
+                      setFormDestinatarioId(Number(e.target.value))
+                    }
                     className="w-full p-2.5 rounded-lg border bg-white text-sm font-sans focus:outline-none focus:ring-2 focus:ring-[#1E2320]"
                     style={{ borderColor: TOKENS.line }}
                     required
@@ -435,11 +494,20 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                 />
               </div>
 
+              <SelectorFotosCampo
+                archivos={formFotos}
+                onChange={setFormFotos}
+                disabled={enviando}
+              />
+
               {/* Botón de envío */}
               <div className="flex justify-end gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => setTab("enviados")}
+                  onClick={() => {
+                    setTab("enviados");
+                    setFormFotos([]);
+                  }}
                   className="px-4 py-2.5 rounded-lg border text-xs font-bold uppercase tracking-wider bg-white hover:bg-gray-50"
                   style={{ borderColor: TOKENS.line }}
                 >
@@ -464,13 +532,17 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
             {enviados.length === 0 ? (
               <div
                 className="p-12 text-center rounded-xl border"
-                style={{ backgroundColor: TOKENS.canvas, borderColor: TOKENS.line }}
+                style={{
+                  backgroundColor: TOKENS.canvas,
+                  borderColor: TOKENS.line,
+                }}
               >
                 <p className="text-base font-bold text-[#1E2320] mb-1">
                   No hay avisos enviados aún
                 </p>
                 <p className="text-xs text-[#726C60] mb-4">
-                  Envía el primer comunicado a tu equipo de impulsadores de campo.
+                  Envía el primer comunicado a tu equipo de impulsadores de
+                  campo.
                 </p>
                 <button
                   type="button"
@@ -504,9 +576,13 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                             className="text-[10px] font-mono uppercase px-2 py-0.5 rounded font-bold inline-flex items-center gap-1"
                             style={{
                               backgroundColor:
-                                aviso.tipo === "EQUIPO" ? "var(--accent-soft)" : TOKENS.bone,
+                                aviso.tipo === "EQUIPO"
+                                  ? "var(--accent-soft)"
+                                  : TOKENS.bone,
                               color:
-                                aviso.tipo === "EQUIPO" ? TOKENS.frio : TOKENS.carne,
+                                aviso.tipo === "EQUIPO"
+                                  ? TOKENS.frio
+                                  : TOKENS.carne,
                             }}
                           >
                             {aviso.tipo === "EQUIPO" ? (
@@ -517,7 +593,10 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                             ) : (
                               <>
                                 <IconoContacto className="w-3 h-3" />
-                                <span>DIRECTO A {aviso.destinatario?.nombre ?? "COLABORADOR"}</span>
+                                <span>
+                                  DIRECTO A{" "}
+                                  {aviso.destinatario?.nombre ?? "COLABORADOR"}
+                                </span>
                               </>
                             )}
                           </span>
@@ -532,22 +611,24 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                             todoLeido
                               ? "fresco"
                               : parcialLeido
-                              ? "alerta"
-                              : "critico"
+                                ? "alerta"
+                                : "critico"
                           }
                           size="sm"
                         >
                           {aviso.tipo === "EQUIPO"
                             ? `${leidos}/${total} LEÍDOS`
                             : aviso.leido
-                            ? "LEÍDO"
-                            : "PENDIENTE"}
+                              ? "LEÍDO"
+                              : "PENDIENTE"}
                         </StatusStamp>
                       </div>
 
                       <p className="text-sm font-sans text-[#1E2320] leading-relaxed mb-3 whitespace-pre-wrap">
                         {aviso.mensaje}
                       </p>
+
+                      <GaleriaAdjuntosCampo adjuntos={aviso.adjuntos} />
 
                       <div
                         className="pt-2 border-t flex items-center justify-between text-xs text-[#726C60]"
@@ -579,7 +660,10 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
             {recibidos.length === 0 ? (
               <div
                 className="p-12 text-center rounded-xl border"
-                style={{ backgroundColor: TOKENS.canvas, borderColor: TOKENS.line }}
+                style={{
+                  backgroundColor: TOKENS.canvas,
+                  borderColor: TOKENS.line,
+                }}
               >
                 <p className="text-base font-bold text-[#1E2320] mb-1">
                   Bandeja de avisos al día
@@ -612,9 +696,13 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                             className="text-[10px] font-mono uppercase px-2 py-0.5 rounded font-bold inline-flex items-center gap-1"
                             style={{
                               backgroundColor:
-                                aviso.tipo === "EQUIPO" ? "var(--accent-soft)" : TOKENS.bone,
+                                aviso.tipo === "EQUIPO"
+                                  ? "var(--accent-soft)"
+                                  : TOKENS.bone,
                               color:
-                                aviso.tipo === "EQUIPO" ? TOKENS.frio : TOKENS.carne,
+                                aviso.tipo === "EQUIPO"
+                                  ? TOKENS.frio
+                                  : TOKENS.carne,
                             }}
                           >
                             {aviso.tipo === "EQUIPO" ? (
@@ -634,20 +722,26 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                           </span>
                         </div>
 
-                        <StatusStamp tone={noLeido ? "alerta" : "fresco"} size="sm">
+                        <StatusStamp
+                          tone={noLeido ? "alerta" : "fresco"}
+                          size="sm"
+                        >
                           {noLeido ? "NO LEÍDO" : "LEÍDO"}
                         </StatusStamp>
                       </div>
 
                       <div className="mb-2">
                         <span className="text-xs font-bold text-[#726C60]">
-                          De: {aviso.emisor.nombre} {aviso.emisor.apellido || ""}
+                          De: {aviso.emisor.nombre}{" "}
+                          {aviso.emisor.apellido || ""}
                         </span>
                       </div>
 
                       <p className="text-sm font-sans text-[#1E2320] leading-relaxed mb-4 whitespace-pre-wrap font-medium">
                         {aviso.mensaje}
                       </p>
+
+                      <GaleriaAdjuntosCampo adjuntos={aviso.adjuntos} />
 
                       <div
                         className="pt-2.5 border-t flex items-center justify-between"

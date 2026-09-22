@@ -13,6 +13,7 @@ import { NotificacionService } from './services/notificacion.service';
 import { NovedadService } from './services/novedad.service';
 import { AvisoService } from './services/aviso.service';
 import { SupervisionService } from './services/supervision.service';
+import { AdjuntoCampoService } from './services/adjunto-campo.service';
 
 @Module({
   imports: [AuthModule, PrismaModule, PlataformaModule],
@@ -28,6 +29,7 @@ import { SupervisionService } from './services/supervision.service';
     NovedadService,
     AvisoService,
     SupervisionService,
+    AdjuntoCampoService,
   ],
   exports: [
     CampoAccesoService,

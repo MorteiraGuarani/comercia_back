@@ -1,12 +1,22 @@
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import type { PrismaService } from '../../prisma/prisma.service';
 import type { NotificacionService } from './notificacion.service';
+import type { AdjuntoCampoService } from './adjunto-campo.service';
 
 jest.mock('../../prisma/prisma.service', () => ({
   PrismaService: class PrismaService {},
 }));
+jest.mock('./adjunto-campo.service', () => ({
+  AdjuntoCampoService: class AdjuntoCampoService {},
+}));
 
 import { AvisoService } from './aviso.service';
+
+const adjuntosMock = () =>
+  ({
+    guardarParaAviso: jest.fn().mockResolvedValue([]),
+    descartarArchivos: jest.fn(),
+  }) as unknown as AdjuntoCampoService;
 
 describe('AvisoService', () => {
   it('exige destinatarioId si el aviso es INDIVIDUAL', async () => {
@@ -19,6 +29,7 @@ describe('AvisoService', () => {
     const service = new AvisoService(
       prisma as unknown as PrismaService,
       notificaciones as unknown as NotificacionService,
+      adjuntosMock(),
     );
 
     await expect(
@@ -31,7 +42,9 @@ describe('AvisoService', () => {
 
   it('crea aviso de equipo y notifica a los miembros', async () => {
     const prisma = {
-      usuario: { findMany: jest.fn().mockResolvedValue([{ id: 2 }, { id: 3 }]) },
+      usuario: {
+        findMany: jest.fn().mockResolvedValue([{ id: 2 }, { id: 3 }]),
+      },
       avisoCampo: {
         create: jest.fn().mockResolvedValue({
           id: 7,
@@ -46,6 +59,7 @@ describe('AvisoService', () => {
     const service = new AvisoService(
       prisma as unknown as PrismaService,
       notificaciones as unknown as NotificacionService,
+      adjuntosMock(),
     );
 
     const res = await service.crear(1, 10, {
@@ -64,6 +78,7 @@ describe('AvisoService', () => {
     const service = new AvisoService(
       prisma as unknown as PrismaService,
       { crearNotificacionAviso: jest.fn() } as unknown as NotificacionService,
+      adjuntosMock(),
     );
 
     await expect(
@@ -77,7 +92,9 @@ describe('AvisoService', () => {
 
   it('no incluye comunicados de equipo en la bandeja de quien no tiene superior', async () => {
     const prisma = {
-      usuario: { findUnique: jest.fn().mockResolvedValue({ superiorId: null }) },
+      usuario: {
+        findUnique: jest.fn().mockResolvedValue({ superiorId: null }),
+      },
       avisoCampo: {
         findMany: jest.fn().mockResolvedValue([]),
         count: jest.fn().mockResolvedValue(0),
@@ -86,6 +103,7 @@ describe('AvisoService', () => {
     const service = new AvisoService(
       prisma as unknown as PrismaService,
       {} as NotificacionService,
+      adjuntosMock(),
     );
 
     await service.listarRecibidos(1, 10, { page: 1, limit: 7 });
@@ -122,21 +140,28 @@ describe('AvisoService', () => {
     const service = new AvisoService(
       prisma as unknown as PrismaService,
       {} as NotificacionService,
+      adjuntosMock(),
     );
 
-    const resultado = await service.listarEnviados(1, 10, { page: 1, limit: 7 });
+    const resultado = await service.listarEnviados(1, 10, {
+      page: 1,
+      limit: 7,
+    });
 
     expect(resultado.items[0]).toMatchObject({ leidoPor: 1, total: 1 });
   });
 
   it('no permite confirmar un aviso que no pertenece al usuario', async () => {
     const prisma = {
-      usuario: { findUnique: jest.fn().mockResolvedValue({ superiorId: null }) },
+      usuario: {
+        findUnique: jest.fn().mockResolvedValue({ superiorId: null }),
+      },
       avisoCampo: { findFirst: jest.fn().mockResolvedValue(null) },
     };
     const service = new AvisoService(
       prisma as unknown as PrismaService,
       {} as NotificacionService,
+      adjuntosMock(),
     );
 
     await expect(service.marcarLeido(1, 10, 99)).rejects.toBeInstanceOf(

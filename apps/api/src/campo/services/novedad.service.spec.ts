@@ -3,12 +3,22 @@
 import { NotFoundException, ForbiddenException } from '@nestjs/common';
 import type { PrismaService } from '../../prisma/prisma.service';
 import type { NotificacionService } from './notificacion.service';
+import type { AdjuntoCampoService } from './adjunto-campo.service';
 
 jest.mock('../../prisma/prisma.service', () => ({
   PrismaService: class PrismaService {},
 }));
+jest.mock('./adjunto-campo.service', () => ({
+  AdjuntoCampoService: class AdjuntoCampoService {},
+}));
 
 import { NovedadService } from './novedad.service';
+
+const adjuntosMock = () =>
+  ({
+    guardarParaNovedad: jest.fn().mockResolvedValue([]),
+    descartarArchivos: jest.fn(),
+  }) as unknown as AdjuntoCampoService;
 
 describe('NovedadService', () => {
   it('lanza NotFoundException si el local no existe en la empresa', async () => {
@@ -21,6 +31,7 @@ describe('NovedadService', () => {
     const service = new NovedadService(
       prisma as unknown as PrismaService,
       notificaciones as unknown as NotificacionService,
+      adjuntosMock(),
     );
 
     await expect(
@@ -35,7 +46,9 @@ describe('NovedadService', () => {
 
   it('crea la novedad y notifica al líder', async () => {
     const prisma = {
-      localCampo: { findFirst: jest.fn().mockResolvedValue({ id: 10, nombre: 'Super 1' }) },
+      localCampo: {
+        findFirst: jest.fn().mockResolvedValue({ id: 10, nombre: 'Super 1' }),
+      },
       novedadCampo: {
         create: jest.fn().mockResolvedValue({
           id: 5,
@@ -55,6 +68,7 @@ describe('NovedadService', () => {
     const service = new NovedadService(
       prisma as unknown as PrismaService,
       notificaciones as unknown as NotificacionService,
+      adjuntosMock(),
     );
 
     const res = await service.crear(1, 10, {
@@ -65,9 +79,15 @@ describe('NovedadService', () => {
     });
 
     expect(res.id).toBe(5);
-    expect(prisma.novedadCampo.create).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ empresaId: 10, usuarioId: 1, localId: 10 }),
-    }));
+    expect(prisma.novedadCampo.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          empresaId: 10,
+          usuarioId: 1,
+          localId: 10,
+        }),
+      }),
+    );
     expect(notificaciones.crearNotificacionNovedad).toHaveBeenCalledWith(
       10,
       1,
@@ -81,28 +101,56 @@ describe('NovedadService', () => {
     const prisma = {
       localCampo: {
         count: jest.fn().mockResolvedValue(8),
-        findMany: jest.fn().mockResolvedValue([{ id: 12, nombre: 'Local asignado' }]),
+        findMany: jest
+          .fn()
+          .mockResolvedValue([{ id: 12, nombre: 'Local asignado' }]),
       },
     };
-    const service = new NovedadService(prisma as unknown as PrismaService, {} as NotificacionService);
-    const respuesta = await service.locales(1, 10, { page: 2, limit: 7, buscar: 'Local' });
+    const service = new NovedadService(
+      prisma as unknown as PrismaService,
+      {} as NotificacionService,
+      adjuntosMock(),
+    );
+    const respuesta = await service.locales(1, 10, {
+      page: 2,
+      limit: 7,
+      buscar: 'Local',
+    });
     expect(respuesta.items).toEqual([{ id: 12, nombre: 'Local asignado' }]);
-    expect(prisma.localCampo.findMany).toHaveBeenCalledWith(expect.objectContaining({
-      skip: 7, take: 7, select: { id: true, nombre: true },
-      where: expect.objectContaining({
-        cliente: { empresaId: 10, activo: true },
-        OR: expect.arrayContaining([{ visitas: { some: { usuarioId: 1 } } }]),
+    expect(prisma.localCampo.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        skip: 7,
+        take: 7,
+        select: { id: true, nombre: true },
+        where: expect.objectContaining({
+          cliente: { empresaId: 10, activo: true },
+          OR: expect.arrayContaining([{ visitas: { some: { usuarioId: 1 } } }]),
+        }),
       }),
-    }));
+    );
   });
 
   it('impide a un líder filtrar novedades de usuarios ajenos a su equipo', async () => {
     const prisma = {
-      usuario: { findUnique: jest.fn().mockImplementation(({ where }: { where: { id: number } }) => Promise.resolve(
-        where.id === 1 ? { id: 1, rol: { hijos: [{ usuarios: [{ id: 2 }] }] } } : { id: 2, rol: null },
-      )) },
+      usuario: {
+        findUnique: jest
+          .fn()
+          .mockImplementation(({ where }: { where: { id: number } }) =>
+            Promise.resolve(
+              where.id === 1
+                ? { id: 1, rol: { hijos: [{ usuarios: [{ id: 2 }] }] } }
+                : { id: 2, rol: null },
+            ),
+          ),
+      },
     };
-    const service = new NovedadService(prisma as unknown as PrismaService, {} as NotificacionService);
-    await expect(service.listar(1, 10, { usuarioId: 999 })).rejects.toBeInstanceOf(ForbiddenException);
+    const service = new NovedadService(
+      prisma as unknown as PrismaService,
+      {} as NotificacionService,
+      adjuntosMock(),
+    );
+    await expect(
+      service.listar(1, 10, { usuarioId: 999 }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
   });
 });

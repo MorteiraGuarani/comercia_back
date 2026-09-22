@@ -15,10 +15,15 @@ import { TOKENS } from "./tokens";
 import { StatusStamp } from "./ui/status-stamp";
 import { StatChip } from "./ui/stat-chip";
 import { TopBar } from "./ui/top-bar";
-import { SelectorFechaFiltro, type PeriodoFiltro } from "./ui/selector-fecha-filtro";
+import {
+  SelectorFechaFiltro,
+  type PeriodoFiltro,
+} from "./ui/selector-fecha-filtro";
 import { Modal } from "@/components/modal";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { MapaLocal } from "./mapa-local";
+import { crearNovedadCampo } from "@/lib/api-adjuntos-campo";
+import { SelectorFotosCampo } from "./selector-fotos-campo";
 import type {
   AgendaCampo,
   LocalCampo,
@@ -45,10 +50,13 @@ export function RutaImpulsadorPanel() {
   const [busqueda, setBusqueda] = useState("");
 
   // Modal para reportar novedad en un local
-  const [novedadLocal, setNovedadLocal] = useState<LocalParaNovedad | null>(null);
+  const [novedadLocal, setNovedadLocal] = useState<LocalParaNovedad | null>(
+    null,
+  );
   const [tipoNovedad, setTipoNovedad] = useState<TipoNovedad>("INCIDENCIA");
   const [tituloNovedad, setTituloNovedad] = useState("");
   const [descNovedad, setDescNovedad] = useState("");
+  const [fotosNovedad, setFotosNovedad] = useState<File[]>([]);
   const [guardandoNovedad, setGuardandoNovedad] = useState(false);
   const [novedadExito, setNovedadExito] = useState(false);
   const [rutaCalc, setRutaCalc] = useState<{
@@ -90,7 +98,9 @@ export function RutaImpulsadorPanel() {
       : lista.items;
     const visitado = (a: AgendaCampo) => a.visitas.some((v) => v.salida);
     if (!ordenRuta?.length) {
-      return [...base].sort((a, b) => Number(visitado(a)) - Number(visitado(b)));
+      return [...base].sort(
+        (a, b) => Number(visitado(a)) - Number(visitado(b)),
+      );
     }
     const peso = new Map(ordenRuta.map((id, i) => [id, i]));
     return [...base].sort((a, b) => {
@@ -104,7 +114,9 @@ export function RutaImpulsadorPanel() {
   }, [lista.items, busqueda, ordenRuta]);
 
   const totalParadas = lista.total || lista.items.length;
-  const visitadas = lista.items.filter((a) => a.visitas.some((v) => v.salida)).length;
+  const visitadas = lista.items.filter((a) =>
+    a.visitas.some((v) => v.salida),
+  ).length;
   const enCurso = abierta ? 1 : 0;
   const pendientes = Math.max(0, totalParadas - visitadas - enCurso);
 
@@ -148,7 +160,9 @@ export function RutaImpulsadorPanel() {
       const pendientes = pendientesParaRuta(lista.items);
       if (!pendientes.length) {
         setRutaCalc(null);
-        setAvisoRuta("No hay locales pendientes con ubicación para armar la ruta.");
+        setAvisoRuta(
+          "No hay locales pendientes con ubicación para armar la ruta.",
+        );
         return;
       }
       let origen = await posicionGps();
@@ -177,7 +191,10 @@ export function RutaImpulsadorPanel() {
         qs: qsFecha,
         origen,
         ids: orden.map((p) => p.id),
-        paradas: orden.map((p) => ({ latitud: p.latitud, longitud: p.longitud })),
+        paradas: orden.map((p) => ({
+          latitud: p.latitud,
+          longitud: p.longitud,
+        })),
         aviso,
       });
       setAvisoRuta(aviso);
@@ -202,28 +219,38 @@ export function RutaImpulsadorPanel() {
   }
 
   const enviarNovedad = async () => {
-    if (!novedadLocal || !tituloNovedad.trim() || !descNovedad.trim() || guardandoNovedad) return;
+    if (
+      !novedadLocal ||
+      !tituloNovedad.trim() ||
+      !descNovedad.trim() ||
+      guardandoNovedad
+    )
+      return;
     try {
       setGuardandoNovedad(true);
-      await apiFetch("/campo/novedades", {
-        method: "POST",
-        body: JSON.stringify({
+      await crearNovedadCampo(
+        {
           localId: novedadLocal.id,
           tipo: tipoNovedad,
           titulo: tituloNovedad.trim(),
           descripcion: descNovedad.trim(),
-          visitaId: abierta?.local.id === novedadLocal.id ? abierta.id : undefined,
-        }),
-      });
+          visitaId:
+            abierta?.local.id === novedadLocal.id ? abierta.id : undefined,
+        },
+        fotosNovedad,
+      );
       setNovedadExito(true);
       setTimeout(() => {
         setNovedadLocal(null);
         setTituloNovedad("");
         setDescNovedad("");
+        setFotosNovedad([]);
         setNovedadExito(false);
       }, 1400);
     } catch (e) {
-      alert("Error al reportar novedad: " + mensajeError(e, "Error inesperado"));
+      alert(
+        "Error al reportar novedad: " + mensajeError(e, "Error inesperado"),
+      );
     } finally {
       setGuardandoNovedad(false);
     }
@@ -248,10 +275,18 @@ export function RutaImpulsadorPanel() {
       <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto w-full space-y-6 flex-1 overflow-y-auto">
         {/* StatChips estilo editorial */}
         <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 sm:grid sm:grid-cols-4 sm:overflow-visible">
-          <div className="min-w-[8.25rem] flex-1"><StatChip label="Total paradas" value={totalParadas} tone="ink" /></div>
-          <div className="min-w-[8.25rem] flex-1"><StatChip label="Visitadas" value={visitadas} tone="fresco" /></div>
-          <div className="min-w-[8.25rem] flex-1"><StatChip label="En curso" value={enCurso} tone="frio" /></div>
-          <div className="min-w-[8.25rem] flex-1"><StatChip label="Pendientes" value={pendientes} tone="sub" /></div>
+          <div className="min-w-[8.25rem] flex-1">
+            <StatChip label="Total paradas" value={totalParadas} tone="ink" />
+          </div>
+          <div className="min-w-[8.25rem] flex-1">
+            <StatChip label="Visitadas" value={visitadas} tone="fresco" />
+          </div>
+          <div className="min-w-[8.25rem] flex-1">
+            <StatChip label="En curso" value={enCurso} tone="frio" />
+          </div>
+          <div className="min-w-[8.25rem] flex-1">
+            <StatChip label="Pendientes" value={pendientes} tone="sub" />
+          </div>
         </div>
 
         {/* Visita en curso destacada */}
@@ -269,11 +304,18 @@ export function RutaImpulsadorPanel() {
                 <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-600"></span>
               </span>
               <div>
-                <p className="ft-body font-bold text-sm" style={{ color: TOKENS.ink }}>
+                <p
+                  className="ft-body font-bold text-sm"
+                  style={{ color: TOKENS.ink }}
+                >
                   Visita en curso · {abierta.local.nombre}
                 </p>
                 <p className="ft-mono text-xs text-muted">
-                  Entrada registrada: {new Date(abierta.entrada).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
+                  Entrada registrada:{" "}
+                  {new Date(abierta.entrada).toLocaleTimeString("es-AR", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
                 </p>
               </div>
             </div>
@@ -337,11 +379,16 @@ export function RutaImpulsadorPanel() {
         {/* Lista de paradas de la ruta */}
         <div className="space-y-2.5 pb-16">
           {lista.cargando ? (
-            <p className="py-8 text-center text-xs text-muted">Cargando tu ruta…</p>
+            <p className="py-8 text-center text-xs text-muted">
+              Cargando tu ruta…
+            </p>
           ) : itemsFiltrados.length === 0 ? (
             <div
               className="rounded-lg p-8 text-center"
-              style={{ background: TOKENS.canvas, border: `1px solid ${TOKENS.line}` }}
+              style={{
+                background: TOKENS.canvas,
+                border: `1px solid ${TOKENS.line}`,
+              }}
             >
               <p className="ft-body text-xs text-muted">
                 No hay locales programados en tu ruta para esta fecha.
@@ -359,8 +406,18 @@ export function RutaImpulsadorPanel() {
                   ? "completado"
                   : "pendiente";
 
-              const tone = estado === "completado" ? "fresco" : estado === "en_curso" ? "frio" : "ink";
-              const label = estado === "completado" ? "VISITADO" : estado === "en_curso" ? "EN CURSO" : "PENDIENTE";
+              const tone =
+                estado === "completado"
+                  ? "fresco"
+                  : estado === "en_curso"
+                    ? "frio"
+                    : "ink";
+              const label =
+                estado === "completado"
+                  ? "VISITADO"
+                  : estado === "en_curso"
+                    ? "EN CURSO"
+                    : "PENDIENTE";
 
               const horarios = a.local.horarios;
               const ventana = horarios.length
@@ -384,7 +441,11 @@ export function RutaImpulsadorPanel() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-start gap-2.5 min-w-0">
                       <span className="ft-display text-xs font-bold w-6 h-6 rounded-full bg-zinc-200 text-foreground flex items-center justify-center shrink-0 mt-0.5 dark:bg-zinc-700 dark:text-zinc-100">
-                        {tieneVisitaCerrada ? "✓" : ordenNumero >= 0 ? ordenNumero + 1 : i + 1}
+                        {tieneVisitaCerrada
+                          ? "✓"
+                          : ordenNumero >= 0
+                            ? ordenNumero + 1
+                            : i + 1}
                       </span>
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5">
@@ -412,12 +473,20 @@ export function RutaImpulsadorPanel() {
                       <span className="ft-mono">{ventana}</span>
                       {ultimaVisita?.entrada && (
                         <span className="ft-mono font-medium text-foreground">
-                          Entrada {new Date(ultimaVisita.entrada).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
+                          Entrada{" "}
+                          {new Date(ultimaVisita.entrada).toLocaleTimeString(
+                            "es-AR",
+                            { hour: "2-digit", minute: "2-digit" },
+                          )}
                         </span>
                       )}
                       {ultimaVisita?.salida && (
                         <span className="ft-mono font-medium text-foreground">
-                          Salida {new Date(ultimaVisita.salida).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
+                          Salida{" "}
+                          {new Date(ultimaVisita.salida).toLocaleTimeString(
+                            "es-AR",
+                            { hour: "2-digit", minute: "2-digit" },
+                          )}
                         </span>
                       )}
                     </div>
@@ -440,7 +509,15 @@ export function RutaImpulsadorPanel() {
                         aria-label={`Ver mapa de ${a.local.nombre}`}
                         title="Ver mapa"
                       >
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          aria-hidden
+                        >
                           <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
                           <line x1="8" y1="2" x2="8" y2="18" />
                           <line x1="16" y1="6" x2="16" y2="22" />
@@ -464,12 +541,27 @@ export function RutaImpulsadorPanel() {
           )}
         </div>
         {lista.error || error ? (
-          <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
+          <p
+            role="alert"
+            className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-200"
+          >
             {lista.error || error}
           </p>
         ) : null}
       </div>
-      <PantallaCarga visible={calculandoRuta} mensaje="Calculando mejor ruta" detalle="Usamos tu GPS, los horarios y la distancia entre locales." />
+      <PantallaCarga
+        visible={calculandoRuta}
+        mensaje="Calculando mejor ruta"
+        detalle="Usamos tu GPS, los horarios y la distancia entre locales."
+      />
+      <PantallaCarga
+        visible={guardandoNovedad}
+        mensaje={
+          fotosNovedad.length
+            ? "Enviando novedad y subiendo fotos"
+            : "Enviando novedad"
+        }
+      />
 
       {/* Modal de Mapa */}
       {mapa && (
@@ -496,34 +588,60 @@ export function RutaImpulsadorPanel() {
         <Modal
           titulo={`Novedad · ${novedadLocal.nombre}`}
           abierto={!!novedadLocal}
-          onCerrar={() => setNovedadLocal(null)}
+          onCerrar={() => {
+            if (!guardandoNovedad) {
+              setNovedadLocal(null);
+              setFotosNovedad([]);
+            }
+          }}
           ancho="md"
         >
           {novedadExito ? (
             <div className="py-6 text-center text-emerald-700 space-y-2">
-              <svg className="w-12 h-12 mx-auto text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+              <svg
+                className="w-12 h-12 mx-auto text-emerald-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M5 13l4 4L19 7"
+                />
               </svg>
-              <p className="ft-display text-xl font-bold">¡Novedad enviada con éxito!</p>
-              <p className="ft-body text-xs text-muted">Tu Team Leader ya fue notificado.</p>
+              <p className="ft-display text-xl font-bold">
+                ¡Novedad enviada con éxito!
+              </p>
+              <p className="ft-body text-xs text-muted">
+                Tu Team Leader ya fue notificado.
+              </p>
             </div>
           ) : (
             <div className="space-y-3">
               <p className="ft-body text-xs text-muted">
-                Si ocurrió un imprevisto en este local (local cerrado, faltante de stock, reclamo de precio, etc.),
-                reportalo para que tu supervisor intervenga.
+                Si ocurrió un imprevisto en este local (local cerrado, faltante
+                de stock, reclamo de precio, etc.), reportalo para que tu
+                supervisor intervenga.
               </p>
 
               <div>
-                <label className="block text-xs font-semibold text-foreground mb-1">Tipo de Novedad:</label>
+                <label className="block text-xs font-semibold text-foreground mb-1">
+                  Tipo de Novedad:
+                </label>
                 <div className="grid grid-cols-2 gap-1.5">
-                  {(["INCIDENCIA", "RECLAMO", "CONSULTA", "SUGERENCIA"] as const).map((t) => (
+                  {(
+                    ["INCIDENCIA", "RECLAMO", "CONSULTA", "SUGERENCIA"] as const
+                  ).map((t) => (
                     <button
                       key={t}
                       type="button"
                       onClick={() => setTipoNovedad(t)}
                       className={`py-1.5 px-2 rounded-md text-xs font-semibold border transition cursor-pointer ${
-                        tipoNovedad === t ? "bg-zinc-900 text-white border-zinc-900" : "bg-surface-raised text-foreground border-line"
+                        tipoNovedad === t
+                          ? "bg-zinc-900 text-white border-zinc-900"
+                          : "bg-surface-raised text-foreground border-line"
                       }`}
                     >
                       {t}
@@ -533,7 +651,9 @@ export function RutaImpulsadorPanel() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-foreground mb-1">Asunto / Título:</label>
+                <label className="block text-xs font-semibold text-foreground mb-1">
+                  Asunto / Título:
+                </label>
                 <input
                   type="text"
                   value={tituloNovedad}
@@ -544,7 +664,9 @@ export function RutaImpulsadorPanel() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-foreground mb-1">Descripción detallada:</label>
+                <label className="block text-xs font-semibold text-foreground mb-1">
+                  Descripción detallada:
+                </label>
                 <textarea
                   value={descNovedad}
                   onChange={(e) => setDescNovedad(e.target.value)}
@@ -554,10 +676,19 @@ export function RutaImpulsadorPanel() {
                 />
               </div>
 
+              <SelectorFotosCampo
+                archivos={fotosNovedad}
+                onChange={setFotosNovedad}
+                disabled={guardandoNovedad}
+              />
+
               <div className="flex gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => setNovedadLocal(null)}
+                  onClick={() => {
+                    setNovedadLocal(null);
+                    setFotosNovedad([]);
+                  }}
                   className="flex-1 py-2 text-xs font-semibold border rounded-lg text-foreground"
                 >
                   Cancelar
@@ -565,7 +696,11 @@ export function RutaImpulsadorPanel() {
                 <button
                   type="button"
                   onClick={enviarNovedad}
-                  disabled={!tituloNovedad.trim() || !descNovedad.trim() || guardandoNovedad}
+                  disabled={
+                    !tituloNovedad.trim() ||
+                    !descNovedad.trim() ||
+                    guardandoNovedad
+                  }
                   className="flex-1 py-2 text-xs font-bold bg-[#1E2320] text-white rounded-lg hover:bg-black transition disabled:opacity-50 cursor-pointer"
                 >
                   {guardandoNovedad ? "Enviando..." : "Reportar Novedad"}

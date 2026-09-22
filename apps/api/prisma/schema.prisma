@@ -12,24 +12,25 @@ datasource db {
 }
 
 model Empresa {
-  id                    Int                       @id @default(autoincrement())
-  nombre                String                    @unique
-  dbName                String?                   @map("db_name")
-  empresaId             Int?                      @map("empresas_id")
-  padre                 Empresa?                  @relation("EmpresaJerarquia", fields: [empresaId], references: [id])
-  hijas                 Empresa[]                 @relation("EmpresaJerarquia")
-  usuarios              Usuario[]
-  roles                 Rol[]
-  clientesCampo         ClienteCampo[]
-  tareasCampo           TareaCampo[]
-  eventosUcheck         IntegracionUcheckEvento[]
-  modulos               EmpresaModulo[]
-  paginas               EmpresaPagina[]
-  notificacionesCampo   NotificacionCampo[]
-  novedadesCampo        NovedadCampo[]
-  avisosCampo           AvisoCampo[]
-  createdAt             DateTime                  @default(now()) @map("created_at")
-  updatedAt             DateTime                  @default(now()) @updatedAt @map("updated_at")
+  id                  Int                       @id @default(autoincrement())
+  nombre              String                    @unique
+  dbName              String?                   @map("db_name")
+  empresaId           Int?                      @map("empresas_id")
+  padre               Empresa?                  @relation("EmpresaJerarquia", fields: [empresaId], references: [id])
+  hijas               Empresa[]                 @relation("EmpresaJerarquia")
+  usuarios            Usuario[]
+  roles               Rol[]
+  clientesCampo       ClienteCampo[]
+  tareasCampo         TareaCampo[]
+  eventosUcheck       IntegracionUcheckEvento[]
+  modulos             EmpresaModulo[]
+  paginas             EmpresaPagina[]
+  notificacionesCampo NotificacionCampo[]
+  novedadesCampo      NovedadCampo[]
+  avisosCampo         AvisoCampo[]
+  adjuntosCampo       AdjuntoCampo[]
+  createdAt           DateTime                  @default(now()) @map("created_at")
+  updatedAt           DateTime                  @default(now()) @updatedAt @map("updated_at")
 
   @@map("empresas")
 }
@@ -158,39 +159,40 @@ model Rol {
 }
 
 model Usuario {
-  id                        Int                       @id @default(autoincrement())
-  empresaId                 Int                       @map("empresa_id")
-  empresa                   Empresa                   @relation(fields: [empresaId], references: [id])
-  nombre                    String
-  apellido                  String
-  correo                    String                    @unique
-  nombreLogin               String                    @unique @map("nombre_login")
-  passwordHash              String                    @map("password_hash")
-  ruc                       String                    @unique
-  celular                   String
-  rolId                     Int?                      @map("rol_id")
-  rol                       Rol?                      @relation(fields: [rolId, empresaId], references: [id, empresaId], onDelete: NoAction, onUpdate: NoAction)
-  superiorId                Int?                      @map("superior_id")
-  superior                  Usuario?                  @relation("UsuarioJerarquia", fields: [superiorId], references: [id])
-  subordinados              Usuario[]                 @relation("UsuarioJerarquia")
-  asignacionesCampo         AsignacionCampo[]         @relation("CampoTitular")
-  backupsCampo              BackupCampo[]             @relation("CampoBackup")
-  visitasCampo              VisitaCampo[]
-  eventosUcheck             IntegracionUcheckEvento[]
-  comentariosTarea          ComentarioTareaCampo[]
-  fotosTarea                FotoTareaCampo[]
-  notificacionesRecibidas   NotificacionCampo[]       @relation("NotificacionesRecibidas")
-  notificacionesEnviadas    NotificacionCampo[]       @relation("NotificacionesEnviadas")
-  novedadesReportadas       NovedadCampo[]            @relation("NovedadesReportadas")
-  novedadesCerradas         NovedadCampo[]            @relation("NovedadesCerradas")
-  avisosEnviados            AvisoCampo[]              @relation("AvisosEnviados")
-  avisosRecibidos           AvisoCampo[]              @relation("AvisosRecibidos")
-  lecturasAvisos            AvisoLecturaCampo[]
-  identidadUcheck           IdentidadUcheck?
-  esSuperadmin              Boolean                   @default(false) @map("es_superadmin")
-  isActive                  Boolean                   @default(true) @map("is_active")
-  createdAt                 DateTime                  @default(now()) @map("created_at")
-  updatedAt                 DateTime                  @default(now()) @updatedAt @map("updated_at")
+  id                      Int                       @id @default(autoincrement())
+  empresaId               Int                       @map("empresa_id")
+  empresa                 Empresa                   @relation(fields: [empresaId], references: [id])
+  nombre                  String
+  apellido                String
+  correo                  String                    @unique
+  nombreLogin             String                    @unique @map("nombre_login")
+  passwordHash            String                    @map("password_hash")
+  ruc                     String                    @unique
+  celular                 String
+  rolId                   Int?                      @map("rol_id")
+  rol                     Rol?                      @relation(fields: [rolId, empresaId], references: [id, empresaId], onDelete: NoAction, onUpdate: NoAction)
+  superiorId              Int?                      @map("superior_id")
+  superior                Usuario?                  @relation("UsuarioJerarquia", fields: [superiorId], references: [id])
+  subordinados            Usuario[]                 @relation("UsuarioJerarquia")
+  asignacionesCampo       AsignacionCampo[]         @relation("CampoTitular")
+  backupsCampo            BackupCampo[]             @relation("CampoBackup")
+  visitasCampo            VisitaCampo[]
+  eventosUcheck           IntegracionUcheckEvento[]
+  comentariosTarea        ComentarioTareaCampo[]
+  fotosTarea              FotoTareaCampo[]
+  notificacionesRecibidas NotificacionCampo[]       @relation("NotificacionesRecibidas")
+  notificacionesEnviadas  NotificacionCampo[]       @relation("NotificacionesEnviadas")
+  novedadesReportadas     NovedadCampo[]            @relation("NovedadesReportadas")
+  novedadesCerradas       NovedadCampo[]            @relation("NovedadesCerradas")
+  avisosEnviados          AvisoCampo[]              @relation("AvisosEnviados")
+  avisosRecibidos         AvisoCampo[]              @relation("AvisosRecibidos")
+  lecturasAvisos          AvisoLecturaCampo[]
+  adjuntosCampo           AdjuntoCampo[]
+  identidadUcheck         IdentidadUcheck?
+  esSuperadmin            Boolean                   @default(false) @map("es_superadmin")
+  isActive                Boolean                   @default(true) @map("is_active")
+  createdAt               DateTime                  @default(now()) @map("created_at")
+  updatedAt               DateTime                  @default(now()) @updatedAt @map("updated_at")
 
   @@map("usuarios")
 }
@@ -198,13 +200,13 @@ model Usuario {
 // Vinculación estable creada en el primer SSO validado. El correo solo se usa
 // para encontrar la cuenta inicial; los siguientes accesos usan ucheckUsuarioId.
 model IdentidadUcheck {
-  id               Int      @id @default(autoincrement())
-  usuarioId        Int      @unique @map("usuario_id")
-  usuario          Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  ucheckUsuarioId  Int      @unique @map("ucheck_usuario_id")
-  correoVinculado  String   @map("correo_vinculado") @db.VarChar(254)
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @default(now()) @updatedAt @map("updated_at")
+  id              Int      @id @default(autoincrement())
+  usuarioId       Int      @unique @map("usuario_id")
+  usuario         Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  ucheckUsuarioId Int      @unique @map("ucheck_usuario_id")
+  correoVinculado String   @map("correo_vinculado") @db.VarChar(254)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
 
   @@map("identidades_ucheck")
 }
@@ -311,23 +313,23 @@ model BackupCampo {
 }
 
 model TareaCampo {
-  id                 Int                 @id @default(autoincrement())
-  empresaId          Int                 @map("empresa_id")
-  empresa            Empresa             @relation(fields: [empresaId], references: [id])
-  nombre             String              @db.VarChar(120)
-  descripcion        String              @default("") @db.VarChar(1000)
-  todosLocales       Boolean             @default(true) @map("todos_locales")
-  fechaDesde         DateTime            @map("fecha_desde") @db.Date
-  fechaHasta         DateTime?           @map("fecha_hasta") @db.Date
-  activo             Boolean             @default(true)
-  requiereFotos      Boolean             @default(false) @map("requiere_fotos")
-  fotosObligatorias  Boolean             @default(false) @map("fotos_obligatorias")
-  categoria          String              @default("Relevamiento") @db.VarChar(60)
-  estado             EstadoTareaCampo    @default(ABIERTA)
-  esObligatoria      Boolean             @default(false) @map("es_obligatoria")
-  locales            TareaLocalCampo[]
-  cumplimientos      CumplimientoCampo[]
-  novedades          NovedadCampo[]
+  id                Int                 @id @default(autoincrement())
+  empresaId         Int                 @map("empresa_id")
+  empresa           Empresa             @relation(fields: [empresaId], references: [id])
+  nombre            String              @db.VarChar(120)
+  descripcion       String              @default("") @db.VarChar(1000)
+  todosLocales      Boolean             @default(true) @map("todos_locales")
+  fechaDesde        DateTime            @map("fecha_desde") @db.Date
+  fechaHasta        DateTime?           @map("fecha_hasta") @db.Date
+  activo            Boolean             @default(true)
+  requiereFotos     Boolean             @default(false) @map("requiere_fotos")
+  fotosObligatorias Boolean             @default(false) @map("fotos_obligatorias")
+  categoria         String              @default("Relevamiento") @db.VarChar(60)
+  estado            EstadoTareaCampo    @default(ABIERTA)
+  esObligatoria     Boolean             @default(false) @map("es_obligatoria")
+  locales           TareaLocalCampo[]
+  cumplimientos     CumplimientoCampo[]
+  novedades         NovedadCampo[]
 
   @@index([empresaId, activo, fechaDesde])
   @@map("campo_tareas")
@@ -432,16 +434,16 @@ model IntegracionUcheckEvento {
 }
 
 model CumplimientoCampo {
-  visitaId        Int                    @map("visita_id")
-  visita          VisitaCampo            @relation(fields: [visitaId], references: [id])
-  tareaId         Int                    @map("tarea_id")
-  tarea           TareaCampo             @relation(fields: [tareaId], references: [id])
-  nombreTarea     String                 @map("nombre_tarea") @db.VarChar(120)
+  visitaId       Int                    @map("visita_id")
+  visita         VisitaCampo            @relation(fields: [visitaId], references: [id])
+  tareaId        Int                    @map("tarea_id")
+  tarea          TareaCampo             @relation(fields: [tareaId], references: [id])
+  nombreTarea    String                 @map("nombre_tarea") @db.VarChar(120)
   // Null mientras se adjuntan evidencias; se completa explícitamente después.
-  completadaAt    DateTime?              @default(now()) @map("completada_at")
-  fotosValidadas  Boolean                @default(true) @map("fotos_validadas")
-  comentarios     ComentarioTareaCampo[]
-  fotos           FotoTareaCampo[]
+  completadaAt   DateTime?              @default(now()) @map("completada_at")
+  fotosValidadas Boolean                @default(true) @map("fotos_validadas")
+  comentarios    ComentarioTareaCampo[]
+  fotos          FotoTareaCampo[]
 
   @@id([visitaId, tareaId])
   @@map("campo_cumplimientos")
@@ -499,20 +501,20 @@ model FotoTareaCampo {
 }
 
 model NotificacionCampo {
-  id                    Int                      @id @default(autoincrement())
-  empresaId             Int                      @map("empresa_id")
-  empresa               Empresa                  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
-  usuarioDestinatarioId Int                      @map("usuario_destinatario_id")
-  usuarioDestinatario   Usuario                  @relation("NotificacionesRecibidas", fields: [usuarioDestinatarioId], references: [id], onDelete: Cascade)
-  usuarioEmisorId       Int                      @map("usuario_emisor_id")
-  usuarioEmisor         Usuario                  @relation("NotificacionesEnviadas", fields: [usuarioEmisorId], references: [id], onDelete: Cascade)
+  id                    Int                   @id @default(autoincrement())
+  empresaId             Int                   @map("empresa_id")
+  empresa               Empresa               @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  usuarioDestinatarioId Int                   @map("usuario_destinatario_id")
+  usuarioDestinatario   Usuario               @relation("NotificacionesRecibidas", fields: [usuarioDestinatarioId], references: [id], onDelete: Cascade)
+  usuarioEmisorId       Int                   @map("usuario_emisor_id")
+  usuarioEmisor         Usuario               @relation("NotificacionesEnviadas", fields: [usuarioEmisorId], references: [id], onDelete: Cascade)
   tipo                  TipoNotificacionCampo
-  referenciaId          Int?                     @map("referencia_id")
-  titulo                String                   @db.VarChar(100)
-  mensaje               String                   @db.VarChar(250)
-  creadoAt              DateTime                 @default(now()) @map("creado_at")
-  leido                 Boolean                  @default(false)
-  leidoAt               DateTime?                @map("leido_at")
+  referenciaId          Int?                  @map("referencia_id")
+  titulo                String                @db.VarChar(100)
+  mensaje               String                @db.VarChar(250)
+  creadoAt              DateTime              @default(now()) @map("creado_at")
+  leido                 Boolean               @default(false)
+  leidoAt               DateTime?             @map("leido_at")
 
   @@index([usuarioDestinatarioId, leido, creadoAt(sort: Desc)])
   @@index([empresaId, creadoAt(sort: Desc)])
@@ -568,6 +570,7 @@ model NovedadCampo {
   cerradoAt    DateTime?             @map("cerrado_at")
   creadoAt     DateTime              @default(now()) @map("creado_at")
   updatedAt    DateTime              @default(now()) @updatedAt @map("updated_at")
+  adjuntos     AdjuntoCampo[]
 
   @@index([empresaId, estado, creadoAt(sort: Desc)])
   @@index([usuarioId, estado])
@@ -593,6 +596,7 @@ model AvisoCampo {
   mensaje        String              @db.VarChar(1000)
   creadoAt       DateTime            @default(now()) @map("creado_at")
   lecturas       AvisoLecturaCampo[]
+  adjuntos       AdjuntoCampo[]
 
   @@index([empresaId, creadoAt(sort: Desc)])
   @@index([emisorId, creadoAt(sort: Desc)])
@@ -611,4 +615,26 @@ model AvisoLecturaCampo {
   @@unique([avisoId, usuarioId])
   @@index([usuarioId])
   @@map("campo_aviso_lecturas")
+}
+
+model AdjuntoCampo {
+  id             Int           @id @default(autoincrement())
+  empresaId      Int           @map("empresa_id")
+  empresa        Empresa       @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  usuarioId      Int           @map("usuario_id")
+  usuario        Usuario       @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
+  novedadId      Int?          @map("novedad_id")
+  novedad        NovedadCampo? @relation(fields: [novedadId], references: [id], onDelete: Cascade)
+  avisoId        Int?          @map("aviso_id")
+  aviso          AvisoCampo?   @relation(fields: [avisoId], references: [id], onDelete: Cascade)
+  nombreOriginal String        @map("nombre_original") @db.VarChar(255)
+  rutaArchivo    String        @map("ruta_archivo") @db.VarChar(500)
+  mimeType       String        @map("mime_type") @db.VarChar(50)
+  tamanioBytes   Int           @map("tamanio_bytes")
+  creadoAt       DateTime      @default(now()) @map("creado_at")
+
+  @@index([novedadId])
+  @@index([avisoId])
+  @@index([empresaId, creadoAt(sort: Desc)])
+  @@map("campo_adjuntos")
 }

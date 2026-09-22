@@ -27,17 +27,26 @@ export async function apiFetch<T>(
 ): Promise<T> {
   let res: Response;
   try {
+    const headers = new Headers(init?.headers);
+    const esFormulario =
+      typeof FormData !== "undefined" && init?.body instanceof FormData;
+    if (!esFormulario && !headers.has("Content-Type")) {
+      headers.set("Content-Type", "application/json");
+    }
     res = await fetch(`${API_URL}${path}`, {
       ...init,
       credentials: "include",
-      headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
+      headers,
     });
   } catch {
     throw new ApiError(0, "No se pudo conectar con el servidor");
   }
   const data: unknown = await res.json().catch(() => null);
   if (!res.ok) {
-    throw new ApiError(res.status, extraerMensaje(data) ?? `Error ${res.status}`);
+    throw new ApiError(
+      res.status,
+      extraerMensaje(data) ?? `Error ${res.status}`,
+    );
   }
   return data as T;
 }

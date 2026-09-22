@@ -19,25 +19,43 @@ import {
 import { esLiderDe, obtenerEquipoCompleto } from '../utils/autorizacion';
 import { localesParaNovedad } from '../utils/locales-novedad';
 import { ConsultaCampoDto } from '../dto/campo.dto';
+import { AdjuntoCampoService } from './adjunto-campo.service';
+
+const adjuntosNovedadInclude = {
+  select: {
+    id: true,
+    nombreOriginal: true,
+    mimeType: true,
+    tamanioBytes: true,
+    creadoAt: true,
+  },
+  orderBy: { creadoAt: 'asc' as const },
+};
 
 @Injectable()
 export class NovedadService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notificaciones: NotificacionService,
+    private readonly adjuntos: AdjuntoCampoService,
   ) {}
 
   async locales(usuarioId: number, empresaId: number, query: ConsultaCampoDto) {
     const where: Prisma.LocalCampoWhereInput = {
       ...localesParaNovedad(usuarioId, empresaId),
-      ...(query.buscar ? { nombre: { contains: query.buscar, mode: 'insensitive' } } : {}),
+      ...(query.buscar
+        ? { nombre: { contains: query.buscar, mode: 'insensitive' } }
+        : {}),
     };
     const { skip, take, page, limit } = rangoPaginacion(query);
     const [total, items] = await Promise.all([
       this.prisma.localCampo.count({ where }),
       this.prisma.localCampo.findMany({
-        where, select: { id: true, nombre: true },
-        orderBy: [{ nombre: 'asc' }, { id: 'asc' }], skip, take,
+        where,
+        select: { id: true, nombre: true },
+        orderBy: [{ nombre: 'asc' }, { id: 'asc' }],
+        skip,
+        take,
       }),
     ]);
     return respuestaPaginada(items, total, page, limit);
@@ -50,85 +68,110 @@ export class NovedadService {
     usuarioId: number,
     empresaId: number,
     dto: CrearNovedadDto,
+    archivos: Express.Multer.File[] = [],
   ) {
-    // Validar existencia del local en la empresa
-    const local = await this.prisma.localCampo.findFirst({
-      where: {
-        ...localesParaNovedad(usuarioId, empresaId),
-        id: dto.localId,
-      },
-      select: { id: true, nombre: true },
-    });
-    if (!local) {
-      throw new NotFoundException('Local no encontrado o inactivo');
-    }
-
-    // Validar tarea opcional
-    if (dto.tareaId) {
-      const tarea = await this.prisma.tareaCampo.findFirst({
-        where: { id: dto.tareaId, empresaId, activo: true },
+    let novedadId: number | undefined;
+    try {
+      // Validar existencia del local en la empresa
+      const local = await this.prisma.localCampo.findFirst({
+        where: {
+          ...localesParaNovedad(usuarioId, empresaId),
+          id: dto.localId,
+        },
         select: { id: true, nombre: true },
       });
-      if (!tarea) {
-        throw new NotFoundException('Tarea no encontrada o inactiva');
+      if (!local) {
+        throw new NotFoundException('Local no encontrado o inactivo');
       }
-    }
 
-    // Validar visita opcional
-    if (dto.visitaId) {
-      const visita = await this.prisma.visitaCampo.findFirst({
-        where: { id: dto.visitaId, localId: dto.localId, usuarioId },
-        select: { id: true },
+      // Validar tarea opcional
+      if (dto.tareaId) {
+        const tarea = await this.prisma.tareaCampo.findFirst({
+          where: { id: dto.tareaId, empresaId, activo: true },
+          select: { id: true, nombre: true },
+        });
+        if (!tarea) {
+          throw new NotFoundException('Tarea no encontrada o inactiva');
+        }
+      }
+
+      // Validar visita opcional
+      if (dto.visitaId) {
+        const visita = await this.prisma.visitaCampo.findFirst({
+          where: { id: dto.visitaId, localId: dto.localId, usuarioId },
+          select: { id: true },
+        });
+        if (!visita) {
+          throw new BadRequestException(
+            'La visita especificada no corresponde al local o usuario',
+          );
+        }
+      }
+
+      const novedad = await this.prisma.novedadCampo.create({
+        data: {
+          empresaId,
+          usuarioId,
+          localId: dto.localId,
+          tareaId: dto.tareaId ?? null,
+          visitaId: dto.visitaId ?? null,
+          tipo: dto.tipo,
+          prioridad: dto.prioridad ?? 'NORMAL',
+          titulo: dto.titulo.trim(),
+          descripcion: dto.descripcion.trim(),
+          estado: 'ABIERTA',
+        },
+        include: {
+          usuario: { select: { id: true, nombre: true, apellido: true } },
+          local: {
+            select: {
+              id: true,
+              nombre: true,
+              direccion: true,
+              cliente: { select: { nombre: true } },
+            },
+          },
+          tarea: { select: { id: true, nombre: true, categoria: true } },
+        },
       });
-      if (!visita) {
-        throw new BadRequestException('La visita especificada no corresponde al local o usuario');
-      }
-    }
+      novedadId = novedad.id;
 
-    const novedad = await this.prisma.novedadCampo.create({
-      data: {
-        empresaId,
-        usuarioId,
-        localId: dto.localId,
-        tareaId: dto.tareaId ?? null,
-        visitaId: dto.visitaId ?? null,
-        tipo: dto.tipo,
-        prioridad: dto.prioridad ?? 'NORMAL',
-        titulo: dto.titulo.trim(),
-        descripcion: dto.descripcion.trim(),
-        estado: 'ABIERTA',
-      },
-      include: {
-        usuario: { select: { id: true, nombre: true, apellido: true } },
-        local: { select: { id: true, nombre: true, direccion: true, cliente: { select: { nombre: true } } } },
-        tarea: { select: { id: true, nombre: true, categoria: true } },
-      },
-    });
-
-    // Notificar al Team Leader automáticamente
-    try {
-      await this.notificaciones.crearNotificacionNovedad(
-        empresaId,
-        usuarioId,
+      const adjuntos = await this.adjuntos.guardarParaNovedad(
         novedad.id,
-        local.nombre,
-        dto.tipo,
+        empresaId,
+        usuarioId,
+        archivos,
       );
-    } catch {
-      // No fallar la creación si la notificación falla
-    }
 
-    return novedad;
+      // Notificar al Team Leader automáticamente
+      try {
+        await this.notificaciones.crearNotificacionNovedad(
+          empresaId,
+          usuarioId,
+          novedad.id,
+          local.nombre,
+          dto.tipo,
+        );
+      } catch {
+        // No fallar la creación si la notificación falla
+      }
+
+      return { ...novedad, adjuntos };
+    } catch (error) {
+      this.adjuntos.descartarArchivos(archivos);
+      if (novedadId) {
+        await this.prisma.novedadCampo
+          .delete({ where: { id: novedadId } })
+          .catch(() => undefined);
+      }
+      throw error;
+    }
   }
 
   /**
    * Listar novedades con filtros y conteos por estado (Abierta, Cerrada, Cancelada)
    */
-  async listar(
-    usuarioId: number,
-    empresaId: number,
-    dto: ListarNovedadesDto,
-  ) {
+  async listar(usuarioId: number, empresaId: number, dto: ListarNovedadesDto) {
     const { skip, take, page, limit } = rangoPaginacion(dto);
 
     // Determinar usuarios a los que tiene acceso
@@ -138,7 +181,9 @@ export class NovedadService {
     let usuariosFiltrados: number[];
     if (dto.usuarioId) {
       if (!equipoIds.includes(dto.usuarioId)) {
-        throw new ForbiddenException('No tienes acceso a novedades de este usuario');
+        throw new ForbiddenException(
+          'No tienes acceso a novedades de este usuario',
+        );
       }
       usuariosFiltrados = [dto.usuarioId];
     } else {
@@ -163,18 +208,32 @@ export class NovedadService {
           where: whereConEstado,
           include: {
             usuario: { select: { id: true, nombre: true, apellido: true } },
-            local: { select: { id: true, nombre: true, direccion: true, cliente: { select: { nombre: true } } } },
+            local: {
+              select: {
+                id: true,
+                nombre: true,
+                direccion: true,
+                cliente: { select: { nombre: true } },
+              },
+            },
             tarea: { select: { id: true, nombre: true, categoria: true } },
             cerradoPor: { select: { id: true, nombre: true, apellido: true } },
+            adjuntos: adjuntosNovedadInclude,
           },
           orderBy: { creadoAt: 'desc' },
           skip,
           take,
         }),
         this.prisma.novedadCampo.count({ where: whereConEstado }),
-        this.prisma.novedadCampo.count({ where: { ...baseWhere, estado: 'ABIERTA' } }),
-        this.prisma.novedadCampo.count({ where: { ...baseWhere, estado: 'CERRADA' } }),
-        this.prisma.novedadCampo.count({ where: { ...baseWhere, estado: 'CANCELADA' } }),
+        this.prisma.novedadCampo.count({
+          where: { ...baseWhere, estado: 'ABIERTA' },
+        }),
+        this.prisma.novedadCampo.count({
+          where: { ...baseWhere, estado: 'CERRADA' },
+        }),
+        this.prisma.novedadCampo.count({
+          where: { ...baseWhere, estado: 'CANCELADA' },
+        }),
       ]);
 
     const paginada = respuestaPaginada(items, total, page, limit);
@@ -197,9 +256,17 @@ export class NovedadService {
       where: { id },
       include: {
         usuario: { select: { id: true, nombre: true, apellido: true } },
-        local: { select: { id: true, nombre: true, direccion: true, cliente: { select: { nombre: true } } } },
+        local: {
+          select: {
+            id: true,
+            nombre: true,
+            direccion: true,
+            cliente: { select: { nombre: true } },
+          },
+        },
         tarea: { select: { id: true, nombre: true, categoria: true } },
         cerradoPor: { select: { id: true, nombre: true, apellido: true } },
+        adjuntos: adjuntosNovedadInclude,
       },
     });
 
@@ -240,15 +307,21 @@ export class NovedadService {
     // El autor solo puede cancelar su propia novedad si aún está abierta
     if (esAutor && !esLider) {
       if (dto.estado !== 'CANCELADA') {
-        throw new ForbiddenException('Solo un supervisor puede cerrar la novedad');
+        throw new ForbiddenException(
+          'Solo un supervisor puede cerrar la novedad',
+        );
       }
       if (novedad.estado !== 'ABIERTA') {
-        throw new BadRequestException('Solo podés cancelar una novedad abierta');
+        throw new BadRequestException(
+          'Solo podés cancelar una novedad abierta',
+        );
       }
     } else if (!esLider) {
       const equipoIds = await obtenerEquipoCompleto(this.prisma, usuarioId);
       if (!equipoIds.includes(novedad.usuarioId)) {
-        throw new ForbiddenException('No tienes permisos para modificar esta novedad');
+        throw new ForbiddenException(
+          'No tienes permisos para modificar esta novedad',
+        );
       }
     }
 
@@ -262,9 +335,16 @@ export class NovedadService {
       },
       include: {
         usuario: { select: { id: true, nombre: true, apellido: true } },
-        local: { select: { id: true, nombre: true, cliente: { select: { nombre: true } } } },
+        local: {
+          select: {
+            id: true,
+            nombre: true,
+            cliente: { select: { nombre: true } },
+          },
+        },
         tarea: { select: { id: true, nombre: true } },
         cerradoPor: { select: { id: true, nombre: true, apellido: true } },
+        adjuntos: adjuntosNovedadInclude,
       },
     });
 

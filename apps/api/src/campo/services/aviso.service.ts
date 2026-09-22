@@ -13,12 +13,25 @@ import {
   respuestaPaginada,
 } from '../../common/utils/paginacion';
 import { Prisma } from '../../../generated/prisma/client';
+import { AdjuntoCampoService } from './adjunto-campo.service';
+
+const adjuntosAvisoInclude = {
+  select: {
+    id: true,
+    nombreOriginal: true,
+    mimeType: true,
+    tamanioBytes: true,
+    creadoAt: true,
+  },
+  orderBy: { creadoAt: 'asc' as const },
+};
 
 @Injectable()
 export class AvisoService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notificaciones: NotificacionService,
+    private readonly adjuntos: AdjuntoCampoService,
   ) {}
 
   private async colaboradoresActivos(
@@ -70,73 +83,100 @@ export class AvisoService {
     usuarioId: number,
     empresaId: number,
     dto: CrearAvisoDto,
+    archivos: Express.Multer.File[] = [],
   ) {
-    if (dto.tipo === 'INDIVIDUAL' && !dto.destinatarioId) {
-      throw new BadRequestException('Debes especificar el destinatario del aviso');
-    }
-
-    const subordinados = await this.colaboradoresActivos(usuarioId, empresaId);
-
-    if (dto.tipo === 'INDIVIDUAL') {
-      if (!subordinados.includes(dto.destinatarioId!)) {
-        throw new ForbiddenException('El destinatario no pertenece a tu equipo');
-      }
-
-      // Validar que el destinatario existe en la empresa
-      const dest = await this.prisma.usuario.findFirst({
-        where: { id: dto.destinatarioId, empresaId, isActive: true },
-        select: { id: true },
-      });
-      if (!dest) {
-        throw new NotFoundException('Destinatario no encontrado o inactivo');
-      }
-    } else if (subordinados.length === 0) {
-      throw new ForbiddenException(
-        'No tienes colaboradores activos para recibir el comunicado',
-      );
-    }
-
-    const aviso = await this.prisma.avisoCampo.create({
-      data: {
-        empresaId,
-        emisorId: usuarioId,
-        tipo: dto.tipo,
-        destinatarioId: dto.tipo === 'INDIVIDUAL' ? dto.destinatarioId : null,
-        mensaje: dto.mensaje.trim(),
-      },
-      include: {
-        emisor: { select: { id: true, nombre: true, apellido: true } },
-        destinatario: { select: { id: true, nombre: true, apellido: true } },
-      },
-    });
-
-    // Enviar notificaciones correspondientes
+    let avisoId: number | undefined;
     try {
-      if (dto.tipo === 'INDIVIDUAL' && dto.destinatarioId) {
-        await this.notificaciones.crearNotificacionAviso(
-          empresaId,
-          usuarioId,
-          dto.destinatarioId,
-          aviso.id,
-          aviso.mensaje,
+      if (dto.tipo === 'INDIVIDUAL' && !dto.destinatarioId) {
+        throw new BadRequestException(
+          'Debes especificar el destinatario del aviso',
         );
-      } else {
-        // Para todo el equipo
-        for (const miembroId of subordinados) {
+      }
+
+      const subordinados = await this.colaboradoresActivos(
+        usuarioId,
+        empresaId,
+      );
+
+      if (dto.tipo === 'INDIVIDUAL') {
+        if (!subordinados.includes(dto.destinatarioId!)) {
+          throw new ForbiddenException(
+            'El destinatario no pertenece a tu equipo',
+          );
+        }
+
+        // Validar que el destinatario existe en la empresa
+        const dest = await this.prisma.usuario.findFirst({
+          where: { id: dto.destinatarioId, empresaId, isActive: true },
+          select: { id: true },
+        });
+        if (!dest) {
+          throw new NotFoundException('Destinatario no encontrado o inactivo');
+        }
+      } else if (subordinados.length === 0) {
+        throw new ForbiddenException(
+          'No tienes colaboradores activos para recibir el comunicado',
+        );
+      }
+
+      const aviso = await this.prisma.avisoCampo.create({
+        data: {
+          empresaId,
+          emisorId: usuarioId,
+          tipo: dto.tipo,
+          destinatarioId: dto.tipo === 'INDIVIDUAL' ? dto.destinatarioId : null,
+          mensaje: dto.mensaje.trim(),
+        },
+        include: {
+          emisor: { select: { id: true, nombre: true, apellido: true } },
+          destinatario: { select: { id: true, nombre: true, apellido: true } },
+        },
+      });
+      avisoId = aviso.id;
+
+      const adjuntos = await this.adjuntos.guardarParaAviso(
+        aviso.id,
+        empresaId,
+        usuarioId,
+        archivos,
+      );
+
+      // Enviar notificaciones correspondientes
+      try {
+        if (dto.tipo === 'INDIVIDUAL' && dto.destinatarioId) {
           await this.notificaciones.crearNotificacionAviso(
             empresaId,
             usuarioId,
-            miembroId,
+            dto.destinatarioId,
             aviso.id,
             aviso.mensaje,
           );
+        } else {
+          // Para todo el equipo
+          for (const miembroId of subordinados) {
+            await this.notificaciones.crearNotificacionAviso(
+              empresaId,
+              usuarioId,
+              miembroId,
+              aviso.id,
+              aviso.mensaje,
+            );
+          }
         }
+      } catch {
+        // Continuar si la notificación falla
       }
-    } catch {
-      // Continuar si la notificación falla
-    }
 
-    return aviso;
+      return { ...aviso, adjuntos };
+    } catch (error) {
+      this.adjuntos.descartarArchivos(archivos);
+      if (avisoId) {
+        await this.prisma.avisoCampo
+          .delete({ where: { id: avisoId } })
+          .catch(() => undefined);
+      }
+      throw error;
+    }
   }
 
   /**
@@ -160,6 +200,7 @@ export class AvisoService {
         include: {
           destinatario: { select: { id: true, nombre: true, apellido: true } },
           lecturas: { select: { usuarioId: true, leidoAt: true } },
+          adjuntos: adjuntosAvisoInclude,
         },
         orderBy: { creadoAt: 'desc' },
         skip,
@@ -170,13 +211,16 @@ export class AvisoService {
 
     const itemsConLectura = items.map((a) => {
       if (a.tipo === 'INDIVIDUAL') {
-        const lectura = a.lecturas.find((l) => l.usuarioId === a.destinatarioId);
+        const lectura = a.lecturas.find(
+          (l) => l.usuarioId === a.destinatarioId,
+        );
         return {
           id: a.id,
           tipo: a.tipo,
           mensaje: a.mensaje,
           destinatario: a.destinatario,
           creadoAt: a.creadoAt,
+          adjuntos: a.adjuntos,
           leido: !!lectura,
           leidoAt: lectura?.leidoAt ?? null,
         };
@@ -190,6 +234,7 @@ export class AvisoService {
           mensaje: a.mensaje,
           destinatario: null,
           creadoAt: a.creadoAt,
+          adjuntos: a.adjuntos,
           leidoPor: lecturasDelEquipo.length,
           total: totalSubordinados,
         };
@@ -220,6 +265,7 @@ export class AvisoService {
             where: { usuarioId },
             select: { leidoAt: true },
           },
+          adjuntos: adjuntosAvisoInclude,
         },
         orderBy: { creadoAt: 'desc' },
         skip,
@@ -236,6 +282,7 @@ export class AvisoService {
       creadoAt: a.creadoAt,
       leido: a.lecturas.length > 0,
       leidoAt: a.lecturas[0]?.leidoAt ?? null,
+      adjuntos: a.adjuntos,
     }));
 
     return respuestaPaginada(formated, total, page, limit);

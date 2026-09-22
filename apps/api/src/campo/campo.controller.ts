@@ -4,6 +4,7 @@ import {
   Controller,
   Delete,
   Get,
+  NotFoundException,
   Param,
   ParseIntPipe,
   Post,
@@ -12,10 +13,11 @@ import {
   Req,
   Res,
   UploadedFile,
+  UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import { join, extname } from 'path';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -29,6 +31,7 @@ import { NotificacionService } from './services/notificacion.service';
 import { NovedadService } from './services/novedad.service';
 import { AvisoService } from './services/aviso.service';
 import { SupervisionService } from './services/supervision.service';
+import { AdjuntoCampoService } from './services/adjunto-campo.service';
 import {
   AsignacionCampoDto,
   BackupCampoDto,
@@ -51,7 +54,11 @@ import {
 import { CrearAvisoDto } from './dto/aviso.dto';
 import { ConsultaSupervisionDto } from './dto/supervision.dto';
 import { ConsultaTareasCampoDto } from './dto/consulta-tareas.dto';
-import { multerConfigFotosTareas, multerConfigLogoCliente } from './utils/multer-config';
+import {
+  multerConfigAdjuntosCampo,
+  multerConfigFotosTareas,
+  multerConfigLogoCliente,
+} from './utils/multer-config';
 import { createReadStream, existsSync } from 'fs';
 
 @Controller('campo')
@@ -67,6 +74,7 @@ export class CampoController {
     private readonly novedadService: NovedadService,
     private readonly avisoService: AvisoService,
     private readonly supervisionService: SupervisionService,
+    private readonly adjuntoCampoService: AdjuntoCampoService,
   ) {}
 
   @Get('clientes') clientes(
@@ -97,9 +105,7 @@ export class CampoController {
 
   @Post('clientes/subir-logo')
   @UseInterceptors(FileInterceptor('logo', multerConfigLogoCliente))
-  subirLogoCliente(
-    @UploadedFile() file?: Express.Multer.File,
-  ) {
+  subirLogoCliente(@UploadedFile() file?: Express.Multer.File) {
     if (!file) {
       throw new BadRequestException('No se envió archivo de imagen');
     }
@@ -107,10 +113,7 @@ export class CampoController {
   }
 
   @Get('clientes/logos/:filename')
-  servirLogoCliente(
-    @Param('filename') filename: string,
-    @Res() res: Response,
-  ) {
+  servirLogoCliente(@Param('filename') filename: string, @Res() res: Response) {
     const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '');
     const ruta = join(process.cwd(), 'uploads', 'clientes', safeName);
     if (!existsSync(ruta)) {
@@ -379,7 +382,11 @@ export class CampoController {
     @Param('id', ParseIntPipe) id: number,
     @Res() res: Response,
   ) {
-    const foto = await this.fotoService.obtenerPorId(r.usuarioId, r.empresaId, id);
+    const foto = await this.fotoService.obtenerPorId(
+      r.usuarioId,
+      r.empresaId,
+      id,
+    );
 
     if (!foto || !existsSync(foto.rutaArchivo)) {
       return res.status(404).json({ message: 'Foto no encontrada' });
@@ -452,18 +459,17 @@ export class CampoController {
   // ========== NOVEDADES ==========
 
   @Post('novedades')
+  @UseInterceptors(FilesInterceptor('fotos', 5, multerConfigAdjuntosCampo))
   crearNovedad(
     @Req() r: RequestConUsuario,
     @Body() d: CrearNovedadDto,
+    @UploadedFiles() fotos: Express.Multer.File[] = [],
   ) {
-    return this.novedadService.crear(r.usuarioId, r.empresaId, d);
+    return this.novedadService.crear(r.usuarioId, r.empresaId, d, fotos);
   }
 
   @Get('novedades')
-  listarNovedades(
-    @Req() r: RequestConUsuario,
-    @Query() q: ListarNovedadesDto,
-  ) {
+  listarNovedades(@Req() r: RequestConUsuario, @Query() q: ListarNovedadesDto) {
     return this.novedadService.listar(r.usuarioId, r.empresaId, q);
   }
 
@@ -492,11 +498,35 @@ export class CampoController {
   // ========== AVISOS ==========
 
   @Post('avisos')
+  @UseInterceptors(FilesInterceptor('fotos', 5, multerConfigAdjuntosCampo))
   crearAviso(
     @Req() r: RequestConUsuario,
     @Body() d: CrearAvisoDto,
+    @UploadedFiles() fotos: Express.Multer.File[] = [],
   ) {
-    return this.avisoService.crear(r.usuarioId, r.empresaId, d);
+    return this.avisoService.crear(r.usuarioId, r.empresaId, d, fotos);
+  }
+
+  @Get('adjuntos/:id')
+  async obtenerAdjunto(
+    @Req() r: RequestConUsuario,
+    @Param('id', ParseIntPipe) id: number,
+    @Res() res: Response,
+  ) {
+    const adjunto = await this.adjuntoCampoService.obtenerArchivo(
+      r.usuarioId,
+      r.empresaId,
+      id,
+    );
+    if (!existsSync(adjunto.rutaArchivo)) {
+      throw new NotFoundException('El archivo adjunto no está disponible');
+    }
+
+    res.setHeader('Content-Type', adjunto.mimeType);
+    res.setHeader('Content-Length', String(adjunto.tamanioBytes));
+    res.setHeader('Content-Disposition', 'inline');
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    createReadStream(adjunto.rutaArchivo).pipe(res);
   }
 
   @Get('avisos/enviados')
