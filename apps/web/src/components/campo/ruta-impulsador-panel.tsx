@@ -246,13 +246,6 @@ export function RutaImpulsadorPanel() {
       />
 
       <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto w-full space-y-6 flex-1 overflow-y-auto">
-        <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-950 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-100">
-          <p className="font-semibold">Las entradas y salidas se registran únicamente desde UCHECK.</p>
-          <p className="mt-1 text-xs text-blue-800 dark:text-blue-200">
-            En Comercia podés consultar tu ruta, revisar horarios, abrir el mapa y reportar novedades.
-          </p>
-        </div>
-
         {/* StatChips estilo editorial */}
         <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 sm:grid sm:grid-cols-4 sm:overflow-visible">
           <div className="min-w-[8.25rem] flex-1"><StatChip label="Total paradas" value={totalParadas} tone="ink" /></div>

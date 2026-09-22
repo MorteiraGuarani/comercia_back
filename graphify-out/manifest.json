@@ -2250,8 +2250,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/ruta-impulsador-panel.tsx": {
-    "mtime": 1790102039.3687923,
-    "ast_hash": "42fa79567f0557fc4d6d0c930c98fb6e",
+    "mtime": 1790105173.499092,
+    "ast_hash": "28ce911e6fbdb0ae8bfbc2be15c92549",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/selector-cliente-combobox.tsx": {

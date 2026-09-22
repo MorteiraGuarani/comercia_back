@@ -1,16 +1,16 @@
 # Graph Report - COMERCIA  (2026-09-22)
 
 ## Corpus Check
-- 474 files · ~179,276 words
+- 474 files · ~179,233 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2501 nodes · 4783 edges · 346 communities (151 shown, 195 thin omitted)
+- 2501 nodes · 4783 edges · 347 communities (152 shown, 195 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 10 edges (avg confidence: 0.62)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `78bab8c7`
+- Built from commit: `e4921d6e`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -100,7 +100,7 @@
 - admin-empresas.service.ts
 - 1. Eliminating Waterfalls
 - 2. Bundle Size Optimization
-- @nestjs/cli
+- mapa-clientes.tsx
 - typescript
 - plataforma.controller.ts
 - 20260706115040_plataforma_modular/migration.sql
@@ -323,6 +323,7 @@
 - 20260917120000_cumplimiento_evidencia_previa/migration.sql
 - eslint-plugin-prettier
 - @nestjs/swagger
+- eslint-config-prettier
 - @types/compression
 - @types/uuid
 - LoginDto
@@ -349,6 +350,8 @@
 10. `ListarUsuariosDto` - 24 edges
 
 ## Surprising Connections (you probably didn't know these)
+- `ModalMarca()` --calls--> `useOperacionCampo()`  [EXTRACTED]
+  apps/web/src/components/campo/jornada-panel.tsx → apps/web/src/hooks/use-lista-campo.ts
 - `CrearUsuarioDto` --inherits--> `RegisterDto`  [EXTRACTED]
   apps/api/src/usuarios/dto/usuario.dto.ts → apps/api/src/auth/dto/register.dto.ts
 - `ConsultaCampoDto` --inherits--> `PaginacionDto`  [EXTRACTED]
@@ -357,13 +360,11 @@
   apps/api/src/campo/dto/supervision.dto.ts → apps/api/src/common/utils/paginacion.ts
 - `AgendaUcheckDto` --inherits--> `PaginacionDto`  [EXTRACTED]
   apps/api/src/integraciones-ucheck/dto/agenda-ucheck.dto.ts → apps/api/src/common/utils/paginacion.ts
-- `ListarRolesDto` --inherits--> `PaginacionDto`  [EXTRACTED]
-  apps/api/src/roles/dto/rol.dto.ts → apps/api/src/common/utils/paginacion.ts
 
 ## Import Cycles
 - None detected.
 
-## Communities (346 total, 195 thin omitted)
+## Communities (347 total, 195 thin omitted)
 
 ### Community 0 - "roles.service.ts"
 Cohesion: 0.09
@@ -398,8 +399,8 @@ Cohesion: 0.40
 Nodes (4): EmpresasController, ApiTags, Controller, UseGuards
 
 ### Community 9 - "jornada-panel.tsx"
-Cohesion: 0.08
-Nodes (41): InicioResumen(), ClientesPanel(), BotonesFormulario(), CabeceraCampo(), CampoTexto(), AgendaDelDia(), JornadaPanel(), ListadoVisitas() (+33 more)
+Cohesion: 0.12
+Nodes (24): InicioResumen(), BotonesFormulario(), CabeceraCampo(), CampoTexto(), AgendaDelDia(), JornadaPanel(), ListadoVisitas(), ModalMarca() (+16 more)
 
 ### Community 10 - "compilerOptions"
 Cohesion: 0.09
@@ -418,8 +419,8 @@ Cohesion: 0.07
 Nodes (28): node_modules, **/*.ts, compilerOptions, allowJs, esModuleInterop, incremental, isolatedModules, jsx (+20 more)
 
 ### Community 14 - "locales-panel.tsx"
-Cohesion: 0.10
-Nodes (30): SelectorUbicacion, MapaClientes(), MapaClientesProps, MapaLocal(), Props, SelectorClienteCombobox(), SelectorUbicacion(), IconoAlerta() (+22 more)
+Cohesion: 0.07
+Nodes (45): ClientesPanel(), TareasDeLocal(), LocalesPanel(), SelectorUbicacion, MapaClientesProps, AsignacionesLocal(), HorariosLocal(), ModalBackups() (+37 more)
 
 ### Community 15 - "ruta-impulsador-panel.tsx"
 Cohesion: 0.24
@@ -470,8 +471,8 @@ Cohesion: 0.17
 Nodes (18): allowedHosts, apiEnvironment, apiPort, checkTunnel(), environmentPath, finish(), main(), openTunnel() (+10 more)
 
 ### Community 28 - "supervision-panel.tsx"
-Cohesion: 0.09
-Nodes (35): ListChecksIcon(), NavigationIcon(), SupervisionPanel(), SupervisionPanelProps, TabType, UsersIcon(), CATEGORIAS_PRESET, TokenColor (+27 more)
+Cohesion: 0.11
+Nodes (27): ListChecksIcon(), NavigationIcon(), SupervisionPanel(), SupervisionPanelProps, TabType, UsersIcon(), TokenColor, TOKENS (+19 more)
 
 ### Community 30 - "api-tareas.ts"
 Cohesion: 0.06
@@ -491,7 +492,7 @@ Nodes (45): dependencies, flag-icons, leaflet, libphonenumber-js, motion, next, 
 
 ### Community 35 - "devDependencies"
 Cohesion: 0.29
-Nodes (7): devDependencies, eslint-config-prettier, globals, tsconfig-paths, eslint-config-prettier, globals, tsconfig-paths
+Nodes (7): devDependencies, globals, @nestjs/cli, tsconfig-paths, globals, @nestjs/cli, tsconfig-paths
 
 ### Community 36 - "campo.controller.ts"
 Cohesion: 0.10
@@ -672,6 +673,10 @@ Nodes (7): 1.1 Check Cheap Conditions Before Async Flags, 1.2 Defer Await Until 
 ### Community 85 - "2. Bundle Size Optimization"
 Cohesion: 0.29
 Nodes (7): 2.1 Avoid Barrel File Imports, 2.2 Conditional Module Loading, 2.3 Defer Non-Critical Third-Party Libraries, 2.4 Dynamic Imports for Heavy Components, 2.5 Prefer Statically Analyzable Paths, 2.6 Preload Based on User Intent, 2. Bundle Size Optimization
+
+### Community 86 - "mapa-clientes.tsx"
+Cohesion: 0.32
+Nodes (10): MapaClientes(), MapaLocal(), SelectorUbicacion(), CapaUsuarioMapa, montarCapaUsuario(), EstadoGpsMapa, PosicionGpsMapa, useGeolocalizacionMapa() (+2 more)
 
 ### Community 88 - "plataforma.controller.ts"
 Cohesion: 0.17
@@ -886,9 +891,9 @@ _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `PrismaService` connect `PrismaService` to `roles.service.ts`, `app.module.ts`, `MarcacionUcheckDto`, `ModulosService`, `EmpresasController`, `CrearAvisoDto`, `ConsultaCampoDto`, `.gestionar`, `usuarios.service.ts`, `campo.controller.ts`, `HealthController`, `auth.service.ts`, `ucheck-sso.service.ts`, `rangoPaginacion`, `MiPlataformaService`, `ActualizarEjecutableDto`, `jornada-campo.service.ts`, `supervision.service.ts`, `AsignacionesService`, `admin-empresas.service.ts`, `plataforma.controller.ts`, `AuthService`?**
   _High betweenness centrality (0.103) - this node is a cross-community bridge._
-- **Why does `useOperacionCampo()` connect `jornada-panel.tsx` to `supervision-panel.tsx`, `apiFetch`, `locales-panel.tsx`, `jornada-campo.service.ts`?**
+- **Why does `useOperacionCampo()` connect `locales-panel.tsx` to `jornada-panel.tsx`, `supervision-panel.tsx`, `apiFetch`, `jornada-campo.service.ts`?**
   _High betweenness centrality (0.076) - this node is a cross-community bridge._
-- **Why does `LocalesPanel()` connect `jornada-panel.tsx` to `.gestionar`, `apiFetch`, `locales-panel.tsx`?**
+- **Why does `LocalesPanel()` connect `locales-panel.tsx` to `.gestionar`, `apiFetch`?**
   _High betweenness centrality (0.073) - this node is a cross-community bridge._
 - **What connects `$schema`, `collection`, `sourceRoot` to the rest of the system?**
   _794 weakly-connected nodes found - possible documentation gaps or missing edges._

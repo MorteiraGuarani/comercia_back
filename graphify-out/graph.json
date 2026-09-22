@@ -934,8 +934,8 @@
       "source_location": "L55",
       "_origin": "ast",
       "id": "apps_api_package_devdependencies_nestjs_cli",
-      "community": 86,
-      "community_name": "@nestjs/cli",
+      "community": 35,
+      "community_name": "devDependencies",
       "norm_label": "@nestjs/cli"
     },
     {
@@ -945,8 +945,8 @@
       "source_location": "L55",
       "_origin": "ast",
       "id": "nestjs_cli",
-      "community": 86,
-      "community_name": "@nestjs/cli",
+      "community": 35,
+      "community_name": "devDependencies",
       "norm_label": "@nestjs/cli"
     },
     {
@@ -1198,8 +1198,8 @@
       "source_location": "L67",
       "_origin": "ast",
       "id": "apps_api_package_devdependencies_eslint_config_prettier",
-      "community": 35,
-      "community_name": "devDependencies",
+      "community": 333,
+      "community_name": "eslint-config-prettier",
       "norm_label": "eslint-config-prettier"
     },
     {
@@ -1209,8 +1209,8 @@
       "source_location": "L67",
       "_origin": "ast",
       "id": "eslint_config_prettier",
-      "community": 35,
-      "community_name": "devDependencies",
+      "community": 333,
+      "community_name": "eslint-config-prettier",
       "norm_label": "eslint-config-prettier"
     },
     {
@@ -14772,8 +14772,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_catalogo_panel",
-      "community": 9,
-      "community_name": "jornada-panel.tsx",
+      "community": 14,
+      "community_name": "locales-panel.tsx",
       "norm_label": "catalogo-panel.tsx"
     },
     {
@@ -14794,8 +14794,8 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_clientes_panel_clientespanel",
-      "community": 9,
-      "community_name": "jornada-panel.tsx",
+      "community": 14,
+      "community_name": "locales-panel.tsx",
       "norm_label": "clientespanel()"
     },
     {
@@ -14904,8 +14904,8 @@
       "source_location": "L710",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_jornada_panel_tareasdelocal",
-      "community": 9,
-      "community_name": "jornada-panel.tsx",
+      "community": 14,
+      "community_name": "locales-panel.tsx",
       "norm_label": "tareasdelocal()"
     },
     {
@@ -14959,8 +14959,8 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_locales_panel_localespanel",
-      "community": 9,
-      "community_name": "jornada-panel.tsx",
+      "community": 14,
+      "community_name": "locales-panel.tsx",
       "norm_label": "localespanel()"
     },
     {
@@ -14970,8 +14970,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_mapa_clientes",
-      "community": 14,
-      "community_name": "locales-panel.tsx",
+      "community": 86,
+      "community_name": "mapa-clientes.tsx",
       "norm_label": "mapa-clientes.tsx"
     },
     {
@@ -14992,8 +14992,8 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_mapa_clientes_mapaclientes",
-      "community": 14,
-      "community_name": "locales-panel.tsx",
+      "community": 86,
+      "community_name": "mapa-clientes.tsx",
       "norm_label": "mapaclientes()"
     },
     {
@@ -15003,8 +15003,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_mapa_local",
-      "community": 14,
-      "community_name": "locales-panel.tsx",
+      "community": 86,
+      "community_name": "mapa-clientes.tsx",
       "norm_label": "mapa-local.tsx"
     },
     {
@@ -15014,8 +15014,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_mapa_local_mapalocal",
-      "community": 14,
-      "community_name": "locales-panel.tsx",
+      "community": 86,
+      "community_name": "mapa-clientes.tsx",
       "norm_label": "mapalocal()"
     },
     {
@@ -15080,8 +15080,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_plan_local",
-      "community": 9,
-      "community_name": "jornada-panel.tsx",
+      "community": 14,
+      "community_name": "locales-panel.tsx",
       "norm_label": "plan-local.tsx"
     },
     {
@@ -15091,8 +15091,8 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_plan_local_planlocal",
-      "community": 9,
-      "community_name": "jornada-panel.tsx",
+      "community": 14,
+      "community_name": "locales-panel.tsx",
       "norm_label": "planlocal()"
     },
     {
@@ -15102,8 +15102,8 @@
       "source_location": "L103",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_plan_local_horarioslocal",
-      "community": 9,
-      "community_name": "jornada-panel.tsx",
+      "community": 14,
+      "community_name": "locales-panel.tsx",
       "norm_label": "horarioslocal()"
     },
     {
@@ -15113,8 +15113,8 @@
       "source_location": "L444",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_plan_local_asignacioneslocal",
-      "community": 9,
-      "community_name": "jornada-panel.tsx",
+      "community": 14,
+      "community_name": "locales-panel.tsx",
       "norm_label": "asignacioneslocal()"
     },
     {
@@ -15124,8 +15124,8 @@
       "source_location": "L680",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_plan_local_modalbackups",
-      "community": 9,
-      "community_name": "jornada-panel.tsx",
+      "community": 14,
+      "community_name": "locales-panel.tsx",
       "norm_label": "modalbackups()"
     },
     {
@@ -15201,8 +15201,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_selector_ubicacion",
-      "community": 14,
-      "community_name": "locales-panel.tsx",
+      "community": 86,
+      "community_name": "mapa-clientes.tsx",
       "norm_label": "selector-ubicacion.tsx"
     },
     {
@@ -15212,8 +15212,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_selector_ubicacion_selectorubicacion",
-      "community": 14,
-      "community_name": "locales-panel.tsx",
+      "community": 86,
+      "community_name": "mapa-clientes.tsx",
       "norm_label": "selectorubicacion()"
     },
     {
@@ -15399,8 +15399,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_tareas_panel",
-      "community": 28,
-      "community_name": "supervision-panel.tsx",
+      "community": 14,
+      "community_name": "locales-panel.tsx",
       "norm_label": "tareas-panel.tsx"
     },
     {
@@ -15410,8 +15410,8 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_tareas_panel_categorias_preset",
-      "community": 28,
-      "community_name": "supervision-panel.tsx",
+      "community": 14,
+      "community_name": "locales-panel.tsx",
       "norm_label": "categorias_preset"
     },
     {
@@ -15421,8 +15421,8 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_tareas_panel_tareaspanel",
-      "community": 9,
-      "community_name": "jornada-panel.tsx",
+      "community": 14,
+      "community_name": "locales-panel.tsx",
       "norm_label": "tareaspanel()"
     },
     {
@@ -15652,8 +15652,8 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_iconos_campo_iconocalendario",
-      "community": 9,
-      "community_name": "jornada-panel.tsx",
+      "community": 14,
+      "community_name": "locales-panel.tsx",
       "norm_label": "iconocalendario()"
     },
     {
@@ -15696,8 +15696,8 @@
       "source_location": "L105",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_iconos_campo_iconoeditar",
-      "community": 28,
-      "community_name": "supervision-panel.tsx",
+      "community": 14,
+      "community_name": "locales-panel.tsx",
       "norm_label": "iconoeditar()"
     },
     {
@@ -15707,8 +15707,8 @@
       "source_location": "L114",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_iconos_campo_iconoeliminar",
-      "community": 28,
-      "community_name": "supervision-panel.tsx",
+      "community": 14,
+      "community_name": "locales-panel.tsx",
       "norm_label": "iconoeliminar()"
     },
     {
@@ -15806,8 +15806,8 @@
       "source_location": "L210",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_iconos_campo_iconocamara",
-      "community": 28,
-      "community_name": "supervision-panel.tsx",
+      "community": 14,
+      "community_name": "locales-panel.tsx",
       "norm_label": "iconocamara()"
     },
     {
@@ -15872,8 +15872,8 @@
       "source_location": "L270",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_iconos_campo_iconoequipo",
-      "community": 9,
-      "community_name": "jornada-panel.tsx",
+      "community": 14,
+      "community_name": "locales-panel.tsx",
       "norm_label": "iconoequipo()"
     },
     {
@@ -15883,8 +15883,8 @@
       "source_location": "L278",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_iconos_campo_iconoglobo",
-      "community": 28,
-      "community_name": "supervision-panel.tsx",
+      "community": 14,
+      "community_name": "locales-panel.tsx",
       "norm_label": "iconoglobo()"
     },
     {
@@ -15905,8 +15905,8 @@
       "source_location": "L303",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_iconos_campo_iconorefrescar",
-      "community": 9,
-      "community_name": "jornada-panel.tsx",
+      "community": 14,
+      "community_name": "locales-panel.tsx",
       "norm_label": "iconorefrescar()"
     },
     {
@@ -15916,8 +15916,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_marcador_usuario_mapa",
-      "community": 14,
-      "community_name": "locales-panel.tsx",
+      "community": 86,
+      "community_name": "mapa-clientes.tsx",
       "norm_label": "marcador-usuario-mapa.ts"
     },
     {
@@ -15927,8 +15927,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_marcador_usuario_mapa_capausuariomapa",
-      "community": 14,
-      "community_name": "locales-panel.tsx",
+      "community": 86,
+      "community_name": "mapa-clientes.tsx",
       "norm_label": "capausuariomapa"
     },
     {
@@ -15938,8 +15938,8 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_marcador_usuario_mapa_montarcapausuario",
-      "community": 14,
-      "community_name": "locales-panel.tsx",
+      "community": 86,
+      "community_name": "mapa-clientes.tsx",
       "norm_label": "montarcapausuario()"
     },
     {
@@ -16147,8 +16147,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_use_geolocalizacion_mapa",
-      "community": 14,
-      "community_name": "locales-panel.tsx",
+      "community": 86,
+      "community_name": "mapa-clientes.tsx",
       "norm_label": "use-geolocalizacion-mapa.ts"
     },
     {
@@ -16158,8 +16158,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_use_geolocalizacion_mapa_estadogpsmapa",
-      "community": 14,
-      "community_name": "locales-panel.tsx",
+      "community": 86,
+      "community_name": "mapa-clientes.tsx",
       "norm_label": "estadogpsmapa"
     },
     {
@@ -16169,8 +16169,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_use_geolocalizacion_mapa_posiciongpsmapa",
-      "community": 14,
-      "community_name": "locales-panel.tsx",
+      "community": 86,
+      "community_name": "mapa-clientes.tsx",
       "norm_label": "posiciongpsmapa"
     },
     {
@@ -16180,8 +16180,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_use_geolocalizacion_mapa_usegeolocalizacionmapa",
-      "community": 14,
-      "community_name": "locales-panel.tsx",
+      "community": 86,
+      "community_name": "mapa-clientes.tsx",
       "norm_label": "usegeolocalizacionmapa()"
     },
     {
@@ -16191,8 +16191,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_use_tema_mapa",
-      "community": 14,
-      "community_name": "locales-panel.tsx",
+      "community": 86,
+      "community_name": "mapa-clientes.tsx",
       "norm_label": "use-tema-mapa.ts"
     },
     {
@@ -16202,8 +16202,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "apps_web_src_components_campo_ui_use_tema_mapa_usetemaoscuromapa",
-      "community": 14,
-      "community_name": "locales-panel.tsx",
+      "community": 86,
+      "community_name": "mapa-clientes.tsx",
       "norm_label": "usetemaoscuromapa()"
     },
     {
@@ -16796,8 +16796,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "apps_web_src_hooks_use_lista_campo_uselistacampo",
-      "community": 9,
-      "community_name": "jornada-panel.tsx",
+      "community": 14,
+      "community_name": "locales-panel.tsx",
       "norm_label": "uselistacampo()"
     },
     {
@@ -16807,8 +16807,8 @@
       "source_location": "L58",
       "_origin": "ast",
       "id": "apps_web_src_hooks_use_lista_campo_useoperacioncampo",
-      "community": 9,
-      "community_name": "jornada-panel.tsx",
+      "community": 14,
+      "community_name": "locales-panel.tsx",
       "norm_label": "useoperacioncampo()"
     },
     {
@@ -17038,8 +17038,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "apps_web_src_types_campo_respuestacatalogotareascampo",
-      "community": 28,
-      "community_name": "supervision-panel.tsx",
+      "community": 14,
+      "community_name": "locales-panel.tsx",
       "norm_label": "respuestacatalogotareascampo"
     },
     {
@@ -17060,8 +17060,8 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "apps_web_src_types_campo_localcampo",
-      "community": 14,
-      "community_name": "locales-panel.tsx",
+      "community": 86,
+      "community_name": "mapa-clientes.tsx",
       "norm_label": "localcampo"
     },
     {
@@ -17071,8 +17071,8 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "apps_web_src_types_campo_horariocampo",
-      "community": 9,
-      "community_name": "jornada-panel.tsx",
+      "community": 14,
+      "community_name": "locales-panel.tsx",
       "norm_label": "horariocampo"
     },
     {
@@ -17093,8 +17093,8 @@
       "source_location": "L48",
       "_origin": "ast",
       "id": "apps_web_src_types_campo_asignacioncampo",
-      "community": 9,
-      "community_name": "jornada-panel.tsx",
+      "community": 14,
+      "community_name": "locales-panel.tsx",
       "norm_label": "asignacioncampo"
     },
     {
@@ -17104,8 +17104,8 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "apps_web_src_types_campo_backupcampo",
-      "community": 9,
-      "community_name": "jornada-panel.tsx",
+      "community": 14,
+      "community_name": "locales-panel.tsx",
       "norm_label": "backupcampo"
     },
     {
@@ -17115,8 +17115,8 @@
       "source_location": "L67",
       "_origin": "ast",
       "id": "apps_web_src_types_campo_tareacampo",
-      "community": 28,
-      "community_name": "supervision-panel.tsx",
+      "community": 14,
+      "community_name": "locales-panel.tsx",
       "norm_label": "tareacampo"
     },
     {
@@ -17159,8 +17159,8 @@
       "source_location": "L128",
       "_origin": "ast",
       "id": "apps_web_src_types_campo_formhorariocampo",
-      "community": 9,
-      "community_name": "jornada-panel.tsx",
+      "community": 14,
+      "community_name": "locales-panel.tsx",
       "norm_label": "formhorariocampo"
     },
     {
@@ -17170,8 +17170,8 @@
       "source_location": "L138",
       "_origin": "ast",
       "id": "apps_web_src_types_campo_formtareacampo",
-      "community": 28,
-      "community_name": "supervision-panel.tsx",
+      "community": 14,
+      "community_name": "locales-panel.tsx",
       "norm_label": "formtareacampo"
     },
     {
@@ -69406,7 +69406,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L435",
+      "source_location": "L428",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel_rutaimpulsadorpanel",
@@ -69418,7 +69418,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/web/src/components/campo/ruta-impulsador-panel.tsx",
-      "source_location": "L436",
+      "source_location": "L429",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_campo_ruta_impulsador_panel_rutaimpulsadorpanel",
@@ -83235,5 +83235,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "78bab8c7430982db73b56c55063cfa5aea5b8a60"
+  "built_at_commit": "e4921d6eba2fac1a923b60d9d5f6af8a86949835"
 }
