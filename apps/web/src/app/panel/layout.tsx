@@ -30,6 +30,7 @@ export default function PanelLayout({
   const [modulos, setModulos] = useState<ModuloMenu[]>([]);
   const [cargando, setCargando] = useState(true);
   const [menuAbierto, setMenuAbierto] = useState(false);
+  const [masAbierto, setMasAbierto] = useState(false);
   const [datosAbierto, setDatosAbierto] = useState(false);
   const [sidebarVisible, setSidebarVisible] = useState(true);
   const [cerrandoSesion, setCerrandoSesion] = useState(false);
@@ -122,6 +123,12 @@ export default function PanelLayout({
   ];
   const activo = (href: string) =>
     href === "/panel" ? pathname === "/panel" : pathname === href;
+  const tieneMasEnlaces = enlaces.length > 5;
+  const enlacesBarra = tieneMasEnlaces
+    ? enlaces.slice(0, 4)
+    : enlaces.slice(0, 5);
+  const enlacesMas = tieneMasEnlaces ? enlaces.slice(4) : [];
+  const masActivo = enlacesMas.some((enlace) => activo(enlace.href));
 
   return (
     <PanelProvider value={valorPanel}>
@@ -285,11 +292,62 @@ export default function PanelLayout({
           </AnimatePresence>
 
           {/* Contenido */}
-          <main className="min-w-0 w-full flex-1 p-0">
+          <main className="min-w-0 w-full flex-1 p-0 pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-0">
             {children}
           </main>
         </div>
         <BotonSubir />
+
+        <AnimatePresence>
+          {masAbierto && tieneMasEnlaces ? (
+            <>
+              <motion.button
+                type="button"
+                aria-label="Cerrar más opciones"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setMasAbierto(false)}
+                className="fixed inset-0 z-30 bg-black/20 lg:hidden"
+              />
+              <motion.div
+                id="panel-mas-opciones"
+                role="menu"
+                aria-label="Más opciones"
+                initial={{ opacity: 0, y: 12, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 8, scale: 0.98 }}
+                transition={{ duration: 0.16, ease: "easeOut" }}
+                className="fixed inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-50 max-h-[min(60dvh,28rem)] overflow-y-auto rounded-2xl border border-line bg-surface-raised p-2 shadow-[0_20px_55px_rgba(var(--warm-shadow),0.24)] lg:hidden"
+              >
+                <p className="px-3 pb-2 pt-1 text-xs font-bold uppercase tracking-wide text-muted">
+                  Más opciones
+                </p>
+                {enlacesMas.map((enlace) => {
+                  const esActivo = activo(enlace.href);
+                  return (
+                    <Link
+                      key={enlace.href}
+                      href={enlace.href}
+                      role="menuitem"
+                      aria-current={esActivo ? "page" : undefined}
+                      onClick={() => setMasAbierto(false)}
+                      className={`flex min-h-12 items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition focus-visible:ring-2 focus-visible:ring-focus ${esActivo
+                        ? "bg-brand-100 font-bold text-brand-900 dark:bg-brand-950 dark:text-brand-100"
+                        : "text-foreground hover:bg-surface-soft"
+                        }`}
+                    >
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-surface-soft">
+                        <IconoModulo nombre={enlace.icono} />
+                      </span>
+                      <span className="min-w-0 truncate">{enlace.nombre}</span>
+                    </Link>
+                  );
+                })}
+              </motion.div>
+            </>
+          ) : null}
+        </AnimatePresence>
 
         {/* Bottom navbar (mobile) — máximo 5 accesos */}
         <nav
@@ -299,10 +357,10 @@ export default function PanelLayout({
           <div
             className="grid"
             style={{
-              gridTemplateColumns: `repeat(${Math.min(enlaces.length, 5)}, minmax(0, 1fr))`,
+              gridTemplateColumns: `repeat(${enlacesBarra.length + (tieneMasEnlaces ? 1 : 0)}, minmax(0, 1fr))`,
             }}
           >
-            {enlaces.slice(0, 5).map((e) => {
+            {enlacesBarra.map((e) => {
               const esActivo = activo(e.href);
               return (
                 <Link
@@ -310,6 +368,7 @@ export default function PanelLayout({
                   href={e.href}
                   title={e.nombre}
                   aria-current={esActivo ? "page" : undefined}
+                  onClick={() => setMasAbierto(false)}
                   className={`relative flex min-h-[60px] min-w-0 flex-col items-center justify-center gap-0.5 px-1 py-1.5 transition focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus ${esActivo
                     ? "text-brand-800 dark:text-brand-200"
                     : "text-muted hover:bg-surface-soft"
@@ -332,6 +391,35 @@ export default function PanelLayout({
                 </Link>
               );
             })}
+            {tieneMasEnlaces ? (
+              <button
+                type="button"
+                aria-label="Más opciones"
+                aria-haspopup="menu"
+                aria-expanded={masAbierto}
+                aria-controls="panel-mas-opciones"
+                onClick={() => setMasAbierto((abierto) => !abierto)}
+                className={`relative flex min-h-[60px] min-w-0 flex-col items-center justify-center gap-0.5 px-1 py-1.5 transition focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus ${masActivo || masAbierto
+                  ? "text-brand-800 dark:text-brand-200"
+                  : "text-muted hover:bg-surface-soft"
+                  }`}
+              >
+                {masActivo || masAbierto ? (
+                  <span className="absolute inset-x-1/2 top-0 h-0.5 w-8 -translate-x-1/2 rounded-b-full bg-accent" />
+                ) : null}
+                <span
+                  className={`grid h-8 w-10 place-items-center rounded-xl transition ${masActivo || masAbierto
+                    ? "bg-brand-100 shadow-sm dark:bg-brand-950"
+                    : "bg-surface-soft"
+                    }`}
+                >
+                  <IconoMas />
+                </span>
+                <span className="w-full truncate px-0.5 text-center text-[11px] font-semibold leading-tight">
+                  Más
+                </span>
+              </button>
+            ) : null}
           </div>
         </nav>
 
@@ -387,6 +475,21 @@ export default function PanelLayout({
         />
       </div>
     </PanelProvider>
+  );
+}
+
+function IconoMas() {
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      fill="currentColor"
+      className="h-5 w-5"
+      aria-hidden
+    >
+      <circle cx="4" cy="10" r="1.5" />
+      <circle cx="10" cy="10" r="1.5" />
+      <circle cx="16" cy="10" r="1.5" />
+    </svg>
   );
 }
 

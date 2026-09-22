@@ -600,8 +600,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/app/panel/layout.tsx": {
-    "mtime": 1790013315.1566985,
-    "ast_hash": "ec9ec625cde21df1f914126d741ca813",
+    "mtime": 1790101121.602681,
+    "ast_hash": "603fb4c56f0d1b0621881acf1081fd2e",
     "semantic_hash": ""
   },
   "apps/web/src/app/panel/page.tsx": {
