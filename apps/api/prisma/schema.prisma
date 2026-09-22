@@ -186,12 +186,27 @@ model Usuario {
   avisosEnviados            AvisoCampo[]              @relation("AvisosEnviados")
   avisosRecibidos           AvisoCampo[]              @relation("AvisosRecibidos")
   lecturasAvisos            AvisoLecturaCampo[]
+  identidadUcheck           IdentidadUcheck?
   esSuperadmin              Boolean                   @default(false) @map("es_superadmin")
   isActive                  Boolean                   @default(true) @map("is_active")
   createdAt                 DateTime                  @default(now()) @map("created_at")
   updatedAt                 DateTime                  @default(now()) @updatedAt @map("updated_at")
 
   @@map("usuarios")
+}
+
+// Vinculación estable creada en el primer SSO validado. El correo solo se usa
+// para encontrar la cuenta inicial; los siguientes accesos usan ucheckUsuarioId.
+model IdentidadUcheck {
+  id               Int      @id @default(autoincrement())
+  usuarioId        Int      @unique @map("usuario_id")
+  usuario          Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  ucheckUsuarioId  Int      @unique @map("ucheck_usuario_id")
+  correoVinculado  String   @map("correo_vinculado") @db.VarChar(254)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("identidades_ucheck")
 }
 
 model ClienteCampo {

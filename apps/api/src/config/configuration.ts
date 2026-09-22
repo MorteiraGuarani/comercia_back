@@ -18,5 +18,8 @@ export default () => ({
   },
   integrations: {
     ucheckSecret: process.env.UCHECK_INTEGRATION_SECRET,
+    ucheckApiUrl: process.env.UCHECK_API_URL,
+    ucheckSsoSecret:
+      process.env.UCHECK_SSO_SECRET ?? process.env.UCHECK_INTEGRATION_SECRET,
   },
 });

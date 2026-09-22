@@ -4,6 +4,7 @@ import {
   Get,
   HttpCode,
   Post,
+  Query,
   Req,
   Res,
   UseGuards,
@@ -15,14 +16,19 @@ import { AUTH_COOKIE, TOKEN_DURACION_MS } from './auth.constants';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { LoginSimDto } from './dto/login-sim.dto';
+import { CallbackUcheckSsoDto } from './dto/callback-ucheck-sso.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import type { UsuarioSesion } from './interfaces/usuario-sesion.interface';
 import type { RequestConUsuario } from './interfaces/request-con-usuario.interface';
+import { UcheckSsoService } from './ucheck-sso.service';
 
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly ucheckSso: UcheckSsoService,
+  ) {}
 
   @Post('login')
   @HttpCode(200)
@@ -73,6 +79,20 @@ export class AuthController {
   @ApiOperation({ summary: 'Usuario de la sesión actual' })
   async me(@Req() req: RequestConUsuario): Promise<{ usuario: UsuarioSesion }> {
     return { usuario: await this.authService.me(req.usuarioId) };
+  }
+
+  // Excepción pública deliberada: el código es opaco, dura 60 segundos, se
+  // consume una sola vez y Comercia lo valida de servidor a servidor con UCHECK.
+  @Get('ucheck/callback')
+  @Throttle({ default: { ttl: 60000, limit: 20 } })
+  @ApiOperation({ summary: 'Completar el SSO iniciado desde el APK de UCHECK' })
+  async callbackUcheck(
+    @Query() dto: CallbackUcheckSsoDto,
+    @Res() res: Response,
+  ): Promise<void> {
+    const { token, destino } = await this.ucheckSso.iniciarSesion(dto.code);
+    this.setAuthCookie(res, token);
+    res.redirect(302, destino);
   }
 
   private setAuthCookie(res: Response, token: string): void {

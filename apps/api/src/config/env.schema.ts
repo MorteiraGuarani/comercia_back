@@ -11,20 +11,39 @@ const booleanFromString = z.preprocess((value) => {
   return ['1', 'true', 'yes', 'on'].includes(value.toLowerCase());
 }, z.boolean());
 
-const rawEnvSchema = z.object({
-  NODE_ENV: z
-    .enum(['development', 'test', 'production'])
-    .default('development'),
-  PORT: z.coerce.number().int().min(1).max(65535).default(3001),
-  DATABASE_URL: z.string().min(1).optional(),
-  FRONTEND_URL: z.string().url().default('http://localhost:3000'),
-  CORS_ORIGINS: z.string().default('http://localhost:3000'),
-  THROTTLE_TTL: z.coerce.number().int().min(1000).default(60000),
-  THROTTLE_LIMIT: z.coerce.number().int().min(1).default(100),
-  SWAGGER_ENABLED: booleanFromString.default(true),
-  COOKIE_SECRET: z.string().min(32).optional(),
-  UCHECK_INTEGRATION_SECRET: z.string().min(32).optional(),
-});
+const rawEnvSchema = z
+  .object({
+    NODE_ENV: z
+      .enum(['development', 'test', 'production'])
+      .default('development'),
+    PORT: z.coerce.number().int().min(1).max(65535).default(3001),
+    DATABASE_URL: z.string().min(1).optional(),
+    FRONTEND_URL: z.string().url().default('http://localhost:3000'),
+    CORS_ORIGINS: z.string().default('http://localhost:3000'),
+    THROTTLE_TTL: z.coerce.number().int().min(1000).default(60000),
+    THROTTLE_LIMIT: z.coerce.number().int().min(1).default(100),
+    SWAGGER_ENABLED: booleanFromString.default(true),
+    COOKIE_SECRET: z.string().min(32).optional(),
+    UCHECK_INTEGRATION_SECRET: z.string().min(32).optional(),
+    UCHECK_API_URL: z.string().url().optional(),
+    UCHECK_SSO_SECRET: z.string().min(32).optional(),
+  })
+  .superRefine((env, context) => {
+    const tieneSecretoSso = Boolean(
+      env.UCHECK_SSO_SECRET ?? env.UCHECK_INTEGRATION_SECRET,
+    );
+    if (
+      (Boolean(env.UCHECK_API_URL) && !tieneSecretoSso) ||
+      (Boolean(env.UCHECK_SSO_SECRET) && !env.UCHECK_API_URL)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['UCHECK_API_URL'],
+        message:
+          'UCHECK_API_URL y un secreto SSO de UCHECK deben configurarse juntos',
+      });
+    }
+  });
 
 export type Env = z.infer<typeof rawEnvSchema> & {
   DATABASE_URL: string;

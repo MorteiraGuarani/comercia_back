@@ -179,6 +179,24 @@ export class AuthService {
     return this.aSesion(usuario);
   }
 
+  async iniciarSesionPorUsuarioId(
+    usuarioId: number,
+  ): Promise<{ usuario: UsuarioSesion; token: string }> {
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      include: { empresa: true, rol: true },
+    });
+    if (!usuario?.isActive) {
+      throw new UnauthorizedException(
+        'La cuenta de Comercia no está habilitada',
+      );
+    }
+    return {
+      usuario: this.aSesion(usuario),
+      token: this.firmarToken(usuario.id),
+    };
+  }
+
   private firmarToken(usuarioId: number): string {
     const payload: TokenPayload = { sub: usuarioId };
     return this.jwt.sign(payload);
