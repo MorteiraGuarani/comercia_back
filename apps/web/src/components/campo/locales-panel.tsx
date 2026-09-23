@@ -91,6 +91,7 @@ export function LocalesPanel() {
       telefono: "",
       latitud: -25.2969,
       longitud: -57.6415,
+      radioMetros: 100,
       notas: "",
       activo: true,
     });
@@ -352,6 +353,9 @@ export function LocalesPanel() {
                                 <span className="text-zinc-400 italic">Sin GPS</span>
                               )}
                             </div>
+                            <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+                              Radio para marcar: {local.radioMetros} m
+                            </p>
                           </div>
                         </td>
 
@@ -608,6 +612,26 @@ export function LocalesPanel() {
                   }
                 />
               </div>
+            </div>
+
+            <div>
+              <label htmlFor="local-radio-metros" className="block text-[11px] font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-300 mb-1">
+                Radio máximo para marcar (metros) *
+              </label>
+              <input
+                id="local-radio-metros"
+                type="number"
+                min={10}
+                max={5000}
+                step={1}
+                required
+                value={form.radioMetros}
+                onChange={(e) => setForm({ ...form, radioMetros: Number(e.target.value) })}
+                className="w-full px-3 py-2 rounded-lg border border-line bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#1E2320]"
+              />
+              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                Entrada y salida requieren GPS dentro de este radio. Valor inicial: 100 m.
+              </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

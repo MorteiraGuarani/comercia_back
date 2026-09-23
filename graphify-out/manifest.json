@@ -1930,8 +1930,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/campo/dto/campo.dto.ts": {
-    "mtime": 1789997857.8027873,
-    "ast_hash": "04dd7bf1eb7b2defa4bead0da3afdc66",
+    "mtime": 1790164052.7844305,
+    "ast_hash": "026f0412f07978b1c236a522d4600159",
     "semantic_hash": ""
   },
   "apps/api/src/campo/interfaces/calendario.interface.ts": {
@@ -1940,8 +1940,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/campo/jornada-campo.service.ts": {
-    "mtime": 1790110526.2201872,
-    "ast_hash": "6ffe54b0ee46532ef622cfe7f20b45a3",
+    "mtime": 1790164107.3753593,
+    "ast_hash": "cbd000f4fb451dd9e9f280022741eb4e",
     "semantic_hash": ""
   },
   "apps/api/src/campo/planificacion-campo.service.ts": {
@@ -1965,8 +1965,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/campo/utils/selectores.ts": {
-    "mtime": 1790110533.6184547,
-    "ast_hash": "79e82f7ffae71efec55814f53f48fdea",
+    "mtime": 1790164107.3753593,
+    "ast_hash": "f65060b31573ec73affcde60e562f71c",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/catalogo-panel.tsx": {
@@ -1980,8 +1980,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/jornada-panel.tsx": {
-    "mtime": 1789998116.4872942,
-    "ast_hash": "901ed9230a106a12a4795c28c76987dd",
+    "mtime": 1790163764.1445436,
+    "ast_hash": "22752129503fa4a3d166605cbd81338a",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/mapa-local.tsx": {
@@ -2010,8 +2010,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/types/campo.ts": {
-    "mtime": 1790110128.4594376,
-    "ast_hash": "d274df7fc9c768a6d47ae3524126bf0c",
+    "mtime": 1790163729.307479,
+    "ast_hash": "7329f88ce91591fa28df7f911e68b0d2",
     "semantic_hash": ""
   },
   "docs/operaciones-campo.md": {
@@ -2235,8 +2235,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/locales-panel.tsx": {
-    "mtime": 1789733485.8485725,
-    "ast_hash": "2fac8aea75439bf16818126046581980",
+    "mtime": 1790163906.798841,
+    "ast_hash": "20953487e5cf2de3309217ac5f36fc72",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/mapa-clientes.tsx": {
@@ -2250,8 +2250,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/ruta-impulsador-panel.tsx": {
-    "mtime": 1790110128.670122,
-    "ast_hash": "e14ddc9ad99712540555b46cdd8dce0f",
+    "mtime": 1790163808.252431,
+    "ast_hash": "06bb9a7b412d3b5a6133c0053e3b63fd",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/selector-cliente-combobox.tsx": {
@@ -2452,6 +2452,21 @@
   "apps/web/src/lib/api-adjuntos-campo.ts": {
     "mtime": 1790110128.4156446,
     "ast_hash": "eaadaeffc9430debc5f859d2b04c1163",
+    "semantic_hash": ""
+  },
+  "apps/api/src/campo/jornada-campo.service.spec.ts": {
+    "mtime": 1790164101.7479334,
+    "ast_hash": "3c43a06e226eb9152efe5b2a4bd575dc",
+    "semantic_hash": ""
+  },
+  "apps/api/src/campo/utils/marcacion.spec.ts": {
+    "mtime": 1790164039.0148766,
+    "ast_hash": "e3659c7552a3ecfa37c10cd8399f510f",
+    "semantic_hash": ""
+  },
+  "apps/api/src/campo/utils/marcacion.ts": {
+    "mtime": 1790164038.9925973,
+    "ast_hash": "6336f94e63178aaa2bbaca9bd69d13fa",
     "semantic_hash": ""
   }
 }

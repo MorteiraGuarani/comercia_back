@@ -183,8 +183,10 @@ export class TareaCampoDto extends VigenciaCampoDto {
 }
 
 export class MarcaCampoDto {
-  @IsOptional() @IsNumber() @Min(-90) @Max(90) latitud?: number;
-  @IsOptional() @IsNumber() @Min(-180) @Max(180) longitud?: number;
+  @IsNumber() @Min(-90) @Max(90) latitud!: number;
+  @IsNumber() @Min(-180) @Max(180) longitud!: number;
+  @IsNumber() @Min(0) @Max(5000) precisionMetros!: number;
+  @IsDateString() capturadaEn!: string;
   @IsString() @MaxLength(250) nota = '';
 }
 

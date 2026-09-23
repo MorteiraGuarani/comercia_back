@@ -572,6 +572,7 @@ export function RutaImpulsadorPanel() {
             direccion: mapa.nombre,
             latitud: mapa.latitud,
             longitud: mapa.longitud,
+            radioMetros: mapa.radioMetros,
             clienteId: 0,
             contacto: "",
             telefono: "",

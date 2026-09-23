@@ -23,6 +23,7 @@ export interface LocalCampo {
   telefono: string;
   latitud: number;
   longitud: number;
+  radioMetros: number;
   notas: string;
   activo: boolean;
   cliente: { id: number; nombre: string; logoUrl?: string | null };
@@ -93,7 +94,7 @@ export interface VisitaCampo {
   entradaLng: number | null;
   salidaLat: number | null;
   salidaLng: number | null;
-  local: { id: number; nombre: string };
+  local: { id: number; nombre: string; radioMetros: number };
   usuario: PersonaCampo;
   asignacion: { usuario: PersonaCampo };
   _count: { cumplimientos: number };
@@ -150,8 +151,10 @@ export interface FormTareaCampo {
   estado?: "ABIERTA" | "CERRADA" | "CANCELADA";
 }
 export interface MarcaCampo {
-  latitud?: number;
-  longitud?: number;
+  latitud: number;
+  longitud: number;
+  precisionMetros: number;
+  capturadaEn: string;
   nota: string;
 }
 

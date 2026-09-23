@@ -54,6 +54,7 @@ function AgendaDelDia({ qsFecha }: { qsFecha: string }) {
     horarioId?: number;
     visitaId?: number;
     nombre: string;
+    radioMetros: number;
   } | null>(null);
 
   useEffect(() => {
@@ -161,6 +162,7 @@ function AgendaDelDia({ qsFecha }: { qsFecha: string }) {
                 asignacionId: abierta.asignacionId,
                 visitaId: abierta.id,
                 nombre: abierta.local.nombre,
+                radioMetros: abierta.local.radioMetros,
               })
             }
           >
@@ -435,6 +437,7 @@ function AgendaDelDia({ qsFecha }: { qsFecha: string }) {
                             asignacionId: a.id,
                             horarioId: h?.id,
                             nombre: a.local.nombre,
+                            radioMetros: a.local.radioMetros,
                           })
                         }
                         className={`min-h-11 flex-1 rounded-lg px-3 py-2 text-xs font-semibold shadow-sm transition-colors flex items-center justify-center gap-1.5 ${
@@ -469,6 +472,7 @@ function AgendaDelDia({ qsFecha }: { qsFecha: string }) {
                         asignacionId: abierta!.asignacionId,
                         visitaId: abierta!.id,
                         nombre: abierta!.local.nombre,
+                        radioMetros: abierta!.local.radioMetros,
                       })
                     }
                     className="min-h-11 flex-1 rounded-lg bg-red-600 text-white hover:bg-red-700 px-3 py-2 text-xs font-bold shadow-sm transition-colors flex items-center justify-center gap-1.5"
@@ -556,6 +560,7 @@ function AgendaDelDia({ qsFecha }: { qsFecha: string }) {
                             asignacionId: a.id,
                             horarioId: h?.id,
                             nombre: a.local.nombre,
+                            radioMetros: a.local.radioMetros,
                           })
                         }
                       >
@@ -585,6 +590,7 @@ function AgendaDelDia({ qsFecha }: { qsFecha: string }) {
       {marca ? (
         <ModalMarca
           nombre={marca.nombre}
+          radioMetros={marca.radioMetros}
           salida={!!marca.visitaId}
           cerrar={() => setMarca(null)}
           guardar={async (datos) => {
@@ -615,50 +621,42 @@ function AgendaDelDia({ qsFecha }: { qsFecha: string }) {
 }
 function ModalMarca({
   nombre,
+  radioMetros,
   salida,
   cerrar,
   guardar,
 }: {
   nombre: string;
+  radioMetros: number;
   salida: boolean;
   cerrar: () => void;
   guardar: (datos: MarcaCampo) => Promise<void>;
 }) {
   const op = useOperacionCampo();
-  const [coords, setCoords] = useState<{
-    latitud: number;
-    longitud: number;
-  } | null>(null);
+  const [coords, setCoords] = useState<Omit<MarcaCampo, "nota"> | null>(null);
   const [nota, setNota] = useState("");
-  async function ubicar() {
-    await op.ejecutar(
-      "Obteniendo ubicación",
-      () =>
-        new Promise<void>((resolve, reject) => {
-          if (!navigator.geolocation) {
-            reject(
-              new Error("GPS no disponible. Indicá un motivo para continuar."),
-            );
-            return;
-          }
-          navigator.geolocation.getCurrentPosition(
-            (p) => {
-              setCoords({
-                latitud: p.coords.latitude,
-                longitud: p.coords.longitude,
-              });
-              resolve();
-            },
-            () =>
-              reject(
-                new Error(
-                  "No se pudo obtener GPS. Reintentá o indicá el motivo para continuar.",
-                ),
-              ),
-            { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 },
-          );
+  function obtenerGps(): Promise<Omit<MarcaCampo, "nota">> {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error("GPS no disponible. Activá la ubicación para marcar."));
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (p) => resolve({
+          latitud: p.coords.latitude,
+          longitud: p.coords.longitude,
+          precisionMetros: p.coords.accuracy,
+          capturadaEn: new Date(p.timestamp).toISOString(),
         }),
-    );
+        () => reject(new Error("No se pudo obtener GPS. Activá la ubicación y reintentá.")),
+        { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 },
+      );
+    });
+  }
+  async function ubicar() {
+    await op.ejecutar("Obteniendo ubicación", async () => {
+      setCoords(await obtenerGps());
+    });
   }
   return (
     <Modal
@@ -672,9 +670,11 @@ function ModalMarca({
         className="space-y-4"
         onSubmit={async (e) => {
           e.preventDefault();
-          await op.ejecutar("Registrando presencia", () =>
-            guardar({ ...coords, nota }),
-          );
+          await op.ejecutar("Obteniendo ubicación y registrando presencia", async () => {
+            const posicion = await obtenerGps();
+            setCoords(posicion);
+            await guardar({ ...posicion, nota });
+          });
         }}
       >
         <button
@@ -686,17 +686,15 @@ function ModalMarca({
         </button>
         <p className="text-sm text-muted">
           {coords
-            ? `Ubicación obtenida: ${coords.latitud.toFixed(5)}, ${coords.longitud.toFixed(5)}`
-            : "Sin ubicación. Es obligatorio indicar un motivo si no podés usar GPS."}
+            ? `Ubicación obtenida: ${coords.latitud.toFixed(5)}, ${coords.longitud.toFixed(5)} · precisión ±${Math.round(coords.precisionMetros)} m`
+            : "Se necesita GPS para marcar. Al confirmar se obtendrá una ubicación nueva."}
         </p>
+        <p className="text-sm text-muted">Radio permitido: {radioMetros} m desde el local.</p>
         <CampoTexto
-          titulo={
-            coords ? "Observación (opcional)" : "Motivo de marcar sin GPS"
-          }
+          titulo="Observación (opcional)"
           maxLength={250}
           value={nota}
           onChange={setNota}
-          required={!coords}
         />
         {op.error ? <p className={errorBox}>{op.error}</p> : null}
         <BotonesFormulario ocupado={!!op.mensaje} cancelar={cerrar}>

@@ -21,6 +21,7 @@ import {
   relojCampo,
 } from './utils/calendario';
 import { condicionAgenda } from './utils/agenda-sql';
+import { comprobarMarcaEnLocal } from './utils/marcacion';
 import {
   HORARIO_CAMPO_SELECT,
   LOCAL_CAMPO_SELECT,
@@ -56,6 +57,7 @@ export class JornadaCampoService {
       select: {
         id: true,
         localId: true,
+        local: { select: { latitud: true, longitud: true, radioMetros: true } },
         usuarioId: true,
         backups: {
           where: {
@@ -138,15 +140,8 @@ export class JornadaCampoService {
     });
     return respuestaPaginada(items, Number(conteo[0].total), page, limit);
   }
-  private validarMarca(dto: MarcaCampoDto) {
-    if ((dto.latitud == null) !== (dto.longitud == null))
-      throw new BadRequestException('Enviá ambas coordenadas');
-    if (dto.latitud == null && dto.nota.trim().length < 3)
-      throw new BadRequestException('Indicá el motivo de marcar sin ubicación');
-  }
   async entrada(usuarioId: number, dto: EntradaCampoDto) {
     const u = await this.acceso.ejecutar(usuarioId);
-    this.validarMarca(dto);
     const ahora = new Date();
     const reloj = relojCampo(ahora);
     const fecha = fechaCampo(reloj.fecha);
@@ -161,6 +156,7 @@ export class JornadaCampoService {
           dto.asignacionId,
           fecha,
         );
+        const distancia = comprobarMarcaEnLocal(dto, a.local, ahora);
         if (await tx.visitaCampo.count({ where: { usuarioId, salida: null } }))
           throw new ConflictException(
             'Cerrá tu visita abierta antes de marcar otra entrada',
@@ -194,6 +190,8 @@ export class JornadaCampoService {
             esBackup: a.usuarioId !== u.id,
             entradaLat: dto.latitud,
             entradaLng: dto.longitud,
+            entradaPrecision: dto.precisionMetros,
+            entradaDistancia: distancia,
             notaEntrada: dto.nota,
           },
           select: VISITA_CAMPO_SELECT,
@@ -222,7 +220,19 @@ export class JornadaCampoService {
   }
   async salida(usuarioId: number, id: number, dto: MarcaCampoDto) {
     const u = await this.acceso.ejecutar(usuarioId);
-    this.validarMarca(dto);
+    const visita = await this.prisma.visitaCampo.findFirst({
+      where: {
+        id,
+        usuarioId: u.id,
+        salida: null,
+        local: { cliente: { empresaId: u.empresaId } },
+      },
+      select: {
+        local: { select: { latitud: true, longitud: true, radioMetros: true } },
+      },
+    });
+    if (!visita) throw new NotFoundException('Visita abierta no disponible');
+    const distancia = comprobarMarcaEnLocal(dto, visita.local, new Date());
     const resultado = await this.prisma.visitaCampo.updateMany({
       where: {
         id,
@@ -234,6 +244,8 @@ export class JornadaCampoService {
         salida: new Date(),
         salidaLat: dto.latitud,
         salidaLng: dto.longitud,
+        salidaPrecision: dto.precisionMetros,
+        salidaDistancia: distancia,
         notaSalida: dto.nota,
       },
     });
@@ -256,7 +268,10 @@ export class JornadaCampoService {
         activo: true,
         fechaDesde: { lte: fechaHasta },
         OR: [{ fechaHasta: null }, { fechaHasta: { gte: fechaDesde } }],
-        local: { activo: true, cliente: { empresaId: u.empresaId, activo: true } },
+        local: {
+          activo: true,
+          cliente: { empresaId: u.empresaId, activo: true },
+        },
       },
       select: {
         id: true,

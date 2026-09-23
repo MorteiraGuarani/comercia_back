@@ -97,10 +97,12 @@ export const VISITA_CAMPO_SELECT = {
   salidaDistancia: true,
   salidaFueraHorario: true,
   salidaFueraAtencion: true,
-  local: { select: { id: true, nombre: true } },
+  local: { select: { id: true, nombre: true, radioMetros: true } },
   usuario: { select: { id: true, nombre: true, apellido: true } },
   asignacion: {
     select: { usuario: { select: { id: true, nombre: true, apellido: true } } },
   },
-  _count: { select: { cumplimientos: { where: { NOT: { completadaAt: null } } } } },
+  _count: {
+    select: { cumplimientos: { where: { NOT: { completadaAt: null } } } },
+  },
 } as const;
