@@ -47,7 +47,7 @@ Servidor Linux (/opt/comercia)
 | HTTPS automático | Caddy emite y renueva certificados Let's Encrypt solo con configurar `DOMAIN`. |
 | Un solo origen | Caddy enruta `/api/*` a NestJS y el resto a Next.js: front y API comparten dominio, sin dolores de CORS. |
 | Logs acotados | Rotación `json-file` 10 MB × 3 archivos por servicio: los logs nunca llenan el disco. |
-| Backups | `deploy/backup.sh` + cron diario hace `pg_dump` comprimido y borra los de más de 14 días. |
+| Backups | `deploy/backup.sh` + cron diario guarda PostgreSQL y uploads con SHA-256; retiene 30 días y bloquea el despliegue si falla la copia previa. |
 | Rollback | Cada imagen queda etiquetada con el SHA del commit: volver atrás es cambiar `API_TAG`/`WEB_TAG` en el `.env` del servidor. |
 | Deploys serializados | `concurrency` en Actions: nunca corren dos deploys a la vez. |
 | Usuario no-root | Los contenedores de api y web corren con usuarios sin privilegios. |

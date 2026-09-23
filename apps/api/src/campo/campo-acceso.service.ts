@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AccesoPlataformaService } from '../plataforma/acceso-plataforma.service';
 
@@ -16,11 +16,19 @@ export class CampoAccesoService {
       pagina,
     );
   }
-  ejecutar(usuarioId: number) {
-    return this.plataforma.exigirAccesoAlgunaPagina(usuarioId, 'mi-jornada', [
-      'locales',
-      'tareas',
-    ]);
+  async ejecutar(usuarioId: number) {
+    try {
+      return await this.plataforma.exigirAccesoAlgunaPagina(usuarioId, 'mi-jornada', [
+        'locales',
+        'tareas',
+      ]);
+    } catch (error) {
+      if (!(error instanceof ForbiddenException)) throw error;
+      const usuario = await this.gestionar(usuarioId, 'locales');
+      const rol = usuario.rolDescripcion?.toLowerCase().replace(/[^a-z]/g, '');
+      if (rol !== 'teamleader' && rol !== 'teamleaderimpulsador') throw error;
+      return usuario;
+    }
   }
   async local(empresaId: number, id: number) {
     const local = await this.prisma.localCampo.findFirst({

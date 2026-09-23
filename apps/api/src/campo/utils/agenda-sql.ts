@@ -17,6 +17,26 @@ function condicionHorario(diaSql: Prisma.Sql) {
     )`;
 }
 
+// Un TeamLeader comparte la ruta de sus colaboradores directos. La asignación
+// sigue siendo del impulsador; cada persona conserva su propia visita.
+function condicionEquipo(usuarioId: number, diaSql: Prisma.Sql) {
+  return Prisma.sql`EXISTS (
+    SELECT 1 FROM usuarios lider
+    JOIN roles rol ON rol.id = lider.rol_id AND rol.empresa_id = lider.empresa_id
+    JOIN usuarios colaborador ON colaborador.superior_id = lider.id
+    WHERE lider.id = ${usuarioId} AND lider.is_active AND colaborador.is_active
+      AND colaborador.empresa_id = lider.empresa_id
+      AND regexp_replace(lower(rol.descripcion), '[^a-z]', '', 'g')
+        IN ('teamleader', 'teamleaderimpulsador')
+      AND colaborador.id = COALESCE((
+        SELECT b.usuario_id FROM campo_backups b
+        WHERE b.asignacion_id = a.id AND b.activo
+          AND ${diaSql} BETWEEN b.fecha_desde AND b.fecha_hasta
+        ORDER BY b.id LIMIT 1
+      ), a.usuario_id)
+  )`;
+}
+
 // Alias fijos de tablas; todos los valores externos se parametrizan.
 // Un solo día usa date (entero de días). El rango castea generate_series a date
 // porque el interval de series no admite `% intervalo`.
@@ -38,7 +58,7 @@ export function condicionAgenda(
         )) OR EXISTS (
           SELECT 1 FROM campo_backups b WHERE b.asignacion_id = a.id AND b.activo AND b.usuario_id = ${usuarioId}
           AND ${dia} BETWEEN b.fecha_desde AND b.fecha_hasta
-        )
+        ) OR ${condicionEquipo(usuarioId, dia)}
       ) AND (${condicionHorario(dia)})`;
   }
 
@@ -53,6 +73,19 @@ export function condicionAgenda(
       )) OR EXISTS (
         SELECT 1 FROM campo_backups b WHERE b.asignacion_id = a.id AND b.activo AND b.usuario_id = ${usuarioId}
         AND b.fecha_desde <= ${fechaFin}::date AND b.fecha_hasta >= ${fecha}::date
+      ) OR EXISTS (
+        SELECT 1 FROM usuarios lider
+        JOIN roles rol ON rol.id = lider.rol_id AND rol.empresa_id = lider.empresa_id
+        JOIN usuarios colaborador ON colaborador.superior_id = lider.id
+        WHERE lider.id = ${usuarioId} AND lider.is_active AND colaborador.is_active
+          AND colaborador.empresa_id = lider.empresa_id
+          AND regexp_replace(lower(rol.descripcion), '[^a-z]', '', 'g')
+            IN ('teamleader', 'teamleaderimpulsador')
+          AND (colaborador.id = a.usuario_id OR EXISTS (
+            SELECT 1 FROM campo_backups b WHERE b.asignacion_id = a.id
+              AND b.activo AND b.usuario_id = colaborador.id
+              AND b.fecha_desde <= ${fechaFin}::date AND b.fecha_hasta >= ${fecha}::date
+          ))
       )
     ) AND (
       NOT EXISTS (SELECT 1 FROM campo_horarios h WHERE h.local_id = l.id AND h.activo)

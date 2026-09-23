@@ -25,7 +25,7 @@ after="$(digests)"
 
 if [ "$before" != "$after" ]; then
   echo "[$(date '+%F %T')] Imagen nueva en GHCR; backup previo al deploy..."
-  bash "$APP_DIR/deploy/backup.sh" || echo "[$(date '+%F %T')] AVISO: backup previo falló (el deploy continúa)"
+  bash "$APP_DIR/deploy/backup.sh"
   echo "[$(date '+%F %T')] Actualizando stack..."
   $COMPOSE up -d --remove-orphans
   $COMPOSE ps

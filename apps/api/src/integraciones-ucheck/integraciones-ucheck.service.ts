@@ -46,6 +46,7 @@ export class IntegracionesUcheckService {
         correo: true,
         nombre: true,
         apellido: true,
+        rol: { select: { descripcion: true } },
         empresa: { select: { id: true, nombre: true } },
       },
     });
@@ -95,6 +96,8 @@ export class IntegracionesUcheckService {
 
     const usuario = await this.usuarioPorCorreo(dto.correoUsuario);
     const fecha = fechaSql(dto.fecha);
+    const rol = usuario.rol?.descripcion.toLowerCase().replace(/[^a-z]/g, '');
+    const esTeamleader = rol === 'teamleader' || rol === 'teamleaderimpulsador';
 
     return this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(${dto.ucheckJornadaId})`;
@@ -130,11 +133,30 @@ export class IntegracionesUcheckService {
                   backups: {
                     some: {
                       usuarioId: usuario.id,
+                      activo: true,
                       fechaDesde: { lte: fecha },
                       fechaHasta: { gte: fecha },
                     },
                   },
                 },
+                ...(esTeamleader ? [
+                  {
+                    usuario: { superiorId: usuario.id, isActive: true },
+                    backups: { none: {
+                      activo: true,
+                      fechaDesde: { lte: fecha },
+                      fechaHasta: { gte: fecha },
+                    } },
+                  },
+                  {
+                    backups: { some: {
+                      activo: true,
+                      fechaDesde: { lte: fecha },
+                      fechaHasta: { gte: fecha },
+                      usuario: { superiorId: usuario.id, isActive: true },
+                    } },
+                  },
+                ] : []),
               ],
             },
           ],
@@ -198,7 +220,7 @@ export class IntegracionesUcheckService {
                 horarioId: dto.horarioId ?? null,
                 fecha,
                 entrada: new Date(dto.registradaEn),
-                esBackup: asignacion.usuarioId !== usuario.id,
+                esBackup: asignacion.usuarioId !== usuario.id && !esTeamleader,
                 origen: 'UCHECK',
                 ucheckJornadaId: dto.ucheckJornadaId,
                 entradaLat: dto.latitud,

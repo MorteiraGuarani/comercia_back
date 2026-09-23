@@ -632,6 +632,26 @@ export function SupervisionPanel({
                   </div>
                 </div>
 
+                {resumen.liderazgo?.totalTeamLeaders > 0 && (
+                  <section aria-label="Seguimiento de TeamLeaders" className="space-y-3">
+                    <h2 className="ft-display text-xl sm:text-2xl font-bold text-foreground">TeamLeaders</h2>
+                    <p className="text-sm text-muted">Visitas propias de supervisión y estado de los TeamLeaders bajo tu responsabilidad.</p>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      <StatChip label="TeamLeaders" value={resumen.liderazgo.totalTeamLeaders} tone="ink" sub="A tu cargo" />
+                      <StatChip label="En ruta" value={resumen.liderazgo.enRuta} tone="frio" sub="Con visita abierta" />
+                      <StatChip label="Finalizaron" value={resumen.liderazgo.finalizados} tone="fresco" sub="Con salida registrada" />
+                      <StatChip label="Sin iniciar" value={resumen.liderazgo.sinIniciar} tone="alerta" sub="Sin marcaciones" />
+                    </div>
+                    <div className="rounded-xl border border-line bg-surface-raised p-4">
+                      <div className="flex items-center justify-between gap-3 text-sm">
+                        <span>Visitas de supervisión completadas</span>
+                        <strong>{resumen.liderazgo.visitasCompletadas}/{resumen.liderazgo.visitasTotales} · {resumen.liderazgo.pctVisitas}%</strong>
+                      </div>
+                      <BigProgress pct={resumen.liderazgo.pctVisitas} color={TOKENS.frio} />
+                    </div>
+                  </section>
+                )}
+
                 {/* Lista de Colaboradores */}
                 <div>
                   {resumen.colaboradores.length === 0 ? (

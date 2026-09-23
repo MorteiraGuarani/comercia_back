@@ -349,7 +349,7 @@ export class UsuariosService {
     const [rol, superior] = await Promise.all([
       this.prisma.rol.findUnique({
         where: { id: rolId },
-        select: { id: true, empresaId: true },
+        select: { id: true, empresaId: true, rolId: true },
       }),
       superiorId
         ? this.prisma.usuario.findUnique({
@@ -378,13 +378,24 @@ export class UsuariosService {
     ) {
       throw new NotFoundException('El superior no existe');
     }
-    if (
-      usuarioEditadoId !== undefined &&
-      superior?.superiorId === usuarioEditadoId
-    ) {
-      throw new BadRequestException(
-        'La jerarquía de usuarios formaría un ciclo',
-      );
+    if (superior && rol?.rolId && superior.rolId !== rol.rolId)
+      throw new BadRequestException('El superior debe tener el rol padre del usuario');
+    if (usuarioEditadoId !== undefined && superior) {
+      const visitados = new Set<number>([usuarioEditadoId]);
+      let actual: number | null = superior.id;
+      while (actual !== null) {
+        if (visitados.has(actual))
+          throw new BadRequestException('La jerarquía de usuarios formaría un ciclo');
+        visitados.add(actual);
+        const padre: { superiorId: number | null } | null =
+          actual === superior.id
+            ? superior
+            : await this.prisma.usuario.findUnique({
+                where: { id: actual },
+                select: { superiorId: true },
+              });
+        actual = padre?.superiorId ?? null;
+      }
     }
   }
 

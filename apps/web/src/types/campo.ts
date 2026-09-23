@@ -391,6 +391,15 @@ export type ColaboradorResumenItem = ColaboradorResumen;
 
 export interface SupervisionResumenData {
   fecha: string;
+  liderazgo: {
+    totalTeamLeaders: number;
+    enRuta: number;
+    finalizados: number;
+    sinIniciar: number;
+    visitasCompletadas: number;
+    visitasTotales: number;
+    pctVisitas: number;
+  };
   presentismo: {
     enRuta: number;
     finalizados: number;

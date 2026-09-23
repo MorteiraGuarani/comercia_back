@@ -1,51 +1,18 @@
 import { ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
-/**
- * Verifica si el usuarioA es líder directo del usuarioB
- * (basado en la jerarquía de roles)
- */
+/** Comprueba la cadena real de superiores, dentro de una misma empresa. */
 export async function esLiderDe(
   prisma: PrismaService,
   liderUserId: number,
   subordinadoUserId: number,
 ): Promise<boolean> {
-  const subordinado = await prisma.usuario.findUnique({
-    where: { id: subordinadoUserId },
-    select: {
-      empresaId: true,
-      rol: {
-        select: {
-          rolId: true,
-        },
-      },
-    },
-  });
-
-  if (!subordinado?.rol?.rolId) {
-    return false;
-  }
-
-  const lider = await prisma.usuario.findUnique({
-    where: { id: liderUserId },
-    select: {
-      rolId: true,
-      empresaId: true,
-    },
-  });
-
-  if (!lider?.rolId || lider.empresaId !== subordinado.empresaId) {
-    return false;
-  }
-
-  // El líder debe tener el rol padre del subordinado
-  return subordinado.rol.rolId === lider.rolId ||
-    (await obtenerEquipoCompleto(prisma, liderUserId)).includes(subordinadoUserId);
+  if (liderUserId === subordinadoUserId) return false;
+  return (await obtenerEquipoCompleto(prisma, liderUserId)).includes(subordinadoUserId);
 }
 
 /**
- * Obtiene todos los IDs de usuarios que pertenecen al equipo completo del líder
- * (recursivo: incluye subordinados directos e indirectos)
+ * Incluye al líder y sus subordinados activos, directos e indirectos.
  */
 export async function obtenerEquipoCompleto(
   prisma: PrismaService,
@@ -59,51 +26,33 @@ export async function obtenerEquipoCompleto(
 
   const lider = await prisma.usuario.findUnique({
     where: { id: liderUserId },
-    select: {
-      id: true,
-      rolId: true,
-      rol: {
-        select: {
-          hijos: {
-            select: {
-              id: true,
-              usuarios: {
-                select: {
-                  id: true,
-                },
-              },
-            },
-          },
-        },
-      },
-    },
+    select: { id: true, empresaId: true, isActive: true },
   });
-
-  if (!lider?.rol) {
-    return [liderUserId];
+  if (!lider?.isActive) return [];
+  const ids = [lider.id];
+  // La consulta incluye empresa y estado en cada nivel; un rol compartido nunca
+  // concede acceso a los subordinados de otro líder.
+  let frontera = [lider.id];
+  while (frontera.length) {
+    const siguientes = await prisma.usuario.findMany({
+      where: {
+        superiorId: { in: frontera },
+        empresaId: lider.empresaId,
+        isActive: true,
+        esSuperadmin: false,
+      },
+      select: { id: true },
+      take: 10000,
+    });
+    frontera = siguientes.map((u) => u.id).filter((id) => !visitados.has(id));
+    for (const id of frontera) visitados.add(id);
+    ids.push(...frontera);
   }
-
-  // Obtener subordinados directos (usuarios con roles hijos del rol del líder)
-  const subordinadosDirectos = lider.rol.hijos.flatMap((rolHijo) =>
-    rolHijo.usuarios.map((u) => u.id),
-  );
-
-  // Recursivamente obtener subordinados de subordinados
-  const subordinadosIndirectos = await Promise.all(
-    subordinadosDirectos
-      .filter((id) => !visitados.has(id))
-      .map((id) => obtenerEquipoCompleto(prisma, id, visitados)),
-  );
-
-  return [
-    liderUserId,
-    ...subordinadosDirectos,
-    ...subordinadosIndirectos.flat(),
-  ];
+  return ids;
 }
 
 /**
- * Obtiene el líder directo de un usuario (basado en jerarquía de roles)
+ * Obtiene el superior asignado explícitamente al usuario.
  * Retorna null si no tiene líder
  */
 export async function obtenerLiderDirecto(
@@ -114,33 +63,20 @@ export async function obtenerLiderDirecto(
     where: { id: usuarioId },
     select: {
       empresaId: true,
-      rol: {
-        select: {
-          padre: {
-            select: {
-              usuarios: {
-                select: {
-                  id: true,
-                },
-                where: {
-                  isActive: true,
-                },
-              },
-            },
-          },
-        },
-      },
+      superiorId: true,
     },
   });
 
-  if (!usuario?.rol?.padre) {
-    return null;
-  }
-
-  // Retornar el primer usuario activo con el rol padre
-  // En una jerarquía bien diseñada, debería haber solo uno por empresa
-  const lideres = usuario.rol.padre.usuarios;
-  return lideres.length > 0 ? lideres[0].id : null;
+  if (!usuario?.superiorId) return null;
+  const superior = await prisma.usuario.findFirst({
+    where: {
+      id: usuario.superiorId,
+      empresaId: usuario.empresaId,
+      isActive: true,
+    },
+    select: { id: true },
+  });
+  return superior?.id ?? null;
 }
 
 /**

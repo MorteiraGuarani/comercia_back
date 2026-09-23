@@ -13,8 +13,11 @@ describe('SupervisionService', () => {
       usuario: {
         findUnique: jest.fn().mockResolvedValue({
           id: 1,
-          rol: { hijos: [{ usuarios: [{ id: 2 }] }] },
+          empresaId: 1,
+          isActive: true,
         }),
+        findMany: jest.fn().mockImplementation(({ where }: { where: { superiorId?: { in: number[] } } }) =>
+          where.superiorId?.in.includes(1) ? [{ id: 2 }] : []),
         findFirst: jest.fn().mockResolvedValue({
           id: 2, nombre: 'Ana', apellido: 'Pérez', celular: '', correo: '',
           rol: { descripcion: 'Impulsador' },
@@ -62,19 +65,21 @@ describe('SupervisionService', () => {
           if (where.id === 1) {
             return Promise.resolve({
               id: 1,
-              rol: {
-                hijos: [{ usuarios: [{ id: 2 }] }],
-              },
+              empresaId: 10,
+              isActive: true,
             });
           }
-          return Promise.resolve({ id: where.id, rol: null });
+          return Promise.resolve({ id: where.id, empresaId: 10, isActive: true });
           }),
-        findMany: jest.fn().mockResolvedValue([
+        findMany: jest.fn().mockImplementation(({ where }: { where: { superiorId?: { in: number[] } } }) =>
+          where.superiorId ?
+          (where.superiorId.in.includes(1) ? [{ id: 2 }] : []) : [
           {
             id: 2,
             nombre: 'Diego',
             apellido: 'Ramírez',
             celular: '11223344',
+            superiorId: 1,
             rol: { descripcion: 'Impulsador' },
           },
         ]),

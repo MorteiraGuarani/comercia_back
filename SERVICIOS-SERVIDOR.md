@@ -3,6 +3,9 @@
 Guía práctica para inspeccionar el back (`:1001`), el front (`:1002`), PostgreSQL
 y Docker en el servidor Linux (`172.19.0.140`) — por comando y por interfaz visual.
 
+Para saber dónde se guardan las fotos, los adjuntos, los logos y sus copias, ver
+[Almacenamiento en producción](docs/almacenamiento-en-produccion.md).
+
 ## El mapa: dónde vive cada cosa en el Linux
 
 ```
@@ -10,7 +13,7 @@ y Docker en el servidor Linux (`172.19.0.140`) — por comando y por interfaz vi
 ├── docker-compose.prod.yml           ← define qué servicios corren y cómo
 ├── .env                              ← configuración y secretos de producción
 ├── deploy/                           ← scripts (auto-deploy, backup) y docs
-└── backups/                          ← dumps diarios de la base (14 días)
+└── backups/                          ← base + fotos verificadas (30 días)
 
 Docker (el motor corre como servicio del sistema)
 ├── comercia-api-1        → backend NestJS   (puerto 1001 → 3001 interno)
@@ -178,8 +181,7 @@ SELECT * FROM _prisma_migrations; → qué migraciones se aplicaron y cuándo
   base `comercia`, usuario `comercia`, contraseña → `grep POSTGRES_PASSWORD /opt/comercia/.env`
 - **DBeaver en tu Windows**: igual pero puerto `15432` (va por el túnel permanente)
 
-**Backups**: `ls -lh /opt/comercia/backups/` (diario 03:00 + antes de cada deploy;
-copia diaria a tu PC en `C:\Users\carlos.morteira\ComerciaBackups`).
+**Backups**: `ls -lh /opt/comercia/backups/` (base y volumen de fotos a las 03:00 y antes de cada despliegue). La tarea de Windows sigue copiando solo los `.sql.gz`. Ver [almacenamiento en producción](docs/almacenamiento-en-produccion.md).
 
 ---
 

@@ -530,8 +530,8 @@
     "semantic_hash": "7c2f0a5f859e84cd1f4a1c62c65e314a"
   },
   "apps/api/src/usuarios/usuarios.service.ts": {
-    "mtime": 1790185362.057899,
-    "ast_hash": "3212feb8ecb4d8101745c3d5512c7fda",
+    "mtime": 1790190246.1376677,
+    "ast_hash": "b0bc271352bce38087bddd3f2b290cb9",
     "semantic_hash": ""
   },
   "apps/api/test/app.e2e-spec.ts": {
@@ -800,14 +800,14 @@
     "semantic_hash": "ee17fd1c97c735e9f3564e3f5251f125"
   },
   "deploy/auto-deploy.sh": {
-    "mtime": 1789744087.0220172,
-    "ast_hash": "f02a1859707f0a1c0deb358eec1f76b6",
+    "mtime": 1790188838.4139292,
+    "ast_hash": "5dee63d17419b15a4247230a01e78218",
     "semantic_hash": ""
   },
   "deploy/backup.sh": {
-    "mtime": 1783019573.831865,
-    "ast_hash": "3d49e207de4f2cf6035a2317c1838b05",
-    "semantic_hash": "3d49e207de4f2cf6035a2317c1838b05"
+    "mtime": 1790189065.124281,
+    "ast_hash": "b8903bc0085e19b069677d060189a751",
+    "semantic_hash": ""
   },
   "package.json": {
     "mtime": 1789148400.3982694,
@@ -1615,8 +1615,8 @@
     "semantic_hash": ""
   },
   "DEPLOY.md": {
-    "mtime": 1783086605.4893947,
-    "ast_hash": "91251f3481e4a96bd3f843b2f24ed9fd",
+    "mtime": 1790188939.2472868,
+    "ast_hash": "6cd829bce6f17006bea68722e835a880",
     "semantic_hash": ""
   },
   "ENV.md": {
@@ -1625,8 +1625,8 @@
     "semantic_hash": ""
   },
   "FLUJO-DIARIO.md": {
-    "mtime": 1783101851.7874608,
-    "ast_hash": "0aa541f5ee4d6178cbc43bec463460e2",
+    "mtime": 1790189069.021032,
+    "ast_hash": "af1902a005df5c7d1d107932f5973162",
     "semantic_hash": ""
   },
   "README.md": {
@@ -1635,8 +1635,8 @@
     "semantic_hash": ""
   },
   "SERVICIOS-SERVIDOR.md": {
-    "mtime": 1783100867.7097082,
-    "ast_hash": "38a25fb65a46ce52e9c3aa10bb667e70",
+    "mtime": 1790189067.717382,
+    "ast_hash": "7a36d8bbb131e72d161a19efb27d52c8",
     "semantic_hash": ""
   },
   "SETUP.md": {
@@ -1675,8 +1675,8 @@
     "semantic_hash": ""
   },
   "deploy/AUTOMATIZACION-SERVIDOR.md": {
-    "mtime": 1783086571.2372472,
-    "ast_hash": "fb24ac1b43ec878bdd80c4f078b56c11",
+    "mtime": 1790188937.2323854,
+    "ast_hash": "e3a77efdad2b3628cc36d0cc059bceda",
     "semantic_hash": ""
   },
   "deploy/BITACORA-SERVIDOR.md": {
@@ -1910,8 +1910,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/campo/campo-acceso.service.ts": {
-    "mtime": 1788876459.780656,
-    "ast_hash": "583f9d1aae257310ca4f3a0a1b65b2bf",
+    "mtime": 1790190161.8588643,
+    "ast_hash": "d2ced3b3e3f82144a582b254fb20b568",
     "semantic_hash": ""
   },
   "apps/api/src/campo/campo.controller.ts": {
@@ -1940,8 +1940,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/campo/jornada-campo.service.ts": {
-    "mtime": 1790164107.3753593,
-    "ast_hash": "cbd000f4fb451dd9e9f280022741eb4e",
+    "mtime": 1790190400.7660072,
+    "ast_hash": "1af91fac6054d7c8fd929ea76c5faa8a",
     "semantic_hash": ""
   },
   "apps/api/src/campo/planificacion-campo.service.ts": {
@@ -1950,8 +1950,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/campo/utils/agenda-sql.ts": {
-    "mtime": 1790000838.2658155,
-    "ast_hash": "37e61e4f2017e5c4eac621509ffeb732",
+    "mtime": 1790190134.5325167,
+    "ast_hash": "d3a74382df0f98479fd497913ce252c3",
     "semantic_hash": ""
   },
   "apps/api/src/campo/utils/calendario.spec.ts": {
@@ -2010,8 +2010,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/types/campo.ts": {
-    "mtime": 1790184442.353559,
-    "ast_hash": "4ed3f5d97a5ddd6e11072dbff7d2d37b",
+    "mtime": 1790190281.472833,
+    "ast_hash": "3ffb4524d9d38fb5f1a4a294d90ac3c1",
     "semantic_hash": ""
   },
   "docs/operaciones-campo.md": {
@@ -2055,8 +2055,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/integraciones-ucheck/integraciones-ucheck.service.ts": {
-    "mtime": 1789154050.323282,
-    "ast_hash": "0926c4e09024ce28a9a84095e8cc0eeb",
+    "mtime": 1790190200.4484138,
+    "ast_hash": "189c30e1755838ad8cb065f68847c4c7",
     "semantic_hash": ""
   },
   "apps/api/src/integraciones-ucheck/ucheck-integracion.guard.ts": {
@@ -2105,8 +2105,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/campo/utils/autorizacion.ts": {
-    "mtime": 1790185362.0538988,
-    "ast_hash": "ddef271e9fe7817f1ea66daf95e79e06",
+    "mtime": 1790190078.7563045,
+    "ast_hash": "7e80b167d2dbe1f1e452fc5a2bf19af7",
     "semantic_hash": ""
   },
   "apps/api/src/campo/utils/multer-config.ts": {
@@ -2175,8 +2175,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/campo/dto/supervision.dto.ts": {
-    "mtime": 1789937507.4049728,
-    "ast_hash": "92f038d659423d8b75bc5e4c47d87fa9",
+    "mtime": 1790190252.7910187,
+    "ast_hash": "a72f38adac28701397a78c6d1f1bc464",
     "semantic_hash": ""
   },
   "apps/api/src/campo/services/aviso.service.spec.ts": {
@@ -2205,13 +2205,13 @@
     "semantic_hash": ""
   },
   "apps/api/src/campo/services/supervision.service.spec.ts": {
-    "mtime": 1790185362.0508993,
-    "ast_hash": "a40253ffde1480e0dee85b1764bf5f14",
+    "mtime": 1790190460.1068966,
+    "ast_hash": "f9756dbdfb164a15838aa54d3cd47c60",
     "semantic_hash": ""
   },
   "apps/api/src/campo/services/supervision.service.ts": {
-    "mtime": 1790185362.0518997,
-    "ast_hash": "567145a4a4350269ab828362defcfd65",
+    "mtime": 1790190605.6617703,
+    "ast_hash": "d85605b7578f66cc7f50273bf7ae12e6",
     "semantic_hash": ""
   },
   "apps/api/src/campo/utils/evidencia-tarea.ts": {
@@ -2260,8 +2260,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/supervision-panel.tsx": {
-    "mtime": 1790185125.9634428,
-    "ast_hash": "5bb00c9fbec7d343346689a25c052d63",
+    "mtime": 1790190293.8080971,
+    "ast_hash": "e4517684c86ba3c8bb1779bd773a5edd",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/tareas-impulsador-panel.tsx": {
@@ -2470,8 +2470,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/campo/utils/autorizacion.spec.ts": {
-    "mtime": 1790185362.0529494,
-    "ast_hash": "ddccd15ee911963e73faa4e97d8298c4",
+    "mtime": 1790190445.514597,
+    "ast_hash": "78ea4086740fc404ef07b404afc1b767",
     "semantic_hash": ""
   },
   "apps/web/src/utils/preparar-imagen.ts": {
@@ -2502,6 +2502,21 @@
   "apps/web/src/utils/html.ts": {
     "mtime": 1790186500.8111086,
     "ast_hash": "ae0d764e6c02ad9122838353231cd7f7",
+    "semantic_hash": ""
+  },
+  "apps/api/prisma/migrations/20260923190000_supervisor_teamleader/migration.sql": {
+    "mtime": 1790190231.2442567,
+    "ast_hash": "e21f60a55a7c49bf93f6b4657d3f212d",
+    "semantic_hash": ""
+  },
+  "docs/almacenamiento-en-produccion.md": {
+    "mtime": 1790189066.3966272,
+    "ast_hash": "b9833ac42bea30123e16ef44d26e282b",
+    "semantic_hash": ""
+  },
+  "docs/supervisor-teamleader-ucheck.md": {
+    "mtime": 1790190685.684601,
+    "ast_hash": "54c96d87ba97819493144aa93b9fab72",
     "semantic_hash": ""
   }
 }

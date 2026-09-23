@@ -67,6 +67,7 @@ export class SupervisionService {
         nombre: true,
         apellido: true,
         celular: true,
+        superiorId: true,
         rol: { select: { descripcion: true } },
       },
       orderBy: [{ nombre: 'asc' }, { id: 'asc' }],
@@ -85,8 +86,19 @@ export class SupervisionService {
     let enRutaCount = 0;
     let finalizadosCount = 0;
     let sinIniciarCount = 0;
+    const liderazgo = {
+      totalTeamLeaders: 0,
+      enRuta: 0,
+      finalizados: 0,
+      sinIniciar: 0,
+      visitasCompletadas: 0,
+      visitasTotales: 0,
+      pctVisitas: 0,
+    };
 
     for (const user of usuarios) {
+      const rol = user.rol?.descripcion.toLowerCase().replace(/[^a-z]/g, '');
+      const esTeamleader = rol === 'teamleader' || rol === 'teamleaderimpulsador';
       // Asignaciones del colaborador para el período
       const asignaciones = await this.prisma.asignacionCampo.findMany({
         where: {
@@ -98,6 +110,7 @@ export class SupervisionService {
             {
               OR: [
                 { usuarioId: user.id },
+                ...(esTeamleader ? [{ usuario: { superiorId: user.id, isActive: true } }] : []),
                 {
                   backups: {
                     some: {
@@ -164,6 +177,14 @@ export class SupervisionService {
       const completadasVisitas = visitasHoy.filter((v) => v.salida !== null).length;
       const enCursoVisitas = visitaAbierta ? 1 : 0;
       const pctRuta = totalVisitas ? Math.round((completadasVisitas / totalVisitas) * 100) : 0;
+      if (esTeamleader && user.superiorId === u.id) {
+        liderazgo.totalTeamLeaders++;
+        liderazgo.visitasTotales += totalVisitas;
+        liderazgo.visitasCompletadas += completadasVisitas;
+        if (asistencia === 'en_curso') liderazgo.enRuta++;
+        else if (asistencia === 'finalizado') liderazgo.finalizados++;
+        else liderazgo.sinIniciar++;
+      }
 
       totalRutaAsignada += totalVisitas;
       totalRutaCompletada += completadasVisitas;
@@ -174,7 +195,7 @@ export class SupervisionService {
         new Set([...asignaciones.map((a) => a.localId), ...visitasHoy.map((v) => v.localId)]),
       );
 
-      const tareasAplicables = await this.prisma.tareaCampo.findMany({
+      const tareasAplicables = esTeamleader ? [] : await this.prisma.tareaCampo.findMany({
         where: {
           empresaId: u.empresaId,
           activo: true,
@@ -254,9 +275,13 @@ export class SupervisionService {
     const totalTareasPct = totalTareasGlobal
       ? Math.round((totalTareasCompletadasGlobal / totalTareasGlobal) * 100)
       : 0;
+    liderazgo.pctVisitas = liderazgo.visitasTotales
+      ? Math.round(liderazgo.visitasCompletadas / liderazgo.visitasTotales * 100)
+      : 0;
 
     return {
       fecha: fechaTexto,
+      liderazgo,
       presentismo: {
         enRuta: enRutaCount,
         finalizados: finalizadosCount,

@@ -34,8 +34,8 @@ cada 3 minutos si hay algo nuevo. Lo que hace [auto-deploy.sh](auto-deploy.sh) e
 
 **Ver el log en vivo**: `ssh comercia` y después `tail -f ~/comercia-autodeploy.log`.
 
-La segunda tarea hace un `pg_dump` comprimido de la base a `/opt/comercia/backups/`
-cada madrugada y borra los backups con más de 14 días ([backup.sh](backup.sh)).
+La segunda tarea guarda un `pg_dump` comprimido y un archivo del volumen de fotos en
+`/opt/comercia/backups/`, verifica sus hashes y retiene 30 días ([backup.sh](backup.sh)).
 
 ## 2. fail2ban (el "portero" contra fuerza bruta)
 

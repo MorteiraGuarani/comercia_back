@@ -1,16 +1,16 @@
 # Graph Report - COMERCIA  (2026-09-23)
 
 ## Corpus Check
-- 490 files · ~186,467 words
+- 493 files · ~188,977 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2572 nodes · 5053 edges · 356 communities (159 shown, 197 thin omitted)
+- 2588 nodes · 5063 edges · 341 communities (147 shown, 194 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 12 edges (avg confidence: 0.62)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `add3f1b7`
+- Built from commit: `77ef1c56`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -20,55 +20,55 @@
 - campo.module.ts
 - MarcacionUcheckDto
 - ModulosService
-- ConsultaCampoDto
+- Flujo diario de trabajo
 - selector-pais.tsx
-- usuarios.service.ts
+- AdminUsuariosController
 - duracion.ts
 - supervision-panel.tsx
 - compilerOptions
-- CrearAvisoDto
+- AvisoService
 - @nestjs/jwt
 - compilerOptions
 - locales-panel.tsx
-- AuthService
+- UsuariosController
 - AdminPlataformaController
-- modulos-panel.tsx
+- Servicios en el servidor: dónde están y cómo verlos
 - scripts
 - poligono.ts
-- apiFetch
+- usuarios-panel.tsx
 - direccion-ruta.ts
 - ActualizarPaginaDto
-- rangoPaginacion
-- avisos-panel.tsx
-- asignaciones.service.ts
-- start-production-db-local.mjs
-- ruta-impulsador-panel.tsx
-- busqueda-usuario.ts
+- auth.service.ts
 - campo.ts
-- datos-usuario.ts
+- AsignacionesService
+- start-production-db-local.mjs
+- apiFetch
+- busqueda-usuario.ts
+- tareas-impulsador-panel.tsx
+- supervision.service.ts
 - 5. Re-render Optimization
 - devDependencies
 - tipo-contenido-imagen.ts
 - devDependencies
-- NotificacionService
+- rangoPaginacion
 - dependencies
 - mapa-clientes.tsx
 - 5. Re-render Optimization
-- AdjuntoCampoService
+- NotificacionService
 - PrismaService
-- LoginSimDto
+- ListarUsuariosDto
 - src/utils/ruc.ts
 - 7. JavaScript Performance
-- @nestjs/testing
-- ucheck-sso.service.ts
+- UsuariosService
+- ruta-impulsador-panel.tsx
 - panel/layout.tsx
 - roles-migration.integration.mjs
 - @types/node
-- panel/page.tsx
+- AsignarModuloDto
 - jest
-- AuthController
+- AuthService
 - RegisterDto
-- campo.controller.ts
+- usuarios.service.ts
 - Quick Reference
 - 7. JavaScript Performance
 - ActualizarEjecutableDto
@@ -76,12 +76,12 @@
 - Comercia Agent Guide
 - EjecutablesService
 - Reglas de UI/UX de Comercia (OBLIGATORIAS — aplicarlas en TODO lo que se construya)
-- acceso-plataforma.service.ts
-- Flujo diario de trabajo
+- prisma
+- Supervisor, TeamLeader y visitas en UCHECK
 - 6. Rendering Performance
 - 6. Rendering Performance
-- Servicios en el servidor: dónde están y cómo verlos
-- Checklist de configuración — local y producción
+- .check
+- Comercia
 - 3. Server-Side Performance
 - 3. Server-Side Performance
 - 20260917000000_modulo_comercial_novedades_avisos_supervision/migration.sql
@@ -90,9 +90,9 @@
 - api/README.md
 - React Best Practices
 - Sections
-- Despliegue de Comercia en un servidor Linux
+- backup.sh
 - scripts
-- marcacion.spec.ts
+- class-transformer
 - AppController
 - 20260814193000_refactor_tareas_canonicas/migration.sql
 - 20260708180426_territorios_zonas_checklists_visitas/migration.sql
@@ -100,36 +100,36 @@
 - admin-empresas.service.ts
 - 1. Eliminating Waterfalls
 - 2. Bundle Size Optimization
-- [pagina]/page.tsx
+- compression
 - typescript
-- plataforma.controller.ts
+- helmet
 - 20260706115040_plataforma_modular/migration.sql
 - 1. Eliminating Waterfalls
 - 2. Bundle Size Optimization
-- LoginDto
+- @nestjs/common
+- @nestjs/config
 - React Best Practices
 - nest-cli.json
 - React Best Practices
-- Comercia
-- foto.service.ts
+- @nestjs/core
+- campo.controller.ts
 - 8. Advanced Patterns
 - "usuarios"
 - Comercia Fullstack Best Practices
 - 8. Advanced Patterns
 - Comercia Fullstack Best Practices
-- contexto.tsx
-- novedad.service.ts
-- @nestjs/schematics
-- Automatización del servidor: cron, fail2ban y unattended-upgrades
-- prettier
+- @nestjs/terminus
+- CrearNovedadDto
+- rxjs
+- uuid
+- globals
 - source-map-support
 - Bitácora del servidor de producción (172.19.0.140)
-- modulos.service.ts
-- ts-loader
+- numeros.ts
+- ts-jest
 - ts-node
 - Operaciones de campo
 - Q: que significa programacion pausada y como reanudar
-- @types/jest
 - @types/supertest
 - typescript-eslint
 - Q: cuales son las librerias que usa para el calculo de ruta
@@ -159,7 +159,6 @@
 - .claude/skills/vercel-react-best-practices/rules/async-cheap-condition-before-await.md
 - Prefer Statically Analyzable Paths
 - .claude/skills/vercel-react-best-practices/rules/server-hoist-static-io.md
-- Entornos local y producción
 - Q: Cómo refactorizar las tablas de tareas para soportar empresa, equipos, usuarios, clientes, locales, exclusiones e historial
 - Scripts SQL para producción
 - 20260715183000_tareas_globales_empresa/migration.sql
@@ -169,7 +168,6 @@
 - 20260807120000_agrega_seguimiento_ubicacion/migration.sql
 - 20260812160000_supervisor_impulsador_presentismo/migration.sql
 - 20260814170000_tareas_excluidas_por_usuario/migration.sql
-- eslint
 - Do Not Put Effect Events in Dependency Arrays
 - .agents/skills/vercel-react-best-practices/rules/advanced-event-handler-refs.md
 - Initialize App Once, Not Per Mount
@@ -235,11 +233,9 @@
 - .agents/skills/vercel-react-best-practices/rules/server-parallel-nested-fetching.md
 - .agents/skills/vercel-react-best-practices/rules/server-serialization.md
 - .agents/skills/vercel-react-best-practices/rules/_template.md
-- jest
 - 20260923150000_novedad_respuestas/migration.sql
 - api/package.json
 - zod
-- pg
 - toast-provider.tsx
 - @types/cookie-parser
 - 20260702120000_init/migration.sql
@@ -261,10 +257,8 @@
 - .claude/skills/vercel-react-best-practices/rules/bundle-preload.md
 - Deduplicate Global Event Listeners
 - .claude/skills/vercel-react-best-practices/rules/client-localstorage-schema.md
-- supertest
 - 20260914000000_mejoras_tareas_comentarios_fotos_notificaciones/migration.sql
 - .claude/skills/vercel-react-best-practices/rules/client-passive-event-listeners.md
-- @types/multer
 - .claude/skills/vercel-react-best-practices/rules/client-swr-dedup.md
 - Avoid Layout Thrashing
 - Cache Repeated Function Calls
@@ -315,31 +309,22 @@
 - .claude/skills/vercel-react-best-practices/rules/server-serialization.md
 - .claude/skills/vercel-react-best-practices/rules/_template.md
 - .codex/skills/vercel-react-best-practices/SKILL.md
-- backup.sh
-- auth.service.ts
 - cookie-parser
 - auto-deploy.sh
 - 20260917010000_cliente_logo_url/migration.sql
 - 20260917120000_cumplimiento_evidencia_previa/migration.sql
 - eslint-plugin-prettier
 - @nestjs/swagger
-- env.schema.ts
 - @types/compression
 - @types/uuid
 - @nestjs/platform-express
-- @nestjs/throttler
-- @eslint/js
 - carga-pruebas-campo-granusa.sql
 - carga-pruebas-campo-granusa-lote-2.sql
-- login/page.tsx
-- eslint-config-prettier
 - @prisma/adapter-pg
-- catalogo-campo.service.ts
-- @prisma/client
+- jornada-campo.service.ts
 - reflect-metadata
 - @eslint/eslintrc
 - 20260922121000_sso_ucheck/migration.sql
-- EmpresasController
 - class-validator
 - @nestjs/cli
 - ActualizarModuloDto
@@ -359,65 +344,65 @@
 10. `CampoAccesoService` - 24 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `PaginaModulo()` --calls--> `usePanel()`  [EXTRACTED]
-  apps/web/src/app/panel/[modulo]/[pagina]/page.tsx → apps/web/src/components/panel/contexto.tsx
-- `ModalMarca()` --calls--> `useOperacionCampo()`  [EXTRACTED]
-  apps/web/src/components/campo/jornada-panel.tsx → apps/web/src/hooks/use-lista-campo.ts
+- `AdminPage()` --calls--> `usePanel()`  [EXTRACTED]
+  apps/web/src/app/panel/admin/page.tsx → apps/web/src/components/panel/contexto.tsx
+- `AsignacionesUsuario()` --calls--> `apiFetch()`  [EXTRACTED]
+  apps/web/src/components/usuarios/usuarios-panel.tsx → apps/web/src/lib/api.ts
 - `CrearUsuarioDto` --inherits--> `RegisterDto`  [EXTRACTED]
   apps/api/src/usuarios/dto/usuario.dto.ts → apps/api/src/auth/dto/register.dto.ts
 - `ConsultaCampoDto` --inherits--> `PaginacionDto`  [EXTRACTED]
   apps/api/src/campo/dto/campo.dto.ts → apps/api/src/common/utils/paginacion.ts
-- `ConsultaTareasCampoDto` --inherits--> `ConsultaCampoDto`  [EXTRACTED]
-  apps/api/src/campo/dto/consulta-tareas.dto.ts → apps/api/src/campo/dto/campo.dto.ts
+- `ListarNovedadesDto` --inherits--> `PaginacionDto`  [EXTRACTED]
+  apps/api/src/campo/dto/novedad.dto.ts → apps/api/src/common/utils/paginacion.ts
 
 ## Import Cycles
 - None detected.
 
-## Communities (356 total, 197 thin omitted)
+## Communities (341 total, 194 thin omitted)
 
 ### Community 0 - "roles.service.ts"
 Cohesion: 0.10
 Nodes (29): ActualizarRolDto, CrearRolDto, ListarRolesDto, IsInt, IsOptional, IsString, Max, MaxLength (+21 more)
 
 ### Community 1 - "RequestConUsuario"
-Cohesion: 0.05
-Nodes (38): prisma, RequestConUsuario, CampoController, Body, Controller, Delete, Get, Param (+30 more)
+Cohesion: 0.06
+Nodes (55): RequestConUsuario, CampoController, Body, Controller, Delete, Get, Param, Post (+47 more)
 
 ### Community 2 - "campo.module.ts"
-Cohesion: 0.14
-Nodes (20): AppModule, Module, AuthModule, Module, CampoModule, Module, EmpresasModule, Module (+12 more)
+Cohesion: 0.11
+Nodes (25): AppModule, Module, AuthModule, Module, CampoModule, Module, booleanFromString, Env (+17 more)
 
 ### Community 3 - "MarcacionUcheckDto"
 Cohesion: 0.06
 Nodes (33): AgendaUcheckDto, IsEmail, IsString, Matches, MaxLength, MarcacionUcheckDto, IsBoolean, IsEmail (+25 more)
 
 ### Community 4 - "ModulosService"
-Cohesion: 0.23
-Nodes (5): ModuloDto, PaginaDto, PaginaMenu, ModulosService, Injectable
+Cohesion: 0.26
+Nodes (4): ModuloDto, PaginaDto, ModulosService, Injectable
 
-### Community 5 - "ConsultaCampoDto"
-Cohesion: 0.18
-Nodes (28): AsignacionCampoDto, BackupCampoDto, ClienteCampoDto, ConsultaCampoDto, EntradaCampoDto, HorarioCampoDto, LocalCampoDto, MarcaCampoDto (+20 more)
+### Community 5 - "Flujo diario de trabajo"
+Cohesion: 0.07
+Nodes (28): 1. Preparar el servidor (una sola vez), 2. Configurar el `.env` de producción, 3. Configurar GitHub (una sola vez), 4. Primer despliegue, 5. Operación diaria, 6. Rollback (volver a una versión anterior), 7. Checklist de seguridad antes de abrir al público, Arquitectura de robustez (+20 more)
 
 ### Community 6 - "selector-pais.tsx"
 Cohesion: 0.33
 Nodes (4): SelectorPais(), PaisItem, PAIS_INICIAL, normalizarBusqueda()
 
-### Community 7 - "usuarios.service.ts"
-Cohesion: 0.06
-Nodes (50): puedeAdministrarUsuarios(), AdminUsuariosController, ApiTags, Body, Controller, Delete, Get, Param (+42 more)
+### Community 7 - "AdminUsuariosController"
+Cohesion: 0.18
+Nodes (12): AdminUsuariosController, ApiTags, Body, Controller, Delete, Get, Param, Patch (+4 more)
 
 ### Community 9 - "supervision-panel.tsx"
 Cohesion: 0.11
-Nodes (23): ListChecksIcon(), NavigationIcon(), SupervisionPanel(), SupervisionPanelProps, TabType, UsersIcon(), TokenColor, TOKENS (+15 more)
+Nodes (18): ListChecksIcon(), NavigationIcon(), SupervisionPanel(), SupervisionPanelProps, TabType, UsersIcon(), BigProgress(), BigProgressProps (+10 more)
 
 ### Community 10 - "compilerOptions"
 Cohesion: 0.09
 Nodes (21): compilerOptions, allowSyntheticDefaultImports, declaration, emitDecoratorMetadata, esModuleInterop, experimentalDecorators, forceConsistentCasingInFileNames, incremental (+13 more)
 
-### Community 11 - "CrearAvisoDto"
-Cohesion: 0.20
-Nodes (9): CrearAvisoDto, IsEnum, IsInt, IsOptional, IsString, MaxLength, Min, MinLength (+1 more)
+### Community 11 - "AvisoService"
+Cohesion: 0.14
+Nodes (11): CrearAvisoDto, IsEnum, IsInt, IsOptional, IsString, MaxLength, Min, MinLength (+3 more)
 
 ### Community 13 - "compilerOptions"
 Cohesion: 0.07
@@ -425,19 +410,19 @@ Nodes (28): node_modules, **/*.ts, compilerOptions, allowJs, esModuleInterop, in
 
 ### Community 14 - "locales-panel.tsx"
 Cohesion: 0.08
-Nodes (42): CapturadorCamara(), MapaClientes, SelectorUbicacion, MapaClientesProps, Props, SelectorClienteCombobox(), SelectorFotosCampo(), CATEGORIAS_PRESET (+34 more)
+Nodes (46): MapaClientes, SelectorUbicacion, MapaClientesProps, PlanLocal(), Props, SelectorClienteCombobox(), CATEGORIAS_PRESET, TokenColor (+38 more)
 
-### Community 15 - "AuthService"
-Cohesion: 0.36
-Nodes (3): AuthService, Injectable, UsuarioSesion
+### Community 15 - "UsuariosController"
+Cohesion: 0.18
+Nodes (12): ApiTags, Body, Controller, Delete, Get, Param, Patch, Post (+4 more)
 
 ### Community 16 - "AdminPlataformaController"
-Cohesion: 0.14
+Cohesion: 0.13
 Nodes (12): AdminPlataformaController, MiPlataformaController, ApiTags, Body, Controller, Delete, Get, Param (+4 more)
 
-### Community 17 - "modulos-panel.tsx"
-Cohesion: 0.12
-Nodes (14): notificarPlataformaActualizada(), AsignacionEmpresa, Conexion, Ejecutable, EmpresaModulo, Modulo, MotorBd, MOTORES (+6 more)
+### Community 17 - "Servicios en el servidor: dónde están y cómo verlos"
+Cohesion: 0.10
+Nodes (18): Caso comprobado el 23/09/2026, Copias de seguridad y recuperación, Cómo comprobarlo en el servidor, Despliegues y almacenamiento, Dónde guarda COMERCIA las fotos y los datos en producción, Mapa rápido, Qué archivo va en cada carpeta, Cambiar el puerto del BACK (ej. 1001 → 2001) (+10 more)
 
 ### Community 19 - "scripts"
 Cohesion: 0.05
@@ -447,9 +432,9 @@ Nodes (36): concurrently, devDependencies, concurrently, name, multer, postcss, 
 Cohesion: 0.60
 Nodes (4): centroPoligono(), PuntoMapa, redondearCoordenada(), trasladarPoligono()
 
-### Community 21 - "apiFetch"
-Cohesion: 0.07
-Nodes (37): Tab, EmpresasAbmPanel(), FORM_INICIAL, FormEmpresa, EmpresasPanel(), ModulosPanel(), FORM_INICIAL, RolesPanel() (+29 more)
+### Community 21 - "usuarios-panel.tsx"
+Cohesion: 0.05
+Nodes (47): AdminPage(), Tab, EmpresasAbmPanel(), FORM_INICIAL, FormEmpresa, EmpresasPanel(), ModulosPanel(), FORM_INICIAL (+39 more)
 
 ### Community 22 - "direccion-ruta.ts"
 Cohesion: 0.67
@@ -459,33 +444,33 @@ Nodes (3): anguloVehiculoEnRuta(), aRadianes(), CoordenadaRutaMapa
 Cohesion: 0.33
 Nodes (11): ActualizarPaginaDto, CrearPaginaDto, IsBoolean, IsInt, IsOptional, IsString, Length, Matches (+3 more)
 
-### Community 24 - "rangoPaginacion"
-Cohesion: 0.09
-Nodes (23): ContadorNoLeidasDto, ListarNotificacionesDto, MarcarTodasLeidasDto, NotificacionDto, IsBoolean, IsOptional, Transform, ColaboradorResumenItem (+15 more)
+### Community 24 - "auth.service.ts"
+Cohesion: 0.07
+Nodes (22): MENSAJES_DUPLICADO, AsignacionUsuario, TokenPayload, JwtAuthGuard, Injectable, SuperadminGuard, Injectable, ListarNotificacionesDto (+14 more)
 
-### Community 25 - "avisos-panel.tsx"
-Cohesion: 0.13
-Nodes (21): AvisosPanel(), AvisosPanelProps, itemsDeLista(), GaleriaAdjuntosCampo(), NovedadesPanel(), IconoMegafono(), agregarFotos(), agregarValor() (+13 more)
+### Community 25 - "campo.ts"
+Cohesion: 0.10
+Nodes (32): AvisosPanel(), AvisosPanelProps, itemsDeLista(), DetalleAviso(), GaleriaAdjuntosCampo(), HiloNovedad(), NovedadesPanel(), agregarFotos() (+24 more)
 
-### Community 26 - "asignaciones.service.ts"
-Cohesion: 0.24
+### Community 26 - "AsignacionesService"
+Cohesion: 0.25
 Nodes (5): AsignacionesService, Injectable, AsignacionEmpresaDto, EmpresaModuloDto, PaginaAsignada
 
 ### Community 27 - "start-production-db-local.mjs"
 Cohesion: 0.17
 Nodes (18): allowedHosts, apiEnvironment, apiPort, checkTunnel(), environmentPath, finish(), main(), openTunnel() (+10 more)
 
-### Community 28 - "ruta-impulsador-panel.tsx"
-Cohesion: 0.10
-Nodes (33): BotonesFormulario(), CabeceraCampo(), CampoTexto(), JornadaPanel(), ListadoVisitas(), ModalMarca(), VisitasPanel(), LocalParaNovedad (+25 more)
+### Community 28 - "apiFetch"
+Cohesion: 0.13
+Nodes (28): InicioResumen(), ClientesPanel(), AgendaDelDia(), JornadaPanel(), ListadoVisitas(), ModalMarca(), TareasDeLocal(), VisitasPanel() (+20 more)
 
-### Community 30 - "campo.ts"
-Cohesion: 0.07
-Nodes (45): BadgeNotificaciones(), formatearHoraOFecha(), obtenerGrupoFecha(), PanelNotificaciones(), PanelNotificacionesProps, DetalleAviso(), PanelComentarios(), PanelComentariosProps (+37 more)
+### Community 30 - "tareas-impulsador-panel.tsx"
+Cohesion: 0.08
+Nodes (37): BadgeNotificaciones(), formatearHoraOFecha(), obtenerGrupoFecha(), PanelNotificaciones(), PanelNotificacionesProps, CapturadorCamara(), PanelComentarios(), PanelComentariosProps (+29 more)
 
-### Community 31 - "datos-usuario.ts"
-Cohesion: 0.38
-Nodes (7): normalizarCelular(), normalizarNumeroSim(), normalizarRucUsuario(), TIPOS_CELULAR_VALIDOS, calcularDvRucPy(), esRucParaguayoValido(), normalizarRucPy()
+### Community 31 - "supervision.service.ts"
+Cohesion: 0.16
+Nodes (11): CatalogoCampoService, Injectable, ColaboradorResumenItem, ConsultaSupervisionDto, SupervisionResumenDto, IsDateString, IsOptional, Matches (+3 more)
 
 ### Community 32 - "5. Re-render Optimization"
 Cohesion: 0.12
@@ -496,36 +481,36 @@ Cohesion: 0.04
 Nodes (45): dependencies, flag-icons, leaflet, libphonenumber-js, motion, next, react, react-dom (+37 more)
 
 ### Community 35 - "devDependencies"
-Cohesion: 0.29
-Nodes (7): devDependencies, globals, ts-jest, tsconfig-paths, globals, ts-jest, tsconfig-paths
+Cohesion: 0.08
+Nodes (25): devDependencies, eslint, eslint-config-prettier, @eslint/js, jest, @nestjs/schematics, @nestjs/testing, prettier (+17 more)
 
-### Community 36 - "NotificacionService"
-Cohesion: 0.13
-Nodes (5): AvisoService, Injectable, NotificacionService, Injectable, obtenerLiderDirecto()
+### Community 36 - "rangoPaginacion"
+Cohesion: 0.12
+Nodes (7): PlanificacionCampoService, Injectable, rangoPaginacion(), respuestaPaginada, ApiOperation, Get, Query
 
 ### Community 37 - "dependencies"
-Cohesion: 0.09
-Nodes (23): dependencies, class-transformer, compression, dotenv, helmet, libphonenumber-js, @nestjs/common, @nestjs/config (+15 more)
+Cohesion: 0.18
+Nodes (11): dependencies, dotenv, libphonenumber-js, @nestjs/throttler, pg, @prisma/client, libphonenumber-js, dotenv (+3 more)
 
 ### Community 38 - "mapa-clientes.tsx"
-Cohesion: 0.22
-Nodes (13): MapaClientes(), MapaLocal(), SelectorUbicacion(), IconoAlerta(), CapaUsuarioMapa, montarCapaUsuario(), EstadoGpsMapa, PosicionGpsMapa (+5 more)
+Cohesion: 0.27
+Nodes (11): MapaClientes(), MapaLocal(), SelectorUbicacion(), CapaUsuarioMapa, montarCapaUsuario(), EstadoGpsMapa, PosicionGpsMapa, useGeolocalizacionMapa() (+3 more)
 
 ### Community 39 - "5. Re-render Optimization"
 Cohesion: 0.12
 Nodes (16): 5.10 Subscribe to Derived State, 5.11 Use Functional setState Updates, 5.12 Use Lazy State Initialization, 5.13 Use Transitions for Non-Urgent Updates, 5.14 Use useDeferredValue for Expensive Derived Renders, 5.15 Use useRef for Transient Values, 5.1 Calculate Derived State During Rendering, 5.2 Defer State Reads to Usage Point (+8 more)
 
-### Community 40 - "AdjuntoCampoService"
-Cohesion: 0.16
-Nodes (6): AdjuntoCampoDto, ArchivoAdjuntoCampoDto, AdjuntoCampoService, Injectable, NovedadService, Injectable
+### Community 40 - "NotificacionService"
+Cohesion: 0.08
+Nodes (19): AdjuntoCampoDto, ArchivoAdjuntoCampoDto, ContadorNoLeidasDto, MarcarTodasLeidasDto, AdjuntoCampoService, selectAdjunto, Injectable, adjuntosAvisoInclude (+11 more)
 
 ### Community 41 - "PrismaService"
-Cohesion: 0.08
-Nodes (18): CampoAccesoService, Injectable, CatalogoCampoService, Injectable, ParadaRuta, JornadaCampoService, local, Injectable (+10 more)
+Cohesion: 0.07
+Nodes (17): CampoAccesoService, Injectable, local, HealthController, ApiTags, Controller, AccesoPlataformaService, Injectable (+9 more)
 
-### Community 42 - "LoginSimDto"
-Cohesion: 0.25
-Nodes (7): LoginSimDto, ArrayMaxSize, IsArray, IsString, MaxLength, Transform, ArrayMinSize
+### Community 42 - "ListarUsuariosDto"
+Cohesion: 0.26
+Nodes (15): ActualizarUsuarioDto, AsignarUsuarioLocalDto, CrearUsuarioDto, ListarUsuariosDto, IsBoolean, IsDateString, IsInt, IsOptional (+7 more)
 
 ### Community 43 - "src/utils/ruc.ts"
 Cohesion: 0.80
@@ -535,33 +520,37 @@ Nodes (4): calcularDvRucPy(), esRucParaguayoValido(), normalizarRucPy(), pistaRu
 Cohesion: 0.13
 Nodes (15): 7.10 Hoist RegExp Creation, 7.11 Use flatMap to Map and Filter in One Pass, 7.12 Use Loop for Min/Max Instead of Sort, 7.13 Use Set/Map for O(1) Lookups, 7.14 Use toSorted() Instead of sort() for Immutability, 7.1 Avoid Layout Thrashing, 7.2 Build Index Maps for Repeated Lookups, 7.3 Cache Property Access in Loops (+7 more)
 
-### Community 46 - "ucheck-sso.service.ts"
-Cohesion: 0.23
-Nodes (5): IdentidadUcheckCanjeada, Injectable, UcheckSsoService, destinoSsoSeguro(), esIdentidadUcheck()
+### Community 45 - "UsuariosService"
+Cohesion: 0.26
+Nodes (4): UsuarioAdminDto, aUsuarioDto(), Injectable, UsuariosService
+
+### Community 46 - "ruta-impulsador-panel.tsx"
+Cohesion: 0.24
+Nodes (14): LocalParaNovedad, RutaImpulsadorPanel(), TareasImpulsadorPanel(), useJornadaCompleta(), formatoDistancia(), metrosEntre(), queryFechasCampo(), CoordenadaCampo (+6 more)
 
 ### Community 47 - "panel/layout.tsx"
-Cohesion: 0.14
-Nodes (7): PanelLayout(), BotonSubir(), BotonTema(), IconoModulo(), ICONOS, Props, resolverIconoPagina()
+Cohesion: 0.06
+Nodes (31): PanelLayout(), AvisosPanel, ClientesPanel, LocalesPanel, NovedadesPanel, PaginaModulo(), RutaImpulsadorPanel, SupervisionPanel (+23 more)
 
-### Community 50 - "panel/page.tsx"
-Cohesion: 0.15
-Nodes (10): AdminPage(), descripcionPagina(), InicioResumen(), PanelInicioPage(), HiloNovedad(), usePanel(), AgendaCampo, SupervisionResumenData (+2 more)
+### Community 50 - "AsignarModuloDto"
+Cohesion: 0.26
+Nodes (11): AsignarModuloDto, PaginaAsignadaDto, ArrayMaxSize, ArrayUnique, IsArray, IsBoolean, IsInt, IsOptional (+3 more)
 
 ### Community 51 - "jest"
 Cohesion: 0.13
 Nodes (15): jest, collectCoverageFrom, coverageDirectory, moduleFileExtensions, moduleNameMapper, rootDir, testEnvironment, testRegex (+7 more)
 
-### Community 52 - "AuthController"
-Cohesion: 0.21
-Nodes (13): AuthController, ApiOperation, ApiTags, Body, Controller, Get, Post, Query (+5 more)
+### Community 52 - "AuthService"
+Cohesion: 0.05
+Nodes (46): AuthController, ApiOperation, ApiTags, Body, Controller, Get, Post, Query (+38 more)
 
 ### Community 53 - "RegisterDto"
 Cohesion: 0.20
 Nodes (10): RegisterDto, IsEmail, IsInt, IsString, Length, Matches, MaxLength, MinLength (+2 more)
 
-### Community 54 - "campo.controller.ts"
-Cohesion: 0.21
-Nodes (11): SubirFotoTareaDto, IsEnum, IsNotEmpty, selectAdjunto, ALLOWED_MIME_TYPES, directorioUploads(), filtroImagen(), multerConfigAdjuntosCampo (+3 more)
+### Community 54 - "usuarios.service.ts"
+Cohesion: 0.25
+Nodes (7): puedeAdministrarUsuarios(), MetaUsuariosDto, UsuarioLocalAsignacionDto, ContextoAdmin, SELECT_LOCAL_USUARIO, SELECT_USUARIO_ADMIN, UsuarioFila
 
 ### Community 55 - "Quick Reference"
 Cohesion: 0.13
@@ -572,7 +561,7 @@ Cohesion: 0.13
 Nodes (15): 7.10 Hoist RegExp Creation, 7.11 Use flatMap to Map and Filter in One Pass, 7.12 Use Loop for Min/Max Instead of Sort, 7.13 Use Set/Map for O(1) Lookups, 7.14 Use toSorted() Instead of sort() for Immutability, 7.1 Avoid Layout Thrashing, 7.2 Build Index Maps for Repeated Lookups, 7.3 Cache Property Access in Loops (+7 more)
 
 ### Community 57 - "ActualizarEjecutableDto"
-Cohesion: 0.26
+Cohesion: 0.27
 Nodes (11): ActualizarEjecutableDto, CrearEjecutableDto, IsBoolean, IsEnum, IsInt, IsOptional, IsString, Length (+3 more)
 
 ### Community 58 - "Quick Reference"
@@ -591,13 +580,13 @@ Nodes (3): EjecutablesService, Injectable, EjecutableDto
 Cohesion: 0.14
 Nodes (13): Botones de alta en ABM, Comercia frontend rules, Elementos clickeables, Feedback global de procedimientos, Modales, Modo claro/oscuro (OBLIGATORIO en todo código nuevo), Organización del código del front (OBLIGATORIA), Reglas de UI/UX de Comercia (OBLIGATORIAS — aplicarlas en TODO lo que se construya) (+5 more)
 
-### Community 62 - "acceso-plataforma.service.ts"
-Cohesion: 0.15
-Nodes (8): AccesoPlataformaService, Injectable, AccesoModulos, ModuloMenu, UsuarioConAcceso, MiPlataformaService, Injectable, rolVe()
+### Community 62 - "prisma"
+Cohesion: 0.60
+Nodes (5): prisma, condicionAgenda(), condicionEquipo(), condicionHorario(), prisma
 
-### Community 63 - "Flujo diario de trabajo"
-Cohesion: 0.15
-Nodes (13): Cambios de estructura (migraciones): cómo funciona el control, Comandos útiles en el servidor (`ssh comercia`), Desarrollar en local usando la base de PRODUCCIÓN (avanzado), Escritorio remoto del servidor (VNC), Flujo diario de trabajo, Mirar el proceso en vivo (opcional), Más documentación, Pendientes (no bloquean nada) (+5 more)
+### Community 63 - "Supervisor, TeamLeader y visitas en UCHECK"
+Cohesion: 0.40
+Nodes (4): Despliegue, Jerarquía, Ruta del TeamLeader, Supervisor, TeamLeader y visitas en UCHECK
 
 ### Community 64 - "6. Rendering Performance"
 Cohesion: 0.17
@@ -607,13 +596,13 @@ Nodes (12): 6.10 Use React DOM Resource Hints, 6.11 Use useTransition Over Manua
 Cohesion: 0.17
 Nodes (12): 6.10 Use React DOM Resource Hints, 6.11 Use useTransition Over Manual Loading States, 6.1 Animate SVG Wrapper Instead of SVG Element, 6.2 CSS content-visibility for Long Lists, 6.3 Hoist Static JSX Elements, 6.4 Optimize SVG Precision, 6.5 Prevent Hydration Mismatch Without Flickering, 6.6 Suppress Expected Hydration Mismatches (+4 more)
 
-### Community 66 - "Servicios en el servidor: dónde están y cómo verlos"
-Cohesion: 0.17
-Nodes (11): Cambiar el puerto del BACK (ej. 1001 → 2001), Cambiar el puerto del FRONT (ej. 1002 → 2002), Chuleta de Docker (lo que vas a usar de verdad), Cómo entrar al servidor, De dónde salen los puertos 1001/1002 (y cómo cambiarlos), El mapa: dónde vive cada cosa en el Linux, PostgreSQL, Servicios en el servidor: dónde están y cómo verlos (+3 more)
+### Community 66 - ".check"
+Cohesion: 0.50
+Nodes (3): ApiOperation, Get, HealthCheck
 
-### Community 67 - "Checklist de configuración — local y producción"
-Cohesion: 0.17
-Nodes (12): 1. El servidor VPS, 2. GitHub → Settings → Secrets and variables → Actions, 3. DNS, 4. El `.env` del servidor, 5. Primer deploy, Checklist de configuración — local y producción, Después del primer deploy (recomendado, no bloqueante), Detalles para no sorprenderse (+4 more)
+### Community 67 - "Comercia"
+Cohesion: 0.08
+Nodes (22): API y web locales con base de producción, Archivos de configuración, Desarrollo local, Entornos local y producción, Comandos utiles, Comercia, Despliegue, Estructura (+14 more)
 
 ### Community 68 - "3. Server-Side Performance"
 Cohesion: 0.18
@@ -647,17 +636,9 @@ Nodes (9): 4.1 Deduplicate Global Event Listeners, 4.2 Use Passive Event Listene
 Cohesion: 0.20
 Nodes (9): 1. Eliminating Waterfalls (async), 2. Bundle Size Optimization (bundle), 3. Server-Side Performance (server), 4. Client-Side Data Fetching (client), 5. Re-render Optimization (rerender), 6. Rendering Performance (rendering), 7. JavaScript Performance (js), 8. Advanced Patterns (advanced) (+1 more)
 
-### Community 76 - "Despliegue de Comercia en un servidor Linux"
-Cohesion: 0.20
-Nodes (10): 1. Preparar el servidor (una sola vez), 2. Configurar el `.env` de producción, 3. Configurar GitHub (una sola vez), 4. Primer despliegue, 5. Operación diaria, 6. Rollback (volver a una versión anterior), 7. Checklist de seguridad antes de abrir al público, Arquitectura de robustez (+2 more)
-
 ### Community 77 - "scripts"
 Cohesion: 0.11
 Nodes (18): scripts, build, format, lint, postinstall, prisma:deploy, prisma:generate, prisma:migrate (+10 more)
-
-### Community 78 - "marcacion.spec.ts"
-Cohesion: 0.31
-Nodes (6): comprobarMarcaEnLocal(), ahora, local, marca, aRadianes(), distanciaMetros()
 
 ### Community 79 - "AppController"
 Cohesion: 0.23
@@ -676,8 +657,8 @@ Cohesion: 0.32
 Nodes (7): "clientes", "config_impulsador", "locales", "tareas_cliente", "tareas_local", "territorios", "zona_usuarios"
 
 ### Community 83 - "admin-empresas.service.ts"
-Cohesion: 0.06
-Nodes (38): AdminEmpresasController, ApiTags, Body, Controller, Delete, Param, Patch, Post (+30 more)
+Cohesion: 0.08
+Nodes (29): AdminEmpresasController, ApiTags, Body, Controller, Delete, Get, Param, Patch (+21 more)
 
 ### Community 84 - "1. Eliminating Waterfalls"
 Cohesion: 0.29
@@ -686,14 +667,6 @@ Nodes (7): 1.1 Check Cheap Conditions Before Async Flags, 1.2 Defer Await Until 
 ### Community 85 - "2. Bundle Size Optimization"
 Cohesion: 0.29
 Nodes (7): 2.1 Avoid Barrel File Imports, 2.2 Conditional Module Loading, 2.3 Defer Non-Critical Third-Party Libraries, 2.4 Dynamic Imports for Heavy Components, 2.5 Prefer Statically Analyzable Paths, 2.6 Preload Based on User Intent, 2. Bundle Size Optimization
-
-### Community 86 - "[pagina]/page.tsx"
-Cohesion: 0.20
-Nodes (9): AvisosPanel, ClientesPanel, LocalesPanel, NovedadesPanel, PaginaModulo(), RutaImpulsadorPanel, SupervisionPanel, TareasImpulsadorPanel (+1 more)
-
-### Community 88 - "plataforma.controller.ts"
-Cohesion: 0.19
-Nodes (7): CallbackUcheckSsoDto, IsString, Length, JwtAuthGuard, Injectable, SuperadminGuard, Injectable
 
 ### Community 89 - "20260706115040_plataforma_modular/migration.sql"
 Cohesion: 0.48
@@ -707,10 +680,6 @@ Nodes (7): 1.1 Check Cheap Conditions Before Async Flags, 1.2 Defer Await Until 
 Cohesion: 0.29
 Nodes (7): 2.1 Avoid Barrel File Imports, 2.2 Conditional Module Loading, 2.3 Defer Non-Critical Third-Party Libraries, 2.4 Dynamic Imports for Heavy Components, 2.5 Prefer Statically Analyzable Paths, 2.6 Preload Based on User Intent, 2. Bundle Size Optimization
 
-### Community 92 - "LoginDto"
-Cohesion: 0.40
-Nodes (5): LoginDto, IsString, Length, MaxLength, Transform
-
 ### Community 94 - "React Best Practices"
 Cohesion: 0.33
 Nodes (5): Creating a New Rule, Getting Started, React Best Practices, Rule File Structure, Structure
@@ -723,13 +692,9 @@ Nodes (5): collection, compilerOptions, deleteOutDir, $schema, sourceRoot
 Cohesion: 0.33
 Nodes (5): Creating a New Rule, Getting Started, React Best Practices, Rule File Structure, Structure
 
-### Community 97 - "Comercia"
-Cohesion: 0.33
-Nodes (6): Comandos utiles, Comercia, Despliegue, Estructura, Primer arranque, Seguridad base
-
-### Community 98 - "foto.service.ts"
-Cohesion: 0.10
-Nodes (19): ComentarioTareaDto, CrearComentarioTareaDto, IsNotEmpty, IsString, MaxLength, FotosTareaResponseDto, FotoTareaDto, MomentoFotoDto (+11 more)
+### Community 98 - "campo.controller.ts"
+Cohesion: 0.09
+Nodes (26): ComentarioTareaDto, CrearComentarioTareaDto, IsNotEmpty, IsString, MaxLength, FotosTareaResponseDto, FotoTareaDto, MomentoFotoDto (+18 more)
 
 ### Community 99 - "8. Advanced Patterns"
 Cohesion: 0.40
@@ -751,20 +716,12 @@ Nodes (5): 8.1 Do Not Put Effect Events in Dependency Arrays, 8.2 Initialize App
 Cohesion: 0.40
 Nodes (4): Backend, Comercia Fullstack Best Practices, Frontend, Verification
 
-### Community 104 - "contexto.tsx"
-Cohesion: 0.27
-Nodes (8): PanelContext, PanelData, PanelProvider(), ModuloMenu, MetaUsuarios, UsuarioAdmin, UsuarioLocalAsignacion, UsuarioSesion
-
-### Community 105 - "novedad.service.ts"
-Cohesion: 0.25
-Nodes (14): ActualizarEstadoNovedadDto, CrearNovedadDto, ListarNovedadesDto, ResponderNovedadDto, IsEnum, IsIn, IsInt, IsOptional (+6 more)
-
-### Community 107 - "Automatización del servidor: cron, fail2ban y unattended-upgrades"
-Cohesion: 0.40
-Nodes (5): 1. El cron del servidor (el "vigilante" del deploy), 2. fail2ban (el "portero" contra fuerza bruta), 3. unattended-upgrades (el "médico" de parches), Automatización del servidor: cron, fail2ban y unattended-upgrades, Cómo conviven — un día normal del servidor
+### Community 105 - "CrearNovedadDto"
+Cohesion: 0.26
+Nodes (13): ActualizarEstadoNovedadDto, CrearNovedadDto, ListarNovedadesDto, ResponderNovedadDto, IsEnum, IsIn, IsInt, IsOptional (+5 more)
 
 ### Community 110 - "Bitácora del servidor de producción (172.19.0.140)"
-Cohesion: 0.40
+Cohesion: 0.33
 Nodes (5): 2026-07-03 — Instalación inicial, Arquitectura de deploy (modo LAN), Bitácora del servidor de producción (172.19.0.140), Datos del servidor, Registro de pasos
 
 ### Community 114 - "Operaciones de campo"
@@ -855,10 +812,6 @@ Nodes (3): Deploy on Vercel, Getting Started, Learn More
 Cohesion: 0.50
 Nodes (3): File-System Paths, Import Paths, Prefer Statically Analyzable Paths
 
-### Community 150 - "Entornos local y producción"
-Cohesion: 0.50
-Nodes (4): API y web locales con base de producción, Archivos de configuración, Desarrollo local, Entornos local y producción
-
 ### Community 151 - "Q: Cómo refactorizar las tablas de tareas para soportar empresa, equipos, usuarios, clientes, locales, exclusiones e historial"
 Cohesion: 0.50
 Nodes (3): Answer, Outcome, Q: Cómo refactorizar las tablas de tareas para soportar empresa, equipos, usuarios, clientes, locales, exclusiones e historial
@@ -876,41 +829,25 @@ Cohesion: 0.29
 Nodes (6): author, description, license, name, private, version
 
 ### Community 232 - "toast-provider.tsx"
-Cohesion: 0.13
-Nodes (16): manrope, metadata, viewport, ActualizadorDespliegue(), deploymentIdDelHtml(), obtenerDeploymentId(), listeners, registrarListenerToast() (+8 more)
+Cohesion: 0.12
+Nodes (17): manrope, metadata, viewport, ActualizadorDespliegue(), deploymentIdDelHtml(), obtenerDeploymentId(), listeners, mostrarToast() (+9 more)
 
 ### Community 254 - "20260914000000_mejoras_tareas_comentarios_fotos_notificaciones/migration.sql"
 Cohesion: 0.47
 Nodes (5): "campo_cumplimientos", "campo_notificaciones", "campo_tarea_comentarios", "campo_tarea_fotos", "campo_tareas"
 
-### Community 326 - "auth.service.ts"
-Cohesion: 0.29
-Nodes (6): MENSAJES_DUPLICADO, AsignacionUsuario, TokenPayload, hashPassword(), scrypt, verifyPassword()
-
-### Community 333 - "env.schema.ts"
-Cohesion: 0.33
-Nodes (5): booleanFromString, Env, parseCorsOrigins(), rawEnvSchema, validateEnv()
-
-### Community 342 - "login/page.tsx"
-Cohesion: 0.40
-Nodes (3): AuthShell(), BrandMark(), LoginForm()
-
-### Community 345 - "catalogo-campo.service.ts"
-Cohesion: 0.18
-Nodes (12): ConsultaTareasCampoDto, IsIn, IsOptional, IsString, MaxLength, ASIGNACION_CAMPO_SELECT, BACKUP_CAMPO_SELECT, CLIENTE_CAMPO_SELECT (+4 more)
-
-### Community 350 - "EmpresasController"
-Cohesion: 0.40
-Nodes (4): EmpresasController, ApiTags, Controller, UseGuards
+### Community 345 - "jornada-campo.service.ts"
+Cohesion: 0.13
+Nodes (19): FilaAgendaId, ReglaHorario, TotalAgenda, JornadaCampoService, Injectable, fechaCampo(), ocurreHorario(), ocurreHorarioEnRango() (+11 more)
 
 ### Community 353 - "ActualizarModuloDto"
 Cohesion: 0.33
 Nodes (11): ActualizarModuloDto, CrearModuloDto, IsBoolean, IsInt, IsOptional, IsString, Length, Matches (+3 more)
 
 ## Knowledge Gaps
-- **803 isolated node(s):** `$schema`, `collection`, `sourceRoot`, `deleteOutDir`, `name` (+798 more)
+- **811 isolated node(s):** `$schema`, `collection`, `sourceRoot`, `deleteOutDir`, `name` (+806 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **197 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **194 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Work-memory lessons
 
@@ -926,17 +863,17 @@ Nodes (11): ActualizarModuloDto, CrearModuloDto, IsBoolean, IsInt, IsOptional, I
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `PrismaService` connect `PrismaService` to `roles.service.ts`, `RequestConUsuario`, `campo.module.ts`, `MarcacionUcheckDto`, `ModulosService`, `usuarios.service.ts`, `AuthService`, `rangoPaginacion`, `asignaciones.service.ts`, `NotificacionService`, `AdjuntoCampoService`, `ucheck-sso.service.ts`, `campo.controller.ts`, `ActualizarEjecutableDto`, `EjecutablesService`, `acceso-plataforma.service.ts`, `auth.service.ts`, `admin-empresas.service.ts`, `plataforma.controller.ts`, `catalogo-campo.service.ts`, `EmpresasController`, `foto.service.ts`, `novedad.service.ts`, `modulos.service.ts`?**
-  _High betweenness centrality (0.101) - this node is a cross-community bridge._
-- **Why does `useOperacionCampo()` connect `apiFetch` to `RequestConUsuario`, `ruta-impulsador-panel.tsx`, `locales-panel.tsx`?**
-  _High betweenness centrality (0.084) - this node is a cross-community bridge._
-- **Why does `apiFetch()` connect `apiFetch` to `mapa-clientes.tsx`, `supervision-panel.tsx`, `locales-panel.tsx`, `panel/layout.tsx`, `modulos-panel.tsx`, `panel/page.tsx`, `avisos-panel.tsx`, `ruta-impulsador-panel.tsx`, `campo.ts`?**
-  _High betweenness centrality (0.072) - this node is a cross-community bridge._
+- **Why does `PrismaService` connect `PrismaService` to `roles.service.ts`, `campo.controller.ts`, `MarcacionUcheckDto`, `rangoPaginacion`, `ModulosService`, `campo.module.ts`, `NotificacionService`, `admin-empresas.service.ts`, `AuthService`, `usuarios.service.ts`, `auth.service.ts`, `jornada-campo.service.ts`, `AsignacionesService`, `EjecutablesService`, `supervision.service.ts`?**
+  _High betweenness centrality (0.111) - this node is a cross-community bridge._
+- **Why does `useOperacionCampo()` connect `apiFetch` to `jornada-campo.service.ts`, `locales-panel.tsx`?**
+  _High betweenness centrality (0.083) - this node is a cross-community bridge._
+- **Why does `dependencies` connect `dependencies` to `@nestjs/jwt`, `prisma`, `cookie-parser`, `@nestjs/swagger`, `class-transformer`, `@nestjs/platform-express`, `compression`, `@prisma/adapter-pg`, `helmet`, `reflect-metadata`, `@nestjs/common`, `@nestjs/config`, `class-validator`, `@nestjs/core`, `api/package.json`, `zod`, `@nestjs/terminus`, `rxjs`, `uuid`?**
+  _High betweenness centrality (0.066) - this node is a cross-community bridge._
 - **What connects `$schema`, `collection`, `sourceRoot` to the rest of the system?**
-  _803 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _811 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `roles.service.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.09528214616096208 - nodes in this community are weakly interconnected._
 - **Should `RequestConUsuario` be split into smaller, more focused modules?**
-  _Cohesion score 0.05355077492482073 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.06 - nodes in this community are weakly interconnected._
 - **Should `campo.module.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.13825757575757575 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.1064102564102564 - nodes in this community are weakly interconnected._

@@ -45,6 +45,7 @@ export class JornadaCampoService {
     usuarioId: number,
     id: number,
     fecha: Date,
+    esTeamleader: boolean,
   ) {
     const a = await tx.asignacionCampo.findFirst({
       where: {
@@ -59,6 +60,7 @@ export class JornadaCampoService {
         localId: true,
         local: { select: { latitud: true, longitud: true, radioMetros: true } },
         usuarioId: true,
+        usuario: { select: { superiorId: true, isActive: true } },
         backups: {
           where: {
             activo: true,
@@ -66,16 +68,23 @@ export class JornadaCampoService {
             fechaHasta: { gte: fecha },
           },
           take: 1,
-          select: { usuarioId: true },
+          select: { usuarioId: true, usuario: { select: { superiorId: true, isActive: true } } },
         },
       },
     });
-    if (!a || (a.backups[0]?.usuarioId ?? a.usuarioId) !== usuarioId)
+    const responsable = a?.backups[0]
+      ? a.backups[0].usuario
+      : a?.usuario;
+    if (!a || ((a.backups[0]?.usuarioId ?? a.usuarioId) !== usuarioId &&
+      !(esTeamleader && responsable?.isActive && responsable.superiorId === usuarioId)))
       throw new NotFoundException('Asignación no disponible para esta fecha');
     return a;
   }
   async agenda(usuarioId: number, query: ConsultaCampoDto) {
     const u = await this.acceso.ejecutar(usuarioId);
+    const esTeamleader = ['teamleader', 'teamleaderimpulsador'].includes(
+      u.rolDescripcion?.toLowerCase().replace(/[^a-z]/g, '') ?? '',
+    );
     const { desde, hasta } = rangoConsulta(query);
     const fechaDesde = fechaCampo(desde);
     const fechaHasta = fechaCampo(hasta);
@@ -84,10 +93,14 @@ export class JornadaCampoService {
     const base = Prisma.sql`FROM campo_asignaciones a JOIN campo_locales l ON l.id = a.local_id JOIN campo_clientes c ON c.id = l.cliente_id WHERE ${condicion}`;
     const [conteo, ids] = await Promise.all([
       this.prisma.$queryRaw<TotalAgenda[]>(
-        Prisma.sql`SELECT COUNT(*) AS total ${base}`,
+        Prisma.sql`SELECT COUNT(DISTINCT l.id) AS total ${base}`,
       ),
       this.prisma.$queryRaw<FilaAgendaId[]>(
-        Prisma.sql`SELECT a.id ${base} ORDER BY l.nombre, a.id LIMIT ${take} OFFSET ${skip}`,
+        Prisma.sql`SELECT elegida.id FROM (
+          SELECT DISTINCT ON (l.id) a.id, l.nombre
+          ${base}
+          ORDER BY l.id, CASE WHEN a.usuario_id = ${u.id} THEN 0 ELSE 1 END, a.id
+        ) elegida ORDER BY elegida.nombre, elegida.id LIMIT ${take} OFFSET ${skip}`,
       ),
     ]);
     const filas = await this.prisma.asignacionCampo.findMany({
@@ -125,7 +138,8 @@ export class JornadaCampoService {
         ? [
             {
               id: a.id,
-              esBackup: a.usuarioId !== u.id,
+              esBackup: a.usuarioId !== u.id && !esTeamleader,
+              heredada: a.usuarioId !== u.id && esTeamleader,
               titular: `${a.usuario.nombre} ${a.usuario.apellido}`,
               local: {
                 ...a.local,
@@ -142,6 +156,9 @@ export class JornadaCampoService {
   }
   async entrada(usuarioId: number, dto: EntradaCampoDto) {
     const u = await this.acceso.ejecutar(usuarioId);
+    const esTeamleader = ['teamleader', 'teamleaderimpulsador'].includes(
+      u.rolDescripcion?.toLowerCase().replace(/[^a-z]/g, '') ?? '',
+    );
     const ahora = new Date();
     const reloj = relojCampo(ahora);
     const fecha = fechaCampo(reloj.fecha);
@@ -155,6 +172,7 @@ export class JornadaCampoService {
           u.id,
           dto.asignacionId,
           fecha,
+          esTeamleader,
         );
         const distancia = comprobarMarcaEnLocal(dto, a.local, ahora);
         if (await tx.visitaCampo.count({ where: { usuarioId, salida: null } }))
@@ -187,7 +205,7 @@ export class JornadaCampoService {
             horarioId: dto.horarioId ?? null,
             fecha,
             entrada: ahora,
-            esBackup: a.usuarioId !== u.id,
+            esBackup: a.usuarioId !== u.id && !esTeamleader,
             entradaLat: dto.latitud,
             entradaLng: dto.longitud,
             entradaPrecision: dto.precisionMetros,
