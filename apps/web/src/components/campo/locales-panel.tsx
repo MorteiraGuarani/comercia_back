@@ -138,8 +138,8 @@ export function LocalesPanel() {
         subtitle="Supermercados, carnicerías y bocas de expendio con franjas y asignaciones"
         right={
           <>
-          <button type="button" onClick={() => setMostrarMapaCobertura((actual) => !actual)} aria-pressed={mostrarMapaCobertura} className="min-h-11 min-w-0 rounded-xl border border-line bg-surface-raised px-3 text-xs font-semibold text-foreground sm:text-sm">
-            {mostrarMapaCobertura ? "Ocultar mapa" : "Mapa de cobertura"}
+          <button type="button" onClick={() => setMostrarMapaCobertura((actual) => !actual)} aria-pressed={mostrarMapaCobertura} aria-label={mostrarMapaCobertura ? "Ocultar mapa de cobertura" : "Mostrar mapa de cobertura"} title={mostrarMapaCobertura ? "Ocultar mapa de cobertura" : "Mostrar mapa de cobertura"} className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-line bg-surface-raised text-foreground transition hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600">
+            <IconoMapa className="h-5 w-5" />
           </button>
           <button
             type="button"

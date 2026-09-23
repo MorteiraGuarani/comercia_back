@@ -215,7 +215,7 @@
     "semantic_hash": "5ace7d98cf048bdbc8c65b5e969d01c7"
   },
   "apps/api/src/auth/jwt-auth.guard.spec.ts": {
-    "mtime": 1790110507.2373002,
+    "mtime": 1790185362.0443068,
     "ast_hash": "ac9bfd060e335a9d756ff2cbdebd6fca",
     "semantic_hash": ""
   },
@@ -510,7 +510,7 @@
     "semantic_hash": ""
   },
   "apps/api/src/usuarios/dto/usuario.dto.ts": {
-    "mtime": 1790110534.4402063,
+    "mtime": 1790185362.056899,
     "ast_hash": "f61f4f4aba0fdcd5344eb671bb64179d",
     "semantic_hash": ""
   },
@@ -530,7 +530,7 @@
     "semantic_hash": "7c2f0a5f859e84cd1f4a1c62c65e314a"
   },
   "apps/api/src/usuarios/usuarios.service.ts": {
-    "mtime": 1790110535.1328044,
+    "mtime": 1790185362.057899,
     "ast_hash": "3212feb8ecb4d8101745c3d5512c7fda",
     "semantic_hash": ""
   },
@@ -2090,7 +2090,7 @@
     "semantic_hash": ""
   },
   "apps/api/src/campo/services/comentario.service.ts": {
-    "mtime": 1790110526.925906,
+    "mtime": 1790185362.0493062,
     "ast_hash": "4dbfab117f587c5904763b702774e3b7",
     "semantic_hash": ""
   },
@@ -2105,8 +2105,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/campo/utils/autorizacion.ts": {
-    "mtime": 1790176002.3290045,
-    "ast_hash": "0f1f9dcf048c2ccbfd45df92f408a769",
+    "mtime": 1790185362.0538988,
+    "ast_hash": "ddef271e9fe7817f1ea66daf95e79e06",
     "semantic_hash": ""
   },
   "apps/api/src/campo/utils/multer-config.ts": {
@@ -2155,7 +2155,7 @@
     "semantic_hash": ""
   },
   "apps/api/src/campo/catalogo-campo.service.spec.ts": {
-    "mtime": 1790110523.8885913,
+    "mtime": 1790185362.0453057,
     "ast_hash": "5959452d963e02a95e88e0172de6c567",
     "semantic_hash": ""
   },
@@ -2165,7 +2165,7 @@
     "semantic_hash": ""
   },
   "apps/api/src/campo/dto/consulta-tareas.dto.ts": {
-    "mtime": 1790110525.5277505,
+    "mtime": 1790185362.0453057,
     "ast_hash": "4cc23e34c0b5c0eefe6579885a9b0eec",
     "semantic_hash": ""
   },
@@ -2190,7 +2190,7 @@
     "semantic_hash": ""
   },
   "apps/api/src/campo/services/foto.service.spec.ts": {
-    "mtime": 1790110527.6247165,
+    "mtime": 1790185362.0498075,
     "ast_hash": "e2cd544e21cb668e09f6a2fac1c3e03b",
     "semantic_hash": ""
   },
@@ -2205,22 +2205,22 @@
     "semantic_hash": ""
   },
   "apps/api/src/campo/services/supervision.service.spec.ts": {
-    "mtime": 1790176284.0516179,
-    "ast_hash": "e63b8572338fb4d6521b00a1ef8d3183",
+    "mtime": 1790185362.0508993,
+    "ast_hash": "a40253ffde1480e0dee85b1764bf5f14",
     "semantic_hash": ""
   },
   "apps/api/src/campo/services/supervision.service.ts": {
-    "mtime": 1790176000.3676417,
-    "ast_hash": "da5c49e6495b2229d842ae5066340032",
+    "mtime": 1790185362.0518997,
+    "ast_hash": "567145a4a4350269ab828362defcfd65",
     "semantic_hash": ""
   },
   "apps/api/src/campo/utils/evidencia-tarea.ts": {
-    "mtime": 1790110532.0496776,
+    "mtime": 1790185362.0548983,
     "ast_hash": "5c74e1a8556e02aa17efa6e85bd22ca3",
     "semantic_hash": ""
   },
   "apps/api/src/campo/utils/locales-novedad.ts": {
-    "mtime": 1790110532.8557696,
+    "mtime": 1790185362.055899,
     "ast_hash": "0f08db005d4a9ab6ad0d6fcaf44d44ff",
     "semantic_hash": ""
   },
@@ -2235,13 +2235,13 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/locales-panel.tsx": {
-    "mtime": 1790184810.4571877,
-    "ast_hash": "7bca422024ae16e8ae067e78928d4c6c",
+    "mtime": 1790186503.39126,
+    "ast_hash": "b2dcaa46394cfd987d5d1596a3c3284c",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/mapa-clientes.tsx": {
-    "mtime": 1790184619.0155458,
-    "ast_hash": "4ae0fdcb809ebfdb3857aa5b24fe74e3",
+    "mtime": 1790186502.1024327,
+    "ast_hash": "a0385b6aa76dc31d22b80e2c57b8b08d",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/novedades-panel.tsx": {
@@ -2470,8 +2470,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/campo/utils/autorizacion.spec.ts": {
-    "mtime": 1790176437.203952,
-    "ast_hash": "e0040a77d948f5e8a2b732534c5641f3",
+    "mtime": 1790185362.0529494,
+    "ast_hash": "ddccd15ee911963e73faa4e97d8298c4",
     "semantic_hash": ""
   },
   "apps/web/src/utils/preparar-imagen.ts": {
@@ -2497,6 +2497,11 @@
   "apps/web/src/components/campo/hilo-novedad.tsx": {
     "mtime": 1790183831.5706234,
     "ast_hash": "8fa875f1bebec3ecfbfcf4e0e1fa3baf",
+    "semantic_hash": ""
+  },
+  "apps/web/src/utils/html.ts": {
+    "mtime": 1790186500.8111086,
+    "ast_hash": "ae0d764e6c02ad9122838353231cd7f7",
     "semantic_hash": ""
   }
 }

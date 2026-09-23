@@ -5,6 +5,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { apiFetch } from "@/lib/api";
 import { mensajeError } from "@/utils/error";
+import { escaparHtml } from "@/utils/html";
 import { TOKENS } from "./tokens";
 import { montarCapaUsuario, type CapaUsuarioMapa } from "./ui/marcador-usuario-mapa";
 import { useGeolocalizacionMapa } from "./ui/use-geolocalizacion-mapa";
@@ -240,16 +241,22 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
       // Logo del cliente o iniciales
       const logoUrl = loc.cliente?.logoUrl;
       const nombreCliente = loc.cliente?.nombre || "Cliente";
+      const nombreClienteSeguro = escaparHtml(nombreCliente);
+      const logoUrlSeguro = logoUrl ? escaparHtml(logoUrl) : null;
       const iniciales = (nombreCliente || loc.nombre)
         .split(" ")
         .map((p) => p[0])
         .slice(0, 2)
         .join("")
         .toUpperCase();
+      const inicialesSeguras = escaparHtml(iniciales);
+      const asignados = loc.asignaciones?.map(({ usuario }) =>
+        `<div style="overflow-wrap:anywhere;">${escaparHtml(`${usuario.rol?.descripcion ?? "Impulsador"} ${usuario.nombre} ${usuario.apellido}`)}</div>`,
+      ).join("");
 
-      const innerAvatar = logoUrl
-        ? `<img src="${logoUrl}" alt="${nombreCliente}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`
-        : `<div style="width:100%;height:100%;border-radius:50%;background:#8B2635;color:white;font-weight:bold;font-size:13px;display:flex;align-items:center;justify-content:center;font-family:sans-serif;">${iniciales}</div>`;
+      const innerAvatar = logoUrlSeguro
+        ? `<img src="${logoUrlSeguro}" alt="${nombreClienteSeguro}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`
+        : `<div style="width:100%;height:100%;border-radius:50%;background:#8B2635;color:white;font-weight:bold;font-size:13px;display:flex;align-items:center;justify-content:center;font-family:sans-serif;">${inicialesSeguras}</div>`;
 
       const pinHtml = `
         <div style="position:relative;width:46px;height:56px;display:flex;flex-direction:column;align-items:center;cursor:pointer;filter:drop-shadow(0 6px 12px rgba(0,0,0,0.38));">
@@ -269,25 +276,30 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
       });
 
       const popupContent = `
-        <div style="min-width:280px;max-width:340px;font-family:sans-serif;padding:8px;">
+        <div style="width:min(300px,calc(100vw - 80px));font-family:sans-serif;padding:8px;">
           <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;border-bottom:1px solid #ECE9E2;padding-bottom:10px;">
             ${
-              logoUrl
-                ? `<img src="${logoUrl}" style="width:38px;height:38px;border-radius:50%;object-fit:cover;border:2px solid #DAD5C9;" />`
-                : `<span style="font-size:13px;font-weight:bold;background:#1E2320;color:white;padding:4px 10px;border-radius:8px;">${iniciales}</span>`
+              logoUrlSeguro
+                ? `<img src="${logoUrlSeguro}" alt="" style="width:38px;height:38px;border-radius:50%;object-fit:cover;border:2px solid #DAD5C9;" />`
+                : `<span style="font-size:13px;font-weight:bold;background:#1E2320;color:white;padding:4px 10px;border-radius:8px;">${inicialesSeguras}</span>`
             }
             <div>
-              <span style="font-size:13px;font-weight:bold;text-transform:uppercase;color:#726C60;letter-spacing:0.5px;display:block;">${nombreCliente}</span>
+              <span style="font-size:13px;font-weight:bold;text-transform:uppercase;color:#726C60;letter-spacing:0.5px;display:block;overflow-wrap:anywhere;">${nombreClienteSeguro}</span>
               <span style="font-size:11px;color:#888;font-family:monospace;">Local #${loc.id}</span>
             </div>
           </div>
 
-          <h4 style="font-size:16px;font-weight:700;color:#1E2320;margin:0 0 4px 0;line-height:1.2;">${loc.nombre}</h4>
-          <p style="font-size:12px;color:#444;margin:0 0 8px 0;line-height:1.4;">${loc.direccion || "Sin dirección fijada"}</p>
+          <h4 style="font-size:16px;font-weight:700;color:#1E2320;margin:0 0 4px 0;line-height:1.2;overflow-wrap:anywhere;">${escaparHtml(loc.nombre)}</h4>
+          <p style="font-size:12px;color:#444;margin:0 0 8px 0;line-height:1.4;overflow-wrap:anywhere;">${escaparHtml(loc.direccion || "Sin dirección fijada")}</p>
+
+          <div style="font-size:12px;color:#1E2320;margin:0 0 8px 0;padding:8px;border-radius:8px;background:#F8F7F4;">
+            <span style="font-size:11px;font-weight:700;color:#726C60;display:block;margin-bottom:3px;">Personal asignado</span>
+            ${asignados || '<span style="color:#666;">Sin asignar</span>'}
+          </div>
 
           ${
             loc.telefono
-              ? `<p style="font-size:12px;color:#2C4A6E;margin:0 0 8px 0;">Tel: <a href="tel:${loc.telefono}" style="color:#2C4A6E;font-weight:bold;text-decoration:none;">${loc.telefono}</a></p>`
+              ? `<p style="font-size:12px;color:#2C4A6E;margin:0 0 8px 0;">Tel: <a href="tel:${escaparHtml(loc.telefono)}" style="color:#2C4A6E;font-weight:bold;text-decoration:none;">${escaparHtml(loc.telefono)}</a></p>`
               : ""
           }
 
