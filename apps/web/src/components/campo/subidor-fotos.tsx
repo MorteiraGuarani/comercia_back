@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { subirFoto, eliminarFoto, obtenerFotos, obtenerUrlFoto } from "@/lib/api-tareas";
 import type { MomentoFoto, FotosTareaResponse } from "@/types/campo";
 import { mostrarToast } from "@/components/toast/toast-controller";
 import { PantallaCarga } from "@/components/pantalla-carga";
+import { prepararImagen } from "@/utils/preparar-imagen";
 
 interface SubidorFotosProps {
   visitaId: number;
@@ -18,6 +19,8 @@ export function SubidorFotos({ visitaId, tareaId, obligatorio, onFotosActualizad
   const [error, setError] = useState("");
   const [intento, setIntento] = useState(0);
   const [operacion, setOperacion] = useState("");
+  const galeriaRef = useRef<Record<MomentoFoto, HTMLInputElement | null>>({ ANTES: null, DESPUES: null });
+  const camaraRef = useRef<Record<MomentoFoto, HTMLInputElement | null>>({ ANTES: null, DESPUES: null });
 
   useEffect(() => {
     let vigente = true;
@@ -31,20 +34,14 @@ export function SubidorFotos({ visitaId, tareaId, obligatorio, onFotosActualizad
 
   async function actualizar(momento: MomentoFoto, archivo?: File) {
     if (operacion) return;
-    if (archivo && archivo.size > 5 * 1024 * 1024) {
-      setError("La imagen no puede superar 5 MB");
-      return;
-    }
-    if (archivo && !["image/jpeg", "image/png", "image/webp"].includes(archivo.type)) {
-      setError("Solo se permiten imágenes JPG, PNG o WebP");
-      return;
-    }
     if (!archivo && !confirm("¿Eliminar esta foto?")) return;
-    setOperacion(archivo ? "Subiendo foto" : "Eliminando foto");
+    setOperacion(archivo ? "Preparando foto" : "Eliminando foto");
     setError("");
     try {
       if (archivo) {
-        const foto = await subirFoto(visitaId, tareaId, momento, archivo);
+        const preparada = await prepararImagen(archivo);
+        setOperacion("Subiendo foto");
+        const foto = await subirFoto(visitaId, tareaId, momento, preparada);
         setFotos((actuales) => ({ ...actuales, [momento === "ANTES" ? "antes" : "despues"]: foto }));
       } else {
         await eliminarFoto(visitaId, tareaId, momento);
@@ -80,14 +77,12 @@ export function SubidorFotos({ visitaId, tareaId, obligatorio, onFotosActualizad
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={obtenerUrlFoto(foto.id) + "?v=" + encodeURIComponent(foto.creadoAt)} alt={"Foto " + nombre.toLowerCase()} className="h-32 w-full rounded object-cover sm:h-44" />
                 ) : <div className="grid h-32 place-items-center rounded bg-surface-soft text-xs text-muted sm:h-44">Sin foto</div>}
-                <label className="relative mt-2 flex min-h-11 cursor-pointer items-center justify-center rounded-md border border-line px-2 text-sm font-medium hover:bg-surface-soft focus-within:ring-2 focus-within:ring-brand-600">
-                  {foto ? "Cambiar" : "Subir foto"}
-                  <input type="file" accept="image/jpeg,image/png,image/webp" aria-label={(foto ? "Cambiar" : "Subir") + " foto " + nombre.toLowerCase()} disabled={!!operacion} className="absolute inset-0 w-full cursor-pointer opacity-0" onChange={(e) => {
-                    const archivo = e.target.files?.[0];
-                    if (archivo) void actualizar(momento, archivo);
-                    e.target.value = "";
-                  }} />
-                </label>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <input ref={(elemento) => { galeriaRef.current[momento] = elemento; }} type="file" accept="image/*" aria-label={`Elegir foto ${nombre.toLowerCase()} de la galería`} disabled={!!operacion} className="sr-only" tabIndex={-1} onChange={(e) => { const archivo = e.target.files?.[0]; if (archivo) void actualizar(momento, archivo); e.target.value = ""; }} />
+                  <input ref={(elemento) => { camaraRef.current[momento] = elemento; }} type="file" accept="image/*" capture="environment" aria-label={`Tomar foto ${nombre.toLowerCase()} con la cámara`} disabled={!!operacion} className="sr-only" tabIndex={-1} onChange={(e) => { const archivo = e.target.files?.[0]; if (archivo) void actualizar(momento, archivo); e.target.value = ""; }} />
+                  <button type="button" disabled={!!operacion} onClick={() => galeriaRef.current[momento]?.click()} className="min-h-11 rounded-md border border-line px-1 text-xs font-medium hover:bg-surface-soft">Galería</button>
+                  <button type="button" disabled={!!operacion} onClick={() => camaraRef.current[momento]?.click()} className="min-h-11 rounded-md border border-line px-1 text-xs font-medium hover:bg-surface-soft">Cámara</button>
+                </div>
                 {foto && !obligatorio && <button type="button" disabled={!!operacion} className="mt-1 min-h-11 w-full rounded-md text-sm text-red-700 hover:bg-surface-soft dark:text-red-300" onClick={() => void actualizar(momento)}>Eliminar</button>}
               </div>
             );

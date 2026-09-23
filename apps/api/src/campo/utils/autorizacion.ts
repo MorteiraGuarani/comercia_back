@@ -13,6 +13,7 @@ export async function esLiderDe(
   const subordinado = await prisma.usuario.findUnique({
     where: { id: subordinadoUserId },
     select: {
+      empresaId: true,
       rol: {
         select: {
           rolId: true,
@@ -29,15 +30,17 @@ export async function esLiderDe(
     where: { id: liderUserId },
     select: {
       rolId: true,
+      empresaId: true,
     },
   });
 
-  if (!lider?.rolId) {
+  if (!lider?.rolId || lider.empresaId !== subordinado.empresaId) {
     return false;
   }
 
   // El líder debe tener el rol padre del subordinado
-  return subordinado.rol.rolId === lider.rolId;
+  return subordinado.rol.rolId === lider.rolId ||
+    (await obtenerEquipoCompleto(prisma, liderUserId)).includes(subordinadoUserId);
 }
 
 /**

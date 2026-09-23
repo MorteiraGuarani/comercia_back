@@ -442,5 +442,18 @@ export interface ColaboradorDetalleData {
   };
   ruta: ParadaRutaColaborador[];
   tareasCategorias: CategoriaTareasColaborador[];
+  evidencias: {
+    visitaId: number;
+    local: string;
+    cliente: string;
+    fecha: string;
+    entrada: string;
+    salida: string | null;
+    tareaId: number;
+    nombreTarea: string;
+    completadaAt: string | null;
+    fotos: { id: number; momento: MomentoFoto; creadoAt: string }[];
+    comentarios: { id: number; comentario: string; creadoAt: string; usuario: { nombre: string; apellido: string } }[];
+  }[];
   novedades: NovedadColaboradorItem[];
 }

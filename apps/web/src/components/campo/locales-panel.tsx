@@ -124,11 +124,12 @@ export function LocalesPanel() {
           <button
             type="button"
             onClick={abrirCrear}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold uppercase tracking-wider text-white shadow-sm transition-all hover:brightness-110 active:scale-95 cursor-pointer shrink-0"
+            aria-label="Crear local"
+            title="Crear local"
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-white shadow-sm transition-all hover:brightness-110 active:scale-95 cursor-pointer"
             style={{ backgroundColor: TOKENS.carne }}
           >
             <IconoMas className="w-4 h-4" />
-            <span>Nuevo Local</span>
           </button>
         }
       />
@@ -266,15 +267,38 @@ export function LocalesPanel() {
               <button
                 type="button"
                 onClick={abrirCrear}
-                className="mt-3.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider text-white"
+                aria-label="Crear local"
+                title="Crear local"
+                className="mt-3.5 inline-grid h-11 w-11 place-items-center rounded-lg text-white"
                 style={{ backgroundColor: TOKENS.ink }}
               >
                 <IconoMas className="w-3.5 h-3.5" />
-                <span>Agregar Local</span>
               </button>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <>
+            <div className="grid gap-2 p-3 md:hidden">
+              {itemsFiltrados.map((local) => (
+                <article key={local.id} className="min-w-0 rounded-xl border border-line bg-surface-raised p-3 text-sm">
+                  <div className="flex min-w-0 items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <h3 className="break-words font-semibold text-foreground">{local.nombre}</h3>
+                      <p className="break-words text-xs text-muted">{local.cliente?.nombre}</p>
+                    </div>
+                    <StatusStamp tone={local.activo ? "fresco" : "sub"} size="sm">{local.activo ? "ACTIVO" : "INACTIVO"}</StatusStamp>
+                  </div>
+                  <p className="mt-2 break-words text-xs text-muted">{local.direccion || "Sin dirección"}</p>
+                  <p className="mt-1 text-xs text-muted">Radio para marcar: {local.radioMetros} m</p>
+                  {local.telefono && <a href={`tel:${local.telefono}`} className="mt-1 inline-flex min-h-11 items-center text-xs font-semibold text-sky-700">{local.telefono}</a>}
+                  <div className="mt-2 grid grid-cols-3 gap-2">
+                    <button type="button" onClick={() => setPlan(local)} className="min-h-11 rounded-lg border border-line text-xs font-semibold text-foreground">Ruta</button>
+                    <button type="button" onClick={() => setMapa(local)} className="min-h-11 rounded-lg border border-line text-xs font-semibold text-foreground">Mapa</button>
+                    <button type="button" onClick={() => setForm(local)} className="min-h-11 rounded-lg border border-line text-xs font-semibold text-foreground">Editar</button>
+                  </div>
+                </article>
+              ))}
+            </div>
+            <div className="hidden overflow-x-auto md:block">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b bg-zinc-50/80 text-[11px] font-bold uppercase tracking-wider text-zinc-500" style={{ borderColor: TOKENS.line }}>
@@ -425,6 +449,7 @@ export function LocalesPanel() {
                 </tbody>
               </table>
             </div>
+            </>
           )}
 
           {/* Footer con Paginación Compacta */}

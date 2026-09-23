@@ -3,6 +3,7 @@
 import React, { useMemo, useState, useRef } from "react";
 import { apiFetch } from "@/lib/api";
 import { mensajeError } from "@/utils/error";
+import { prepararImagen } from "@/utils/preparar-imagen";
 import { useListaCampo, useOperacionCampo } from "@/hooks/use-lista-campo";
 import { Modal } from "@/components/modal";
 import { PantallaCarga } from "@/components/pantalla-carga";
@@ -46,6 +47,7 @@ export function ClientesPanel() {
   const [guardando, setGuardando] = useState(false);
   const [subiendoLogo, setSubiendoLogo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   // Filtrado local por estado activo / inactivo
   const itemsFiltrados = useMemo(() => {
@@ -95,7 +97,12 @@ export function ClientesPanel() {
     try {
       setSubiendoLogo(true);
       const formData = new FormData();
-      formData.append("logo", file);
+      if (file.type === "image/svg+xml") {
+        if (file.size > 5 * 1024 * 1024) throw new Error("El SVG supera 5 MB.");
+        formData.append("logo", file);
+      } else {
+        formData.append("logo", await prepararImagen(file));
+      }
 
       const res = await apiFetch<{ url: string }>("/campo/clientes/subir-logo", {
         method: "POST",
@@ -108,6 +115,7 @@ export function ClientesPanel() {
     } finally {
       setSubiendoLogo(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
+      if (cameraInputRef.current) cameraInputRef.current.value = "";
     }
   };
 
@@ -124,13 +132,13 @@ export function ClientesPanel() {
         title="Catálogo de Clientes"
         subtitle="Empresas y cuentas comerciales con gestión de logos y cobertura geográfica"
         right={
-          <div className="flex items-center gap-2">
+            <div className="flex max-w-full flex-wrap items-center gap-2">
             {/* Toggle de Vista: Tabla vs Mapa */}
             <div className="flex items-center rounded-lg border border-line bg-surface-soft p-1">
               <button
                 type="button"
                 onClick={() => setVista("tabla")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-all cursor-pointer sm:px-3 ${
                   vista === "tabla"
                     ? "bg-surface-raised text-foreground shadow-xs"
                     : "text-muted hover:text-foreground"
@@ -145,14 +153,14 @@ export function ClientesPanel() {
                   setClienteFiltroMapa(null);
                   setVista("mapa");
                 }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-all cursor-pointer sm:px-3 ${
                   vista === "mapa"
                     ? "bg-surface-raised text-foreground shadow-xs"
                     : "text-muted hover:text-foreground"
                 }`}
               >
                 <IconoMapa className="w-3.5 h-3.5" />
-                <span>Mapa de Cobertura</span>
+                <span>Mapa</span>
               </button>
             </div>
 
@@ -160,11 +168,12 @@ export function ClientesPanel() {
             <button
               type="button"
               onClick={abrirCrear}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold uppercase tracking-wider text-white shadow-sm transition-all hover:brightness-110 active:scale-95 cursor-pointer shrink-0"
+              aria-label="Crear cliente"
+              title="Crear cliente"
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-white shadow-sm transition-all hover:brightness-110 active:scale-95 cursor-pointer"
               style={{ backgroundColor: TOKENS.carne }}
             >
               <IconoMas className="w-4 h-4" />
-              <span>Nuevo Cliente</span>
             </button>
           </div>
         }
@@ -280,15 +289,36 @@ export function ClientesPanel() {
                   <button
                     type="button"
                     onClick={abrirCrear}
-                    className="mt-3.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider text-white"
+                    aria-label="Crear cliente"
+                    title="Crear cliente"
+                    className="mt-3.5 inline-grid h-11 w-11 place-items-center rounded-lg text-white"
                     style={{ backgroundColor: TOKENS.carne }}
                   >
                     <IconoMas className="w-3.5 h-3.5" />
-                    <span>Registrar Cliente</span>
                   </button>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
+                <>
+                <div className="grid gap-2 p-3 md:hidden">
+                  {itemsFiltrados.map((cliente) => (
+                    <article key={cliente.id} className="min-w-0 rounded-xl border border-line bg-surface-raised p-3 text-sm">
+                      <div className="flex min-w-0 items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <h3 className="break-words font-semibold text-foreground">{cliente.nombre}</h3>
+                          <p className="text-xs text-muted">{cliente.ruc || "Sin RUC"} · {cliente._count?.locales ?? 0} locales</p>
+                        </div>
+                        <StatusStamp tone={cliente.activo ? "fresco" : "sub"} size="sm">{cliente.activo ? "ACTIVO" : "INACTIVO"}</StatusStamp>
+                      </div>
+                      {cliente.contacto && <p className="mt-2 break-words text-xs text-muted">Contacto: {cliente.contacto}</p>}
+                      {cliente.telefono && <a href={`tel:${cliente.telefono}`} className="mt-1 inline-flex min-h-11 items-center text-xs font-semibold text-sky-700">{cliente.telefono}</a>}
+                      <div className="mt-2 flex gap-2">
+                        <button type="button" onClick={() => verEnMapa(cliente.id)} className="min-h-11 flex-1 rounded-lg border border-line px-3 text-xs font-semibold text-foreground">Ver mapa</button>
+                        <button type="button" onClick={() => setForm(cliente)} className="min-h-11 flex-1 rounded-lg border border-line px-3 text-xs font-semibold text-foreground">Editar</button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+                <div className="hidden overflow-x-auto md:block">
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="border-b bg-zinc-50/80 text-[11px] font-bold uppercase tracking-wider text-zinc-500" style={{ borderColor: TOKENS.line }}>
@@ -411,6 +441,7 @@ export function ClientesPanel() {
                     </tbody>
                   </table>
                 </div>
+                </>
               )}
 
               {/* Footer con Paginación Compacta */}
@@ -542,10 +573,11 @@ export function ClientesPanel() {
                   <input
                     type="file"
                     ref={fileInputRef}
-                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                    accept="image/*"
                     onChange={manejarSubidaLogo}
                     className="hidden"
                   />
+                  <input type="file" ref={cameraInputRef} accept="image/*" capture="environment" onChange={manejarSubidaLogo} className="hidden" />
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
@@ -555,6 +587,7 @@ export function ClientesPanel() {
                   >
                     {subiendoLogo ? "Subiendo..." : form.logoUrl ? "Cambiar Imagen" : "Subir Imagen"}
                   </button>
+                  <button type="button" onClick={() => cameraInputRef.current?.click()} disabled={subiendoLogo} className="min-h-11 rounded-lg border border-line bg-surface-raised px-3 text-xs font-bold text-foreground disabled:opacity-50">Cámara</button>
 
                   {form.logoUrl && (
                     <button
@@ -567,7 +600,7 @@ export function ClientesPanel() {
                   )}
                 </div>
                 <p className="text-[11px] text-zinc-500 mt-1 font-medium">
-                  Formatos admitidos: JPG, PNG, WebP o SVG (máx. 5 MB)
+                  Las fotos se reducen antes de subir. SVG hasta 5 MB.
                 </p>
               </div>
             </div>

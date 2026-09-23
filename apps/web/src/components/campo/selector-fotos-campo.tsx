@@ -1,10 +1,10 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { prepararImagen } from "@/utils/preparar-imagen";
+import { PantallaCarga } from "@/components/pantalla-carga";
 
 const MAX_FOTOS = 5;
-const MAX_BYTES = 5 * 1024 * 1024;
-const TIPOS_PERMITIDOS = ["image/jpeg", "image/png", "image/webp"];
 
 export function SelectorFotosCampo({
   archivos,
@@ -16,56 +16,75 @@ export function SelectorFotosCampo({
   disabled?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const camaraRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState("");
+  const [procesando, setProcesando] = useState(false);
 
-  const seleccionar = (seleccionados: FileList | null) => {
+  const seleccionar = async (seleccionados: FileList | null) => {
     if (!seleccionados) return;
     const nuevos = Array.from(seleccionados);
-    const invalida = nuevos.find(
-      (foto) => !TIPOS_PERMITIDOS.includes(foto.type) || foto.size > MAX_BYTES,
-    );
-    if (invalida) {
-      setError("Cada foto debe ser JPG, PNG o WebP y pesar hasta 5 MB.");
-      return;
-    }
     if (archivos.length + nuevos.length > MAX_FOTOS) {
       setError(`Podés adjuntar hasta ${MAX_FOTOS} fotos.`);
       return;
     }
+    setProcesando(true);
     setError("");
-    onChange([...archivos, ...nuevos]);
-    if (inputRef.current) inputRef.current.value = "";
+    try {
+      const preparadas: File[] = [];
+      for (const archivo of nuevos) preparadas.push(await prepararImagen(archivo));
+      onChange([...archivos, ...preparadas]);
+    } catch (problema) {
+      setError(problema instanceof Error ? problema.message : "No se pudieron procesar las fotos.");
+    } finally {
+      setProcesando(false);
+      if (inputRef.current) inputRef.current.value = "";
+      if (camaraRef.current) camaraRef.current.value = "";
+    }
   };
 
   return (
     <div className="space-y-2">
+      <PantallaCarga visible={procesando} mensaje="Preparando fotos" />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <p className="text-xs font-semibold text-foreground">
             Fotos (opcional)
           </p>
           <p className="text-[11px] text-muted">
-            Hasta 5 imágenes de 5 MB cada una.
+            Hasta 5 fotos; se reducen antes de subir.
           </p>
         </div>
         <input
           ref={inputRef}
           type="file"
-          accept="image/jpeg,image/png,image/webp"
+          accept="image/*"
           multiple
-          disabled={disabled || archivos.length >= MAX_FOTOS}
-          onChange={(evento) => seleccionar(evento.target.files)}
+          disabled={disabled || procesando || archivos.length >= MAX_FOTOS}
+          onChange={(evento) => void seleccionar(evento.target.files)}
           className="sr-only"
           tabIndex={-1}
         />
+        <input
+          ref={camaraRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          disabled={disabled || procesando || archivos.length >= MAX_FOTOS}
+          onChange={(evento) => void seleccionar(evento.target.files)}
+          className="sr-only"
+          tabIndex={-1}
+        />
+        <div className="flex flex-wrap gap-2">
         <button
           type="button"
-          disabled={disabled || archivos.length >= MAX_FOTOS}
+          disabled={disabled || procesando || archivos.length >= MAX_FOTOS}
           onClick={() => inputRef.current?.click()}
           className="min-h-11 rounded-lg border border-line bg-surface-raised px-3 text-xs font-semibold text-foreground transition hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Adjuntar foto
+          Galería
         </button>
+        <button type="button" disabled={disabled || procesando || archivos.length >= MAX_FOTOS} onClick={() => camaraRef.current?.click()} className="min-h-11 rounded-lg border border-line bg-surface-raised px-3 text-xs font-semibold text-foreground transition hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40 disabled:opacity-50">Cámara</button>
+        </div>
       </div>
 
       {archivos.length > 0 && (

@@ -17,6 +17,7 @@ import {
   type PeriodoFiltro,
 } from "./ui/selector-fecha-filtro";
 import { PantallaCarga } from "@/components/pantalla-carga";
+import { obtenerUrlFoto } from "@/lib/api-tareas";
 import { Modal } from "@/components/modal";
 import type {
   ColaboradorDetalleData,
@@ -601,8 +602,8 @@ export function SupervisionPanel({
         >
           <div className="space-y-4 -mt-1">
             {/* Header del colaborador */}
-            <div className="flex items-center justify-between">
-              <div>
+            <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+              <div className="min-w-0">
                 <p className="ft-body text-xs sm:text-sm text-muted font-medium">
                   {detalleColab.colaborador.zona} · Tel:{" "}
                   {detalleColab.colaborador.telefono}
@@ -627,7 +628,7 @@ export function SupervisionPanel({
 
             {/* Fila de Inicio / Fin de jornada */}
             <div
-              className="rounded-xl p-3 flex items-center justify-between text-xs sm:text-sm"
+              className="rounded-xl p-3 flex flex-wrap items-center justify-between gap-2 text-xs sm:text-sm"
               style={{
                 background: TOKENS.canvas,
                 border: `1px solid ${TOKENS.line}`,
@@ -679,21 +680,21 @@ export function SupervisionPanel({
                   detalleColab.ruta.map((p, i) => (
                     <div
                       key={p.localId}
-                      className="rounded-xl p-3 flex items-center justify-between gap-3 text-xs"
+                      className="rounded-xl p-3 flex min-w-0 flex-wrap items-center justify-between gap-3 text-xs"
                       style={{
                         background: TOKENS.canvas,
                         border: `1px solid ${TOKENS.line}`,
                       }}
                     >
-                      <div className="flex items-center gap-2.5">
+                      <div className="flex min-w-0 items-center gap-2.5">
                         <span className="w-5 h-5 rounded-full bg-zinc-200 text-foreground ft-mono font-bold text-[11px] flex items-center justify-center shrink-0">
                           {i + 1}
                         </span>
-                        <div>
-                          <p className="ft-body font-semibold text-foreground text-sm">
+                        <div className="min-w-0">
+                          <p className="ft-body break-words font-semibold text-foreground text-sm">
                             {p.local}
                           </p>
-                          <p className="ft-mono text-[11px] text-muted">
+                          <p className="ft-mono break-words text-[11px] text-muted">
                             Ventana: {p.ventana ?? "Sin franja"} · {p.cliente}
                           </p>
                         </div>
@@ -717,8 +718,8 @@ export function SupervisionPanel({
 
             {/* Contenido sub-tab: Tareas del Colaborador */}
             {subTabColab === "tareas" && (
-              <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
-                {detalleColab.tareasCategorias.length === 0 ? (
+              <div className="space-y-3 max-h-[65vh] overflow-y-auto pr-1">
+                {detalleColab.tareasCategorias.length === 0 && (detalleColab.evidencias ?? []).length === 0 ? (
                   <p className="text-xs text-muted text-center py-6">
                     Sin tareas registradas
                   </p>
@@ -750,6 +751,43 @@ export function SupervisionPanel({
                       />
                     </div>
                   ))
+                )}
+                {(detalleColab.evidencias ?? []).length > 0 && (
+                  <div className="space-y-3 border-t border-line pt-3">
+                    <h3 className="text-sm font-semibold text-foreground">Detalle de visitas y evidencias</h3>
+                    {(detalleColab.evidencias ?? []).map((evidencia) => (
+                      <article key={`${evidencia.visitaId}-${evidencia.tareaId}`} className="min-w-0 space-y-2 rounded-xl border border-line bg-surface-raised p-3">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <h4 className="break-words text-sm font-semibold text-foreground">{evidencia.nombreTarea}</h4>
+                            <p className="break-words text-xs text-muted">{evidencia.local} · {evidencia.cliente}</p>
+                          </div>
+                          <StatusStamp tone={evidencia.completadaAt ? "fresco" : "sub"} size="sm">{evidencia.completadaAt ? "COMPLETADA" : "EN CURSO"}</StatusStamp>
+                        </div>
+                        <p className="text-xs text-muted">Visita: {new Date(evidencia.entrada).toLocaleString("es-PY")} · Salida: {evidencia.salida ? new Date(evidencia.salida).toLocaleTimeString("es-PY") : "en curso"}</p>
+                        {evidencia.completadaAt && <p className="text-xs text-muted">Completada: {new Date(evidencia.completadaAt).toLocaleString("es-PY")}</p>}
+                        {evidencia.fotos.length > 0 && (
+                          <div className="grid grid-cols-2 gap-2">
+                            {evidencia.fotos.map((foto) => (
+                              <a key={foto.id} href={obtenerUrlFoto(foto.id)} target="_blank" rel="noopener noreferrer" className="min-w-0 rounded-lg border border-line p-1 text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600" aria-label={`Abrir foto ${foto.momento === "ANTES" ? "antes" : "después"} de ${evidencia.nombreTarea}`}>
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={obtenerUrlFoto(foto.id)} alt={`Foto ${foto.momento === "ANTES" ? "antes" : "después"} de ${evidencia.nombreTarea}`} loading="lazy" className="h-28 w-full rounded object-cover" />
+                                <span className="block py-1 text-xs font-medium text-foreground">{foto.momento === "ANTES" ? "Antes" : "Después"}</span>
+                              </a>
+                            ))}
+                          </div>
+                        )}
+                        {evidencia.comentarios.length > 0 && (
+                          <div className="space-y-1 border-t border-line pt-2">
+                            <p className="text-xs font-semibold text-foreground">Comentarios</p>
+                            {evidencia.comentarios.map((comentario) => (
+                              <p key={comentario.id} className="break-words text-xs text-muted"><strong>{comentario.usuario.nombre} {comentario.usuario.apellido}:</strong> {comentario.comentario}</p>
+                            ))}
+                          </div>
+                        )}
+                      </article>
+                    ))}
+                  </div>
                 )}
               </div>
             )}

@@ -9,6 +9,7 @@ import { PantallaCarga } from "@/components/pantalla-carga";
 import { SelectorPaginado } from "@/components/selector-paginado";
 import { TOKENS } from "./tokens";
 import { StatusStamp } from "./ui/status-stamp";
+import { IconoMas } from "@/components/icono-mas";
 import {
   IconoEquipo,
   IconoRefrescar,
@@ -70,7 +71,7 @@ export function PlanLocal({
             }`}
             style={{ borderColor: vista === "horarios" ? "transparent" : TOKENS.line }}
           >
-            ⏰ Horarios & Franjas de Visita
+            <span className="sm:hidden">Horarios</span><span className="hidden sm:inline">⏰ Horarios &amp; Franjas de Visita</span>
           </button>
           <button
             type="button"
@@ -137,10 +138,12 @@ function HorariosLocal({ localId }: { localId: number }) {
         <button
           type="button"
           onClick={() => abrir()}
-          className="px-3.5 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider text-white transition-all hover:brightness-110"
+          aria-label="Agregar franja"
+          title="Agregar franja"
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-white transition-all hover:brightness-110"
           style={{ backgroundColor: TOKENS.carne }}
         >
-          + Agregar Franja
+          <IconoMas />
         </button>
       </div>
 
@@ -467,10 +470,12 @@ function AsignacionesLocal({ localId }: { localId: number }) {
             setCrear(true);
             setUsuarioId("");
           }}
-          className="px-3.5 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider text-white transition-all hover:brightness-110"
+          aria-label="Asignar colaborador"
+          title="Asignar colaborador"
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-white transition-all hover:brightness-110"
           style={{ backgroundColor: TOKENS.carne }}
         >
-          + Asignar Colaborador
+          <IconoMas />
         </button>
       </div>
 
@@ -706,17 +711,19 @@ function ModalBackups({
           Designa suplentes temporales para cubrir licencias, vacaciones o refuerzos puntuales.
         </p>
 
-        <div className="flex justify-between items-center">
+        <div className="flex min-w-0 flex-wrap justify-between items-center gap-2">
           <span className="text-xs font-bold uppercase tracking-wider text-[#1E2320]">
             Suplentes Registrados ({lista.items.length})
           </span>
           <button
             type="button"
             onClick={() => setCrear(true)}
-            className="px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider text-white"
+            aria-label="Agregar suplente"
+            title="Agregar suplente"
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-white"
             style={{ backgroundColor: TOKENS.ink }}
           >
-            + Agregar Suplente
+            <IconoMas />
           </button>
         </div>
 

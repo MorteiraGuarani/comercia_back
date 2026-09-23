@@ -182,7 +182,7 @@ export function SelectorFechaFiltro({ valorActual, onChange }: SelectorFechaFilt
 
       {abierto && (
         <div
-          className="absolute right-0 z-50 mt-2 w-72 rounded-xl border border-line bg-surface-raised p-3 text-foreground shadow-2xl animate-in fade-in zoom-in-95 duration-100 sm:w-80"
+          className="absolute left-0 z-50 mt-2 w-[min(18rem,calc(100vw-2rem))] rounded-xl border border-line bg-surface-raised p-3 text-foreground shadow-2xl animate-in fade-in zoom-in-95 duration-100 sm:left-auto sm:right-0 sm:w-80"
         >
           <div className="mb-2 flex items-center justify-between border-b border-line pb-2">
             <span className="ft-display text-xs font-bold uppercase tracking-wider text-accent-ink">

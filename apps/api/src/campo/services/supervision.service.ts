@@ -371,8 +371,20 @@ export class SupervisionService {
           },
         },
         cumplimientos: {
-          where: { NOT: { completadaAt: null } },
-          select: { tareaId: true },
+          select: {
+            tareaId: true,
+            nombreTarea: true,
+            completadaAt: true,
+            fotos: { select: { id: true, momento: true, creadoAt: true }, take: 2 },
+            comentarios: {
+              select: {
+                id: true, comentario: true, creadoAt: true,
+                usuario: { select: { nombre: true, apellido: true } },
+              },
+              orderBy: { creadoAt: 'desc' },
+              take: 20,
+            },
+          },
         },
       },
       orderBy: { entrada: 'asc' },
@@ -462,7 +474,27 @@ export class SupervisionService {
     });
 
     const tareasCumplidasSet = new Set(
-      visitas.flatMap((v) => v.cumplimientos.map((c) => c.tareaId)),
+      visitas.flatMap((v) => v.cumplimientos.filter((c) => c.completadaAt).map((c) => c.tareaId)),
+    );
+
+    const evidencias = visitas.flatMap((visita) =>
+      visita.cumplimientos.map((cumplimiento) => ({
+        visitaId: visita.id,
+        local: visita.local.nombre,
+        cliente: visita.local.cliente.nombre,
+        fecha: visita.fecha,
+        entrada: visita.entrada,
+        salida: visita.salida,
+        tareaId: cumplimiento.tareaId,
+        nombreTarea: cumplimiento.nombreTarea,
+        completadaAt: cumplimiento.completadaAt,
+        fotos: cumplimiento.fotos.map((foto) => ({
+          id: foto.id,
+          momento: foto.momento,
+          creadoAt: foto.creadoAt,
+        })),
+        comentarios: cumplimiento.comentarios,
+      })),
     );
 
     // Agrupar por categoría
@@ -533,6 +565,7 @@ export class SupervisionService {
       },
       ruta,
       tareasCategorias,
+      evidencias,
       novedades: novedadesFormat,
     };
   }

@@ -279,11 +279,11 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
             className="flex flex-wrap items-center justify-between gap-4 border-b pb-4"
             style={{ borderColor: TOKENS.line }}
           >
-            <div className="flex gap-3">
+            <div className="flex max-w-full flex-wrap gap-2">
               <button
                 type="button"
                 onClick={() => setTab("enviados")}
-                className={`px-5 py-2.5 rounded-xl text-sm font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                className={`px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer sm:px-5 sm:text-sm ${
                   tab === "enviados"
                     ? "bg-[#1E2320] text-white shadow-sm"
                     : "bg-white text-[#726C60] hover:text-[#1E2320] border"
@@ -292,13 +292,15 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                   borderColor: tab === "enviados" ? "transparent" : TOKENS.line,
                 }}
               >
-                Avisos Enviados ({enviados.length})
+                Enviados ({enviados.length})
               </button>
 
               <button
                 type="button"
                 onClick={() => setTab("redactar")}
-                className={`px-5 py-2.5 rounded-xl text-sm font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                aria-label="Crear comunicado"
+                title="Crear comunicado"
+                className={`grid h-11 w-11 place-items-center rounded-xl text-sm font-bold transition-all cursor-pointer ${
                   tab === "redactar"
                     ? "bg-[#1E2320] text-white shadow-sm"
                     : "bg-white text-[#726C60] hover:text-[#1E2320] border"
@@ -307,13 +309,13 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                   borderColor: tab === "redactar" ? "transparent" : TOKENS.line,
                 }}
               >
-                + Nuevo Comunicado
+                <span aria-hidden="true" className="text-xl">+</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setTab("recibidos")}
-                className={`px-5 py-2.5 rounded-xl text-sm font-bold uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                className={`px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer sm:px-5 sm:text-sm ${
                   tab === "recibidos"
                     ? "bg-[#1E2320] text-white shadow-sm"
                     : "bg-white text-[#726C60] hover:text-[#1E2320] border"
@@ -323,7 +325,7 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                     tab === "recibidos" ? "transparent" : TOKENS.line,
                 }}
               >
-                <span>Bandeja Recibida</span>
+                <span>Recibidos</span>
                 {noLeidosCount > 0 && (
                   <span
                     className="text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold text-white"
@@ -547,10 +549,12 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                 <button
                   type="button"
                   onClick={() => setTab("redactar")}
-                  className="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider text-white"
+                  aria-label="Crear comunicado"
+                  title="Crear comunicado"
+                  className="inline-grid h-11 w-11 place-items-center rounded-lg text-white"
                   style={{ backgroundColor: TOKENS.ink }}
                 >
-                  + Redactar Comunicado
+                  <span aria-hidden="true" className="text-xl">+</span>
                 </button>
               </div>
             ) : (
