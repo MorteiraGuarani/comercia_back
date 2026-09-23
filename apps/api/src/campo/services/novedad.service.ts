@@ -11,6 +11,7 @@ import {
   ActualizarEstadoNovedadDto,
   CrearNovedadDto,
   ListarNovedadesDto,
+  ResponderNovedadDto,
 } from '../dto/novedad.dto';
 import {
   rangoPaginacion,
@@ -251,9 +252,9 @@ export class NovedadService {
   /**
    * Obtener detalle de una novedad
    */
-  async obtenerPorId(usuarioId: number, id: number) {
+  async obtenerPorId(usuarioId: number, empresaId: number, id: number) {
     const novedad = await this.prisma.novedadCampo.findUnique({
-      where: { id },
+      where: { id, empresaId },
       include: {
         usuario: { select: { id: true, nombre: true, apellido: true } },
         local: {
@@ -282,6 +283,79 @@ export class NovedadService {
     return novedad;
   }
 
+  async listarRespuestas(
+    usuarioId: number,
+    empresaId: number,
+    id: number,
+    query: ConsultaCampoDto,
+  ) {
+    await this.obtenerPorId(usuarioId, empresaId, id);
+    const { skip, take, page, limit } = rangoPaginacion(query);
+    const where = { novedadId: id };
+    const [items, total] = await Promise.all([
+      this.prisma.respuestaNovedadCampo.findMany({
+        where,
+        include: {
+          usuario: { select: { id: true, nombre: true, apellido: true } },
+        },
+        orderBy: [{ creadoAt: 'desc' }, { id: 'desc' }],
+        skip,
+        take,
+      }),
+      this.prisma.respuestaNovedadCampo.count({ where }),
+    ]);
+    return respuestaPaginada(
+      items.map((respuesta) => ({
+        id: respuesta.id,
+        mensaje: respuesta.mensaje,
+        creadoAt: respuesta.creadoAt,
+        usuario: respuesta.usuario,
+      })),
+      total,
+      page,
+      limit,
+    );
+  }
+
+  async responder(
+    usuarioId: number,
+    empresaId: number,
+    id: number,
+    dto: ResponderNovedadDto,
+  ) {
+    const novedad = await this.obtenerPorId(usuarioId, empresaId, id);
+    if (novedad.estado !== 'ABIERTA') {
+      throw new BadRequestException(
+        'Solo se puede responder una novedad abierta',
+      );
+    }
+    const mensaje = dto.mensaje.trim();
+    if (!mensaje) throw new BadRequestException('Escribe una respuesta');
+    const respuesta = await this.prisma.respuestaNovedadCampo.create({
+      data: { novedadId: id, usuarioId, mensaje },
+      include: {
+        usuario: { select: { id: true, nombre: true, apellido: true } },
+      },
+    });
+    try {
+      await this.notificaciones.crearNotificacionRespuestaNovedad(
+        empresaId,
+        usuarioId,
+        novedad.usuarioId,
+        id,
+        novedad.titulo,
+      );
+    } catch {
+      // La respuesta queda guardada aunque falle la notificación.
+    }
+    return {
+      id: respuesta.id,
+      mensaje: respuesta.mensaje,
+      creadoAt: respuesta.creadoAt,
+      usuario: respuesta.usuario,
+    };
+  }
+
   /**
    * Actualizar estado de una novedad (Cerrar o Cancelar con resolución)
    */
@@ -299,6 +373,9 @@ export class NovedadService {
 
     if (!novedad) {
       throw new NotFoundException('Novedad no encontrada');
+    }
+    if (novedad.estado !== 'ABIERTA') {
+      throw new BadRequestException('La novedad ya está cerrada');
     }
 
     const esAutor = novedad.usuarioId === usuarioId;

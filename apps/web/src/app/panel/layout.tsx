@@ -124,10 +124,14 @@ export default function PanelLayout({
   const activo = (href: string) =>
     href === "/panel" ? pathname === "/panel" : pathname === href;
   const tieneMasEnlaces = enlaces.length > 5;
-  const enlacesBarra = tieneMasEnlaces
+  const enlacesIniciales = tieneMasEnlaces
     ? enlaces.slice(0, 4)
     : enlaces.slice(0, 5);
-  const enlacesMas = tieneMasEnlaces ? enlaces.slice(4) : [];
+  const enlaceNovedades = enlaces.find((enlace) => enlace.href === "/panel/gestion-campo/novedades");
+  const enlacesBarra = tieneMasEnlaces && enlaceNovedades && !enlacesIniciales.includes(enlaceNovedades)
+    ? [enlacesIniciales[0], ...enlacesIniciales.slice(2), enlaceNovedades]
+    : enlacesIniciales;
+  const enlacesMas = tieneMasEnlaces ? enlaces.filter((enlace) => !enlacesBarra.includes(enlace)) : [];
   const masActivo = enlacesMas.some((enlace) => activo(enlace.href));
 
   return (

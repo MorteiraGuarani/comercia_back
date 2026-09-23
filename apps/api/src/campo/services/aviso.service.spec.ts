@@ -1,4 +1,8 @@
-import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import type { PrismaService } from '../../prisma/prisma.service';
 import type { NotificacionService } from './notificacion.service';
 import type { AdjuntoCampoService } from './adjunto-campo.service';
@@ -175,5 +179,39 @@ describe('AvisoService', () => {
       },
       select: { id: true },
     });
+  });
+
+  it('limita el detalle del aviso a la empresa y al destinatario autorizado', async () => {
+    const prisma = {
+      usuario: { findUnique: jest.fn().mockResolvedValue({ superiorId: 9 }) },
+      avisoCampo: { findFirst: jest.fn().mockResolvedValue(null) },
+    };
+    const service = new AvisoService(
+      prisma as unknown as PrismaService,
+      {} as NotificacionService,
+      adjuntosMock(),
+    );
+
+    await expect(service.obtenerPorId(2, 10, 99)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    expect(prisma.avisoCampo.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          id: 99,
+          empresaId: 10,
+          OR: [
+            { emisorId: 2 },
+            {
+              empresaId: 10,
+              OR: [
+                { destinatarioId: 2, emisorId: { not: 2 } },
+                { tipo: 'EQUIPO', emisorId: 9 },
+              ],
+            },
+          ],
+        },
+      }),
+    );
   });
 });

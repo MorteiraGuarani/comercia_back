@@ -172,6 +172,40 @@ export class NotificacionService {
     });
   }
 
+  async crearNotificacionRespuestaNovedad(
+    empresaId: number,
+    emisorId: number,
+    autorId: number,
+    novedadId: number,
+    tituloNovedad: string,
+  ): Promise<void> {
+    const destinatarioId =
+      emisorId === autorId
+        ? await obtenerLiderDirecto(this.prisma, autorId)
+        : autorId;
+    if (!destinatarioId || destinatarioId === emisorId) return;
+    const emisor = await this.prisma.usuario.findUnique({
+      where: { id: emisorId },
+      select: { nombre: true, apellido: true },
+    });
+    if (!emisor) return;
+    await this.prisma.notificacionCampo.create({
+      data: {
+        empresaId,
+        usuarioDestinatarioId: destinatarioId,
+        usuarioEmisorId: emisorId,
+        tipo: TipoNotificacionCampo.NOVEDAD_RESPUESTA,
+        referenciaId: novedadId,
+        titulo: 'Nueva respuesta en novedad',
+        mensaje:
+          `${emisor.nombre} ${emisor.apellido} respondió en '${tituloNovedad}'`.slice(
+            0,
+            250,
+          ),
+      },
+    });
+  }
+
   /**
    * Crear notificación cuando un usuario recibe un aviso
    */
@@ -186,10 +220,15 @@ export class NotificacionService {
       where: { id: emisorId },
       select: { nombre: true, apellido: true },
     });
-    const nombreEmisor = emisor ? `${emisor.nombre} ${emisor.apellido}` : 'Tu líder';
+    const nombreEmisor = emisor
+      ? `${emisor.nombre} ${emisor.apellido}`
+      : 'Tu líder';
 
     const titulo = 'Nuevo aviso de supervisión';
-    const preview = mensajeAviso.length > 80 ? `${mensajeAviso.slice(0, 77)}...` : mensajeAviso;
+    const preview =
+      mensajeAviso.length > 80
+        ? `${mensajeAviso.slice(0, 77)}...`
+        : mensajeAviso;
     const mensaje = `${nombreEmisor}: ${preview}`;
 
     await this.prisma.notificacionCampo.create({

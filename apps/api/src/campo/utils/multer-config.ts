@@ -1,5 +1,5 @@
 import { diskStorage } from 'multer';
-import { extname, join, resolve } from 'path';
+import { extname, isAbsolute, join, resolve } from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { BadRequestException } from '@nestjs/common';
 import { existsSync, mkdirSync } from 'fs';
@@ -11,8 +11,15 @@ const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 // Tamaño máximo: 5 MB
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
-function directorioUploads(): string {
+export function directorioUploads(): string {
   return process.env.UPLOADS_DIR ?? resolve(process.cwd(), 'uploads');
+}
+
+export function resolverRutaFoto(ruta: string): string {
+  if (isAbsolute(ruta)) return ruta;
+  const relativa = ruta.replace(/^uploads[/\\]/, '');
+  const persistida = resolve(directorioUploads(), relativa);
+  return existsSync(persistida) ? persistida : resolve(process.cwd(), ruta);
 }
 
 function filtroImagen(
@@ -71,7 +78,7 @@ export const multerConfigFotosTareas: MulterOptions = {
       const mes = String(now.getMonth() + 1).padStart(2, '0');
       const día = String(now.getDate()).padStart(2, '0');
 
-      const dir = `uploads/tareas/${año}/${mes}/${día}`;
+      const dir = join(directorioUploads(), 'tareas', String(año), mes, día);
 
       // Crear directorio si no existe
       if (!existsSync(dir)) {
@@ -118,7 +125,7 @@ export const multerConfigFotosTareas: MulterOptions = {
 export const multerConfigLogoCliente: MulterOptions = {
   storage: diskStorage({
     destination: (req, file, cb) => {
-      const dir = 'uploads/clientes';
+      const dir = join(directorioUploads(), 'clientes');
       if (!existsSync(dir)) {
         mkdirSync(dir, { recursive: true });
       }

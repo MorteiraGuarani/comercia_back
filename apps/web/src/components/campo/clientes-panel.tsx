@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import { mensajeError } from "@/utils/error";
 import { prepararImagen } from "@/utils/preparar-imagen";
@@ -13,7 +14,6 @@ import { TOKENS } from "./tokens";
 import { StatusStamp } from "./ui/status-stamp";
 import { StatChip } from "./ui/stat-chip";
 import { TopBar } from "./ui/top-bar";
-import { MapaClientes } from "./mapa-clientes";
 import {
   IconoCliente,
   IconoMapa,
@@ -30,8 +30,7 @@ import {
 import type { ClienteCampo } from "@/types/campo";
 
 export function ClientesPanel() {
-  const [vista, setVista] = useState<"tabla" | "mapa">("tabla");
-  const [clienteFiltroMapa, setClienteFiltroMapa] = useState<number | null>(null);
+  const router = useRouter();
 
   const [busqueda, setBusqueda] = useState("");
   const [filtroEstado, setFiltroEstado] = useState<"todos" | "activos" | "inactivos">("todos");
@@ -76,8 +75,7 @@ export function ClientesPanel() {
   };
 
   const verEnMapa = (clienteId: number) => {
-    setClienteFiltroMapa(clienteId);
-    setVista("mapa");
+    router.push(`/panel/gestion-campo/locales?mapa=1&clienteId=${clienteId}`);
   };
 
   const iniciales = (nombre: string) => {
@@ -131,40 +129,9 @@ export function ClientesPanel() {
       {camaraAbierta && <CapturadorCamara onCapturar={(archivo) => void subirLogo(archivo)} onCerrar={() => setCamaraAbierta(false)} />}
       <TopBar
         title="Catálogo de Clientes"
-        subtitle="Empresas y cuentas comerciales con gestión de logos y cobertura geográfica"
+        subtitle="Empresas y cuentas comerciales con gestión de logos"
         right={
             <div className="flex max-w-full flex-wrap items-center gap-2">
-            {/* Toggle de Vista: Tabla vs Mapa */}
-            <div className="flex items-center rounded-lg border border-line bg-surface-soft p-1">
-              <button
-                type="button"
-                onClick={() => setVista("tabla")}
-                className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-all cursor-pointer sm:px-3 ${
-                  vista === "tabla"
-                    ? "bg-surface-raised text-foreground shadow-xs"
-                    : "text-muted hover:text-foreground"
-                }`}
-              >
-                <IconoCliente className="w-3.5 h-3.5" />
-                <span>Tabla</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setClienteFiltroMapa(null);
-                  setVista("mapa");
-                }}
-                className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-all cursor-pointer sm:px-3 ${
-                  vista === "mapa"
-                    ? "bg-surface-raised text-foreground shadow-xs"
-                    : "text-muted hover:text-foreground"
-                }`}
-              >
-                <IconoMapa className="w-3.5 h-3.5" />
-                <span>Mapa</span>
-              </button>
-            </div>
-
             {/* Botón Crear Cliente */}
             <button
               type="button"
@@ -203,14 +170,7 @@ export function ClientesPanel() {
           />
         </div>
 
-        {/* VISTA 1: MAPA INTERACTIVO DE CLIENTES */}
-        {vista === "mapa" && (
-          <MapaClientes clientes={lista.items} clienteSeleccionadoId={clienteFiltroMapa} />
-        )}
-
         {/* VISTA 2: TABLA DE CLIENTES COMPACTA */}
-        {vista === "tabla" && (
-          <>
             {/* Buscador & Filtros de Estado */}
             <div
               className="grid grid-cols-2 items-stretch gap-2 rounded-xl border p-3.5 shadow-xs bg-white md:flex md:items-center md:gap-3 md:justify-between"
@@ -504,8 +464,6 @@ export function ClientesPanel() {
                 </div>
               )}
             </div>
-          </>
-        )}
       </main>
 
       {/* Modal de Creación / Edición con Subida de Logo */}

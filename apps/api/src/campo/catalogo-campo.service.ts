@@ -18,7 +18,7 @@ import {
   LOCAL_CAMPO_SELECT,
   TAREA_CAMPO_SELECT,
 } from './utils/selectores';
-import { vigenciaCampo } from './utils/calendario';
+import { fechaCampo, relojCampo, vigenciaCampo } from './utils/calendario';
 import { ConsultaTareasCampoDto } from './dto/consulta-tareas.dto';
 
 @Injectable()
@@ -40,9 +40,19 @@ export class CatalogoCampoService {
       ...(query.buscar
         ? {
             OR: [
-              { nombre: { contains: query.buscar, mode: 'insensitive' as const } },
+              {
+                nombre: {
+                  contains: query.buscar,
+                  mode: 'insensitive' as const,
+                },
+              },
               { ruc: { contains: query.buscar, mode: 'insensitive' as const } },
-              { contacto: { contains: query.buscar, mode: 'insensitive' as const } },
+              {
+                contacto: {
+                  contains: query.buscar,
+                  mode: 'insensitive' as const,
+                },
+              },
             ],
           }
         : {}),
@@ -104,19 +114,57 @@ export class CatalogoCampoService {
       ...(query.buscar
         ? {
             OR: [
-              { nombre: { contains: query.buscar, mode: 'insensitive' as const } },
-              { direccion: { contains: query.buscar, mode: 'insensitive' as const } },
-              { contacto: { contains: query.buscar, mode: 'insensitive' as const } },
+              {
+                nombre: {
+                  contains: query.buscar,
+                  mode: 'insensitive' as const,
+                },
+              },
+              {
+                direccion: {
+                  contains: query.buscar,
+                  mode: 'insensitive' as const,
+                },
+              },
+              {
+                contacto: {
+                  contains: query.buscar,
+                  mode: 'insensitive' as const,
+                },
+              },
             ],
           }
         : {}),
     };
     const { skip, take, page, limit } = rangoPaginacion(query);
+    const hoy = fechaCampo(relojCampo().fecha);
     const [total, items] = await Promise.all([
       this.prisma.localCampo.count({ where }),
       this.prisma.localCampo.findMany({
         where,
-        select: LOCAL_CAMPO_SELECT,
+        select: {
+          ...LOCAL_CAMPO_SELECT,
+          asignaciones: {
+            where: {
+              activo: true,
+              fechaDesde: { lte: hoy },
+              OR: [{ fechaHasta: null }, { fechaHasta: { gte: hoy } }],
+            },
+            select: {
+              id: true,
+              usuario: {
+                select: {
+                  id: true,
+                  nombre: true,
+                  apellido: true,
+                  rol: { select: { descripcion: true } },
+                },
+              },
+            },
+            orderBy: { fechaDesde: 'desc' },
+            take: 5,
+          },
+        },
         orderBy: [{ nombre: 'asc' }, { id: 'asc' }],
         skip,
         take,
@@ -161,27 +209,47 @@ export class CatalogoCampoService {
       ...(query.tipo === 'obligatorias' ? { esObligatoria: true } : {}),
       ...(query.tipo === 'con_fotos' ? { requiereFotos: true } : {}),
       ...(query.buscar
-        ? { OR: [
-            { nombre: { contains: query.buscar, mode: 'insensitive' as const } },
-            { descripcion: { contains: query.buscar, mode: 'insensitive' as const } },
-          ] }
+        ? {
+            OR: [
+              {
+                nombre: {
+                  contains: query.buscar,
+                  mode: 'insensitive' as const,
+                },
+              },
+              {
+                descripcion: {
+                  contains: query.buscar,
+                  mode: 'insensitive' as const,
+                },
+              },
+            ],
+          }
         : {}),
     };
     const { skip, take, page, limit } = rangoPaginacion(query);
-    const [total, items, totalCatalogo, obligatorias, conFotos] = await Promise.all([
-      this.prisma.tareaCampo.count({ where }),
-      this.prisma.tareaCampo.findMany({
-        where,
-        select: TAREA_CAMPO_SELECT,
-        orderBy: [{ nombre: 'asc' }, { id: 'asc' }],
-        skip,
-        take,
-      }),
-      this.prisma.tareaCampo.count({ where: { empresaId: u.empresaId } }),
-      this.prisma.tareaCampo.count({ where: { empresaId: u.empresaId, esObligatoria: true } }),
-      this.prisma.tareaCampo.count({ where: { empresaId: u.empresaId, requiereFotos: true } }),
-    ]);
-    return { ...respuestaPaginada(items, total, page, limit), resumen: { total: totalCatalogo, obligatorias, conFotos } };
+    const [total, items, totalCatalogo, obligatorias, conFotos] =
+      await Promise.all([
+        this.prisma.tareaCampo.count({ where }),
+        this.prisma.tareaCampo.findMany({
+          where,
+          select: TAREA_CAMPO_SELECT,
+          orderBy: [{ nombre: 'asc' }, { id: 'asc' }],
+          skip,
+          take,
+        }),
+        this.prisma.tareaCampo.count({ where: { empresaId: u.empresaId } }),
+        this.prisma.tareaCampo.count({
+          where: { empresaId: u.empresaId, esObligatoria: true },
+        }),
+        this.prisma.tareaCampo.count({
+          where: { empresaId: u.empresaId, requiereFotos: true },
+        }),
+      ]);
+    return {
+      ...respuestaPaginada(items, total, page, limit),
+      resumen: { total: totalCatalogo, obligatorias, conFotos },
+    };
   }
   async guardarTarea(usuarioId: number, dto: TareaCampoDto, id?: number) {
     const u = await this.acceso.gestionar(usuarioId, 'tareas');

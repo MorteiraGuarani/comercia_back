@@ -18,7 +18,6 @@ import {
 } from "./ui/selector-fecha-filtro";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { obtenerUrlFoto } from "@/lib/api-tareas";
-import { Modal } from "@/components/modal";
 import type {
   ColaboradorDetalleData,
   SupervisionResumenData,
@@ -149,6 +148,21 @@ interface SupervisionPanelProps {
   initialTab?: TabType;
 }
 
+function FotoEvidencia({ id, momento, tarea }: { id: number; momento: "ANTES" | "DESPUES"; tarea: string }) {
+  const [noDisponible, setNoDisponible] = useState(false);
+  const etiqueta = momento === "ANTES" ? "Antes" : "Después";
+  if (noDisponible) {
+    return <div className="flex min-h-32 min-w-0 flex-col items-center justify-center rounded-lg border border-dashed border-line p-2 text-center text-xs text-muted"><span>Foto {etiqueta.toLowerCase()} no disponible en el servidor</span><span className="mt-1 font-mono">#{id}</span></div>;
+  }
+  return (
+    <a href={obtenerUrlFoto(id)} target="_blank" rel="noopener noreferrer" className="min-w-0 rounded-lg border border-line p-1 text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600" aria-label={`Abrir foto ${etiqueta.toLowerCase()} de ${tarea}`}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={obtenerUrlFoto(id)} alt={`Foto ${etiqueta.toLowerCase()} de ${tarea}`} onError={() => setNoDisponible(true)} loading="lazy" className="h-28 w-full rounded object-cover" />
+      <span className="block py-1 text-xs font-medium text-foreground">{etiqueta}</span>
+    </a>
+  );
+}
+
 export function SupervisionPanel({
   initialTab = "resumen",
 }: SupervisionPanelProps) {
@@ -175,7 +189,6 @@ export function SupervisionPanel({
   const [subTabColab, setSubTabColab] = useState<
     "ruta" | "tareas" | "novedades"
   >("ruta");
-  const [cargandoDetalle, setCargandoDetalle] = useState(false);
 
   // Cargar resumen de supervisión según el período seleccionado
   const cargarResumen = async () => {
@@ -206,7 +219,6 @@ export function SupervisionPanel({
     setColaboradorId(id);
     setSubTabColab(sub);
     try {
-      setCargandoDetalle(true);
       const queryFecha = queryFechasCampo(periodo) || `fecha=${hoyStr}`;
       const data = await apiFetch<ColaboradorDetalleData>(
         `/campo/supervision/colaboradores/${id}?${queryFecha}`,
@@ -215,8 +227,6 @@ export function SupervisionPanel({
     } catch (e) {
       alert("Error al cargar detalle del colaborador: " + mensajeError(e, "Error inesperado"));
       setColaboradorId(null);
-    } finally {
-      setCargandoDetalle(false);
     }
   };
 
@@ -234,6 +244,215 @@ export function SupervisionPanel({
     },
   ];
 
+  if (colaboradorId) {
+    return (
+      <div className="campo-screen min-h-[calc(100vh-5rem)] w-full bg-background text-foreground">
+        <TopBar
+          title={detalleColab?.colaborador.nombre ?? "Colaborador"}
+          subtitle="Ruta, tareas, comentarios y fotos del período seleccionado"
+          onBack={() => {
+            setColaboradorId(null);
+            setDetalleColab(null);
+          }}
+        />
+        <main className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
+          {!detalleColab ? (
+            <p className="py-10 text-center text-sm text-muted">Cargando detalle del colaborador…</p>
+          ) : (
+          <div className="space-y-4">
+            {/* Header del colaborador */}
+            <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="ft-body text-xs sm:text-sm text-muted font-medium">
+                  {detalleColab.colaborador.zona} · Tel:{" "}
+                  {detalleColab.colaborador.telefono}
+                </p>
+              </div>
+              <StatusStamp
+                tone={
+                  detalleColab.colaborador.asistencia === "en_curso"
+                    ? "frio"
+                    : detalleColab.colaborador.asistencia === "finalizado"
+                      ? "fresco"
+                      : "critico"
+                }
+              >
+                {detalleColab.colaborador.asistencia === "en_curso"
+                  ? "EN RUTA"
+                  : detalleColab.colaborador.asistencia === "finalizado"
+                    ? "FINALIZADO"
+                    : "SIN INICIAR"}
+              </StatusStamp>
+            </div>
+
+            {/* Fila de Inicio / Fin de jornada */}
+            <div
+              className="rounded-xl p-3 flex flex-wrap items-center justify-between gap-2 text-xs sm:text-sm"
+              style={{
+                background: TOKENS.canvas,
+                border: `1px solid ${TOKENS.line}`,
+              }}
+            >
+              <div className="flex items-center gap-1.5">
+                <span className="text-muted">Inicio:</span>
+                <span className="ft-mono font-bold text-foreground">
+                  {detalleColab.colaborador.inicioJornada ?? "—"}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-muted">Fin:</span>
+                <span className="ft-mono font-bold text-foreground">
+                  {detalleColab.colaborador.finJornada ??
+                    (detalleColab.colaborador.asistencia === "en_curso"
+                      ? "en curso"
+                      : "—")}
+                </span>
+              </div>
+            </div>
+
+            {/* Pestañas de detalle: Ruta / Tareas / Novedades */}
+            <SegTabs
+              active={subTabColab}
+              onChange={setSubTabColab}
+              tabs={[
+                {
+                  key: "ruta",
+                  label: `Ruta (${detalleColab.ruta.filter((r) => r.estado === "completado").length}/${detalleColab.ruta.length})`,
+                  icon: NavigationIcon,
+                },
+                {
+                  key: "tareas",
+                  label: `Tareas (${detalleColab.tareasCategorias.reduce((a, c) => a + c.completadas, 0)}/${detalleColab.tareasCategorias.reduce((a, c) => a + c.total, 0)})`,
+                  icon: ListChecksIcon,
+                },
+              ]}
+            />
+
+            {/* Contenido sub-tab: Ruta del Colaborador */}
+            {subTabColab === "ruta" && (
+              <div className="space-y-2">
+                {detalleColab.ruta.length === 0 ? (
+                  <p className="text-xs text-muted text-center py-6">
+                    Sin paradas asignadas
+                  </p>
+                ) : (
+                  detalleColab.ruta.map((p, i) => (
+                    <div
+                      key={p.localId}
+                      className="rounded-xl p-3 flex min-w-0 flex-wrap items-center justify-between gap-3 text-xs"
+                      style={{
+                        background: TOKENS.canvas,
+                        border: `1px solid ${TOKENS.line}`,
+                      }}
+                    >
+                      <div className="flex min-w-0 items-center gap-2.5">
+                        <span className="w-5 h-5 rounded-full bg-zinc-200 text-foreground ft-mono font-bold text-[11px] flex items-center justify-center shrink-0">
+                          {i + 1}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="ft-body break-words font-semibold text-foreground text-sm">
+                            {p.local}
+                          </p>
+                          <p className="ft-mono break-words text-[11px] text-muted">
+                            Ventana: {p.ventana ?? "Sin franja"} · {p.cliente}
+                          </p>
+                        </div>
+                      </div>
+                      <StatusStamp
+                        tone={
+                          p.estado === "completado"
+                            ? "fresco"
+                            : p.estado === "en_curso"
+                              ? "frio"
+                              : "sub"
+                        }
+                      >
+                        {p.estado.toUpperCase()}
+                      </StatusStamp>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+
+            {/* Contenido sub-tab: Tareas del Colaborador */}
+            {subTabColab === "tareas" && (
+              <div className="space-y-3">
+                {detalleColab.tareasCategorias.length === 0 && (detalleColab.evidencias ?? []).length === 0 ? (
+                  <p className="text-xs text-muted text-center py-6">
+                    Sin tareas registradas
+                  </p>
+                ) : (
+                  detalleColab.tareasCategorias.map((cat) => (
+                    <div
+                      key={cat.categoria}
+                      className="rounded-xl p-3 text-xs"
+                      style={{
+                        background: TOKENS.canvas,
+                        border: `1px solid ${TOKENS.line}`,
+                      }}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="ft-body font-bold text-foreground text-sm">
+                          {cat.categoria}
+                        </span>
+                        <span className="ft-mono text-xs font-semibold text-muted">
+                          {cat.completadas} / {cat.total}
+                        </span>
+                      </div>
+                      <BigProgress
+                        pct={
+                          cat.total
+                            ? Math.round((cat.completadas / cat.total) * 100)
+                            : 0
+                        }
+                        color={TOKENS.fresco}
+                      />
+                    </div>
+                  ))
+                )}
+                {(detalleColab.evidencias ?? []).length > 0 && (
+                  <div className="space-y-3 border-t border-line pt-3">
+                    <h3 className="text-sm font-semibold text-foreground">Detalle de visitas y evidencias</h3>
+                    {(detalleColab.evidencias ?? []).map((evidencia) => (
+                      <article key={`${evidencia.visitaId}-${evidencia.tareaId}`} className="min-w-0 space-y-2 rounded-xl border border-line bg-surface-raised p-3">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <h4 className="break-words text-sm font-semibold text-foreground">{evidencia.nombreTarea}</h4>
+                            <p className="break-words text-xs text-muted">{evidencia.local} · {evidencia.cliente}</p>
+                          </div>
+                          <StatusStamp tone={evidencia.completadaAt ? "fresco" : "sub"} size="sm">{evidencia.completadaAt ? "COMPLETADA" : "EN CURSO"}</StatusStamp>
+                        </div>
+                        <p className="text-xs text-muted">Visita: {new Date(evidencia.entrada).toLocaleString("es-PY")} · Salida: {evidencia.salida ? new Date(evidencia.salida).toLocaleTimeString("es-PY") : "en curso"}</p>
+                        {evidencia.completadaAt && <p className="text-xs text-muted">Completada: {new Date(evidencia.completadaAt).toLocaleString("es-PY")}</p>}
+                        {evidencia.fotos.length > 0 && (
+                          <div className="grid grid-cols-2 gap-2">
+                            {evidencia.fotos.map((foto) => (
+                              <FotoEvidencia key={foto.id} id={foto.id} momento={foto.momento} tarea={evidencia.nombreTarea} />
+                            ))}
+                          </div>
+                        )}
+                        {evidencia.comentarios.length > 0 && (
+                          <div className="space-y-1 border-t border-line pt-2">
+                            <p className="text-xs font-semibold text-foreground">Comentarios</p>
+                            {evidencia.comentarios.map((comentario) => (
+                              <p key={comentario.id} className="break-words text-xs text-muted"><strong>{comentario.usuario.nombre} {comentario.usuario.apellido}:</strong> {comentario.comentario}</p>
+                            ))}
+                          </div>
+                        )}
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          )}
+        </main>
+      </div>
+    );
+  }
   return (
     <div
       className="campo-screen flex min-h-[calc(100vh-5rem)] w-full flex-col overflow-hidden font-sans"
@@ -243,8 +462,8 @@ export function SupervisionPanel({
       }}
     >
       <TopBar
-        title="Presencias del equipo"
-        subtitle="Presentismo, rutas y tareas de los impulsadores"
+        title="Presentismo"
+        subtitle="Presencias del equipo: rutas y tareas de los impulsadores"
         right={<SelectorFechaFiltro valorActual={periodo} onChange={setPeriodo} />}
       />
 
@@ -589,211 +808,7 @@ export function SupervisionPanel({
         />
       </div>
 
-      {/* ==================== MODAL DETALLE DE COLABORADOR ==================== */}
-      {colaboradorId && detalleColab && (
-        <Modal
-          titulo={detalleColab.colaborador.nombre}
-          abierto={!!colaboradorId}
-          onCerrar={() => {
-            setColaboradorId(null);
-            setDetalleColab(null);
-          }}
-          ancho="lg"
-        >
-          <div className="space-y-4 -mt-1">
-            {/* Header del colaborador */}
-            <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="ft-body text-xs sm:text-sm text-muted font-medium">
-                  {detalleColab.colaborador.zona} · Tel:{" "}
-                  {detalleColab.colaborador.telefono}
-                </p>
-              </div>
-              <StatusStamp
-                tone={
-                  detalleColab.colaborador.asistencia === "en_curso"
-                    ? "frio"
-                    : detalleColab.colaborador.asistencia === "finalizado"
-                      ? "fresco"
-                      : "critico"
-                }
-              >
-                {detalleColab.colaborador.asistencia === "en_curso"
-                  ? "EN RUTA"
-                  : detalleColab.colaborador.asistencia === "finalizado"
-                    ? "FINALIZADO"
-                    : "SIN INICIAR"}
-              </StatusStamp>
-            </div>
 
-            {/* Fila de Inicio / Fin de jornada */}
-            <div
-              className="rounded-xl p-3 flex flex-wrap items-center justify-between gap-2 text-xs sm:text-sm"
-              style={{
-                background: TOKENS.canvas,
-                border: `1px solid ${TOKENS.line}`,
-              }}
-            >
-              <div className="flex items-center gap-1.5">
-                <span className="text-muted">Inicio:</span>
-                <span className="ft-mono font-bold text-foreground">
-                  {detalleColab.colaborador.inicioJornada ?? "—"}
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-muted">Fin:</span>
-                <span className="ft-mono font-bold text-foreground">
-                  {detalleColab.colaborador.finJornada ??
-                    (detalleColab.colaborador.asistencia === "en_curso"
-                      ? "en curso"
-                      : "—")}
-                </span>
-              </div>
-            </div>
-
-            {/* Pestañas de detalle: Ruta / Tareas / Novedades */}
-            <SegTabs
-              active={subTabColab}
-              onChange={setSubTabColab}
-              tabs={[
-                {
-                  key: "ruta",
-                  label: `Ruta (${detalleColab.ruta.filter((r) => r.estado === "completado").length}/${detalleColab.ruta.length})`,
-                  icon: NavigationIcon,
-                },
-                {
-                  key: "tareas",
-                  label: `Tareas (${detalleColab.tareasCategorias.reduce((a, c) => a + c.completadas, 0)}/${detalleColab.tareasCategorias.reduce((a, c) => a + c.total, 0)})`,
-                  icon: ListChecksIcon,
-                },
-              ]}
-            />
-
-            {/* Contenido sub-tab: Ruta del Colaborador */}
-            {subTabColab === "ruta" && (
-              <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
-                {detalleColab.ruta.length === 0 ? (
-                  <p className="text-xs text-muted text-center py-6">
-                    Sin paradas asignadas
-                  </p>
-                ) : (
-                  detalleColab.ruta.map((p, i) => (
-                    <div
-                      key={p.localId}
-                      className="rounded-xl p-3 flex min-w-0 flex-wrap items-center justify-between gap-3 text-xs"
-                      style={{
-                        background: TOKENS.canvas,
-                        border: `1px solid ${TOKENS.line}`,
-                      }}
-                    >
-                      <div className="flex min-w-0 items-center gap-2.5">
-                        <span className="w-5 h-5 rounded-full bg-zinc-200 text-foreground ft-mono font-bold text-[11px] flex items-center justify-center shrink-0">
-                          {i + 1}
-                        </span>
-                        <div className="min-w-0">
-                          <p className="ft-body break-words font-semibold text-foreground text-sm">
-                            {p.local}
-                          </p>
-                          <p className="ft-mono break-words text-[11px] text-muted">
-                            Ventana: {p.ventana ?? "Sin franja"} · {p.cliente}
-                          </p>
-                        </div>
-                      </div>
-                      <StatusStamp
-                        tone={
-                          p.estado === "completado"
-                            ? "fresco"
-                            : p.estado === "en_curso"
-                              ? "frio"
-                              : "sub"
-                        }
-                      >
-                        {p.estado.toUpperCase()}
-                      </StatusStamp>
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
-
-            {/* Contenido sub-tab: Tareas del Colaborador */}
-            {subTabColab === "tareas" && (
-              <div className="space-y-3 max-h-[65vh] overflow-y-auto pr-1">
-                {detalleColab.tareasCategorias.length === 0 && (detalleColab.evidencias ?? []).length === 0 ? (
-                  <p className="text-xs text-muted text-center py-6">
-                    Sin tareas registradas
-                  </p>
-                ) : (
-                  detalleColab.tareasCategorias.map((cat) => (
-                    <div
-                      key={cat.categoria}
-                      className="rounded-xl p-3 text-xs"
-                      style={{
-                        background: TOKENS.canvas,
-                        border: `1px solid ${TOKENS.line}`,
-                      }}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="ft-body font-bold text-foreground text-sm">
-                          {cat.categoria}
-                        </span>
-                        <span className="ft-mono text-xs font-semibold text-muted">
-                          {cat.completadas} / {cat.total}
-                        </span>
-                      </div>
-                      <BigProgress
-                        pct={
-                          cat.total
-                            ? Math.round((cat.completadas / cat.total) * 100)
-                            : 0
-                        }
-                        color={TOKENS.fresco}
-                      />
-                    </div>
-                  ))
-                )}
-                {(detalleColab.evidencias ?? []).length > 0 && (
-                  <div className="space-y-3 border-t border-line pt-3">
-                    <h3 className="text-sm font-semibold text-foreground">Detalle de visitas y evidencias</h3>
-                    {(detalleColab.evidencias ?? []).map((evidencia) => (
-                      <article key={`${evidencia.visitaId}-${evidencia.tareaId}`} className="min-w-0 space-y-2 rounded-xl border border-line bg-surface-raised p-3">
-                        <div className="flex flex-wrap items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <h4 className="break-words text-sm font-semibold text-foreground">{evidencia.nombreTarea}</h4>
-                            <p className="break-words text-xs text-muted">{evidencia.local} · {evidencia.cliente}</p>
-                          </div>
-                          <StatusStamp tone={evidencia.completadaAt ? "fresco" : "sub"} size="sm">{evidencia.completadaAt ? "COMPLETADA" : "EN CURSO"}</StatusStamp>
-                        </div>
-                        <p className="text-xs text-muted">Visita: {new Date(evidencia.entrada).toLocaleString("es-PY")} · Salida: {evidencia.salida ? new Date(evidencia.salida).toLocaleTimeString("es-PY") : "en curso"}</p>
-                        {evidencia.completadaAt && <p className="text-xs text-muted">Completada: {new Date(evidencia.completadaAt).toLocaleString("es-PY")}</p>}
-                        {evidencia.fotos.length > 0 && (
-                          <div className="grid grid-cols-2 gap-2">
-                            {evidencia.fotos.map((foto) => (
-                              <a key={foto.id} href={obtenerUrlFoto(foto.id)} target="_blank" rel="noopener noreferrer" className="min-w-0 rounded-lg border border-line p-1 text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600" aria-label={`Abrir foto ${foto.momento === "ANTES" ? "antes" : "después"} de ${evidencia.nombreTarea}`}>
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src={obtenerUrlFoto(foto.id)} alt={`Foto ${foto.momento === "ANTES" ? "antes" : "después"} de ${evidencia.nombreTarea}`} loading="lazy" className="h-28 w-full rounded object-cover" />
-                                <span className="block py-1 text-xs font-medium text-foreground">{foto.momento === "ANTES" ? "Antes" : "Después"}</span>
-                              </a>
-                            ))}
-                          </div>
-                        )}
-                        {evidencia.comentarios.length > 0 && (
-                          <div className="space-y-1 border-t border-line pt-2">
-                            <p className="text-xs font-semibold text-foreground">Comentarios</p>
-                            {evidencia.comentarios.map((comentario) => (
-                              <p key={comentario.id} className="break-words text-xs text-muted"><strong>{comentario.usuario.nombre} {comentario.usuario.apellido}:</strong> {comentario.comentario}</p>
-                            ))}
-                          </div>
-                        )}
-                      </article>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </Modal>
-      )}
     </div>
   );
 }

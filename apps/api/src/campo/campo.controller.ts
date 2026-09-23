@@ -50,6 +50,7 @@ import {
   ActualizarEstadoNovedadDto,
   CrearNovedadDto,
   ListarNovedadesDto,
+  ResponderNovedadDto,
 } from './dto/novedad.dto';
 import { CrearAvisoDto } from './dto/aviso.dto';
 import { ConsultaSupervisionDto } from './dto/supervision.dto';
@@ -58,6 +59,8 @@ import {
   multerConfigAdjuntosCampo,
   multerConfigFotosTareas,
   multerConfigLogoCliente,
+  directorioUploads,
+  resolverRutaFoto,
 } from './utils/multer-config';
 import { createReadStream, existsSync } from 'fs';
 
@@ -115,7 +118,10 @@ export class CampoController {
   @Get('clientes/logos/:filename')
   servirLogoCliente(@Param('filename') filename: string, @Res() res: Response) {
     const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '');
-    const ruta = join(process.cwd(), 'uploads', 'clientes', safeName);
+    const rutaPersistida = join(directorioUploads(), 'clientes', safeName);
+    const ruta = existsSync(rutaPersistida)
+      ? rutaPersistida
+      : join(process.cwd(), 'uploads', 'clientes', safeName);
     if (!existsSync(ruta)) {
       return res.status(404).json({ message: 'Logo no encontrado' });
     }
@@ -388,14 +394,15 @@ export class CampoController {
       id,
     );
 
-    if (!foto || !existsSync(foto.rutaArchivo)) {
+    const rutaFoto = foto ? resolverRutaFoto(foto.rutaArchivo) : null;
+    if (!foto || !rutaFoto || !existsSync(rutaFoto)) {
       return res.status(404).json({ message: 'Foto no encontrada' });
     }
 
     res.setHeader('Content-Type', foto.mimeType);
     res.setHeader('Content-Length', foto.tamanioBytes);
 
-    const stream = createReadStream(foto.rutaArchivo);
+    const stream = createReadStream(rutaFoto);
     stream.pipe(res);
   }
 
@@ -483,7 +490,30 @@ export class CampoController {
     @Req() r: RequestConUsuario,
     @Param('id', ParseIntPipe) id: number,
   ) {
-    return this.novedadService.obtenerPorId(r.usuarioId, id);
+    return this.novedadService.obtenerPorId(r.usuarioId, r.empresaId, id);
+  }
+
+  @Get('novedades/:id/respuestas')
+  listarRespuestasNovedad(
+    @Req() r: RequestConUsuario,
+    @Param('id', ParseIntPipe) id: number,
+    @Query() q: ConsultaCampoDto,
+  ) {
+    return this.novedadService.listarRespuestas(
+      r.usuarioId,
+      r.empresaId,
+      id,
+      q,
+    );
+  }
+
+  @Post('novedades/:id/respuestas')
+  responderNovedad(
+    @Req() r: RequestConUsuario,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() d: ResponderNovedadDto,
+  ) {
+    return this.novedadService.responder(r.usuarioId, r.empresaId, id, d);
   }
 
   @Put('novedades/:id/estado')
@@ -543,6 +573,14 @@ export class CampoController {
     @Query() q: ConsultaCampoDto,
   ) {
     return this.avisoService.listarRecibidos(r.usuarioId, r.empresaId, q);
+  }
+
+  @Get('avisos/:id')
+  obtenerAviso(
+    @Req() r: RequestConUsuario,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.avisoService.obtenerPorId(r.usuarioId, r.empresaId, id);
   }
 
   @Put('avisos/:id/marcar-leido')

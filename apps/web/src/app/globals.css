@@ -401,9 +401,6 @@ body {
 .campo-screen :where(button, input:not([type="checkbox"]):not([type="radio"]), select, summary) {
   min-height: 2.75rem;
 }
-.campo-screen :where(button) {
-  white-space: nowrap;
-}
 .campo-screen :where(button:disabled) {
   cursor: not-allowed;
   opacity: 0.5;

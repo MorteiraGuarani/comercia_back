@@ -11,10 +11,13 @@ import {
   MomentoFotoDto,
 } from '../dto/foto-tarea.dto';
 import { verificarAccesoCumplimiento } from '../utils/autorizacion';
-import { validarArchivoImagen } from '../utils/multer-config';
+import { resolverRutaFoto, validarArchivoImagen } from '../utils/multer-config';
 import { NotificacionService } from './notificacion.service';
 import { unlinkSync } from 'fs';
-import { prepararEvidencia, tareaParaEvidencia } from '../utils/evidencia-tarea';
+import {
+  prepararEvidencia,
+  tareaParaEvidencia,
+} from '../utils/evidencia-tarea';
 
 @Injectable()
 export class FotoService {
@@ -37,7 +40,13 @@ export class FotoService {
     // Validar archivo
     validarArchivoImagen(file);
 
-    const tarea = await tareaParaEvidencia(this.prisma, usuarioId, empresaId, visitaId, tareaId);
+    const tarea = await tareaParaEvidencia(
+      this.prisma,
+      usuarioId,
+      empresaId,
+      visitaId,
+      tareaId,
+    );
     if (!tarea.requiereFotos) {
       throw new BadRequestException('Esta tarea no admite fotos');
     }
@@ -77,7 +86,7 @@ export class FotoService {
 
       // Eliminar archivo anterior del disco
       try {
-        unlinkSync(fotoExistente.rutaArchivo);
+        unlinkSync(resolverRutaFoto(fotoExistente.rutaArchivo));
       } catch (error) {
         // Si falla la eliminación, continuar (archivo puede no existir)
         console.error('Error al eliminar foto anterior:', error);
@@ -190,7 +199,11 @@ export class FotoService {
   /**
    * Obtener foto por ID (para servir el archivo)
    */
-  async obtenerPorId(usuarioId: number, empresaId: number, fotoId: number): Promise<FotoTareaDto | null> {
+  async obtenerPorId(
+    usuarioId: number,
+    empresaId: number,
+    fotoId: number,
+  ): Promise<FotoTareaDto | null> {
     const foto = await this.prisma.fotoTareaCampo.findFirst({
       where: { id: fotoId, usuario: { empresaId } },
       select: {
@@ -209,7 +222,12 @@ export class FotoService {
       return null;
     }
 
-    await verificarAccesoCumplimiento(this.prisma, usuarioId, foto.cumplimientoVisitaId, foto.cumplimientoTareaId);
+    await verificarAccesoCumplimiento(
+      this.prisma,
+      usuarioId,
+      foto.cumplimientoVisitaId,
+      foto.cumplimientoTareaId,
+    );
 
     return {
       id: foto.id,
@@ -286,7 +304,7 @@ export class FotoService {
 
     // Eliminar archivo del disco
     try {
-      unlinkSync(foto.rutaArchivo);
+      unlinkSync(resolverRutaFoto(foto.rutaArchivo));
     } catch (error) {
       console.error('Error al eliminar archivo de foto:', error);
     }

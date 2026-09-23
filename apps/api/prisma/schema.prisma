@@ -184,6 +184,7 @@ model Usuario {
   notificacionesEnviadas  NotificacionCampo[]       @relation("NotificacionesEnviadas")
   novedadesReportadas     NovedadCampo[]            @relation("NovedadesReportadas")
   novedadesCerradas       NovedadCampo[]            @relation("NovedadesCerradas")
+  respuestasNovedad       RespuestaNovedadCampo[]
   avisosEnviados          AvisoCampo[]              @relation("AvisosEnviados")
   avisosRecibidos         AvisoCampo[]              @relation("AvisosRecibidos")
   lecturasAvisos          AvisoLecturaCampo[]
@@ -455,6 +456,7 @@ enum TipoNotificacionCampo {
   FOTO_SUBIDA
   NOVEDAD_CREADA
   NOVEDAD_ACTUALIZADA
+  NOVEDAD_RESPUESTA
   AVISO_RECIBIDO
 }
 
@@ -571,12 +573,26 @@ model NovedadCampo {
   creadoAt     DateTime              @default(now()) @map("creado_at")
   updatedAt    DateTime              @default(now()) @updatedAt @map("updated_at")
   adjuntos     AdjuntoCampo[]
+  respuestas   RespuestaNovedadCampo[]
 
   @@index([empresaId, estado, creadoAt(sort: Desc)])
   @@index([usuarioId, estado])
   @@index([localId, estado])
   @@index([tareaId])
   @@map("campo_novedades")
+}
+
+model RespuestaNovedadCampo {
+  id         Int          @id @default(autoincrement())
+  novedadId  Int          @map("novedad_id")
+  novedad    NovedadCampo @relation(fields: [novedadId], references: [id], onDelete: Cascade)
+  usuarioId  Int          @map("usuario_id")
+  usuario    Usuario      @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
+  mensaje    String       @db.VarChar(1000)
+  creadoAt   DateTime     @default(now()) @map("creado_at")
+
+  @@index([novedadId, creadoAt, id])
+  @@map("campo_novedad_respuestas")
 }
 
 enum TipoAvisoCampo {

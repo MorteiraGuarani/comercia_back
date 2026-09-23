@@ -204,11 +204,11 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
       style={{ backgroundColor: TOKENS.bone, color: TOKENS.ink }}
     >
       <TopBar
-        title="Canal de Avisos & Comunicados"
+        title="Avisos"
         subtitle={
           esImpulsador
             ? "Mensajes e instrucciones operativas de tu supervisor"
-            : "Transmisión y control de comunicados a la fuerza de campo"
+            : "Avisos al equipo: envío y seguimiento de comunicados"
         }
         right={
           noLeidosCount > 0 ? (
@@ -276,14 +276,14 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
         {/* Barra de navegación de pestañas (si es Team Leader) */}
         {!esImpulsador ? (
           <div
-            className="flex flex-wrap items-center justify-between gap-4 border-b pb-4"
+            className="min-w-0 border-b pb-4"
             style={{ borderColor: TOKENS.line }}
           >
-            <div className="flex max-w-full flex-wrap gap-2">
+            <div className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_2.75rem_minmax(0,1fr)] items-center gap-2 sm:flex sm:w-auto">
               <button
                 type="button"
                 onClick={() => setTab("enviados")}
-                className={`px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-brand-600 sm:px-5 sm:text-sm ${
+                className={`min-w-0 px-2 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-brand-600 sm:px-5 sm:text-sm ${
                   tab === "enviados"
                     ? "bg-brand-700 text-white shadow-sm dark:bg-brand-200 dark:text-brand-950"
                     : "border border-line bg-surface-raised text-foreground hover:bg-surface-soft"
@@ -315,7 +315,7 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
               <button
                 type="button"
                 onClick={() => setTab("recibidos")}
-                className={`px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer focus-visible:ring-2 focus-visible:ring-brand-600 sm:px-5 sm:text-sm ${
+                className={`min-w-0 justify-center px-2 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer focus-visible:ring-2 focus-visible:ring-brand-600 sm:px-5 sm:text-sm ${
                   tab === "recibidos"
                     ? "bg-brand-700 text-white shadow-sm dark:bg-brand-200 dark:text-brand-950"
                     : "border border-line bg-surface-raised text-foreground hover:bg-surface-soft"
@@ -345,7 +345,7 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
             <h2 className="text-xl font-bold uppercase tracking-wide ft-display">
               Mensajes y Avisos Recibidos
             </h2>
-            <span className="text-xs font-mono text-[#726C60]">
+            <span className="text-xs font-mono text-muted">
               Total: {recibidos.length} | Pendientes: {noLeidosCount}
             </span>
           </div>
@@ -365,7 +365,7 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
               <h3 className="text-xl font-bold uppercase tracking-wide ft-display">
                 Transmitir Comunicado a Campo
               </h3>
-              <p className="text-xs text-[#726C60]">
+              <p className="text-xs text-muted">
                 Envía una notificación prioritaria instantánea a todo tu equipo
                 o a un impulsador específico.
               </p>
@@ -374,7 +374,7 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
             <form onSubmit={handleEnviar} className="min-w-0 space-y-5">
               {/* Tipo de alcance */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider mb-2 text-[#726C60]">
+                <label className="block text-xs font-bold uppercase tracking-wider mb-2 text-muted">
                   Alcance del Mensaje
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -452,7 +452,7 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
               {/* Selector de colaborador (si es individual) */}
               {formTipo === "INDIVIDUAL" && (
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-[#726C60]">
+                  <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-muted">
                     Seleccionar Destinatario
                   </label>
                   <select
@@ -479,10 +479,10 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
               {/* Mensaje */}
               <div>
                 <div className="mb-1.5 flex min-w-0 flex-wrap items-center justify-between gap-1">
-                  <label className="text-xs font-bold uppercase tracking-wider text-[#726C60]">
+                  <label className="text-xs font-bold uppercase tracking-wider text-muted">
                     Texto del Comunicado
                   </label>
-                  <span className="text-[11px] font-mono text-[#726C60]">
+                  <span className="text-[11px] font-mono text-muted">
                     {formMensaje.length} caracteres
                   </span>
                 </div>
@@ -538,10 +538,10 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                   borderColor: TOKENS.line,
                 }}
               >
-                <p className="text-base font-bold text-[#1E2320] mb-1">
+                <p className="text-base font-bold text-foreground mb-1">
                   No hay avisos enviados aún
                 </p>
-                <p className="text-xs text-[#726C60] mb-4">
+                <p className="text-xs text-muted mb-4">
                   Envía el primer comunicado a tu equipo de impulsadores de
                   campo.
                 </p>
@@ -603,7 +603,7 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                               </>
                             )}
                           </span>
-                          <span className="text-xs font-mono text-[#726C60]">
+                          <span className="text-xs font-mono text-muted">
                             {formatearFecha(aviso.creadoAt)}
                           </span>
                         </div>
@@ -668,10 +668,10 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                   borderColor: TOKENS.line,
                 }}
               >
-                <p className="text-base font-bold text-[#1E2320] mb-1">
+                <p className="text-base font-bold text-foreground mb-1">
                   Bandeja de avisos al día
                 </p>
-                <p className="text-xs text-[#726C60]">
+                <p className="text-xs text-muted">
                   No tienes comunicados pendientes en este momento.
                 </p>
               </div>
@@ -685,7 +685,7 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                       key={aviso.id}
                       className={`min-w-0 rounded-xl border p-3 transition-all sm:p-4 ${
                         noLeido
-                          ? "bg-white shadow-sm ring-1 ring-[#C1752B]/40"
+                          ? "bg-surface-raised shadow-sm ring-1 ring-[#C1752B]/40"
                           : "opacity-90"
                       }`}
                       style={{
@@ -720,7 +720,7 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                               </>
                             )}
                           </span>
-                          <span className="text-xs font-mono text-[#726C60]">
+                          <span className="text-xs font-mono text-muted">
                             {formatearFecha(aviso.creadoAt)}
                           </span>
                         </div>
@@ -734,7 +734,7 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                       </div>
 
                       <div className="mb-2">
-                        <span className="text-xs font-bold text-[#726C60]">
+                        <span className="text-xs font-bold text-muted">
                           De: {aviso.emisor.nombre}{" "}
                           {aviso.emisor.apellido || ""}
                         </span>

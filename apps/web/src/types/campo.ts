@@ -27,6 +27,7 @@ export interface LocalCampo {
   notas: string;
   activo: boolean;
   cliente: { id: number; nombre: string; logoUrl?: string | null };
+  asignaciones?: Array<{ id: number; usuario: PersonaCampo & { rol?: { descripcion: string } | null } }>;
 }
 export interface HorarioCampo {
   id: number;
@@ -211,6 +212,7 @@ export type TipoNotificacion =
   | "FOTO_SUBIDA"
   | "NOVEDAD_CREADA"
   | "NOVEDAD_ACTUALIZADA"
+  | "NOVEDAD_RESPUESTA"
   | "AVISO_RECIBIDO";
 
 export interface Notificacion {
@@ -275,6 +277,13 @@ export interface NovedadCampoItem {
   adjuntos: AdjuntoCampoItem[];
 }
 
+export interface RespuestaNovedadCampo {
+  id: number;
+  mensaje: string;
+  creadoAt: string;
+  usuario: PersonaCampo;
+}
+
 export interface FormNovedadCampo {
   localId: number;
   tareaId?: number;
@@ -333,6 +342,17 @@ export interface AvisoRecibidoItem {
   leido: boolean;
   leidoAt?: string | null;
   adjuntos: AdjuntoCampoItem[];
+}
+
+export interface AvisoDetalleCampo {
+  id: number;
+  tipo: TipoAviso;
+  mensaje: string;
+  emisor: PersonaCampo;
+  destinatario?: PersonaCampo | null;
+  creadoAt: string;
+  adjuntos: AdjuntoCampoItem[];
+  leido: boolean;
 }
 
 export interface FormAvisoCampo {

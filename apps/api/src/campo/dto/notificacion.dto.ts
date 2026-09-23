@@ -23,6 +23,7 @@ export interface NotificacionDto {
     | 'FOTO_SUBIDA'
     | 'NOVEDAD_CREADA'
     | 'NOVEDAD_ACTUALIZADA'
+    | 'NOVEDAD_RESPUESTA'
     | 'AVISO_RECIBIDO';
   titulo: string;
   mensaje: string;

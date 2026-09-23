@@ -10,6 +10,8 @@ import {
 import type { Notificacion, TipoNotificacion } from "@/types/campo";
 import { mostrarToast } from "@/components/toast/toast-controller";
 import { Modal } from "@/components/modal";
+import { HiloNovedad } from "./hilo-novedad";
+import { DetalleAviso } from "./detalle-aviso";
 
 export function BadgeNotificaciones() {
   const [noLeidas, setNoLeidas] = useState(0);
@@ -163,6 +165,7 @@ function IconoTipo({ tipo }: { tipo: TipoNotificacion }) {
         </svg>
       );
     case "NOVEDAD_ACTUALIZADA":
+    case "NOVEDAD_RESPUESTA":
       return (
         <svg
           className="h-4 w-4"
@@ -269,6 +272,7 @@ function PanelNotificaciones({
   const [totalItems, setTotalItems] = useState(0);
   const [filtro, setFiltro] = useState<"todas" | "no_leidas">("todas");
   const [marcandoTodas, setMarcandoTodas] = useState(false);
+  const [referenciaSeleccionada, setReferenciaSeleccionada] = useState<{ tipo: "novedad" | "aviso"; id: number } | null>(null);
 
   const cargarNotificaciones = useCallback(async () => {
     setCargando(true);
@@ -330,6 +334,17 @@ function PanelNotificaciones({
     }
   };
 
+  const handleAbrirNotificacion = (n: Notificacion) => {
+    if (n.referenciaId) {
+      if (n.tipo === "NOVEDAD_CREADA" || n.tipo === "NOVEDAD_ACTUALIZADA" || n.tipo === "NOVEDAD_RESPUESTA") {
+        setReferenciaSeleccionada({ tipo: "novedad", id: n.referenciaId });
+      } else if (n.tipo === "AVISO_RECIBIDO") {
+        setReferenciaSeleccionada({ tipo: "aviso", id: n.referenciaId });
+      }
+    }
+    if (!n.leido) void handleMarcarLeida(n);
+  };
+
   const handleMarcarTodasLeidas = async () => {
     if (marcandoTodas) return;
     setMarcandoTodas(true);
@@ -364,6 +379,14 @@ function PanelNotificaciones({
 
   return (
     <Modal titulo="Avisos y Notificaciones" abierto onCerrar={onCerrar} ancho="lg">
+      {referenciaSeleccionada ? (
+        <div className="min-w-0 space-y-4">
+          <button type="button" onClick={() => setReferenciaSeleccionada(null)} className="min-h-11 rounded-lg border border-line px-3 text-sm font-semibold text-foreground">← Volver a notificaciones</button>
+          {referenciaSeleccionada.tipo === "novedad"
+            ? <HiloNovedad id={referenciaSeleccionada.id} onActualizado={() => void cargarNotificaciones()} />
+            : <DetalleAviso id={referenciaSeleccionada.id} />}
+        </div>
+      ) : (
       <div className="flex flex-col space-y-4">
         {/* Barra superior de filtros y acción "Marcar leídas" */}
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line pb-3">
@@ -462,6 +485,7 @@ function PanelNotificaciones({
                       const esFoto = n.tipo === "FOTO_SUBIDA";
                       const esNovedadCreada = n.tipo === "NOVEDAD_CREADA";
                       const esNovedadActualizada = n.tipo === "NOVEDAD_ACTUALIZADA";
+                      const esNovedadRespuesta = n.tipo === "NOVEDAD_RESPUESTA";
                       const esAviso = n.tipo === "AVISO_RECIBIDO";
 
                       const colorClase = esCompletada
@@ -472,7 +496,7 @@ function PanelNotificaciones({
                             ? "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200/60 dark:border-amber-800/40"
                             : esNovedadCreada
                               ? "bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-300 border-red-200/60 dark:border-red-800/40"
-                              : esNovedadActualizada
+                              : esNovedadActualizada || esNovedadRespuesta
                                 ? "bg-indigo-100 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-300 border-indigo-200/60 dark:border-indigo-800/40"
                                 : esAviso
                                   ? "bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300 border-purple-200/60 dark:border-purple-800/40"
@@ -482,17 +506,16 @@ function PanelNotificaciones({
                         <button
                           key={n.id}
                           type="button"
-                          disabled={n.leido}
-                          onClick={() => void handleMarcarLeida(n)}
+                          onClick={() => handleAbrirNotificacion(n)}
                           aria-label={
                             n.leido
-                              ? `${n.titulo}. Notificación leída`
-                              : `${n.titulo}. Marcar como leída`
+                              ? `${n.titulo}. Abrir notificación`
+                              : `${n.titulo}. Abrir y marcar como leída`
                           }
                           className={`group flex w-full items-start gap-3 rounded-xl border p-3.5 text-left transition-[background-color,border-color,box-shadow,opacity] ${
                             !n.leido
                               ? "border-line bg-surface-raised shadow-[0_2px_8px_rgba(var(--warm-shadow),0.06)] hover:border-brand-500/50 dark:hover:border-brand-500/40"
-                              : "border-line/60 bg-surface-soft/30 opacity-80 disabled:cursor-default"
+                              : "border-line/60 bg-surface-soft/30 opacity-80 hover:bg-surface-soft"
                           }`}
                         >
                           {/* Ícono temático en avatar circular */}
@@ -595,6 +618,7 @@ function PanelNotificaciones({
           </div>
         )}
       </div>
+      )}
     </Modal>
   );
 }

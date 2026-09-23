@@ -33,17 +33,33 @@ const SelectorUbicacion = dynamic(() => import("./selector-ubicacion"), {
   ssr: false,
   loading: () => <p className="text-xs font-mono text-zinc-500 py-4 text-center">Cargando mapa GPS…</p>,
 });
+const MapaClientes = dynamic(() => import("./mapa-clientes").then((modulo) => modulo.MapaClientes), {
+  ssr: false,
+  loading: () => <p className="py-4 text-center text-sm text-muted">Cargando mapa de cobertura…</p>,
+});
 
 export function LocalesPanel() {
+  const [mostrarMapaCobertura, setMostrarMapaCobertura] = useState(false);
   const [busqueda, setBusqueda] = useState("");
   const [clienteFiltro, setClienteFiltro] = useState<number | "">("");
   const [filtroEstado, setFiltroEstado] = useState<"todos" | "activos" | "inactivos">("todos");
 
   const [clientes, setClientes] = useState<ClienteCampo[]>([]);
 
-  // Cargar catálogo de clientes para filtros y selector (hasta 1000)
   useEffect(() => {
-    apiFetch<{ items: ClienteCampo[] }>("/campo/clientes?limit=1000")
+    const params = new URLSearchParams(window.location.search);
+    const mostrarMapa = params.get("mapa") === "1";
+    const clienteId = Number(params.get("clienteId"));
+    const frame = window.requestAnimationFrame(() => {
+      if (mostrarMapa) setMostrarMapaCobertura(true);
+      if (clienteId > 0) setClienteFiltro(clienteId);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+
+  // Cargar la primera página de clientes para el filtro rápido.
+  useEffect(() => {
+    apiFetch<{ items: ClienteCampo[] }>("/campo/clientes?limit=50")
       .then((res) => setClientes(res.items || []))
       .catch(() => undefined);
   }, []);
@@ -121,6 +137,10 @@ export function LocalesPanel() {
         title="Puntos de Venta & Rutas"
         subtitle="Supermercados, carnicerías y bocas de expendio con franjas y asignaciones"
         right={
+          <>
+          <button type="button" onClick={() => setMostrarMapaCobertura((actual) => !actual)} aria-pressed={mostrarMapaCobertura} className="min-h-11 min-w-0 rounded-xl border border-line bg-surface-raised px-3 text-xs font-semibold text-foreground sm:text-sm">
+            {mostrarMapaCobertura ? "Ocultar mapa" : "Mapa de cobertura"}
+          </button>
           <button
             type="button"
             onClick={abrirCrear}
@@ -131,10 +151,12 @@ export function LocalesPanel() {
           >
             <IconoMas className="w-4 h-4" />
           </button>
+          </>
         }
       />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
+        {mostrarMapaCobertura && <MapaClientes clientes={clientes} clienteSeleccionadoId={typeof clienteFiltro === "number" ? clienteFiltro : null} />}
         {/* KPI: compacto y cerrado por defecto en móvil */}
         <details className="rounded-xl border border-line bg-surface-raised sm:hidden">
           <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-foreground [&::-webkit-details-marker]:hidden">
@@ -289,6 +311,7 @@ export function LocalesPanel() {
                   </div>
                   <p className="mt-2 break-words text-xs text-muted">{local.direccion || "Sin dirección"}</p>
                   <p className="mt-1 text-xs text-muted">Radio para marcar: {local.radioMetros} m</p>
+                  <p className="mt-1 break-words text-xs font-medium text-foreground">Asignado: {local.asignaciones?.length ? local.asignaciones.map((asignacion) => `${asignacion.usuario.rol?.descripcion ?? "Impulsador"} ${asignacion.usuario.nombre} ${asignacion.usuario.apellido}`).join(", ") : "Sin asignar"}</p>
                   {local.telefono && <a href={`tel:${local.telefono}`} className="mt-1 inline-flex min-h-11 items-center text-xs font-semibold text-sky-700">{local.telefono}</a>}
                   <div className="mt-2 grid grid-cols-3 gap-2">
                     <button type="button" onClick={() => setPlan(local)} className="min-h-11 rounded-lg border border-line text-xs font-semibold text-foreground">Ruta</button>
@@ -304,6 +327,7 @@ export function LocalesPanel() {
                   <tr className="border-b bg-zinc-50/80 text-[11px] font-bold uppercase tracking-wider text-zinc-500" style={{ borderColor: TOKENS.line }}>
                     <th className="py-2.5 px-3.5">Local / Sucursal</th>
                     <th className="py-2.5 px-3.5">Cliente / Cadena</th>
+                    <th className="py-2.5 px-3.5">Asignado</th>
                     <th className="py-2.5 px-3.5">Dirección & GPS</th>
                     <th className="py-2.5 px-3.5">Contacto</th>
                     <th className="py-2.5 px-3.5 text-center">Estado</th>
@@ -355,6 +379,12 @@ export function LocalesPanel() {
                               {local.cliente.nombre}
                             </span>
                           </div>
+                        </td>
+
+                        <td className="max-w-[220px] px-3.5 py-2.5 text-xs text-foreground">
+                          {local.asignaciones?.length
+                            ? local.asignaciones.map((asignacion) => `${asignacion.usuario.rol?.descripcion ?? "Impulsador"} ${asignacion.usuario.nombre} ${asignacion.usuario.apellido}`).join(", ")
+                            : <span className="text-muted">Sin asignar</span>}
                         </td>
 
                         {/* Dirección & GPS */}

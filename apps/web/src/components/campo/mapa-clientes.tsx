@@ -23,6 +23,23 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
 
   const [locales, setLocales] = useState<LocalCampo[]>([]);
+  const clientesDisponibles = useMemo(() => {
+    const porId = new Map(clientes.map((cliente) => [cliente.id, cliente]));
+    for (const local of locales) {
+      if (!porId.has(local.clienteId) && local.cliente) {
+        porId.set(local.clienteId, {
+          id: local.clienteId,
+          nombre: local.cliente.nombre,
+          logoUrl: local.cliente.logoUrl,
+          ruc: "",
+          contacto: "",
+          telefono: "",
+          activo: true,
+        });
+      }
+    }
+    return [...porId.values()].sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+  }, [clientes, locales]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -59,7 +76,7 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
   useEffect(() => {
     const sincronizar = window.setTimeout(() => {
       if (clienteSeleccionadoId) {
-        const match = clientes.find((c) => c.id === clienteSeleccionadoId);
+        const match = clientesDisponibles.find((c) => c.id === clienteSeleccionadoId);
         if (match) {
           setClienteSeleccionado(match);
           setBusquedaClienteInput(match.nombre);
@@ -70,7 +87,7 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
       }
     }, 0);
     return () => window.clearTimeout(sincronizar);
-  }, [clienteSeleccionadoId, clientes]);
+  }, [clienteSeleccionadoId, clientesDisponibles]);
 
   // Cerrar dropdown al hacer click afuera
   useEffect(() => {
@@ -83,29 +100,27 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Cargar todos los locales de la red (permite hasta 1000 locales para mapeo exhaustivo)
+  // La API admite 50 por página; cargar todas para que la cobertura sea completa.
   useEffect(() => {
     let montado = true;
     const cargar = async () => {
       try {
         setCargando(true);
         setError(null);
-        // Usar limit=1000 ahora que el backend lo soporta
-        const data = await apiFetch<{ items: LocalCampo[] }>("/campo/locales?limit=1000");
-        if (montado) {
-          setLocales(data.items || []);
+        const primera = await apiFetch<{ items: LocalCampo[]; totalPages: number }>("/campo/locales?page=1&limit=50");
+        const todos = [...primera.items];
+        for (let inicio = 2; inicio <= primera.totalPages; inicio += 4) {
+          const paginas = await Promise.all(
+            Array.from({ length: Math.min(4, primera.totalPages - inicio + 1) }, (_, indice) =>
+              apiFetch<{ items: LocalCampo[] }>(`/campo/locales?page=${inicio + indice}&limit=50`),
+            ),
+          );
+          todos.push(...paginas.flatMap((pagina) => pagina.items));
         }
+        if (montado) setLocales(todos);
       } catch (e) {
         console.error("Error al cargar locales:", e);
-        // Si falla por limit, intentar con el límite estándar
-        try {
-          const fallbackData = await apiFetch<{ items: LocalCampo[] }>("/campo/locales?limit=50");
-          if (montado) {
-            setLocales(fallbackData.items || []);
-          }
-        } catch (e2) {
-          if (montado) setError(mensajeError(e2, "Error al cargar locales en el mapa"));
-        }
+        if (montado) setError(mensajeError(e, "Error al cargar locales en el mapa"));
       } finally {
         if (montado) setCargando(false);
       }
@@ -129,14 +144,14 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
   // Clientes filtrados para el dropdown autocompletable
   const clientesFiltradosDropdown = useMemo(() => {
     const q = busquedaClienteInput.toLowerCase().trim();
-    if (!q) return clientes;
-    return clientes.filter(
+    if (!q) return clientesDisponibles;
+    return clientesDisponibles.filter(
       (c) =>
         c.nombre.toLowerCase().includes(q) ||
         (c.ruc && c.ruc.toLowerCase().includes(q)) ||
         (c.contacto && c.contacto.toLowerCase().includes(q)),
     );
-  }, [clientes, busquedaClienteInput]);
+  }, [clientesDisponibles, busquedaClienteInput]);
 
   // Inicializar Leaflet Map
   useEffect(() => {
@@ -344,6 +359,7 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
 
   return (
     <div className="space-y-5">
+      {error && <p role="alert" className="break-words rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-200">{error}</p>}
       {/* Inyectar estilo para anular el fondo blanco y bordes de Leaflet divIcon */}
       <style>{`
         .custom-cliente-marker-clean,

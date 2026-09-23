@@ -288,6 +288,40 @@ export class AvisoService {
     return respuestaPaginada(formated, total, page, limit);
   }
 
+  async obtenerPorId(usuarioId: number, empresaId: number, id: number) {
+    const aviso = await this.prisma.avisoCampo.findFirst({
+      where: {
+        id,
+        empresaId,
+        OR: [
+          { emisorId: usuarioId },
+          await this.filtroRecibidos(usuarioId, empresaId),
+        ],
+      },
+      include: {
+        emisor: { select: { id: true, nombre: true, apellido: true } },
+        destinatario: { select: { id: true, nombre: true, apellido: true } },
+        adjuntos: adjuntosAvisoInclude,
+        lecturas: {
+          where: { usuarioId },
+          select: { leidoAt: true },
+        },
+      },
+    });
+    if (!aviso) throw new NotFoundException('Aviso no encontrado');
+    return {
+      id: aviso.id,
+      tipo: aviso.tipo,
+      mensaje: aviso.mensaje,
+      emisor: aviso.emisor,
+      destinatario: aviso.destinatario,
+      creadoAt: aviso.creadoAt,
+      adjuntos: aviso.adjuntos,
+      leido: aviso.lecturas.length > 0,
+      leidoAt: aviso.lecturas[0]?.leidoAt ?? null,
+    };
+  }
+
   /**
    * Marcar aviso como leído por el usuario
    */

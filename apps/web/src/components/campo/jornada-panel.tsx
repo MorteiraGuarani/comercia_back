@@ -789,7 +789,7 @@ export function VisitasPanel({
   return (
     <>
       <h2 className="mb-3 text-lg font-semibold">
-        {propia ? "Mis presencias" : "Presencias del equipo"}
+        {propia ? "Mi presentismo" : "Presentismo"}
       </h2>
       {!propia ? (
         <div className="mb-4 max-w-xs">

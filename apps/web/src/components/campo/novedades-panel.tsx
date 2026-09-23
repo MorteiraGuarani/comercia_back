@@ -13,6 +13,7 @@ import { IconoMas } from "@/components/icono-mas";
 import { crearNovedadCampo } from "@/lib/api-adjuntos-campo";
 import { SelectorFotosCampo } from "./selector-fotos-campo";
 import { GaleriaAdjuntosCampo } from "./galeria-adjuntos-campo";
+import { HiloNovedad } from "./hilo-novedad";
 import type {
   NovedadCampoItem,
   NovedadesResponse,
@@ -52,10 +53,7 @@ export function NovedadesPanel({
   const [fotos, setFotos] = useState<File[]>([]);
   const [guardando, setGuardando] = useState(false);
 
-  // Modal para resolver novedad (Team Leader)
-  const [resolviendo, setResolviendo] = useState<NovedadCampoItem | null>(null);
-  const [accion, setAccion] = useState<"CERRADA" | "CANCELADA">("CERRADA");
-  const [resolucion, setResolucion] = useState("");
+  const [novedadAbiertaId, setNovedadAbiertaId] = useState<number | null>(null);
 
   const consulta = `${filtro}|${page}|${limit}|${revision}`;
   const cargando = consulta !== consultaTerminada;
@@ -121,30 +119,6 @@ export function NovedadesPanel({
     }
   };
 
-  const confirmarResolucion = async () => {
-    if (!resolviendo || guardando) return;
-    try {
-      setGuardando(true);
-      setErrorFormulario("");
-      await apiFetch(`/campo/novedades/${resolviendo.id}/estado`, {
-        method: "PUT",
-        body: JSON.stringify({
-          estado: accion,
-          resolucion: resolucion.trim(),
-        }),
-      });
-      setResolviendo(null);
-      setResolucion("");
-      cargar();
-    } catch (e: unknown) {
-      setErrorFormulario(
-        e instanceof Error ? e.message : "No se pudo guardar la resolución",
-      );
-    } finally {
-      setGuardando(false);
-    }
-  };
-
   return (
     <div
       className="campo-screen min-w-0 w-full min-h-[calc(100vh-5rem)] flex flex-col font-sans"
@@ -154,11 +128,11 @@ export function NovedadesPanel({
       }}
     >
       <TopBar
-        title={esImpulsador ? "Mis Novedades" : "Novedades del Equipo"}
+        title="Novedades"
         subtitle={
           esImpulsador
             ? "Reportes e incidencias operativas enviadas a tu supervisor"
-            : "Gestión y resolución de novedades reportadas por impulsadores"
+            : "Novedades del equipo: conversaciones y resolución de reportes de impulsadores"
         }
         right={
           esImpulsador && (
@@ -332,18 +306,13 @@ export function NovedadesPanel({
                           month: "short",
                         })}
                       </span>
-                      {!esImpulsador && n.estado === "ABIERTA" && (
+                      {(
                         <button
                           type="button"
-                          onClick={() => {
-                            setResolviendo(n);
-                            setErrorFormulario("");
-                            setAccion("CERRADA");
-                            setResolucion("");
-                          }}
-                          className="px-2.5 py-0.5 rounded bg-zinc-800 text-white font-medium text-[10px] hover:bg-black transition cursor-pointer"
+                          onClick={() => setNovedadAbiertaId(n.id)}
+                          className="min-h-9 rounded-lg border border-line px-2.5 text-xs font-semibold text-foreground hover:bg-surface-soft"
                         >
-                          Resolver
+                          Ver hilo
                         </button>
                       )}
                     </div>
@@ -373,7 +342,7 @@ export function NovedadesPanel({
             ? "Enviando novedad y subiendo fotos"
             : creando
               ? "Enviando novedad"
-              : "Guardando resolución"
+              : "Guardando"
         }
       />
 
@@ -495,91 +464,9 @@ export function NovedadesPanel({
         </Modal>
       )}
 
-      {/* Modal Resolver Novedad */}
-      {resolviendo && (
-        <Modal
-          titulo="Resolver Novedad"
-          abierto={!!resolviendo}
-          onCerrar={() => {
-            if (!guardando) setResolviendo(null);
-          }}
-          ancho="md"
-        >
-          <div className="space-y-3">
-            {errorFormulario && (
-              <p
-                role="alert"
-                className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-200"
-              >
-                {errorFormulario}
-              </p>
-            )}
-            <div className="p-3 rounded-lg bg-surface-soft border text-xs text-foreground">
-              <p className="font-bold">{resolviendo.titulo}</p>
-              <p className="mt-1">{resolviendo.descripcion}</p>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">
-                Acción:
-              </label>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setAccion("CERRADA")}
-                  className={`flex-1 py-2 text-xs font-bold rounded-lg border transition cursor-pointer ${
-                    accion === "CERRADA"
-                      ? "bg-emerald-700 text-white border-emerald-700"
-                      : "bg-surface-raised text-foreground border-line"
-                  }`}
-                >
-                  Cerrar como Resuelta
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAccion("CANCELADA")}
-                  className={`flex-1 py-2 text-xs font-bold rounded-lg border transition cursor-pointer ${
-                    accion === "CANCELADA"
-                      ? "bg-zinc-700 text-white border-zinc-700"
-                      : "bg-surface-raised text-foreground border-line"
-                  }`}
-                >
-                  Cancelar Novedad
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">
-                Resolución:
-              </label>
-              <textarea
-                value={resolucion}
-                onChange={(e) => setResolucion(e.target.value)}
-                rows={3}
-                placeholder="Explicá la solución o respuesta..."
-                className="w-full text-xs p-2.5 rounded-lg border border-line bg-surface-raised outline-none"
-              />
-            </div>
-
-            <div className="flex gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setResolviendo(null)}
-                className="flex-1 py-2 text-xs font-semibold border rounded-lg text-foreground"
-              >
-                Volver
-              </button>
-              <button
-                type="button"
-                onClick={confirmarResolucion}
-                disabled={guardando}
-                className="flex-1 py-2 text-xs font-bold bg-[#1E2320] text-white rounded-lg hover:bg-black transition cursor-pointer"
-              >
-                {guardando ? "Guardando..." : "Confirmar"}
-              </button>
-            </div>
-          </div>
+      {novedadAbiertaId && (
+        <Modal titulo="Novedad" abierto onCerrar={() => setNovedadAbiertaId(null)} ancho="lg">
+          <HiloNovedad id={novedadAbiertaId} onActualizado={cargar} />
         </Modal>
       )}
     </div>

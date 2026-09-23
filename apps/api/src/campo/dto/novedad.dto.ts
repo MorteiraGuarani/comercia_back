@@ -1,6 +1,7 @@
 import {
   IsEnum,
   IsInt,
+  IsIn,
   IsOptional,
   IsString,
   MaxLength,
@@ -76,11 +77,18 @@ export class ListarNovedadesDto extends PaginacionDto {
 }
 
 export class ActualizarEstadoNovedadDto {
-  @IsEnum(EstadoNovedadCampo)
+  @IsIn([EstadoNovedadCampo.CERRADA, EstadoNovedadCampo.CANCELADA])
   estado!: EstadoNovedadCampo;
 
   @IsOptional()
   @IsString()
   @MaxLength(1000)
   resolucion?: string;
+}
+
+export class ResponderNovedadDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(1000)
+  mensaje!: string;
 }

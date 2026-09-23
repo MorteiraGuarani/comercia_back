@@ -1,6 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment -- Partial Prisma mocks are intentionally cast at the service boundary. */
 
-import { NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  NotFoundException,
+  ForbiddenException,
+  BadRequestException,
+} from '@nestjs/common';
 import type { PrismaService } from '../../prisma/prisma.service';
 import type { NotificacionService } from './notificacion.service';
 import type { AdjuntoCampoService } from './adjunto-campo.service';
@@ -152,5 +156,59 @@ describe('NovedadService', () => {
     await expect(
       service.listar(1, 10, { usuarioId: 999 }),
     ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('guarda una respuesta y notifica sin cerrar la novedad', async () => {
+    const prisma = {
+      novedadCampo: { update: jest.fn() },
+      respuestaNovedadCampo: {
+        create: jest
+          .fn()
+          .mockResolvedValue({ id: 9, mensaje: 'Seguimos revisando' }),
+      },
+    };
+    const notificaciones = {
+      crearNotificacionRespuestaNovedad: jest.fn().mockResolvedValue(undefined),
+    };
+    const service = new NovedadService(
+      prisma as unknown as PrismaService,
+      notificaciones as unknown as NotificacionService,
+      adjuntosMock(),
+    );
+    jest.spyOn(service, 'obtenerPorId').mockResolvedValue({
+      id: 5,
+      estado: 'ABIERTA',
+      titulo: 'Faltante',
+      usuarioId: 2,
+    } as never);
+
+    await expect(
+      service.responder(1, 10, 5, { mensaje: ' Seguimos revisando ' }),
+    ).resolves.toMatchObject({ id: 9, mensaje: 'Seguimos revisando' });
+    expect(prisma.novedadCampo.update).not.toHaveBeenCalled();
+    expect(prisma.respuestaNovedadCampo.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { novedadId: 5, usuarioId: 1, mensaje: 'Seguimos revisando' },
+      }),
+    );
+    expect(
+      notificaciones.crearNotificacionRespuestaNovedad,
+    ).toHaveBeenCalledWith(10, 1, 2, 5, 'Faltante');
+  });
+
+  it('rechaza respuestas en una novedad ya cerrada', async () => {
+    const prisma = { respuestaNovedadCampo: { create: jest.fn() } };
+    const service = new NovedadService(
+      prisma as unknown as PrismaService,
+      {} as NotificacionService,
+      adjuntosMock(),
+    );
+    jest
+      .spyOn(service, 'obtenerPorId')
+      .mockResolvedValue({ estado: 'CERRADA' } as never);
+    await expect(
+      service.responder(1, 10, 5, { mensaje: 'Otra respuesta' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.respuestaNovedadCampo.create).not.toHaveBeenCalled();
   });
 });
