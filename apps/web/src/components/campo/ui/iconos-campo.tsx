@@ -215,6 +215,16 @@ export function IconoCamara({ className }: Props) {
   );
 }
 
+export function IconoGaleria({ className }: Props) {
+  return (
+    <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="2" y="3" width="16" height="14" rx="2" />
+      <circle cx="6.5" cy="7.5" r="1.5" />
+      <path d="m3 14 4-4 3 3 3-4 4 5" />
+    </svg>
+  );
+}
+
 export function IconoMensaje({ className }: Props) {
   return (
     <Base className={className}>

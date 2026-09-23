@@ -2125,8 +2125,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/subidor-fotos.tsx": {
-    "mtime": 1790175976.706965,
-    "ast_hash": "d3d6138f62db3441eb9ea460225ac80d",
+    "mtime": 1790181963.6165497,
+    "ast_hash": "50b9fd02ab8f2019962946a6629179c7",
     "semantic_hash": ""
   },
   "apps/web/src/components/toast/toast-controller.ts": {
@@ -2225,13 +2225,13 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/avisos-panel.tsx": {
-    "mtime": 1790176122.8937912,
-    "ast_hash": "589395045597bd6a482a1f71f2f4cfd4",
+    "mtime": 1790182168.2534437,
+    "ast_hash": "25cbc73779740d15fd1a8199155ac31f",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/clientes-panel.tsx": {
-    "mtime": 1790176259.9191966,
-    "ast_hash": "f1cae56de9527b64b4749494a2810fcf",
+    "mtime": 1790181984.7714787,
+    "ast_hash": "c252a3530726f4100d139d29556f16f5",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/locales-panel.tsx": {
@@ -2290,8 +2290,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/ui/iconos-campo.tsx": {
-    "mtime": 1789739989.0816212,
-    "ast_hash": "0349d22d8f548d9ded19540a69a50f0e",
+    "mtime": 1790181897.7726274,
+    "ast_hash": "803f5d9ed7839aae644f2cf409f11a84",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/ui/seg-tabs.tsx": {
@@ -2445,8 +2445,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/selector-fotos-campo.tsx": {
-    "mtime": 1790175950.2798374,
-    "ast_hash": "b70654b774e60d1fe83aeac44fbd66d7",
+    "mtime": 1790181943.547639,
+    "ast_hash": "2e235bec68098035685597d2d089d19d",
     "semantic_hash": ""
   },
   "apps/web/src/lib/api-adjuntos-campo.ts": {
@@ -2477,6 +2477,11 @@
   "apps/web/src/utils/preparar-imagen.ts": {
     "mtime": 1790176486.0416076,
     "ast_hash": "5d88773dcf0a86d43f2169df728c69c2",
+    "semantic_hash": ""
+  },
+  "apps/web/src/components/campo/capturador-camara.tsx": {
+    "mtime": 1790182291.374819,
+    "ast_hash": "55a0587be3aa1c15e6e71245eded47b2",
     "semantic_hash": ""
   }
 }

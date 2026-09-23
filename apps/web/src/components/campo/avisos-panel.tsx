@@ -242,7 +242,7 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
               color: TOKENS.critico,
             }}
           >
-            <span>{error}</span>
+            <span className="min-w-0 break-words">{error}</span>
             <button
               type="button"
               onClick={() => setError("")}
@@ -262,7 +262,7 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
               color: TOKENS.fresco,
             }}
           >
-            <span>{exito}</span>
+            <span className="min-w-0 break-words">{exito}</span>
             <button
               type="button"
               onClick={() => setExito("")}
@@ -283,10 +283,10 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
               <button
                 type="button"
                 onClick={() => setTab("enviados")}
-                className={`px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer sm:px-5 sm:text-sm ${
+                className={`px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-brand-600 sm:px-5 sm:text-sm ${
                   tab === "enviados"
-                    ? "bg-[#1E2320] text-white shadow-sm"
-                    : "bg-white text-[#726C60] hover:text-[#1E2320] border"
+                    ? "bg-brand-700 text-white shadow-sm dark:bg-brand-200 dark:text-brand-950"
+                    : "border border-line bg-surface-raised text-foreground hover:bg-surface-soft"
                 }`}
                 style={{
                   borderColor: tab === "enviados" ? "transparent" : TOKENS.line,
@@ -300,10 +300,10 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                 onClick={() => setTab("redactar")}
                 aria-label="Crear comunicado"
                 title="Crear comunicado"
-                className={`grid h-11 w-11 place-items-center rounded-xl text-sm font-bold transition-all cursor-pointer ${
+                className={`grid h-11 w-11 place-items-center rounded-xl text-sm font-bold transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-brand-600 ${
                   tab === "redactar"
-                    ? "bg-[#1E2320] text-white shadow-sm"
-                    : "bg-white text-[#726C60] hover:text-[#1E2320] border"
+                    ? "bg-brand-700 text-white shadow-sm dark:bg-brand-200 dark:text-brand-950"
+                    : "border border-line bg-surface-raised text-foreground hover:bg-surface-soft"
                 }`}
                 style={{
                   borderColor: tab === "redactar" ? "transparent" : TOKENS.line,
@@ -315,10 +315,10 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
               <button
                 type="button"
                 onClick={() => setTab("recibidos")}
-                className={`px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer sm:px-5 sm:text-sm ${
+                className={`px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer focus-visible:ring-2 focus-visible:ring-brand-600 sm:px-5 sm:text-sm ${
                   tab === "recibidos"
-                    ? "bg-[#1E2320] text-white shadow-sm"
-                    : "bg-white text-[#726C60] hover:text-[#1E2320] border"
+                    ? "bg-brand-700 text-white shadow-sm dark:bg-brand-200 dark:text-brand-950"
+                    : "border border-line bg-surface-raised text-foreground hover:bg-surface-soft"
                 }`}
                 style={{
                   borderColor:
@@ -339,7 +339,7 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
           </div>
         ) : (
           <div
-            className="flex items-center justify-between border-b pb-3"
+            className="flex min-w-0 flex-wrap items-center justify-between gap-2 border-b pb-3"
             style={{ borderColor: TOKENS.line }}
           >
             <h2 className="text-xl font-bold uppercase tracking-wide ft-display">
@@ -356,8 +356,7 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
         {/* 1. FORMULARIO DE NUEVO COMUNICADO */}
         {tab === "redactar" && !esImpulsador && (
           <div
-            className="p-6 rounded-xl border shadow-sm"
-            style={{ backgroundColor: TOKENS.canvas, borderColor: TOKENS.line }}
+            className="min-w-0 max-w-full rounded-xl border border-line bg-surface-raised p-3 text-foreground shadow-sm sm:p-6"
           >
             <div
               className="mb-5 border-b pb-3"
@@ -372,7 +371,7 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
               </p>
             </div>
 
-            <form onSubmit={handleEnviar} className="space-y-5">
+            <form onSubmit={handleEnviar} className="min-w-0 space-y-5">
               {/* Tipo de alcance */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider mb-2 text-[#726C60]">
@@ -382,14 +381,15 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                   <button
                     type="button"
                     onClick={() => setFormTipo("EQUIPO")}
-                    className={`p-3.5 rounded-lg border text-left flex items-start gap-3 transition-all ${
+                    aria-pressed={formTipo === "EQUIPO"}
+                    className={`flex w-full min-w-0 items-start gap-3 rounded-lg border p-3 text-left whitespace-normal transition-all sm:p-3.5 ${
                       formTipo === "EQUIPO"
-                        ? "border-[#1E2320] bg-white shadow-sm ring-1 ring-[#1E2320]"
-                        : "border-[#DAD5C9] bg-[#ECE9E2]/50 hover:bg-white"
+                        ? "border-brand-700 bg-brand-50 text-foreground shadow-sm ring-1 ring-brand-700 dark:border-brand-200 dark:bg-brand-950"
+                        : "border-line bg-surface-soft text-foreground hover:bg-surface-raised"
                     }`}
                   >
                     <div
-                      className="w-4 h-4 rounded-full border mt-0.5 flex items-center justify-center"
+                      className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border"
                       style={{
                         borderColor:
                           formTipo === "EQUIPO" ? TOKENS.ink : TOKENS.sub,
@@ -402,11 +402,11 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                         />
                       )}
                     </div>
-                    <div>
-                      <div className="font-bold text-sm">
+                    <div className="min-w-0">
+                      <div className="break-words text-sm font-bold">
                         Todo el Equipo de Campo
                       </div>
-                      <div className="text-xs text-[#726C60]">
+                      <div className="break-words text-xs text-muted">
                         Se transmite a todos los impulsadores asignados a tu
                         supervisión.
                       </div>
@@ -416,14 +416,15 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                   <button
                     type="button"
                     onClick={() => setFormTipo("INDIVIDUAL")}
-                    className={`p-3.5 rounded-lg border text-left flex items-start gap-3 transition-all ${
+                    aria-pressed={formTipo === "INDIVIDUAL"}
+                    className={`flex w-full min-w-0 items-start gap-3 rounded-lg border p-3 text-left whitespace-normal transition-all sm:p-3.5 ${
                       formTipo === "INDIVIDUAL"
-                        ? "border-[#1E2320] bg-white shadow-sm ring-1 ring-[#1E2320]"
-                        : "border-[#DAD5C9] bg-[#ECE9E2]/50 hover:bg-white"
+                        ? "border-brand-700 bg-brand-50 text-foreground shadow-sm ring-1 ring-brand-700 dark:border-brand-200 dark:bg-brand-950"
+                        : "border-line bg-surface-soft text-foreground hover:bg-surface-raised"
                     }`}
                   >
                     <div
-                      className="w-4 h-4 rounded-full border mt-0.5 flex items-center justify-center"
+                      className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border"
                       style={{
                         borderColor:
                           formTipo === "INDIVIDUAL" ? TOKENS.ink : TOKENS.sub,
@@ -436,11 +437,11 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                         />
                       )}
                     </div>
-                    <div>
-                      <div className="font-bold text-sm">
+                    <div className="min-w-0">
+                      <div className="break-words text-sm font-bold">
                         Colaborador Individual
                       </div>
-                      <div className="text-xs text-[#726C60]">
+                      <div className="break-words text-xs text-muted">
                         Mensaje directo a un impulsador en particular.
                       </div>
                     </div>
@@ -459,7 +460,7 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                     onChange={(e) =>
                       setFormDestinatarioId(Number(e.target.value))
                     }
-                    className="w-full p-2.5 rounded-lg border bg-white text-sm font-sans focus:outline-none focus:ring-2 focus:ring-[#1E2320]"
+                    className="w-full min-w-0 rounded-lg border border-line bg-surface-raised p-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand-600"
                     style={{ borderColor: TOKENS.line }}
                     required
                   >
@@ -477,7 +478,7 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
 
               {/* Mensaje */}
               <div>
-                <div className="flex justify-between items-center mb-1.5">
+                <div className="mb-1.5 flex min-w-0 flex-wrap items-center justify-between gap-1">
                   <label className="text-xs font-bold uppercase tracking-wider text-[#726C60]">
                     Texto del Comunicado
                   </label>
@@ -490,7 +491,7 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                   value={formMensaje}
                   onChange={(e) => setFormMensaje(e.target.value)}
                   placeholder="Ej: Recordatorio urgente: priorizar reposición de la línea fresca en Superseis Los Laureles antes de las 14:00..."
-                  className="w-full p-3 rounded-lg border bg-white text-sm font-sans focus:outline-none focus:ring-2 focus:ring-[#1E2320]"
+                  className="w-full min-w-0 rounded-lg border border-line bg-surface-raised p-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand-600"
                   style={{ borderColor: TOKENS.line }}
                   required
                 />
@@ -503,25 +504,23 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
               />
 
               {/* Botón de envío */}
-              <div className="flex justify-end gap-3 pt-2">
+              <div className="grid min-w-0 grid-cols-2 gap-2 pt-2 sm:flex sm:justify-end">
                 <button
                   type="button"
                   onClick={() => {
                     setTab("enviados");
                     setFormFotos([]);
                   }}
-                  className="px-4 py-2.5 rounded-lg border text-xs font-bold uppercase tracking-wider bg-white hover:bg-gray-50"
-                  style={{ borderColor: TOKENS.line }}
+                  className="min-h-11 min-w-0 rounded-lg border border-line bg-surface-raised px-3 text-sm font-semibold text-foreground transition hover:bg-surface-soft focus-visible:ring-2 focus-visible:ring-brand-600 sm:px-5"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={enviando || !formMensaje.trim()}
-                  className="px-6 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-white shadow-sm disabled:opacity-50 transition-all hover:brightness-110"
-                  style={{ backgroundColor: TOKENS.ink }}
+                  className="min-h-11 min-w-0 rounded-lg bg-brand-700 px-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800 focus-visible:ring-2 focus-visible:ring-brand-600 disabled:cursor-not-allowed disabled:border disabled:border-line disabled:bg-surface-soft disabled:text-foreground disabled:opacity-100 dark:bg-brand-200 dark:text-brand-950 dark:hover:bg-brand-100 dark:disabled:bg-surface-soft dark:disabled:text-foreground sm:px-6"
                 >
-                  {enviando ? "Transmitiendo..." : "Enviar Comunicado Ahora"}
+                  {enviando ? "Enviando…" : "Enviar"}
                 </button>
               </div>
             </form>
@@ -533,7 +532,7 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
           <div className="space-y-4">
             {enviados.length === 0 ? (
               <div
-                className="p-12 text-center rounded-xl border"
+                className="rounded-xl border p-5 text-center sm:p-12"
                 style={{
                   backgroundColor: TOKENS.canvas,
                   borderColor: TOKENS.line,
@@ -568,16 +567,16 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                   return (
                     <div
                       key={aviso.id}
-                      className="p-4 rounded-xl border transition-all hover:shadow-sm"
+                      className="min-w-0 rounded-xl border p-3 transition-all hover:shadow-sm sm:p-4"
                       style={{
                         backgroundColor: TOKENS.canvas,
                         borderColor: TOKENS.line,
                       }}
                     >
                       <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
-                        <div className="flex items-center gap-2">
+                        <div className="flex min-w-0 flex-wrap items-center gap-2">
                           <span
-                            className="text-[10px] font-mono uppercase px-2 py-0.5 rounded font-bold inline-flex items-center gap-1"
+                            className="inline-flex max-w-full min-w-0 items-center gap-1 rounded px-2 py-0.5 font-mono text-[10px] font-bold uppercase"
                             style={{
                               backgroundColor:
                                 aviso.tipo === "EQUIPO"
@@ -597,7 +596,7 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                             ) : (
                               <>
                                 <IconoContacto className="w-3 h-3" />
-                                <span>
+                                <span className="min-w-0 truncate">
                                   DIRECTO A{" "}
                                   {aviso.destinatario?.nombre ?? "COLABORADOR"}
                                 </span>
@@ -628,24 +627,24 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                         </StatusStamp>
                       </div>
 
-                      <p className="text-sm font-sans text-[#1E2320] leading-relaxed mb-3 whitespace-pre-wrap">
+                      <p className="mb-3 break-words whitespace-pre-wrap text-sm leading-relaxed text-foreground">
                         {aviso.mensaje}
                       </p>
 
                       <GaleriaAdjuntosCampo adjuntos={aviso.adjuntos} />
 
                       <div
-                        className="pt-2 border-t flex items-center justify-between text-xs text-[#726C60]"
+                        className="flex min-w-0 flex-wrap items-center justify-between gap-2 border-t pt-2 text-xs text-muted"
                         style={{ borderColor: TOKENS.line }}
                       >
-                        <span className="font-mono text-[11px]">
+                        <span className="min-w-0 break-words font-mono text-[11px]">
                           {aviso.tipo === "EQUIPO"
                             ? `Alcance: ${total} colaboradores asignados`
                             : `Destinatario: ${aviso.destinatario?.nombre} ${aviso.destinatario?.apellido || ""}`}
                         </span>
 
                         {aviso.tipo === "INDIVIDUAL" && aviso.leidoAt && (
-                          <span className="font-mono text-[11px] text-[#4F7A52]">
+                          <span className="min-w-0 break-words font-mono text-[11px] text-accent-ink">
                             Leído el {formatearFecha(aviso.leidoAt)}
                           </span>
                         )}
@@ -663,7 +662,7 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
           <div className="space-y-4">
             {recibidos.length === 0 ? (
               <div
-                className="p-12 text-center rounded-xl border"
+                className="rounded-xl border p-5 text-center sm:p-12"
                 style={{
                   backgroundColor: TOKENS.canvas,
                   borderColor: TOKENS.line,
@@ -684,7 +683,7 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                   return (
                     <div
                       key={aviso.id}
-                      className={`p-4 rounded-xl border transition-all ${
+                      className={`min-w-0 rounded-xl border p-3 transition-all sm:p-4 ${
                         noLeido
                           ? "bg-white shadow-sm ring-1 ring-[#C1752B]/40"
                           : "opacity-90"
@@ -695,9 +694,9 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                       }}
                     >
                       <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
-                        <div className="flex items-center gap-2">
+                        <div className="flex min-w-0 flex-wrap items-center gap-2">
                           <span
-                            className="text-[10px] font-mono uppercase px-2 py-0.5 rounded font-bold inline-flex items-center gap-1"
+                            className="inline-flex max-w-full min-w-0 items-center gap-1 rounded px-2 py-0.5 font-mono text-[10px] font-bold uppercase"
                             style={{
                               backgroundColor:
                                 aviso.tipo === "EQUIPO"
@@ -741,17 +740,17 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                         </span>
                       </div>
 
-                      <p className="text-sm font-sans text-[#1E2320] leading-relaxed mb-4 whitespace-pre-wrap font-medium">
+                      <p className="mb-4 break-words whitespace-pre-wrap text-sm font-medium leading-relaxed text-foreground">
                         {aviso.mensaje}
                       </p>
 
                       <GaleriaAdjuntosCampo adjuntos={aviso.adjuntos} />
 
                       <div
-                        className="pt-2.5 border-t flex items-center justify-between"
+                        className="flex min-w-0 flex-wrap items-center justify-between gap-2 border-t pt-2.5"
                         style={{ borderColor: TOKENS.line }}
                       >
-                        <span className="text-xs font-mono text-[#726C60]">
+                        <span className="min-w-0 break-words font-mono text-xs text-muted">
                           {aviso.leido && aviso.leidoAt
                             ? `Confirmado: ${formatearFecha(aviso.leidoAt)}`
                             : "Pendiente de acuse de recibo"}
@@ -761,11 +760,10 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                           <button
                             type="button"
                             onClick={() => handleMarcarLeido(aviso.id)}
-                            className="px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider text-white shadow-sm transition-all hover:brightness-110 flex items-center gap-1.5 cursor-pointer"
-                            style={{ backgroundColor: TOKENS.fresco }}
+                            className="flex min-h-11 items-center gap-1.5 rounded-lg bg-brand-700 px-3 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-800 focus-visible:ring-2 focus-visible:ring-brand-600 dark:bg-brand-200 dark:text-brand-950 dark:hover:bg-brand-100"
                           >
                             <IconoCheck className="w-3.5 h-3.5" />
-                            <span>Entendido / Marcar Leído</span>
+                            <span>Marcar leído</span>
                           </button>
                         )}
                       </div>

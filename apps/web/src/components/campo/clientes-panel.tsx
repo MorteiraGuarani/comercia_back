@@ -4,6 +4,8 @@ import React, { useMemo, useState, useRef } from "react";
 import { apiFetch } from "@/lib/api";
 import { mensajeError } from "@/utils/error";
 import { prepararImagen } from "@/utils/preparar-imagen";
+import { CapturadorCamara } from "./capturador-camara";
+import { IconoCamara, IconoGaleria } from "./ui/iconos-campo";
 import { useListaCampo, useOperacionCampo } from "@/hooks/use-lista-campo";
 import { Modal } from "@/components/modal";
 import { PantallaCarga } from "@/components/pantalla-carga";
@@ -47,7 +49,7 @@ export function ClientesPanel() {
   const [guardando, setGuardando] = useState(false);
   const [subiendoLogo, setSubiendoLogo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const [camaraAbierta, setCamaraAbierta] = useState(false);
 
   // Filtrado local por estado activo / inactivo
   const itemsFiltrados = useMemo(() => {
@@ -90,8 +92,7 @@ export function ClientesPanel() {
   };
 
   // Manejar subida de archivo de logo
-  const manejarSubidaLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const subirLogo = async (file: File) => {
     if (!file || !form) return;
 
     try {
@@ -115,7 +116,6 @@ export function ClientesPanel() {
     } finally {
       setSubiendoLogo(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
-      if (cameraInputRef.current) cameraInputRef.current.value = "";
     }
   };
 
@@ -128,6 +128,7 @@ export function ClientesPanel() {
       className="campo-screen min-h-screen min-w-0 w-full text-[13px] font-sans pb-16"
       style={{ backgroundColor: TOKENS.bone, color: TOKENS.ink }}
     >
+      {camaraAbierta && <CapturadorCamara onCapturar={(archivo) => void subirLogo(archivo)} onCerrar={() => setCamaraAbierta(false)} />}
       <TopBar
         title="Catálogo de Clientes"
         subtitle="Empresas y cuentas comerciales con gestión de logos y cobertura geográfica"
@@ -574,20 +575,21 @@ export function ClientesPanel() {
                     type="file"
                     ref={fileInputRef}
                     accept="image/*"
-                    onChange={manejarSubidaLogo}
+                    onChange={(evento) => { const archivo = evento.target.files?.[0]; if (archivo) void subirLogo(archivo); }}
                     className="hidden"
                   />
-                  <input type="file" ref={cameraInputRef} accept="image/*" capture="environment" onChange={manejarSubidaLogo} className="hidden" />
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={subiendoLogo}
-                    className="px-3 py-1.5 rounded-lg border text-xs font-bold bg-white text-zinc-800 hover:bg-zinc-100 transition shadow-xs cursor-pointer disabled:opacity-50"
+                    aria-label="Elegir logo de la galería"
+                    title="Galería"
+                    className="grid h-11 w-11 place-items-center rounded-lg border border-line bg-surface-raised text-foreground hover:bg-surface-soft focus-visible:ring-2 focus-visible:ring-brand-600 disabled:opacity-50"
                     style={{ borderColor: TOKENS.line }}
                   >
-                    {subiendoLogo ? "Subiendo..." : form.logoUrl ? "Cambiar Imagen" : "Subir Imagen"}
+                    <IconoGaleria className="h-5 w-5" />
                   </button>
-                  <button type="button" onClick={() => cameraInputRef.current?.click()} disabled={subiendoLogo} className="min-h-11 rounded-lg border border-line bg-surface-raised px-3 text-xs font-bold text-foreground disabled:opacity-50">Cámara</button>
+                  <button type="button" onClick={() => setCamaraAbierta(true)} disabled={subiendoLogo} aria-label="Tomar foto del cliente con la cámara" title="Cámara" className="grid h-11 w-11 place-items-center rounded-lg border border-line bg-surface-raised text-foreground hover:bg-surface-soft focus-visible:ring-2 focus-visible:ring-brand-600 disabled:opacity-50"><IconoCamara className="h-5 w-5" /></button>
 
                   {form.logoUrl && (
                     <button
@@ -707,7 +709,7 @@ export function ClientesPanel() {
         )}
       </Modal>
 
-      <PantallaCarga visible={guardando} mensaje="Procesando operación comercial..." />
+      <PantallaCarga visible={guardando || subiendoLogo} mensaje={subiendoLogo ? "Subiendo foto del cliente" : "Procesando operación comercial..."} />
     </div>
   );
 }

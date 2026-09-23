@@ -3,6 +3,8 @@
 import { useRef, useState } from "react";
 import { prepararImagen } from "@/utils/preparar-imagen";
 import { PantallaCarga } from "@/components/pantalla-carga";
+import { CapturadorCamara } from "./capturador-camara";
+import { IconoCamara, IconoGaleria } from "./ui/iconos-campo";
 
 const MAX_FOTOS = 5;
 
@@ -16,11 +18,11 @@ export function SelectorFotosCampo({
   disabled?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const camaraRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState("");
   const [procesando, setProcesando] = useState(false);
+  const [camaraAbierta, setCamaraAbierta] = useState(false);
 
-  const seleccionar = async (seleccionados: FileList | null) => {
+  const seleccionar = async (seleccionados: FileList | File[] | null) => {
     if (!seleccionados) return;
     const nuevos = Array.from(seleccionados);
     if (archivos.length + nuevos.length > MAX_FOTOS) {
@@ -38,13 +40,13 @@ export function SelectorFotosCampo({
     } finally {
       setProcesando(false);
       if (inputRef.current) inputRef.current.value = "";
-      if (camaraRef.current) camaraRef.current.value = "";
     }
   };
 
   return (
     <div className="space-y-2">
       <PantallaCarga visible={procesando} mensaje="Preparando fotos" />
+      {camaraAbierta && <CapturadorCamara onCapturar={(archivo) => void seleccionar([archivo])} onCerrar={() => setCamaraAbierta(false)} />}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <p className="text-xs font-semibold text-foreground">
@@ -64,26 +66,9 @@ export function SelectorFotosCampo({
           className="sr-only"
           tabIndex={-1}
         />
-        <input
-          ref={camaraRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          disabled={disabled || procesando || archivos.length >= MAX_FOTOS}
-          onChange={(evento) => void seleccionar(evento.target.files)}
-          className="sr-only"
-          tabIndex={-1}
-        />
         <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          disabled={disabled || procesando || archivos.length >= MAX_FOTOS}
-          onClick={() => inputRef.current?.click()}
-          className="min-h-11 rounded-lg border border-line bg-surface-raised px-3 text-xs font-semibold text-foreground transition hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Galería
-        </button>
-        <button type="button" disabled={disabled || procesando || archivos.length >= MAX_FOTOS} onClick={() => camaraRef.current?.click()} className="min-h-11 rounded-lg border border-line bg-surface-raised px-3 text-xs font-semibold text-foreground transition hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40 disabled:opacity-50">Cámara</button>
+          <button type="button" aria-label="Elegir fotos de la galería" title="Galería" disabled={disabled || procesando || archivos.length >= MAX_FOTOS} onClick={() => inputRef.current?.click()} className="grid h-11 w-11 place-items-center rounded-lg border border-line bg-surface-raised text-foreground transition hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40 disabled:cursor-not-allowed disabled:opacity-50"><IconoGaleria className="h-5 w-5" /></button>
+          <button type="button" aria-label="Tomar foto con la cámara" title="Cámara" disabled={disabled || procesando || archivos.length >= MAX_FOTOS} onClick={() => setCamaraAbierta(true)} className="grid h-11 w-11 place-items-center rounded-lg border border-line bg-surface-raised text-foreground transition hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40 disabled:cursor-not-allowed disabled:opacity-50"><IconoCamara className="h-5 w-5" /></button>
         </div>
       </div>
 

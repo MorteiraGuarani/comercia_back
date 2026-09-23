@@ -6,6 +6,8 @@ import type { MomentoFoto, FotosTareaResponse } from "@/types/campo";
 import { mostrarToast } from "@/components/toast/toast-controller";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { prepararImagen } from "@/utils/preparar-imagen";
+import { CapturadorCamara } from "./capturador-camara";
+import { IconoCamara, IconoGaleria } from "./ui/iconos-campo";
 
 interface SubidorFotosProps {
   visitaId: number;
@@ -20,7 +22,7 @@ export function SubidorFotos({ visitaId, tareaId, obligatorio, onFotosActualizad
   const [intento, setIntento] = useState(0);
   const [operacion, setOperacion] = useState("");
   const galeriaRef = useRef<Record<MomentoFoto, HTMLInputElement | null>>({ ANTES: null, DESPUES: null });
-  const camaraRef = useRef<Record<MomentoFoto, HTMLInputElement | null>>({ ANTES: null, DESPUES: null });
+  const [camaraMomento, setCamaraMomento] = useState<MomentoFoto | null>(null);
 
   useEffect(() => {
     let vigente = true;
@@ -59,6 +61,7 @@ export function SubidorFotos({ visitaId, tareaId, obligatorio, onFotosActualizad
   return (
     <div className="space-y-3 text-foreground">
       <PantallaCarga visible={!!operacion} mensaje={operacion} />
+      {camaraMomento && <CapturadorCamara onCapturar={(archivo) => void actualizar(camaraMomento, archivo)} onCerrar={() => setCamaraMomento(null)} />}
       <p className="text-sm text-muted">{obligatorio ? "Subí ambas fotos antes de completar la tarea." : "Podés adjuntar fotos del antes y del después."}</p>
       {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-200">{error}</p>}
       {!fotos ? (
@@ -79,9 +82,8 @@ export function SubidorFotos({ visitaId, tareaId, obligatorio, onFotosActualizad
                 ) : <div className="grid h-32 place-items-center rounded bg-surface-soft text-xs text-muted sm:h-44">Sin foto</div>}
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   <input ref={(elemento) => { galeriaRef.current[momento] = elemento; }} type="file" accept="image/*" aria-label={`Elegir foto ${nombre.toLowerCase()} de la galería`} disabled={!!operacion} className="sr-only" tabIndex={-1} onChange={(e) => { const archivo = e.target.files?.[0]; if (archivo) void actualizar(momento, archivo); e.target.value = ""; }} />
-                  <input ref={(elemento) => { camaraRef.current[momento] = elemento; }} type="file" accept="image/*" capture="environment" aria-label={`Tomar foto ${nombre.toLowerCase()} con la cámara`} disabled={!!operacion} className="sr-only" tabIndex={-1} onChange={(e) => { const archivo = e.target.files?.[0]; if (archivo) void actualizar(momento, archivo); e.target.value = ""; }} />
-                  <button type="button" disabled={!!operacion} onClick={() => galeriaRef.current[momento]?.click()} className="min-h-11 rounded-md border border-line px-1 text-xs font-medium hover:bg-surface-soft">Galería</button>
-                  <button type="button" disabled={!!operacion} onClick={() => camaraRef.current[momento]?.click()} className="min-h-11 rounded-md border border-line px-1 text-xs font-medium hover:bg-surface-soft">Cámara</button>
+                  <button type="button" aria-label={`Elegir foto ${nombre.toLowerCase()} de la galería`} title="Galería" disabled={!!operacion} onClick={() => galeriaRef.current[momento]?.click()} className="grid h-11 min-w-0 place-items-center rounded-md border border-line bg-surface-raised text-foreground hover:bg-surface-soft focus-visible:ring-2 focus-visible:ring-brand-600"><IconoGaleria className="h-5 w-5" /></button>
+                  <button type="button" aria-label={`Tomar foto ${nombre.toLowerCase()} con la cámara`} title="Cámara" disabled={!!operacion} onClick={() => setCamaraMomento(momento)} className="grid h-11 min-w-0 place-items-center rounded-md border border-line bg-surface-raised text-foreground hover:bg-surface-soft focus-visible:ring-2 focus-visible:ring-brand-600"><IconoCamara className="h-5 w-5" /></button>
                 </div>
                 {foto && !obligatorio && <button type="button" disabled={!!operacion} className="mt-1 min-h-11 w-full rounded-md text-sm text-red-700 hover:bg-surface-soft dark:text-red-300" onClick={() => void actualizar(momento)}>Eliminar</button>}
               </div>
