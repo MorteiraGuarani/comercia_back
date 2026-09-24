@@ -22,8 +22,6 @@ import {
   IconoBuscar,
   IconoCruz,
   IconoMas,
-  IconoTelefono,
-  IconoContacto,
   IconoTienda,
   IconoFlechaIzq,
   IconoFlechaDer,
@@ -272,11 +270,9 @@ export function ClientesPanel() {
                         </div>
                         <StatusStamp tone={cliente.activo ? "fresco" : "sub"} size="sm">{cliente.activo ? "ACTIVO" : "INACTIVO"}</StatusStamp>
                       </div>
-                      {cliente.contacto && <p className="mt-2 break-words text-xs text-muted">Contacto: {cliente.contacto}</p>}
-                      {cliente.telefono && <a href={`tel:${cliente.telefono}`} className="mt-1 inline-flex min-h-11 items-center text-xs font-semibold text-sky-700">{cliente.telefono}</a>}
                       <div className="mt-2 flex gap-2">
-                        <button type="button" onClick={() => verEnMapa(cliente.id)} className="min-h-11 flex-1 rounded-lg border border-line px-3 text-xs font-semibold text-foreground">Ver mapa</button>
                         <button type="button" onClick={() => setForm(cliente)} className="min-h-11 flex-1 rounded-lg border border-line px-3 text-xs font-semibold text-foreground">Editar</button>
+                        <button type="button" onClick={() => verEnMapa(cliente.id)} className="min-h-11 flex-1 rounded-lg border border-line px-3 text-xs font-semibold text-foreground">Ver mapa</button>
                       </div>
                     </article>
                   ))}
@@ -285,13 +281,11 @@ export function ClientesPanel() {
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="border-b bg-zinc-50/80 text-[11px] font-bold uppercase tracking-wider text-zinc-500" style={{ borderColor: TOKENS.line }}>
-                        <th className="py-2.5 px-3.5">Cliente / Empresa</th>
+                        <th className="py-2.5 px-3.5">Acciones</th>
+                        <th className="py-2.5 px-3.5">Cliente</th>
                         <th className="py-2.5 px-3.5">RUC</th>
-                        <th className="py-2.5 px-3.5">Contacto Principal</th>
-                        <th className="py-2.5 px-3.5">Teléfono</th>
                         <th className="py-2.5 px-3.5 text-center">Puntos de Venta</th>
                         <th className="py-2.5 px-3.5 text-center">Estado</th>
-                        <th className="py-2.5 px-3.5 text-right">Acciones</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-100 text-xs">
@@ -302,7 +296,31 @@ export function ClientesPanel() {
                             key={cliente.id}
                             className="hover:bg-zinc-50/70 transition-colors group"
                           >
-                            {/* Cliente / Empresa */}
+                            {/* Acciones */}
+                            <td className="py-2.5 px-3.5 whitespace-nowrap">
+                              <div className="inline-flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => setForm(cliente)}
+                                  title="Editar cliente"
+                                  aria-label={`Editar cliente ${cliente.nombre}`}
+                                  className="p-1 rounded-md text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors cursor-pointer"
+                                >
+                                  <IconoEditar className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => verEnMapa(cliente.id)}
+                                  title="Ver locales de este cliente en el mapa de cobertura"
+                                  className="px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider text-[#2C4A6E] bg-sky-50 hover:bg-sky-100 transition-colors inline-flex items-center gap-1 cursor-pointer"
+                                >
+                                  <IconoMapa className="w-3 h-3" />
+                                  <span>Mapa</span>
+                                </button>
+                              </div>
+                            </td>
+
+                            {/* Cliente */}
                             <td className="py-2.5 px-3.5">
                               <div className="flex items-center gap-2.5 min-w-0 max-w-[260px]">
                                 {cliente.logoUrl ? (
@@ -335,31 +353,6 @@ export function ClientesPanel() {
                               )}
                             </td>
 
-                            {/* Contacto */}
-                            <td className="py-2.5 px-3.5">
-                              <div className="flex items-center gap-1.5 min-w-0 max-w-[180px]">
-                                <IconoContacto className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
-                                <span className="truncate font-medium text-zinc-800">
-                                  {cliente.contacto || "—"}
-                                </span>
-                              </div>
-                            </td>
-
-                            {/* Teléfono */}
-                            <td className="py-2.5 px-3.5 whitespace-nowrap">
-                              {cliente.telefono ? (
-                                <a
-                                  href={`tel:${cliente.telefono}`}
-                                  className="inline-flex items-center gap-1 font-mono text-xs text-[#2C4A6E] font-bold hover:underline"
-                                >
-                                  <IconoTelefono className="w-3 h-3 text-zinc-400" />
-                                  <span>{cliente.telefono}</span>
-                                </a>
-                              ) : (
-                                <span className="text-[11px] text-zinc-400">Sin teléfono</span>
-                              )}
-                            </td>
-
                             {/* Puntos de Venta (Locales) */}
                             <td className="py-2.5 px-3.5 text-center whitespace-nowrap">
                               <span className="inline-flex items-center gap-1 rounded-full border border-line bg-surface-soft px-2 py-0.5 text-[11px] font-bold text-foreground">
@@ -375,29 +368,6 @@ export function ClientesPanel() {
                               </StatusStamp>
                             </td>
 
-                            {/* Acciones */}
-                            <td className="py-2.5 px-3.5 text-right whitespace-nowrap">
-                              <div className="inline-flex items-center gap-1.5">
-                                <button
-                                  type="button"
-                                  onClick={() => verEnMapa(cliente.id)}
-                                  title="Ver locales de este cliente en el mapa de cobertura"
-                                  className="px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider text-[#2C4A6E] bg-sky-50 hover:bg-sky-100 transition-colors inline-flex items-center gap-1 cursor-pointer"
-                                >
-                                  <IconoMapa className="w-3 h-3" />
-                                  <span>Mapa</span>
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() => setForm(cliente)}
-                                  title="Editar cliente"
-                                  className="p-1 rounded-md text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors cursor-pointer"
-                                >
-                                  <IconoEditar className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                            </td>
                           </tr>
                         );
                       })}

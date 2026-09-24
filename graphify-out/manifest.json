@@ -2230,8 +2230,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/clientes-panel.tsx": {
-    "mtime": 1790275411.401607,
-    "ast_hash": "1e1aca21bebe29ad75640fb6fb66aa52",
+    "mtime": 1790278291.1746693,
+    "ast_hash": "3070208fb3601d640461f7c83b3190d5",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/locales-panel.tsx": {
