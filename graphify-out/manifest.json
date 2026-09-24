@@ -620,8 +620,8 @@
     "semantic_hash": "6507204d19d049b57988edd383a9e384"
   },
   "apps/web/src/components/admin/empresas-abm-panel.tsx": {
-    "mtime": 1790275488.0287547,
-    "ast_hash": "6407c8591041aeeccc0f626bc3d07d3e",
+    "mtime": 1790279466.8738604,
+    "ast_hash": "7fed6fcad75e9f3d8c0b8f1606d87b29",
     "semantic_hash": ""
   },
   "apps/web/src/components/admin/empresas-panel.tsx": {
@@ -630,13 +630,13 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/admin/modulos-panel.tsx": {
-    "mtime": 1784237312.451856,
-    "ast_hash": "5eda7bfd04ec15f22aecec7f15b91130",
-    "semantic_hash": "5eda7bfd04ec15f22aecec7f15b91130"
+    "mtime": 1790279521.3234427,
+    "ast_hash": "bb7375e6e14962e6bf0509e1cf5988da",
+    "semantic_hash": ""
   },
   "apps/web/src/components/admin/roles-panel.tsx": {
-    "mtime": 1790275485.4396715,
-    "ast_hash": "f8b41197ab8b192586e05243ae258b8f",
+    "mtime": 1790279464.8704696,
+    "ast_hash": "83c6b4a73f56b27757859e502af8a17a",
     "semantic_hash": ""
   },
   "apps/web/src/components/auth-shell.tsx": {
@@ -700,8 +700,8 @@
     "semantic_hash": "692f7f4acb1607e8575b72c625e03c79"
   },
   "apps/web/src/components/usuarios/usuarios-panel.tsx": {
-    "mtime": 1790275492.5515506,
-    "ast_hash": "e16492d1774fb7e266420e71f440ff12",
+    "mtime": 1790279585.665099,
+    "ast_hash": "fb6aad6d4cac523c8c66a0634e2d87f8",
     "semantic_hash": ""
   },
   "apps/web/src/lib/api.ts": {
@@ -1650,8 +1650,8 @@
     "semantic_hash": ""
   },
   "apps/web/AGENTS.md": {
-    "mtime": 1788891078.8248332,
-    "ast_hash": "1e64e99772fe8acc72e4d601ceaad0d8",
+    "mtime": 1790279571.1277018,
+    "ast_hash": "020f3c90a96c0359b5e0f9ed7ce69577",
     "semantic_hash": ""
   },
   "apps/web/CLAUDE.md": {
@@ -1990,8 +1990,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/plan-local.tsx": {
-    "mtime": 1790176335.5303514,
-    "ast_hash": "285164d3dcef04230bf117e959f946ee",
+    "mtime": 1790280045.759257,
+    "ast_hash": "c15c5f406a27bcbaae64ebb7dffb762c",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/tabla-campo.tsx": {
@@ -2000,8 +2000,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/tareas-panel.tsx": {
-    "mtime": 1790275496.9770663,
-    "ast_hash": "a62961f9cd8ab32a17dd05861f9c51f0",
+    "mtime": 1790279487.0894215,
+    "ast_hash": "e5ce2a07688d3ec659c7fa736882df23",
     "semantic_hash": ""
   },
   "apps/web/src/hooks/use-lista-campo.ts": {
@@ -2230,13 +2230,13 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/clientes-panel.tsx": {
-    "mtime": 1790278291.1746693,
-    "ast_hash": "3070208fb3601d640461f7c83b3190d5",
+    "mtime": 1790279448.3143501,
+    "ast_hash": "d716dc9e6050c8d64c4823c6b83a74bc",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/locales-panel.tsx": {
-    "mtime": 1790275409.044457,
-    "ast_hash": "0baf4025e828593b8b6c51e4f162c3e7",
+    "mtime": 1790279450.1992414,
+    "ast_hash": "99b8cc1dfbb7d3acc56971f883838fea",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/mapa-clientes.tsx": {
@@ -2557,6 +2557,16 @@
   "apps/web/src/utils/scroll-listado.ts": {
     "mtime": 1790275546.1417732,
     "ast_hash": "1629f6a5a0bf18ce889f42f76bda2668",
+    "semantic_hash": ""
+  },
+  "apps/web/src/components/boton-editar.tsx": {
+    "mtime": 1790280069.169958,
+    "ast_hash": "0fa01e851c7b4e7bd64ac6e30e75f06a",
+    "semantic_hash": ""
+  },
+  "docs/patron-acciones-edicion.md": {
+    "mtime": 1790279563.8946602,
+    "ast_hash": "86e9a670716b853b93a4d65ea93f6623",
     "semantic_hash": ""
   }
 }

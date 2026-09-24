@@ -10,6 +10,7 @@ import { CapturadorCamara } from "./capturador-camara";
 import { IconoCamara, IconoGaleria } from "./ui/iconos-campo";
 import { useListaCampo, useOperacionCampo } from "@/hooks/use-lista-campo";
 import { Modal } from "@/components/modal";
+import { BotonEditar } from "@/components/boton-editar";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { TOKENS } from "./tokens";
 import { StatusStamp } from "./ui/status-stamp";
@@ -18,7 +19,6 @@ import { TopBar } from "./ui/top-bar";
 import {
   IconoCliente,
   IconoMapa,
-  IconoEditar,
   IconoBuscar,
   IconoCruz,
   IconoMas,
@@ -271,7 +271,7 @@ export function ClientesPanel() {
                         <StatusStamp tone={cliente.activo ? "fresco" : "sub"} size="sm">{cliente.activo ? "ACTIVO" : "INACTIVO"}</StatusStamp>
                       </div>
                       <div className="mt-2 flex gap-2">
-                        <button type="button" onClick={() => setForm(cliente)} className="min-h-11 flex-1 rounded-lg border border-line px-3 text-xs font-semibold text-foreground">Editar</button>
+                        <BotonEditar onClick={() => setForm(cliente)} etiqueta={`Editar cliente ${cliente.nombre}`} modo="texto" className="flex-1" />
                         <button type="button" onClick={() => verEnMapa(cliente.id)} className="min-h-11 flex-1 rounded-lg border border-line px-3 text-xs font-semibold text-foreground">Ver mapa</button>
                       </div>
                     </article>
@@ -299,15 +299,7 @@ export function ClientesPanel() {
                             {/* Acciones */}
                             <td className="py-2.5 px-3.5 whitespace-nowrap">
                               <div className="inline-flex items-center gap-1.5">
-                                <button
-                                  type="button"
-                                  onClick={() => setForm(cliente)}
-                                  title="Editar cliente"
-                                  aria-label={`Editar cliente ${cliente.nombre}`}
-                                  className="p-1 rounded-md text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors cursor-pointer"
-                                >
-                                  <IconoEditar className="w-3.5 h-3.5" />
-                                </button>
+                                <BotonEditar onClick={() => setForm(cliente)} etiqueta={`Editar cliente ${cliente.nombre}`} />
                                 <button
                                   type="button"
                                   onClick={() => verEnMapa(cliente.id)}

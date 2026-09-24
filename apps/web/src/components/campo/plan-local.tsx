@@ -5,6 +5,7 @@ import { apiFetch } from "@/lib/api";
 import { useListaCampo, useOperacionCampo } from "@/hooks/use-lista-campo";
 import { fechaEnZonaIso } from "@/utils/fechas";
 import { Modal } from "@/components/modal";
+import { BotonEditar } from "@/components/boton-editar";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { SelectorPaginado } from "@/components/selector-paginado";
 import { TOKENS } from "./tokens";
@@ -14,7 +15,6 @@ import {
   IconoEquipo,
   IconoRefrescar,
   IconoCruz,
-  IconoCalendario,
 } from "./ui/iconos-campo";
 import type {
   AsignacionCampo,
@@ -207,14 +207,7 @@ function HorariosLocal({ localId }: { localId: number }) {
               </div>
 
               <div className="flex flex-wrap items-center justify-end gap-2 pt-3 border-t mt-3" style={{ borderColor: TOKENS.line }}>
-                <button
-                  type="button"
-                  onClick={() => abrir(h)}
-                  className="min-h-11 whitespace-nowrap px-2.5 py-1 text-xs font-bold uppercase tracking-wider rounded border bg-white hover:bg-gray-50"
-                  style={{ borderColor: TOKENS.line }}
-                >
-                  Editar
-                </button>
+                <BotonEditar onClick={() => abrir(h)} etiqueta={`Editar horario ${h.id}`} modo="texto" />
                 <button
                   type="button"
                   onClick={() =>

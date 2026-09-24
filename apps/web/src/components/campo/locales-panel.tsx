@@ -6,6 +6,7 @@ import { apiFetch } from "@/lib/api";
 import { volverAlInicioDelListado } from "@/utils/scroll-listado";
 import { useListaCampo, useOperacionCampo } from "@/hooks/use-lista-campo";
 import { Modal } from "@/components/modal";
+import { BotonEditar } from "@/components/boton-editar";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { TOKENS } from "./tokens";
 import { StatusStamp } from "./ui/status-stamp";
@@ -17,7 +18,6 @@ import {
   IconoTienda,
   IconoMapa,
   IconoPlanificacion,
-  IconoEditar,
   IconoBuscar,
   IconoCruz,
   IconoMas,
@@ -298,7 +298,7 @@ export function LocalesPanel() {
                   </div>
                   <p className="mt-2 break-words text-xs text-foreground">Asignado: {local.asignaciones?.length ? local.asignaciones.map((asignacion) => `${asignacion.usuario.rol?.descripcion ?? "Impulsador"} ${asignacion.usuario.nombre} ${asignacion.usuario.apellido}`).join(", ") : "Sin asignar"}</p>
                   <div className="mt-3 grid grid-cols-2 gap-2">
-                    <button type="button" onClick={() => setForm(local)} className="min-h-11 cursor-pointer rounded-lg border border-line text-xs font-semibold text-foreground hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600">Editar</button>
+                    <BotonEditar onClick={() => setForm(local)} etiqueta={`Editar local ${local.nombre}`} modo="texto" />
                     <button type="button" onClick={() => setPlan(local)} className="min-h-11 cursor-pointer rounded-lg border border-line text-xs font-semibold text-foreground hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600">Ruta</button>
                   </div>
                 </li>
@@ -319,14 +319,7 @@ export function LocalesPanel() {
                     <tr key={local.id} className="transition-colors hover:bg-surface-soft">
                       <td className="whitespace-nowrap px-3.5 py-2.5">
                         <div className="flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => setForm(local)}
-                            className="inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-md border border-line px-2.5 font-semibold text-foreground hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
-                          >
-                            <IconoEditar className="h-3.5 w-3.5" />
-                            Editar
-                          </button>
+                          <BotonEditar onClick={() => setForm(local)} etiqueta={`Editar local ${local.nombre}`} />
                           <button
                             type="button"
                             onClick={() => setPlan(local)}

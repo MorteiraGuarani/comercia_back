@@ -9,6 +9,7 @@ import type { CountryCode } from "libphonenumber-js";
 import { apiFetch, ApiError } from "@/lib/api";
 import { SelectorPaginado } from "@/components/selector-paginado";
 import { IconoMas } from "@/components/icono-mas";
+import { BotonEditar } from "@/components/boton-editar";
 import type { RespuestaPaginada } from "@/types/paginacion";
 import type {
   MetaUsuarios,
@@ -119,19 +120,13 @@ function ListaUsuariosMovil({
             </p>
           ) : (
             <>
+              <BotonEditar onClick={() => onEditar(usuario)} etiqueta={`Editar usuario ${usuario.nombre} ${usuario.apellido}`} modo="texto" className="mt-2 w-full" />
               <button
                 type="button"
                 onClick={() => onLocales(usuario)}
-                className={`${btnGhost} mt-3 min-h-11 w-full whitespace-nowrap`}
-              >
-                Gestionar locales
-              </button>
-              <button
-                type="button"
-                onClick={() => onEditar(usuario)}
                 className={`${btnGhost} mt-2 min-h-11 w-full whitespace-nowrap`}
               >
-                Editar usuario
+                Gestionar locales
               </button>
               {onEliminar ? (
                 <button
@@ -395,19 +390,13 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
                     </span>
                   ) : (
                     <div className="flex justify-end gap-2">
+                      <BotonEditar onClick={() => abrirEditar(usuario)} etiqueta={`Editar usuario ${usuario.nombre} ${usuario.apellido}`} />
                       <button
                         type="button"
                         onClick={() => setLocalesUsuario(usuario)}
                         className={btnGhost}
                       >
                         Locales
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => abrirEditar(usuario)}
-                        className={btnGhost}
-                      >
-                        Editar
                       </button>
                       {soloSuperadmin ? (
                         <button

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { IconoMas } from "@/components/icono-mas";
+import { BotonEditar } from "@/components/boton-editar";
 import { Modal } from "@/components/modal";
 import { Paginacion } from "@/components/paginacion";
 import {
@@ -66,13 +67,7 @@ function ListaEmpresasMovil({
               </p>
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => onEditar(empresa)}
-                className={`${btnGhost} min-h-11 whitespace-nowrap`}
-              >
-                Editar
-              </button>
+              <BotonEditar onClick={() => onEditar(empresa)} etiqueta={`Editar empresa ${empresa.nombre}`} modo="texto" />
               <button
                 type="button"
                 onClick={() => onEliminar(empresa)}
@@ -287,13 +282,7 @@ export function EmpresasAbmPanel() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-2">
-                          <button
-                            type="button"
-                            onClick={() => abrir(empresa)}
-                            className={btnGhost}
-                          >
-                            Editar
-                          </button>
+                          <BotonEditar onClick={() => abrir(empresa)} etiqueta={`Editar empresa ${empresa.nombre}`} />
                           <button
                             type="button"
                             onClick={() => {

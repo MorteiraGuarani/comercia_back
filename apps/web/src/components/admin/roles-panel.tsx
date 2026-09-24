@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { SelectorPaginado } from "@/components/selector-paginado";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { IconoMas } from "@/components/icono-mas";
+import { BotonEditar } from "@/components/boton-editar";
 import { Modal } from "@/components/modal";
 import { Paginacion } from "@/components/paginacion";
 import {
@@ -57,13 +58,7 @@ function ListaRolesMovil({
               </p>
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => onEditar(rol)}
-                className={`${btnGhost} min-h-11 whitespace-nowrap`}
-              >
-                Editar
-              </button>
+              <BotonEditar onClick={() => onEditar(rol)} etiqueta={`Editar rol ${rol.descripcion}`} modo="texto" />
               <button
                 type="button"
                 onClick={() => onEliminar(rol)}
@@ -291,13 +286,7 @@ export function RolesPanel() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-2">
-                          <button
-                            type="button"
-                            onClick={() => abrir(rol)}
-                            className={btnGhost}
-                          >
-                            Editar
-                          </button>
+                          <BotonEditar onClick={() => abrir(rol)} etiqueta={`Editar rol ${rol.descripcion}`} />
                           <button
                             type="button"
                             onClick={() => {

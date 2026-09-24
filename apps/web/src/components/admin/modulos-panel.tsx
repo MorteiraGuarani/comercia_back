@@ -13,6 +13,7 @@ import type {
 import { MOTORES, TIPOS_EJECUTABLE } from "@/types/plataforma";
 import { Modal } from "@/components/modal";
 import { IconoMas } from "@/components/icono-mas";
+import { BotonEditar } from "@/components/boton-editar";
 import { notificarPlataformaActualizada } from "@/lib/eventos-plataforma";
 import {
   btnGhost,
@@ -165,12 +166,7 @@ export function ModulosPanel() {
                   /{m.ruta} · {m.paginas?.length ?? 0} páginas
                 </p>
               </div>
-              <BotonIcono
-                onClick={() => setFormModulo(m)}
-                titulo="Editar módulo"
-              >
-                <IconoLapiz />
-              </BotonIcono>
+              <BotonEditar onClick={() => setFormModulo(m)} etiqueta={`Editar módulo ${m.nombre}`} />
               <BotonIcono
                 onClick={() =>
                   setAEliminar({ tipo: "modulo", id: m.id, nombre: m.nombre })
@@ -232,14 +228,10 @@ export function ModulosPanel() {
                         >
                           <IconoMas className="h-5 w-5" />
                         </button>
-                        <BotonIcono
-                          onClick={() =>
-                            setFormPagina({ pagina: p, moduloId: m.id })
-                          }
-                          titulo="Editar página"
-                        >
-                          <IconoLapiz />
-                        </BotonIcono>
+                        <BotonEditar
+                          onClick={() => setFormPagina({ pagina: p, moduloId: m.id })}
+                          etiqueta={`Editar página ${p.nombre}`}
+                        />
                         <BotonIcono
                           onClick={() =>
                             setAEliminar({
@@ -271,14 +263,10 @@ export function ModulosPanel() {
                               <span className="flex-1 truncate">
                                 {e.nombre}
                               </span>
-                              <BotonIcono
-                                onClick={() =>
-                                  setFormEjec({ ejec: e, paginaId: p.id })
-                                }
-                                titulo="Editar ejecutable"
-                              >
-                                <IconoLapiz />
-                              </BotonIcono>
+                              <BotonEditar
+                                onClick={() => setFormEjec({ ejec: e, paginaId: p.id })}
+                                etiqueta={`Editar ejecutable ${e.nombre}`}
+                              />
                               <BotonIcono
                                 onClick={() =>
                                   setAEliminar({
@@ -815,19 +803,6 @@ function BotonIcono({
     >
       {children}
     </button>
-  );
-}
-
-function IconoLapiz() {
-  return (
-    <svg
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      className="h-4 w-4"
-      aria-hidden
-    >
-      <path d="M2.695 14.762l-1.262 3.155a.5.5 0 00.65.65l3.155-1.262a4 4 0 001.343-.885L17.5 5.5a2.121 2.121 0 00-3-3L3.58 13.42a4 4 0 00-.885 1.343z" />
-    </svg>
   );
 }
 

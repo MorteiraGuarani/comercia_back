@@ -5,6 +5,7 @@ import { apiFetch } from "@/lib/api";
 import { useListaCampo, useOperacionCampo } from "@/hooks/use-lista-campo";
 import { fechaCalendario, fechaEnZonaIso } from "@/utils/fechas";
 import { Modal } from "@/components/modal";
+import { BotonEditar } from "@/components/boton-editar";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { Paginacion } from "@/components/paginacion";
 import { IconoMas } from "@/components/icono-mas";
@@ -15,7 +16,6 @@ import { TopBar } from "./ui/top-bar";
 import {
   IconoBuscar,
   IconoCruz,
-  IconoEditar,
   IconoEliminar,
   IconoCamara,
   IconoGlobo,
@@ -229,7 +229,7 @@ export function TareasPanel() {
                       <h3 className="mt-1 text-sm font-semibold text-foreground">{tarea.nombre}</h3>
                     </div>
                     <div className="flex shrink-0 gap-1">
-                      <button type="button" onClick={() => abrir(tarea)} aria-label={"Editar " + tarea.nombre} className="grid h-11 w-11 place-items-center rounded-md border border-line text-foreground hover:bg-surface-soft"><IconoEditar className="h-4 w-4" /></button>
+                      <BotonEditar onClick={() => abrir(tarea)} etiqueta={`Editar tarea ${tarea.nombre}`} modo="texto" />
                       <button type="button" onClick={() => void eliminar(tarea)} disabled={!!op.mensaje} aria-label={"Eliminar " + tarea.nombre} className="grid h-11 w-11 place-items-center rounded-md border border-red-200 text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950"><IconoEliminar className="h-4 w-4" /></button>
                     </div>
                   </div>
@@ -258,7 +258,7 @@ export function TareasPanel() {
                       <td className="p-4 text-muted">{tarea.todosLocales ? "Todos los locales" : (tarea.locales?.length ?? 0) + " locales"}</td>
                   <td className="p-4">
                     <div className="flex flex-wrap gap-2">
-                      <button type="button" onClick={() => abrir(tarea)} className="min-h-11 rounded-md border border-line px-3 text-foreground hover:bg-surface-soft">Editar</button>
+                      <BotonEditar onClick={() => abrir(tarea)} etiqueta={`Editar tarea ${tarea.nombre}`} />
                       <button type="button" onClick={() => void eliminar(tarea)} disabled={!!op.mensaje} className="min-h-11 rounded-md border border-red-200 px-3 text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950">Eliminar</button>
                     </div>
                   </td>

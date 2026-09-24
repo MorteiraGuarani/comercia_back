@@ -94,6 +94,12 @@ This version has breaking changes. APIs, conventions, and file structure may dif
 
 ## Elementos clickeables
 
+- Para la acción **Editar** en listados, usar `src/components/boton-editar.tsx`.
+  Consultar [`docs/patron-acciones-edicion.md`](../../docs/patron-acciones-edicion.md)
+  al crear o modificar pantallas: icono en tablas, texto en tarjetas móviles y
+  etiqueta accesible con el nombre del registro. Editar va antes de las demás
+  acciones de la fila.
+
 - **Todo** elemento clickeable (botón, link, opción de lista, fila accionable,
   ícono, tarjeta que navega) debe tener **cursor pointer** y un **hover visible**
   (cambio de fondo, borde o subrayado). Hay una regla base en `globals.css` que
