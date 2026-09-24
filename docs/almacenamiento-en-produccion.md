@@ -22,7 +22,7 @@ Todas las rutas siguientes están **dentro de `/app/uploads`**:
 | Uso | Ruta | Referencia guardada en PostgreSQL |
 | --- | --- | --- |
 | Fotos «antes» y «después» de tareas | `tareas/AAAA/MM/DD/<uuid>.jpg` (también puede ser PNG o WebP) | `campo_tarea_fotos`: momento, ruta, tipo, tamaño, usuario y visita/tarea. |
-| Fotos de novedades y avisos | `adjuntos/AAAA/MM/DD/<uuid>.<extensión>` | `campo_adjuntos`: ruta, nombre original, tipo, tamaño y novedad o aviso. |
+| Fotos de novedades, avisos y avisos programados | `adjuntos/AAAA/MM/DD/<uuid>.<extensión>` | `campo_adjuntos`: ruta, nombre original, tipo, tamaño y novedad, aviso o programación. Al enviarse una programación, cada aviso conserva una referencia a las mismas imágenes. |
 | Logos de clientes | `clientes/logo_<uuid>.<extensión>` | `campo_clientes.logo_url`: URL de la API que sirve el logo. |
 
 **PostgreSQL guarda referencias y metadatos; no guarda los bytes de las imágenes.** Por eso hacen falta tanto la base como el volumen de uploads para una restauración completa. Algunas fotos de tareas antiguas tienen una ruta relativa `uploads/tareas/...`; las nuevas pueden tener `/app/uploads/tareas/...`. La API resuelve ambos formatos, siempre que el archivo exista en el volumen.

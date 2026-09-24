@@ -28,6 +28,7 @@ model Empresa {
   notificacionesCampo NotificacionCampo[]
   novedadesCampo      NovedadCampo[]
   avisosCampo         AvisoCampo[]
+  programacionesAviso AvisoProgramacionCampo[]
   adjuntosCampo       AdjuntoCampo[]
   createdAt           DateTime                  @default(now()) @map("created_at")
   updatedAt           DateTime                  @default(now()) @updatedAt @map("updated_at")
@@ -187,6 +188,8 @@ model Usuario {
   respuestasNovedad       RespuestaNovedadCampo[]
   avisosEnviados          AvisoCampo[]              @relation("AvisosEnviados")
   avisosRecibidos         AvisoCampo[]              @relation("AvisosRecibidos")
+  destinatariosAvisos     AvisoDestinatarioCampo[]
+  programacionesAviso     AvisoProgramacionCampo[]
   lecturasAvisos          AvisoLecturaCampo[]
   adjuntosCampo           AdjuntoCampo[]
   identidadUcheck         IdentidadUcheck?
@@ -598,6 +601,15 @@ model RespuestaNovedadCampo {
 enum TipoAvisoCampo {
   INDIVIDUAL
   EQUIPO
+  SELECCION
+}
+
+enum FrecuenciaAvisoCampo {
+  UNA_VEZ
+  HORARIA
+  DIARIA
+  SEMANAL
+  MENSUAL
 }
 
 model AvisoCampo {
@@ -612,12 +624,56 @@ model AvisoCampo {
   mensaje        String              @db.VarChar(1000)
   creadoAt       DateTime            @default(now()) @map("creado_at")
   lecturas       AvisoLecturaCampo[]
+  destinatarios  AvisoDestinatarioCampo[]
   adjuntos       AdjuntoCampo[]
+  programacionId Int? @map("programacion_id")
+  programacion   AvisoProgramacionCampo? @relation(fields: [programacionId], references: [id], onDelete: SetNull)
+  instanteProgramado DateTime? @map("instante_programado")
 
   @@index([empresaId, creadoAt(sort: Desc)])
   @@index([emisorId, creadoAt(sort: Desc)])
   @@index([destinatarioId, creadoAt(sort: Desc)])
+  @@unique([programacionId, instanteProgramado])
   @@map("campo_avisos")
+}
+
+model AvisoDestinatarioCampo {
+  avisoId Int @map("aviso_id")
+  aviso AvisoCampo @relation(fields: [avisoId], references: [id], onDelete: Cascade)
+  usuarioId Int @map("usuario_id")
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@id([avisoId, usuarioId])
+  @@index([usuarioId])
+  @@map("campo_aviso_destinatarios")
+}
+
+model AvisoProgramacionCampo {
+  id Int @id @default(autoincrement())
+  empresaId Int @map("empresa_id")
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  emisorId Int @map("emisor_id")
+  emisor Usuario @relation(fields: [emisorId], references: [id], onDelete: Cascade)
+  tipo TipoAvisoCampo
+  destinatariosIds Int[] @default([]) @map("destinatarios_ids")
+  mensaje String @db.VarChar(1000)
+  frecuencia FrecuenciaAvisoCampo
+  fechaInicio String @map("fecha_inicio") @db.VarChar(10)
+  hora String @db.VarChar(5)
+  intervaloHoras Int? @map("intervalo_horas")
+  diasSemana Int[] @default([]) @map("dias_semana")
+  diaMes Int? @map("dia_mes")
+  fechaFin String? @map("fecha_fin") @db.VarChar(10)
+  proximoEnvioAt DateTime @map("proximo_envio_at")
+  ultimoEnvioAt DateTime? @map("ultimo_envio_at")
+  activo Boolean @default(true)
+  creadoAt DateTime @default(now()) @map("creado_at")
+  avisos AvisoCampo[]
+  adjuntos AdjuntoCampo[]
+
+  @@index([activo, proximoEnvioAt])
+  @@index([emisorId, creadoAt(sort: Desc)])
+  @@map("campo_aviso_programaciones")
 }
 
 model AvisoLecturaCampo {
@@ -643,6 +699,8 @@ model AdjuntoCampo {
   novedad        NovedadCampo? @relation(fields: [novedadId], references: [id], onDelete: Cascade)
   avisoId        Int?          @map("aviso_id")
   aviso          AvisoCampo?   @relation(fields: [avisoId], references: [id], onDelete: Cascade)
+  programacionId Int? @map("programacion_id")
+  programacion AvisoProgramacionCampo? @relation(fields: [programacionId], references: [id], onDelete: Cascade)
   nombreOriginal String        @map("nombre_original") @db.VarChar(255)
   rutaArchivo    String        @map("ruta_archivo") @db.VarChar(500)
   mimeType       String        @map("mime_type") @db.VarChar(50)
@@ -651,6 +709,7 @@ model AdjuntoCampo {
 
   @@index([novedadId])
   @@index([avisoId])
+  @@index([programacionId])
   @@index([empresaId, creadoAt(sort: Desc)])
   @@map("campo_adjuntos")
 }

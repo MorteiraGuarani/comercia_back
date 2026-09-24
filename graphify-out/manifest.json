@@ -1915,8 +1915,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/campo/campo.controller.ts": {
-    "mtime": 1790184713.8745313,
-    "ast_hash": "ef6afa93d16fe78edf6e2c29744972db",
+    "mtime": 1790273653.6153882,
+    "ast_hash": "ec7bcc0faa37d9f60943a7a8705e6a94",
     "semantic_hash": ""
   },
   "apps/api/src/campo/campo.module.ts": {
@@ -2010,8 +2010,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/types/campo.ts": {
-    "mtime": 1790271300.4147377,
-    "ast_hash": "29e44c2f1de817bede553b01d579f8ae",
+    "mtime": 1790273896.0683248,
+    "ast_hash": "b8f8834dbf04e0a81dfa3fdb8e6fcb05",
     "semantic_hash": ""
   },
   "docs/operaciones-campo.md": {
@@ -2160,8 +2160,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/campo/dto/aviso.dto.ts": {
-    "mtime": 1789645515.840179,
-    "ast_hash": "7661d8d63e1b26893381cb8037c0bf87",
+    "mtime": 1790273762.9441135,
+    "ast_hash": "99f5e2f10d0017defca979133057734b",
     "semantic_hash": ""
   },
   "apps/api/src/campo/dto/consulta-tareas.dto.ts": {
@@ -2180,13 +2180,13 @@
     "semantic_hash": ""
   },
   "apps/api/src/campo/services/aviso.service.spec.ts": {
-    "mtime": 1790184934.1164043,
-    "ast_hash": "250b5092b63a36971d668bcd62acd967",
+    "mtime": 1790274106.320091,
+    "ast_hash": "9de2187024413c876334ccc548ccc439",
     "semantic_hash": ""
   },
   "apps/api/src/campo/services/aviso.service.ts": {
-    "mtime": 1790183638.7623107,
-    "ast_hash": "ffe67fc7cc88798bd7706036dc8d4b2b",
+    "mtime": 1790273979.0406685,
+    "ast_hash": "53f49555007fdfb8e2ebdf1322416308",
     "semantic_hash": ""
   },
   "apps/api/src/campo/services/foto.service.spec.ts": {
@@ -2225,8 +2225,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/avisos-panel.tsx": {
-    "mtime": 1790185123.8188624,
-    "ast_hash": "674552b458ace020c83469e0ffbab073",
+    "mtime": 1790273896.1966982,
+    "ast_hash": "e84ea492ebb4761c2b7f90414cdc1c26",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/clientes-panel.tsx": {
@@ -2235,8 +2235,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/locales-panel.tsx": {
-    "mtime": 1790271409.067609,
-    "ast_hash": "6f834d2717b426cf936178fb0b852497",
+    "mtime": 1790272086.9217966,
+    "ast_hash": "2ced47346a9dc9befdef9b06d45e59f5",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/mapa-clientes.tsx": {
@@ -2435,8 +2435,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/campo/services/adjunto-campo.service.ts": {
-    "mtime": 1790109545.9516237,
-    "ast_hash": "bf5393913d4fed9e88b3fe2b8f437b4d",
+    "mtime": 1790273653.5127902,
+    "ast_hash": "f41147a13c85ecd249ba894675a448c6",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/galeria-adjuntos-campo.tsx": {
@@ -2450,8 +2450,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/lib/api-adjuntos-campo.ts": {
-    "mtime": 1790110128.4156446,
-    "ast_hash": "eaadaeffc9430debc5f859d2b04c1163",
+    "mtime": 1790273794.6160595,
+    "ast_hash": "ee568e55b4f61cf348ae6e9c2708161c",
     "semantic_hash": ""
   },
   "apps/api/src/campo/jornada-campo.service.spec.ts": {
@@ -2495,8 +2495,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/hilo-novedad.tsx": {
-    "mtime": 1790183831.5706234,
-    "ast_hash": "8fa875f1bebec3ecfbfcf4e0e1fa3baf",
+    "mtime": 1790272589.2501593,
+    "ast_hash": "d4a70bc0ac3de7eab63c32cb84bb5d7f",
     "semantic_hash": ""
   },
   "apps/web/src/utils/html.ts": {
@@ -2510,13 +2510,48 @@
     "semantic_hash": ""
   },
   "docs/almacenamiento-en-produccion.md": {
-    "mtime": 1790189066.3966272,
-    "ast_hash": "b9833ac42bea30123e16ef44d26e282b",
+    "mtime": 1790273858.9143105,
+    "ast_hash": "1a9966b2eba09de75528e1c009f3f597",
     "semantic_hash": ""
   },
   "docs/supervisor-teamleader-ucheck.md": {
     "mtime": 1790190685.684601,
     "ast_hash": "54c96d87ba97819493144aa93b9fab72",
+    "semantic_hash": ""
+  },
+  "apps/api/prisma/migrations/20260924120000_avisos_programados_y_destinatarios/migration.sql": {
+    "mtime": 1790273756.4973755,
+    "ast_hash": "dadeaa0f4685e458934d3bce415f8481",
+    "semantic_hash": ""
+  },
+  "apps/api/src/campo/services/adjunto-aviso.service.spec.ts": {
+    "mtime": 1790273895.9557521,
+    "ast_hash": "f403b3eeccb153d9707da6734d5b1326",
+    "semantic_hash": ""
+  },
+  "apps/api/src/campo/services/aviso-programacion.service.spec.ts": {
+    "mtime": 1790273653.487892,
+    "ast_hash": "675a6963d2dc6f0c7a87632b4bdd705b",
+    "semantic_hash": ""
+  },
+  "apps/api/src/campo/utils/programacion-aviso.spec.ts": {
+    "mtime": 1790273896.0091379,
+    "ast_hash": "c8b735b35a70981763c9b621c73dcce1",
+    "semantic_hash": ""
+  },
+  "apps/api/src/campo/utils/programacion-aviso.ts": {
+    "mtime": 1790273895.988207,
+    "ast_hash": "1e40f7d123e5ed090c0be4f13ba3c6c9",
+    "semantic_hash": ""
+  },
+  "apps/web/src/utils/aviso.ts": {
+    "mtime": 1790273896.2084868,
+    "ast_hash": "49344895fb8beea1953e75dcfe20530a",
+    "semantic_hash": ""
+  },
+  "docs/avisos-programados.md": {
+    "mtime": 1790273996.0027385,
+    "ast_hash": "81523f7188e9c441764bc47eac872e21",
     "semantic_hash": ""
   }
 }

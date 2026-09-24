@@ -11,14 +11,18 @@ import { IconoMegafono, IconoContacto, IconoCheck } from "./ui/iconos-campo";
 import { crearAvisoCampo } from "@/lib/api-adjuntos-campo";
 import { SelectorFotosCampo } from "./selector-fotos-campo";
 import { GaleriaAdjuntosCampo } from "./galeria-adjuntos-campo";
+import { SelectorPaginado } from "@/components/selector-paginado";
+import { Paginacion } from "@/components/paginacion";
+import { descripcionFrecuenciaAviso } from "@/utils/aviso";
 import type { RespuestaPaginada } from "@/types/paginacion";
 import type {
   AvisoEnviadoItem,
   AvisoRecibidoItem,
   FormAvisoCampo,
   TipoAviso,
-  ColaboradorResumenItem,
-  SupervisionResumenData,
+  DestinatarioAviso,
+  FrecuenciaAviso,
+  ProgramacionAvisoItem,
 } from "@/types/campo";
 
 function itemsDeLista<T>(
@@ -35,15 +39,16 @@ interface AvisosPanelProps {
 
 export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
   // Tabs: para lider: "recibidos" | "enviados" | "redactar". Para impulsador: "recibidos"
-  const [tab, setTab] = useState<"recibidos" | "enviados" | "redactar">(
-    esImpulsador ? "recibidos" : "enviados",
-  );
+  const [tab, setTab] = useState<
+    "recibidos" | "enviados" | "programados" | "redactar"
+  >(esImpulsador ? "recibidos" : "enviados");
 
   const [recibidos, setRecibidos] = useState<AvisoRecibidoItem[]>([]);
   const [enviados, setEnviados] = useState<AvisoEnviadoItem[]>([]);
-  const [colaboradores, setColaboradores] = useState<ColaboradorResumenItem[]>(
-    [],
-  );
+  const [programados, setProgramados] =
+    useState<RespuestaPaginada<ProgramacionAvisoItem> | null>(null);
+  const [programadosPage, setProgramadosPage] = useState(1);
+  const [programadosLimit, setProgramadosLimit] = useState(7);
 
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
@@ -51,9 +56,19 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
 
   // Estado del formulario
   const [formTipo, setFormTipo] = useState<TipoAviso>("EQUIPO");
-  const [formDestinatarioId, setFormDestinatarioId] = useState<
-    number | undefined
-  >(undefined);
+  const [formDestinatarioId, setFormDestinatarioId] = useState<number | "">("");
+  const [formDestinatarios, setFormDestinatarios] = useState<
+    DestinatarioAviso[]
+  >([]);
+  const [formModo, setFormModo] = useState<"AHORA" | "PROGRAMAR">("AHORA");
+  const [formFrecuencia, setFormFrecuencia] =
+    useState<FrecuenciaAviso>("UNA_VEZ");
+  const [formFechaInicio, setFormFechaInicio] = useState("");
+  const [formHora, setFormHora] = useState("");
+  const [formIntervaloHoras, setFormIntervaloHoras] = useState(1);
+  const [formDiasSemana, setFormDiasSemana] = useState<number[]>([]);
+  const [formDiaMes, setFormDiaMes] = useState(1);
+  const [formFechaFin, setFormFechaFin] = useState("");
   const [formMensaje, setFormMensaje] = useState("");
   const [formFotos, setFormFotos] = useState<File[]>([]);
   const [enviando, setEnviando] = useState(false);
@@ -83,20 +98,17 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
   };
 
   // Cargar colaboradores para el selector individual
-  const cargarColaboradores = async () => {
-    if (esImpulsador) return;
+  const cargarProgramados = async (
+    page = programadosPage,
+    limit = programadosLimit,
+  ) => {
     try {
-      const res = await apiFetch<SupervisionResumenData>(
-        "/campo/supervision/resumen",
+      const res = await apiFetch<RespuestaPaginada<ProgramacionAvisoItem>>(
+        `/campo/avisos/programaciones?page=${page}&limit=${limit}`,
       );
-      if (res && res.colaboradores) {
-        setColaboradores(res.colaboradores);
-        if (res.colaboradores.length > 0 && !formDestinatarioId) {
-          setFormDestinatarioId(res.colaboradores[0].id);
-        }
-      }
-    } catch {
-      // Ignorar si falla
+      setProgramados(res);
+    } catch (e) {
+      setError(mensajeError(e, "Error al cargar avisos programados"));
     }
   };
 
@@ -107,7 +119,7 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
       await Promise.all([
         cargarRecibidos(),
         !esImpulsador ? cargarEnviados() : null,
-        !esImpulsador ? cargarColaboradores() : null,
+        !esImpulsador ? cargarProgramados() : null,
       ]);
     } catch (e) {
       setError(mensajeError(e, "Error al cargar avisos"));
@@ -124,8 +136,17 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
   const handleEnviar = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formMensaje.trim()) return;
-    if (formTipo === "INDIVIDUAL" && !formDestinatarioId) {
-      setError("Debes seleccionar un colaborador para el aviso individual.");
+    if (formTipo === "SELECCION" && formDestinatarios.length === 0) {
+      setError("Selecciona uno o varios colaboradores.");
+      return;
+    }
+    if (
+      formModo === "PROGRAMAR" &&
+      (!formFechaInicio ||
+        !formHora ||
+        (formFrecuencia === "SEMANAL" && !formDiasSemana.length))
+    ) {
+      setError("Indica fecha, hora y los días de envío cuando corresponda.");
       return;
     }
 
@@ -137,17 +158,47 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
       const payload: FormAvisoCampo = {
         tipo: formTipo,
         mensaje: formMensaje.trim(),
-        destinatarioId:
-          formTipo === "INDIVIDUAL" ? formDestinatarioId : undefined,
+        destinatariosIds:
+          formTipo === "SELECCION"
+            ? formDestinatarios.map((item) => item.id)
+            : undefined,
+        frecuencia: formModo === "PROGRAMAR" ? formFrecuencia : undefined,
+        fechaInicio: formModo === "PROGRAMAR" ? formFechaInicio : undefined,
+        hora: formModo === "PROGRAMAR" ? formHora : undefined,
+        intervaloHoras:
+          formModo === "PROGRAMAR" && formFrecuencia === "HORARIA"
+            ? formIntervaloHoras
+            : undefined,
+        diasSemana:
+          formModo === "PROGRAMAR" && formFrecuencia === "SEMANAL"
+            ? formDiasSemana
+            : undefined,
+        diaMes:
+          formModo === "PROGRAMAR" && formFrecuencia === "MENSUAL"
+            ? formDiaMes
+            : undefined,
+        fechaFin:
+          formModo === "PROGRAMAR" &&
+          formFrecuencia !== "UNA_VEZ" &&
+          formFechaFin
+            ? formFechaFin
+            : undefined,
       };
 
       await crearAvisoCampo(payload, formFotos);
 
       setFormMensaje("");
       setFormFotos([]);
-      setExito("Aviso transmitido con éxito al equipo de campo.");
+      setFormDestinatarios([]);
+      setExito(
+        formModo === "PROGRAMAR"
+          ? "Aviso programado correctamente."
+          : "Aviso enviado correctamente.",
+      );
       await cargarEnviados();
-      setTab("enviados");
+      await cargarProgramados(1, programadosLimit);
+      setProgramadosPage(1);
+      setTab(formModo === "PROGRAMAR" ? "programados" : "enviados");
     } catch (err) {
       setError(mensajeError(err, "Error al enviar aviso."));
     } finally {
@@ -170,6 +221,22 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
       );
     } catch (err: unknown) {
       console.error("Error al marcar aviso como leído:", err);
+    }
+  };
+
+  const cancelarProgramacion = async (id: number) => {
+    setEnviando(true);
+    setError("");
+    try {
+      await apiFetch(`/campo/avisos/programaciones/${id}`, {
+        method: "DELETE",
+      });
+      await cargarProgramados();
+      setExito("Programación cancelada.");
+    } catch (e) {
+      setError(mensajeError(e, "No se pudo cancelar la programación"));
+    } finally {
+      setEnviando(false);
     }
   };
 
@@ -225,9 +292,11 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
       <PantallaCarga
         visible={enviando}
         mensaje={
-          formFotos.length
-            ? "Enviando comunicado y subiendo fotos"
-            : "Enviando comunicado"
+          formModo === "PROGRAMAR"
+            ? "Guardando aviso programado y fotos"
+            : formFotos.length
+              ? "Enviando comunicado y subiendo fotos"
+              : "Enviando comunicado"
         }
       />
 
@@ -279,7 +348,7 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
             className="min-w-0 border-b pb-4"
             style={{ borderColor: TOKENS.line }}
           >
-            <div className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_2.75rem_minmax(0,1fr)] items-center gap-2 sm:flex sm:w-auto">
+            <div className="grid w-full min-w-0 grid-cols-[repeat(3,minmax(0,1fr))_2.75rem] items-center gap-1.5 sm:flex sm:gap-2">
               <button
                 type="button"
                 onClick={() => setTab("enviados")}
@@ -292,24 +361,8 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                   borderColor: tab === "enviados" ? "transparent" : TOKENS.line,
                 }}
               >
-                Enviados ({enviados.length})
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setTab("redactar")}
-                aria-label="Crear comunicado"
-                title="Crear comunicado"
-                className={`grid h-11 w-11 place-items-center rounded-xl text-sm font-bold transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-brand-600 ${
-                  tab === "redactar"
-                    ? "bg-brand-700 text-white shadow-sm dark:bg-brand-200 dark:text-brand-950"
-                    : "border border-line bg-surface-raised text-foreground hover:bg-surface-soft"
-                }`}
-                style={{
-                  borderColor: tab === "redactar" ? "transparent" : TOKENS.line,
-                }}
-              >
-                <span aria-hidden="true" className="text-xl">+</span>
+                Enviados{" "}
+                <span className="hidden sm:inline">({enviados.length})</span>
               </button>
 
               <button
@@ -335,6 +388,32 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                   </span>
                 )}
               </button>
+              <button
+                type="button"
+                onClick={() => setTab("programados")}
+                className={`min-w-0 rounded-xl px-1 py-2.5 text-[10px] font-bold uppercase tracking-wide transition-all focus-visible:ring-2 focus-visible:ring-brand-600 sm:px-5 sm:text-sm ${
+                  tab === "programados"
+                    ? "bg-brand-700 text-white dark:bg-brand-200 dark:text-brand-950"
+                    : "border border-line bg-surface-raised text-foreground hover:bg-surface-soft"
+                }`}
+              >
+                Programados
+              </button>
+              <button
+                type="button"
+                onClick={() => setTab("redactar")}
+                aria-label="Crear aviso"
+                title="Crear aviso"
+                className={`grid h-11 w-11 place-items-center rounded-xl text-sm font-bold transition-all focus-visible:ring-2 focus-visible:ring-brand-600 sm:ml-auto ${
+                  tab === "redactar"
+                    ? "bg-brand-700 text-white dark:bg-brand-200 dark:text-brand-950"
+                    : "border border-line bg-surface-raised text-foreground hover:bg-surface-soft"
+                }`}
+              >
+                <span aria-hidden="true" className="text-xl">
+                  +
+                </span>
+              </button>
             </div>
           </div>
         ) : (
@@ -355,9 +434,7 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
 
         {/* 1. FORMULARIO DE NUEVO COMUNICADO */}
         {tab === "redactar" && !esImpulsador && (
-          <div
-            className="min-w-0 max-w-full rounded-xl border border-line bg-surface-raised p-3 text-foreground shadow-sm sm:p-6"
-          >
+          <div className="min-w-0 max-w-full rounded-xl border border-line bg-surface-raised p-3 text-foreground shadow-sm sm:p-6">
             <div
               className="mb-5 border-b pb-3"
               style={{ borderColor: TOKENS.line }}
@@ -366,8 +443,8 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                 Transmitir Comunicado a Campo
               </h3>
               <p className="text-xs text-muted">
-                Envía una notificación prioritaria instantánea a todo tu equipo
-                o a un impulsador específico.
+                Envía ahora o programa un aviso para todo tu equipo o para los
+                colaboradores que elijas.
               </p>
             </div>
 
@@ -407,18 +484,18 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                         Todo el Equipo de Campo
                       </div>
                       <div className="break-words text-xs text-muted">
-                        Se transmite a todos los impulsadores asignados a tu
-                        supervisión.
+                        Se transmite a todos los colaboradores activos de tu
+                        equipo.
                       </div>
                     </div>
                   </button>
 
                   <button
                     type="button"
-                    onClick={() => setFormTipo("INDIVIDUAL")}
-                    aria-pressed={formTipo === "INDIVIDUAL"}
+                    onClick={() => setFormTipo("SELECCION")}
+                    aria-pressed={formTipo === "SELECCION"}
                     className={`flex w-full min-w-0 items-start gap-3 rounded-lg border p-3 text-left whitespace-normal transition-all sm:p-3.5 ${
-                      formTipo === "INDIVIDUAL"
+                      formTipo === "SELECCION"
                         ? "border-brand-700 bg-brand-50 text-foreground shadow-sm ring-1 ring-brand-700 dark:border-brand-200 dark:bg-brand-950"
                         : "border-line bg-surface-soft text-foreground hover:bg-surface-raised"
                     }`}
@@ -427,10 +504,10 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                       className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border"
                       style={{
                         borderColor:
-                          formTipo === "INDIVIDUAL" ? TOKENS.ink : TOKENS.sub,
+                          formTipo === "SELECCION" ? TOKENS.ink : TOKENS.sub,
                       }}
                     >
-                      {formTipo === "INDIVIDUAL" && (
+                      {formTipo === "SELECCION" && (
                         <div
                           className="w-2 h-2 rounded-full"
                           style={{ backgroundColor: TOKENS.ink }}
@@ -439,10 +516,10 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                     </div>
                     <div className="min-w-0">
                       <div className="break-words text-sm font-bold">
-                        Colaborador Individual
+                        Uno o varios colaboradores
                       </div>
                       <div className="break-words text-xs text-muted">
-                        Mensaje directo a un impulsador en particular.
+                        Elige exactamente quiénes recibirán el aviso.
                       </div>
                     </div>
                   </button>
@@ -450,29 +527,55 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
               </div>
 
               {/* Selector de colaborador (si es individual) */}
-              {formTipo === "INDIVIDUAL" && (
+              {formTipo === "SELECCION" && (
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-muted">
-                    Seleccionar Destinatario
-                  </label>
-                  <select
-                    value={formDestinatarioId ?? ""}
-                    onChange={(e) =>
-                      setFormDestinatarioId(Number(e.target.value))
-                    }
-                    className="w-full min-w-0 rounded-lg border border-line bg-surface-raised p-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand-600"
-                    style={{ borderColor: TOKENS.line }}
-                    required
+                  <SelectorPaginado
+                    url="/campo/avisos/destinatarios"
+                    etiqueta="Agregar colaborador"
+                    value={formDestinatarioId}
+                    onChange={setFormDestinatarioId}
+                    onSeleccionar={(opcion) => {
+                      setFormDestinatarios((prev) =>
+                        prev.some((item) => item.id === opcion.id)
+                          ? prev
+                          : [
+                              ...prev,
+                              {
+                                id: opcion.id,
+                                nombre:
+                                  opcion.nombre ?? `Colaborador ${opcion.id}`,
+                              },
+                            ],
+                      );
+                      setFormDestinatarioId("");
+                    }}
+                    buscable
+                  />
+                  <div
+                    className="mt-2 flex min-w-0 flex-wrap gap-2"
+                    aria-label="Destinatarios elegidos"
                   >
-                    <option value="" disabled>
-                      -- Seleccionar colaborador --
-                    </option>
-                    {colaboradores.map((colab) => (
-                      <option key={colab.id} value={colab.id}>
-                        {colab.nombre} — {colab.zona || "General"}
-                      </option>
+                    {formDestinatarios.map((item) => (
+                      <span
+                        key={item.id}
+                        className="inline-flex max-w-full items-center gap-1 rounded-lg border border-line bg-surface-soft px-2 py-1 text-sm text-foreground"
+                      >
+                        <span className="truncate">{item.nombre}</span>
+                        <button
+                          type="button"
+                          aria-label={`Quitar a ${item.nombre}`}
+                          onClick={() =>
+                            setFormDestinatarios((prev) =>
+                              prev.filter((actual) => actual.id !== item.id),
+                            )
+                          }
+                          className="grid h-9 w-9 shrink-0 place-items-center rounded hover:bg-surface-raised focus-visible:ring-2 focus-visible:ring-brand-600"
+                        >
+                          ×
+                        </button>
+                      </span>
                     ))}
-                  </select>
+                  </div>
                 </div>
               )}
 
@@ -497,6 +600,153 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                 />
               </div>
 
+              <fieldset className="min-w-0 space-y-3 rounded-xl border border-line bg-surface-soft p-3 sm:p-4">
+                <legend className="px-1 text-xs font-bold uppercase tracking-wider text-muted">
+                  Momento del envío
+                </legend>
+                <div className="grid grid-cols-2 gap-2">
+                  {(["AHORA", "PROGRAMAR"] as const).map((modo) => (
+                    <button
+                      key={modo}
+                      type="button"
+                      onClick={() => setFormModo(modo)}
+                      aria-pressed={formModo === modo}
+                      className={`min-h-11 rounded-lg border px-2 text-sm font-semibold focus-visible:ring-2 focus-visible:ring-brand-600 ${formModo === modo ? "border-brand-700 bg-brand-700 text-white dark:border-brand-200 dark:bg-brand-200 dark:text-brand-950" : "border-line bg-surface-raised text-foreground hover:bg-surface-soft"}`}
+                    >
+                      {modo === "AHORA" ? "Enviar ahora" : "Programar"}
+                    </button>
+                  ))}
+                </div>
+                {formModo === "PROGRAMAR" && (
+                  <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
+                    <label className="text-xs font-semibold text-muted">
+                      Repetición
+                      <select
+                        value={formFrecuencia}
+                        onChange={(e) =>
+                          setFormFrecuencia(e.target.value as FrecuenciaAviso)
+                        }
+                        className="mt-1 min-h-11 w-full rounded-lg border border-line bg-surface-raised px-3 text-sm text-foreground"
+                      >
+                        <option value="UNA_VEZ">Una vez</option>
+                        <option value="HORARIA">Cada ciertas horas</option>
+                        <option value="DIARIA">Cada día</option>
+                        <option value="SEMANAL">Cada semana</option>
+                        <option value="MENSUAL">Cada mes</option>
+                      </select>
+                    </label>
+                    <label className="text-xs font-semibold text-muted">
+                      Primera fecha
+                      <input
+                        type="date"
+                        value={formFechaInicio}
+                        onChange={(e) => setFormFechaInicio(e.target.value)}
+                        required
+                        className="mt-1 min-h-11 w-full min-w-0 rounded-lg border border-line bg-surface-raised px-3 text-sm text-foreground"
+                      />
+                    </label>
+                    <label className="text-xs font-semibold text-muted">
+                      Hora (Paraguay)
+                      <input
+                        type="time"
+                        value={formHora}
+                        onChange={(e) => setFormHora(e.target.value)}
+                        required
+                        className="mt-1 min-h-11 w-full min-w-0 rounded-lg border border-line bg-surface-raised px-3 text-sm text-foreground"
+                      />
+                    </label>
+                    {formFrecuencia === "MENSUAL" && (
+                      <label className="text-xs font-semibold text-muted">
+                        Día del mes
+                        <input
+                          type="number"
+                          min={1}
+                          max={31}
+                          value={formDiaMes}
+                          onChange={(e) =>
+                            setFormDiaMes(Number(e.target.value))
+                          }
+                          className="mt-1 min-h-11 w-full rounded-lg border border-line bg-surface-raised px-3 text-sm text-foreground"
+                        />
+                      </label>
+                    )}
+                    {formFrecuencia === "HORARIA" && (
+                      <label className="text-xs font-semibold text-muted">
+                        Repetir cada (horas)
+                        <input
+                          type="number"
+                          min={1}
+                          max={168}
+                          value={formIntervaloHoras}
+                          onChange={(e) =>
+                            setFormIntervaloHoras(Number(e.target.value))
+                          }
+                          className="mt-1 min-h-11 w-full rounded-lg border border-line bg-surface-raised px-3 text-sm text-foreground"
+                        />
+                      </label>
+                    )}
+                    {formFrecuencia !== "UNA_VEZ" && (
+                      <label className="text-xs font-semibold text-muted">
+                        Finalizar después de (opcional)
+                        <input
+                          type="date"
+                          value={formFechaFin}
+                          min={formFechaInicio}
+                          onChange={(e) => setFormFechaFin(e.target.value)}
+                          className="mt-1 min-h-11 w-full min-w-0 rounded-lg border border-line bg-surface-raised px-3 text-sm text-foreground"
+                        />
+                      </label>
+                    )}
+                    {formFrecuencia === "SEMANAL" && (
+                      <div className="sm:col-span-2">
+                        <p className="mb-1 text-xs font-semibold text-muted">
+                          Días de la semana
+                        </p>
+                        <div className="grid grid-cols-7 gap-1">
+                          {(["L", "M", "X", "J", "V", "S", "D"] as const).map(
+                            (dia, index) => (
+                              <button
+                                key={index}
+                                type="button"
+                                aria-label={
+                                  [
+                                    "Lunes",
+                                    "Martes",
+                                    "Miércoles",
+                                    "Jueves",
+                                    "Viernes",
+                                    "Sábado",
+                                    "Domingo",
+                                  ][index]
+                                }
+                                aria-pressed={formDiasSemana.includes(
+                                  index + 1,
+                                )}
+                                onClick={() =>
+                                  setFormDiasSemana((prev) =>
+                                    prev.includes(index + 1)
+                                      ? prev.filter((n) => n !== index + 1)
+                                      : [...prev, index + 1].sort(),
+                                  )
+                                }
+                                className={`min-h-11 min-w-0 rounded-lg border text-sm font-bold focus-visible:ring-2 focus-visible:ring-brand-600 ${formDiasSemana.includes(index + 1) ? "border-brand-700 bg-brand-700 text-white dark:border-brand-200 dark:bg-brand-200 dark:text-brand-950" : "border-line bg-surface-raised text-foreground hover:bg-surface-soft"}`}
+                              >
+                                {dia}
+                              </button>
+                            ),
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    <p className="text-xs text-muted sm:col-span-2">
+                      Las repeticiones continúan hasta que las canceles o llegue
+                      la fecha de fin. En meses cortos, el día 29, 30 o 31 se
+                      ajusta al último día.
+                    </p>
+                  </div>
+                )}
+              </fieldset>
+
               <SelectorFotosCampo
                 archivos={formFotos}
                 onChange={setFormFotos}
@@ -520,11 +770,139 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                   disabled={enviando || !formMensaje.trim()}
                   className="min-h-11 min-w-0 rounded-lg bg-brand-700 px-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800 focus-visible:ring-2 focus-visible:ring-brand-600 disabled:cursor-not-allowed disabled:border disabled:border-line disabled:bg-surface-soft disabled:text-foreground disabled:opacity-100 dark:bg-brand-200 dark:text-brand-950 dark:hover:bg-brand-100 dark:disabled:bg-surface-soft dark:disabled:text-foreground sm:px-6"
                 >
-                  {enviando ? "Enviando…" : "Enviar"}
+                  {enviando
+                    ? "Guardando…"
+                    : formModo === "PROGRAMAR"
+                      ? "Programar"
+                      : "Enviar"}
                 </button>
               </div>
             </form>
           </div>
+        )}
+
+        {tab === "programados" && !esImpulsador && (
+          <section
+            className="min-w-0 space-y-3"
+            aria-label="Avisos programados"
+          >
+            <h2 className="text-lg font-bold text-foreground">
+              Avisos programados
+            </h2>
+            {!programados?.items.length ? (
+              <p className="rounded-xl border border-line bg-surface-raised p-5 text-sm text-muted">
+                Aún no hay avisos programados.
+              </p>
+            ) : (
+              <>
+                <div className="space-y-2 md:hidden">
+                  {programados.items.map((item) => (
+                    <article
+                      key={item.id}
+                      className="min-w-0 rounded-xl border border-line bg-surface-raised p-3 text-foreground"
+                    >
+                      <p className="break-words text-sm font-semibold">
+                        {item.mensaje}
+                      </p>
+                      <p className="mt-2 text-xs text-muted">
+                        {descripcionFrecuenciaAviso(item)} · {item.hora} ·{" "}
+                        {item.activo
+                          ? `Próximo: ${formatearFecha(item.proximoEnvioAt)}`
+                          : "Finalizado"}
+                      </p>
+                      <p className="mt-1 text-xs text-muted">
+                        {item.tipo === "EQUIPO"
+                          ? "Todo el equipo"
+                          : `${item.destinatariosIds.length} destinatarios`}
+                      </p>
+                      {item.activo && (
+                        <button
+                          type="button"
+                          onClick={() => void cancelarProgramacion(item.id)}
+                          className="mt-2 min-h-11 w-full rounded-lg border border-line bg-surface-soft px-3 text-sm font-semibold text-foreground hover:bg-surface-raised focus-visible:ring-2 focus-visible:ring-brand-600"
+                        >
+                          Cancelar programación
+                        </button>
+                      )}
+                    </article>
+                  ))}
+                </div>
+                <div className="hidden overflow-x-auto rounded-xl border border-line bg-surface-raised md:block">
+                  <table className="w-full min-w-[620px] text-left text-sm text-foreground">
+                    <thead className="border-b border-line bg-surface-soft text-xs uppercase text-muted">
+                      <tr>
+                        <th className="p-3">Aviso</th>
+                        <th className="p-3">Repetición</th>
+                        <th className="p-3">Próximo envío</th>
+                        <th className="p-3">Estado</th>
+                        <th className="p-3">Acción</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {programados.items.map((item) => (
+                        <tr
+                          key={item.id}
+                          className="border-b border-line last:border-0"
+                        >
+                          <td className="max-w-[300px] p-3">
+                            <p className="break-words font-semibold">
+                              {item.mensaje}
+                            </p>
+                            <p className="text-xs text-muted">
+                              {item.tipo === "EQUIPO"
+                                ? "Todo el equipo"
+                                : `${item.destinatariosIds.length} destinatarios`}
+                            </p>
+                          </td>
+                          <td className="p-3">
+                            {descripcionFrecuenciaAviso(item)} · {item.hora}
+                          </td>
+                          <td className="p-3">
+                            {item.activo
+                              ? formatearFecha(item.proximoEnvioAt)
+                              : "—"}
+                          </td>
+                          <td className="p-3">
+                            {item.activo ? "Activo" : "Finalizado"}
+                          </td>
+                          <td className="p-3">
+                            {item.activo && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  void cancelarProgramacion(item.id)
+                                }
+                                className="min-h-11 rounded-lg border border-line bg-surface-soft px-3 text-sm font-semibold hover:bg-surface-raised focus-visible:ring-2 focus-visible:ring-brand-600"
+                              >
+                                Cancelar
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+            {programados && (
+              <Paginacion
+                page={programadosPage}
+                limit={programadosLimit}
+                total={programados.total}
+                totalPages={programados.totalPages}
+                onPageChange={(page) => {
+                  setProgramadosPage(page);
+                  void cargarProgramados(page, programadosLimit);
+                }}
+                onLimitChange={(limit) => {
+                  setProgramadosLimit(limit);
+                  setProgramadosPage(1);
+                  void cargarProgramados(1, limit);
+                }}
+              />
+            )}
+          </section>
         )}
 
         {/* 2. BANDEJA DE AVISOS ENVIADOS (TEAM LEADER) */}
@@ -553,7 +931,9 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                   className="inline-grid h-11 w-11 place-items-center rounded-lg text-white"
                   style={{ backgroundColor: TOKENS.ink }}
                 >
-                  <span aria-hidden="true" className="text-xl">+</span>
+                  <span aria-hidden="true" className="text-xl">
+                    +
+                  </span>
                 </button>
               </div>
             ) : (
@@ -597,8 +977,9 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                               <>
                                 <IconoContacto className="w-3 h-3" />
                                 <span className="min-w-0 truncate">
-                                  DIRECTO A{" "}
-                                  {aviso.destinatario?.nombre ?? "COLABORADOR"}
+                                  {aviso.tipo === "SELECCION"
+                                    ? `${aviso.total ?? 0} DESTINATARIOS`
+                                    : `DIRECTO A ${aviso.destinatario?.nombre ?? "COLABORADOR"}`}
                                 </span>
                               </>
                             )}
@@ -619,7 +1000,7 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                           }
                           size="sm"
                         >
-                          {aviso.tipo === "EQUIPO"
+                          {aviso.tipo !== "INDIVIDUAL"
                             ? `${leidos}/${total} LEÍDOS`
                             : aviso.leido
                               ? "LEÍDO"
@@ -640,7 +1021,9 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
                         <span className="min-w-0 break-words font-mono text-[11px]">
                           {aviso.tipo === "EQUIPO"
                             ? `Alcance: ${total} colaboradores asignados`
-                            : `Destinatario: ${aviso.destinatario?.nombre} ${aviso.destinatario?.apellido || ""}`}
+                            : aviso.tipo === "SELECCION"
+                              ? `Destinatarios: ${aviso.destinatarios?.map((persona) => `${persona.nombre} ${persona.apellido}`).join(", ") || `${total} colaboradores`}`
+                              : `Destinatario: ${aviso.destinatario?.nombre} ${aviso.destinatario?.apellido || ""}`}
                         </span>
 
                         {aviso.tipo === "INDIVIDUAL" && aviso.leidoAt && (

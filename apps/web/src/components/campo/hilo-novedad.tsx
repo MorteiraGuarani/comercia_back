@@ -130,16 +130,16 @@ export function HiloNovedad({ id, onActualizado }: { id: number; onActualizado?:
       )}
 
       {puedeCerrar && (
-        <div className="border-t border-line pt-3">
+        <div className="sticky bottom-0 z-10 rounded-xl border border-line bg-surface-raised p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-lg">
           {!confirmandoCierre ? (
-            <button type="button" onClick={() => setConfirmandoCierre(true)} className="min-h-11 rounded-lg border border-line px-4 text-sm font-semibold">{puedeGestionar ? "Cerrar novedad resuelta" : "Cancelar mi novedad"}</button>
+            <button type="button" onClick={() => setConfirmandoCierre(true)} className="min-h-11 w-full cursor-pointer rounded-lg border border-line px-4 text-sm font-semibold text-foreground hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 sm:w-auto">{puedeGestionar ? "Cerrar novedad resuelta" : "Cancelar mi novedad"}</button>
           ) : (
-            <div className="space-y-2 rounded-xl border border-line p-3">
+            <div className="space-y-2">
               <label htmlFor={`cierre-novedad-${id}`} className="block text-sm font-semibold">{puedeGestionar ? "Resolución final" : "Motivo de cancelación"}</label>
               <textarea id={`cierre-novedad-${id}`} value={resolucion} maxLength={1000} onChange={(event) => setResolucion(event.target.value)} rows={2} className="w-full min-w-0 rounded-lg border border-line bg-surface-raised p-2 text-sm text-foreground" />
-              <div className="flex flex-wrap gap-2">
-                <button type="button" onClick={() => setConfirmandoCierre(false)} className="min-h-11 rounded-lg border border-line px-3 text-sm">Volver</button>
-                <button type="button" onClick={() => void cerrar()} disabled={guardando} className="min-h-11 rounded-lg bg-brand-700 px-3 text-sm font-semibold text-white disabled:opacity-50 dark:bg-brand-200 dark:text-brand-950">Confirmar cierre</button>
+              <div className="grid grid-cols-2 gap-2 sm:flex">
+                <button type="button" onClick={() => setConfirmandoCierre(false)} className="min-h-11 cursor-pointer rounded-lg border border-line px-3 text-sm text-foreground hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600">Volver</button>
+                <button type="button" onClick={() => void cerrar()} disabled={guardando} className="min-h-11 cursor-pointer rounded-lg bg-brand-700 px-3 text-sm font-semibold text-white hover:bg-brand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-brand-200 dark:text-brand-950 dark:hover:bg-brand-300">Confirmar cierre</button>
               </div>
             </div>
           )}

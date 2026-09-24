@@ -28,7 +28,10 @@ export interface LocalCampo {
   notas: string;
   activo: boolean;
   cliente: { id: number; nombre: string; logoUrl?: string | null };
-  asignaciones?: Array<{ id: number; usuario: PersonaCampo & { rol?: { descripcion: string } | null } }>;
+  asignaciones?: Array<{
+    id: number;
+    usuario: PersonaCampo & { rol?: { descripcion: string } | null };
+  }>;
 }
 export type DatosLocalCampo = Pick<
   LocalCampo,
@@ -325,7 +328,31 @@ export interface NovedadesResponse {
 
 // ========== AVISOS ==========
 
-export type TipoAviso = "INDIVIDUAL" | "EQUIPO";
+export type TipoAviso = "INDIVIDUAL" | "EQUIPO" | "SELECCION";
+export type FrecuenciaAviso =
+  "UNA_VEZ" | "HORARIA" | "DIARIA" | "SEMANAL" | "MENSUAL";
+
+export interface DestinatarioAviso {
+  id: number;
+  nombre: string;
+}
+
+export interface ProgramacionAvisoItem {
+  id: number;
+  tipo: TipoAviso;
+  mensaje: string;
+  frecuencia: FrecuenciaAviso;
+  fechaInicio: string;
+  hora: string;
+  intervaloHoras: number | null;
+  diasSemana: number[];
+  diaMes: number | null;
+  fechaFin: string | null;
+  proximoEnvioAt: string;
+  ultimoEnvioAt: string | null;
+  activo: boolean;
+  destinatariosIds: number[];
+}
 
 export interface AvisoEnviadoItem {
   id: number;
@@ -336,6 +363,7 @@ export interface AvisoEnviadoItem {
     nombre: string;
     apellido: string;
   } | null;
+  destinatarios?: { id: number; nombre: string; apellido: string }[];
   creadoAt: string;
   leido?: boolean;
   leidoAt?: string | null;
@@ -373,7 +401,15 @@ export interface AvisoDetalleCampo {
 export interface FormAvisoCampo {
   tipo: TipoAviso;
   destinatarioId?: number;
+  destinatariosIds?: number[];
   mensaje: string;
+  frecuencia?: FrecuenciaAviso;
+  fechaInicio?: string;
+  hora?: string;
+  intervaloHoras?: number;
+  diasSemana?: number[];
+  diaMes?: number;
+  fechaFin?: string;
 }
 
 // ========== SUPERVISIÓN Y PRESENTISMO ==========
@@ -497,7 +533,12 @@ export interface ColaboradorDetalleData {
     nombreTarea: string;
     completadaAt: string | null;
     fotos: { id: number; momento: MomentoFoto; creadoAt: string }[];
-    comentarios: { id: number; comentario: string; creadoAt: string; usuario: { nombre: string; apellido: string } }[];
+    comentarios: {
+      id: number;
+      comentario: string;
+      creadoAt: string;
+      usuario: { nombre: string; apellido: string };
+    }[];
   }[];
   novedades: NovedadColaboradorItem[];
 }

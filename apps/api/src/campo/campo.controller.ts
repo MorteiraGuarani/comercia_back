@@ -52,7 +52,7 @@ import {
   ListarNovedadesDto,
   ResponderNovedadDto,
 } from './dto/novedad.dto';
-import { CrearAvisoDto } from './dto/aviso.dto';
+import { ConsultaAvisosDto, CrearAvisoDto } from './dto/aviso.dto';
 import { ConsultaSupervisionDto } from './dto/supervision.dto';
 import { ConsultaTareasCampoDto } from './dto/consulta-tareas.dto';
 import {
@@ -565,6 +565,30 @@ export class CampoController {
     @Query() q: ConsultaCampoDto,
   ) {
     return this.avisoService.listarEnviados(r.usuarioId, r.empresaId, q);
+  }
+
+  @Get('avisos/destinatarios')
+  listarDestinatariosAviso(
+    @Req() r: RequestConUsuario,
+    @Query() q: ConsultaAvisosDto,
+  ) {
+    return this.avisoService.listarDestinatarios(r.usuarioId, r.empresaId, q);
+  }
+
+  @Get('avisos/programaciones')
+  listarProgramacionesAviso(
+    @Req() r: RequestConUsuario,
+    @Query() q: ConsultaAvisosDto,
+  ) {
+    return this.avisoService.listarProgramaciones(r.usuarioId, r.empresaId, q);
+  }
+
+  @Delete('avisos/programaciones/:id')
+  cancelarProgramacionAviso(
+    @Req() r: RequestConUsuario,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.avisoService.cancelarProgramacion(r.usuarioId, r.empresaId, id);
   }
 
   @Get('avisos/recibidos')

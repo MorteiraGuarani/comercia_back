@@ -91,6 +91,7 @@ export class AdjuntoCampoService {
             emisorId: true,
             tipo: true,
             destinatarioId: true,
+            destinatarios: { select: { usuarioId: true } },
           },
         },
       },
@@ -107,9 +108,22 @@ export class AdjuntoCampoService {
     } else if (adjunto.aviso) {
       permitido =
         adjunto.aviso.emisorId === usuarioId ||
-        adjunto.aviso.destinatarioId === usuarioId;
+        adjunto.aviso.destinatarios.some(
+          (destinatario) => destinatario.usuarioId === usuarioId,
+        );
 
-      if (!permitido && adjunto.aviso.tipo === 'EQUIPO') {
+      if (
+        !permitido &&
+        adjunto.aviso.destinatarios.length === 0 &&
+        adjunto.aviso.tipo === 'INDIVIDUAL'
+      ) {
+        permitido = adjunto.aviso.destinatarioId === usuarioId;
+      }
+      if (
+        !permitido &&
+        adjunto.aviso.destinatarios.length === 0 &&
+        adjunto.aviso.tipo === 'EQUIPO'
+      ) {
         const usuario = await this.prisma.usuario.findFirst({
           where: { id: usuarioId, empresaId },
           select: { superiorId: true },

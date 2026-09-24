@@ -10,19 +10,16 @@ import { TOKENS } from "./tokens";
 import { StatusStamp } from "./ui/status-stamp";
 import { StatChip } from "./ui/stat-chip";
 import { TopBar } from "./ui/top-bar";
-import { MapaLocal } from "./mapa-local";
 import { PlanLocal } from "./plan-local";
 import { SelectorClienteCombobox } from "./selector-cliente-combobox";
 import {
   IconoTienda,
-  IconoPin,
   IconoMapa,
   IconoPlanificacion,
   IconoEditar,
   IconoBuscar,
   IconoCruz,
   IconoMas,
-  IconoTelefono,
   IconoFlechaIzq,
   IconoFlechaDer,
 } from "./ui/iconos-campo";
@@ -76,7 +73,6 @@ export function LocalesPanel() {
 
   const [form, setForm] = useState<LocalCampo | null>(null);
   const [plan, setPlan] = useState<LocalCampo | null>(null);
-  const [mapa, setMapa] = useState<LocalCampo | null>(null);
 
   // Filtrado local por estado activo / inactivo
   const itemsFiltrados = useMemo(() => {
@@ -111,17 +107,6 @@ export function LocalesPanel() {
       notas: "",
       activo: true,
     });
-  };
-
-  const iniciales = (nombre: string) => {
-    return (
-      nombre
-        .split(" ")
-        .map((p) => p[0])
-        .slice(0, 2)
-        .join("")
-        .toUpperCase() || "CL"
-    );
   };
 
   const totalRegistros = lista.datos?.total ?? lista.items.length;
@@ -299,183 +284,73 @@ export function LocalesPanel() {
             </div>
           ) : (
             <>
-            <div className="grid gap-2 p-3 md:hidden">
+            <ul className="grid gap-2 p-3 md:hidden" aria-label="Puntos de venta">
               {itemsFiltrados.map((local) => (
-                <article key={local.id} className="min-w-0 rounded-xl border border-line bg-surface-raised p-3 text-sm">
+                <li key={local.id} className="min-w-0 rounded-xl border border-line bg-surface-raised p-3 text-sm">
                   <div className="flex min-w-0 items-start justify-between gap-2">
                     <div className="min-w-0">
                       <h3 className="break-words font-semibold text-foreground">{local.nombre}</h3>
-                      <p className="break-words text-xs text-muted">{local.cliente?.nombre}</p>
+                      <p className="mt-1 break-words text-xs text-muted">{local.direccion || "Sin dirección"}</p>
                     </div>
                     <StatusStamp tone={local.activo ? "fresco" : "sub"} size="sm">{local.activo ? "ACTIVO" : "INACTIVO"}</StatusStamp>
                   </div>
-                  <p className="mt-2 break-words text-xs text-muted">{local.direccion || "Sin dirección"}</p>
-                  <p className="mt-1 text-xs text-muted">Radio para marcar: {local.radioMetros} m</p>
-                  <p className="mt-1 break-words text-xs font-medium text-foreground">Asignado: {local.asignaciones?.length ? local.asignaciones.map((asignacion) => `${asignacion.usuario.rol?.descripcion ?? "Impulsador"} ${asignacion.usuario.nombre} ${asignacion.usuario.apellido}`).join(", ") : "Sin asignar"}</p>
-                  {local.telefono && <a href={`tel:${local.telefono}`} className="mt-1 inline-flex min-h-11 items-center text-xs font-semibold text-sky-700">{local.telefono}</a>}
-                  <div className="mt-2 grid grid-cols-3 gap-2">
-                    <button type="button" onClick={() => setPlan(local)} className="min-h-11 rounded-lg border border-line text-xs font-semibold text-foreground">Ruta</button>
-                    <button type="button" onClick={() => setMapa(local)} className="min-h-11 rounded-lg border border-line text-xs font-semibold text-foreground">Mapa</button>
-                    <button type="button" onClick={() => setForm(local)} className="min-h-11 rounded-lg border border-line text-xs font-semibold text-foreground">Editar</button>
+                  <p className="mt-2 break-words text-xs text-foreground">Asignado: {local.asignaciones?.length ? local.asignaciones.map((asignacion) => `${asignacion.usuario.rol?.descripcion ?? "Impulsador"} ${asignacion.usuario.nombre} ${asignacion.usuario.apellido}`).join(", ") : "Sin asignar"}</p>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <button type="button" onClick={() => setForm(local)} className="min-h-11 cursor-pointer rounded-lg border border-line text-xs font-semibold text-foreground hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600">Editar</button>
+                    <button type="button" onClick={() => setPlan(local)} className="min-h-11 cursor-pointer rounded-lg border border-line text-xs font-semibold text-foreground hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600">Ruta</button>
                   </div>
-                </article>
+                </li>
               ))}
-            </div>
+            </ul>
             <div className="hidden overflow-x-auto md:block">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b bg-zinc-50/80 text-[11px] font-bold uppercase tracking-wider text-zinc-500" style={{ borderColor: TOKENS.line }}>
-                    <th className="py-2.5 px-3.5">Local / Sucursal</th>
-                    <th className="py-2.5 px-3.5">Cliente / Cadena</th>
+                  <tr className="border-b border-line bg-surface-soft text-[11px] font-bold uppercase tracking-wider text-muted">
+                    <th className="py-2.5 px-3.5">Acciones</th>
+                    <th className="py-2.5 px-3.5">PDV</th>
                     <th className="py-2.5 px-3.5">Asignado</th>
-                    <th className="py-2.5 px-3.5">Dirección & GPS</th>
-                    <th className="py-2.5 px-3.5">Contacto</th>
                     <th className="py-2.5 px-3.5 text-center">Estado</th>
-                    <th className="py-2.5 px-3.5 text-right">Acciones</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-100 text-xs">
-                  {itemsFiltrados.map((local) => {
-                    const tieneCoordenadas = local.latitud && local.longitud;
-                    return (
-                      <tr
-                        key={local.id}
-                        className="hover:bg-zinc-50/70 transition-colors group"
-                      >
-                        {/* Local */}
-                        <td className="py-2.5 px-3.5">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-lg bg-zinc-100 text-zinc-600 flex items-center justify-center shrink-0 border border-zinc-200">
-                              <IconoTienda className="w-4 h-4" />
-                            </div>
-                            <div className="min-w-0 max-w-[240px]">
-                              <p className="font-bold text-zinc-900 truncate leading-tight">
-                                {local.nombre}
-                              </p>
-                              {local.notas && (
-                                <p className="text-[11px] text-zinc-400 truncate mt-0.5">
-                                  {local.notas}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        </td>
-
-                        {/* Cliente */}
-                        <td className="py-2.5 px-3.5">
-                          <div className="flex items-center gap-2 min-w-0 max-w-[200px]">
-                            {local.cliente?.logoUrl ? (
-                              <img
-                                src={local.cliente.logoUrl}
-                                alt={local.cliente.nombre}
-                                className="w-6 h-6 rounded object-cover border border-zinc-200 shrink-0 bg-zinc-50"
-                              />
-                            ) : (
-                              <div className="w-6 h-6 rounded bg-[#1E2320] text-white font-bold text-[10px] flex items-center justify-center shrink-0">
-                                {iniciales(local.cliente.nombre)}
-                              </div>
-                            )}
-                            <span className="font-semibold text-zinc-800 truncate">
-                              {local.cliente.nombre}
-                            </span>
-                          </div>
-                        </td>
-
-                        <td className="max-w-[220px] px-3.5 py-2.5 text-xs text-foreground">
-                          {local.asignaciones?.length
-                            ? local.asignaciones.map((asignacion) => `${asignacion.usuario.rol?.descripcion ?? "Impulsador"} ${asignacion.usuario.nombre} ${asignacion.usuario.apellido}`).join(", ")
-                            : <span className="text-muted">Sin asignar</span>}
-                        </td>
-
-                        {/* Dirección & GPS */}
-                        <td className="py-2.5 px-3.5">
-                          <div className="min-w-0 max-w-[260px]">
-                            <p className="text-zinc-700 truncate leading-tight">
-                              {local.direccion || "Sin dirección fijada"}
-                            </p>
-                            <div className="flex items-center gap-1.5 mt-0.5 text-[11px]">
-                              {tieneCoordenadas ? (
-                                <button
-                                  type="button"
-                                  onClick={() => setMapa(local)}
-                                  className="inline-flex items-center gap-1 text-[#2C4A6E] font-medium hover:underline cursor-pointer"
-                                >
-                                  <IconoPin className="w-3 h-3 text-emerald-600 shrink-0" />
-                                  <span>{local.latitud?.toFixed(4)}, {local.longitud?.toFixed(4)}</span>
-                                </button>
-                              ) : (
-                                <span className="text-zinc-400 italic">Sin GPS</span>
-                              )}
-                            </div>
-                            <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
-                              Radio para marcar: {local.radioMetros} m
-                            </p>
-                          </div>
-                        </td>
-
-                        {/* Contacto */}
-                        <td className="py-2.5 px-3.5">
-                          <div className="min-w-0 max-w-[180px]">
-                            <p className="text-zinc-800 font-medium truncate">
-                              {local.contacto || "—"}
-                            </p>
-                            {local.telefono ? (
-                              <a
-                                href={`tel:${local.telefono}`}
-                                className="inline-flex items-center gap-1 text-[11px] font-mono text-[#2C4A6E] font-bold hover:underline"
-                              >
-                                <IconoTelefono className="w-2.5 h-2.5 text-zinc-400" />
-                                <span>{local.telefono}</span>
-                              </a>
-                            ) : (
-                              <span className="text-[11px] text-zinc-400">Sin teléfono</span>
-                            )}
-                          </div>
-                        </td>
-
-                        {/* Estado */}
-                        <td className="py-2.5 px-3.5 text-center whitespace-nowrap">
-                          <StatusStamp tone={local.activo ? "fresco" : "sub"} size="sm">
-                            {local.activo ? "ACTIVO" : "INACTIVO"}
-                          </StatusStamp>
-                        </td>
-
-                        {/* Acciones */}
-                        <td className="py-2.5 px-3.5 text-right whitespace-nowrap">
-                          <div className="inline-flex items-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => setPlan(local)}
-                              title="Planificación semanal y franjas"
-                              className="px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider text-[#2C4A6E] bg-sky-50 hover:bg-sky-100 transition-colors inline-flex items-center gap-1 cursor-pointer"
-                            >
-                              <IconoPlanificacion className="w-3 h-3" />
-                              <span>Ruta</span>
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => setMapa(local)}
-                              title="Ver ubicación en mapa satelital"
-                              className="px-2 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider text-zinc-700 bg-zinc-100 hover:bg-zinc-200 transition-colors inline-flex items-center gap-1 cursor-pointer"
-                            >
-                              <IconoMapa className="w-3 h-3" />
-                              <span>Mapa</span>
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => setForm(local)}
-                              title="Editar local"
-                              className="p-1 rounded-md text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors cursor-pointer"
-                            >
-                              <IconoEditar className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                <tbody className="divide-y divide-line text-xs">
+                  {itemsFiltrados.map((local) => (
+                    <tr key={local.id} className="transition-colors hover:bg-surface-soft">
+                      <td className="whitespace-nowrap px-3.5 py-2.5">
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setForm(local)}
+                            className="inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-md border border-line px-2.5 font-semibold text-foreground hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
+                          >
+                            <IconoEditar className="h-3.5 w-3.5" />
+                            Editar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPlan(local)}
+                            className="inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-md border border-line px-2.5 font-semibold text-foreground hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
+                          >
+                            <IconoPlanificacion className="h-3.5 w-3.5" />
+                            Ruta
+                          </button>
+                        </div>
+                      </td>
+                      <td className="min-w-[180px] px-3.5 py-2.5">
+                        <p className="font-semibold text-foreground">{local.nombre}</p>
+                        <p className="mt-1 break-words text-[11px] text-muted">{local.direccion || "Sin dirección"}</p>
+                      </td>
+                      <td className="max-w-[220px] break-words px-3.5 py-2.5 text-foreground">
+                        {local.asignaciones?.length
+                          ? local.asignaciones.map((asignacion) => `${asignacion.usuario.rol?.descripcion ?? "Impulsador"} ${asignacion.usuario.nombre} ${asignacion.usuario.apellido}`).join(", ")
+                          : <span className="text-muted">Sin asignar</span>}
+                      </td>
+                      <td className="whitespace-nowrap px-3.5 py-2.5 text-center">
+                        <StatusStamp tone={local.activo ? "fresco" : "sub"} size="sm">
+                          {local.activo ? "ACTIVO" : "INACTIVO"}
+                        </StatusStamp>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -545,9 +420,6 @@ export function LocalesPanel() {
 
       {/* Modal de Planificación */}
       {plan && <PlanLocal local={plan} cerrar={() => setPlan(null)} />}
-
-      {/* Modal de Mapa */}
-      {mapa && <MapaLocal local={mapa} cerrar={() => setMapa(null)} />}
 
       {/* Modal de Creación / Edición */}
       <Modal

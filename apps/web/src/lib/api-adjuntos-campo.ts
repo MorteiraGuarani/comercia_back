@@ -31,7 +31,19 @@ export function crearAvisoCampo(datos: FormAvisoCampo, fotos: File[] = []) {
   const formulario = new FormData();
   agregarValor(formulario, "tipo", datos.tipo);
   agregarValor(formulario, "destinatarioId", datos.destinatarioId);
+  agregarValor(
+    formulario,
+    "destinatariosIds",
+    datos.destinatariosIds?.join(","),
+  );
   agregarValor(formulario, "mensaje", datos.mensaje);
+  agregarValor(formulario, "frecuencia", datos.frecuencia);
+  agregarValor(formulario, "fechaInicio", datos.fechaInicio);
+  agregarValor(formulario, "hora", datos.hora);
+  agregarValor(formulario, "intervaloHoras", datos.intervaloHoras);
+  agregarValor(formulario, "diasSemana", datos.diasSemana?.join(","));
+  agregarValor(formulario, "diaMes", datos.diaMes);
+  agregarValor(formulario, "fechaFin", datos.fechaFin);
   agregarFotos(formulario, fotos);
 
   return apiFetch("/campo/avisos", { method: "POST", body: formulario });
