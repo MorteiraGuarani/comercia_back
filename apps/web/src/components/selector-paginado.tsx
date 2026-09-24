@@ -294,6 +294,7 @@ export function SelectorPaginado({
           ) : null}
           {datos && !cargando && !error && datos.totalPages > 1 ? (
             <Paginacion
+              desplazarAlInicio={false}
               page={datos.page}
               limit={datos.limit}
               total={datos.total}

@@ -153,9 +153,9 @@ export function NovedadesPanel({
         }
       />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5 flex-1 overflow-y-auto w-full">
+      <div data-inicio-listado className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5 flex-1 overflow-y-auto w-full scroll-mt-20">
         {/* Pestañas de estado (Abiertas, Cerradas, Canceladas) */}
-        <div className="flex min-w-0 gap-1 border-b border-line">
+        <div data-ancla-listado className="flex min-w-0 gap-1 border-b border-line scroll-mt-20">
           {(["ABIERTA", "CERRADA", "CANCELADA"] as const).map((st) => {
             const isActive = filtro === st;
             const colors = {

@@ -125,7 +125,7 @@ export function TareasPanel() {
         }
       />
 
-      <main className="max-w-7xl min-w-0 mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-3 sm:space-y-5">
+      <main data-inicio-listado className="max-w-7xl min-w-0 mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-3 sm:space-y-5 scroll-mt-20">
         {/* Filtros por Categoría */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
           {["Todas", ...CATEGORIAS_PRESET].map((cat) => {

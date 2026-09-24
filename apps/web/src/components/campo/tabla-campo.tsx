@@ -27,7 +27,7 @@ export function TablaCampo<T extends { id: number }>({
   tarjetaMovil?: (item: T) => ReactNode;
 }) {
   return (
-    <div className="w-full min-w-0">
+    <div data-inicio-listado className="w-full min-w-0 scroll-mt-20">
       <PantallaCarga
         visible={lista.cargando}
         mensaje={`Cargando ${etiqueta.toLowerCase()}`}

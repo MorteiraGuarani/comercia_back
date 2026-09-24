@@ -1,5 +1,7 @@
 "use client";
 
+import { volverAlInicioDelListado } from "@/utils/scroll-listado";
+
 // Paginador estándar de comercIA para TODA tabla (7 filas por defecto).
 // Uso: mantener page/limit en el estado de la página y pedir a la API con
 // ?page=X&limit=Y (la API responde RespuestaPaginada<T> — ver @/types/paginacion).
@@ -13,6 +15,7 @@ export function Paginacion({
   limit,
   onPageChange,
   onLimitChange,
+  desplazarAlInicio = true,
 }: {
   page: number;
   totalPages: number;
@@ -20,6 +23,7 @@ export function Paginacion({
   limit: number;
   onPageChange: (page: number) => void;
   onLimitChange: (limit: number) => void;
+  desplazarAlInicio?: boolean;
 }) {
   const desde = total === 0 ? 0 : (page - 1) * limit + 1;
   const hasta = Math.min(page * limit, total);
@@ -38,7 +42,10 @@ export function Paginacion({
           Por página
           <select
             value={limit}
-            onChange={(e) => onLimitChange(Number(e.target.value))}
+            onChange={(e) => {
+              if (desplazarAlInicio) volverAlInicioDelListado(e.currentTarget);
+              onLimitChange(Number(e.target.value));
+            }}
             className="min-h-10 rounded-xl border border-control-line bg-surface-raised px-2 py-1.5 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/55"
           >
             {OPCIONES_POR_PAGINA.map((n) => (
@@ -51,7 +58,10 @@ export function Paginacion({
 
         <button
           type="button"
-          onClick={() => onPageChange(page - 1)}
+          onClick={(e) => {
+            if (desplazarAlInicio) volverAlInicioDelListado(e.currentTarget);
+            onPageChange(page - 1);
+          }}
           disabled={page <= 1}
           aria-label="Página anterior"
           className={botonBase}
@@ -63,7 +73,10 @@ export function Paginacion({
         </span>
         <button
           type="button"
-          onClick={() => onPageChange(page + 1)}
+          onClick={(e) => {
+            if (desplazarAlInicio) volverAlInicioDelListado(e.currentTarget);
+            onPageChange(page + 1);
+          }}
           disabled={page >= totalPages}
           aria-label="Página siguiente"
           className={botonBase}

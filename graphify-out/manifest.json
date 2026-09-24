@@ -620,13 +620,13 @@
     "semantic_hash": "6507204d19d049b57988edd383a9e384"
   },
   "apps/web/src/components/admin/empresas-abm-panel.tsx": {
-    "mtime": 1788368487.1235287,
-    "ast_hash": "9950ccc45be4593a6293689e07d547e9",
+    "mtime": 1790275488.0287547,
+    "ast_hash": "6407c8591041aeeccc0f626bc3d07d3e",
     "semantic_hash": ""
   },
   "apps/web/src/components/admin/empresas-panel.tsx": {
-    "mtime": 1788871867.3063128,
-    "ast_hash": "012f8207313b4d588226c37d3985fb3e",
+    "mtime": 1790275489.9861138,
+    "ast_hash": "42b3f5fbf006fc2a50ee2eaae23ab1d0",
     "semantic_hash": ""
   },
   "apps/web/src/components/admin/modulos-panel.tsx": {
@@ -635,8 +635,8 @@
     "semantic_hash": "5eda7bfd04ec15f22aecec7f15b91130"
   },
   "apps/web/src/components/admin/roles-panel.tsx": {
-    "mtime": 1788876981.2255137,
-    "ast_hash": "6832f99aed48b5f4727d345b09cf4e7b",
+    "mtime": 1790275485.4396715,
+    "ast_hash": "f8b41197ab8b192586e05243ae258b8f",
     "semantic_hash": ""
   },
   "apps/web/src/components/auth-shell.tsx": {
@@ -665,9 +665,9 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/paginacion.tsx": {
-    "mtime": 1784236617.3916328,
-    "ast_hash": "63c68e0b24a948b34a0a97189692d17f",
-    "semantic_hash": "63c68e0b24a948b34a0a97189692d17f"
+    "mtime": 1790275383.6290107,
+    "ast_hash": "57442ebc7e31e414a2dbba0b53bd5a15",
+    "semantic_hash": ""
   },
   "apps/web/src/components/panel/contexto.tsx": {
     "mtime": 1783339344.6995397,
@@ -700,8 +700,8 @@
     "semantic_hash": "692f7f4acb1607e8575b72c625e03c79"
   },
   "apps/web/src/components/usuarios/usuarios-panel.tsx": {
-    "mtime": 1789583004.1049821,
-    "ast_hash": "7cfb6fa9267794f41f55f9e859827318",
+    "mtime": 1790275492.5515506,
+    "ast_hash": "e16492d1774fb7e266420e71f440ff12",
     "semantic_hash": ""
   },
   "apps/web/src/lib/api.ts": {
@@ -1890,8 +1890,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/selector-paginado.tsx": {
-    "mtime": 1789578488.638981,
-    "ast_hash": "2db1f2fdf3a2abd79f22b41e83b7d07b",
+    "mtime": 1790275446.318289,
+    "ast_hash": "c2f7d98fc98c50733ed15a3811198d33",
     "semantic_hash": ""
   },
   "apps/web/src/types/opcion-selector.ts": {
@@ -1995,13 +1995,13 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/tabla-campo.tsx": {
-    "mtime": 1789566050.3910465,
-    "ast_hash": "9646f84170626f483163a512020937f7",
+    "mtime": 1790275448.5744178,
+    "ast_hash": "04de480e9778eba2e5268f213583496a",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/tareas-panel.tsx": {
-    "mtime": 1789998170.205587,
-    "ast_hash": "28717e0a01f58646f0d4f8a4f7a5259f",
+    "mtime": 1790275496.9770663,
+    "ast_hash": "a62961f9cd8ab32a17dd05861f9c51f0",
     "semantic_hash": ""
   },
   "apps/web/src/hooks/use-lista-campo.ts": {
@@ -2225,18 +2225,18 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/avisos-panel.tsx": {
-    "mtime": 1790273896.1966982,
-    "ast_hash": "e84ea492ebb4761c2b7f90414cdc1c26",
+    "mtime": 1790275450.8979847,
+    "ast_hash": "ac86a449f5c4be1eefa8e97ce77031fc",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/clientes-panel.tsx": {
-    "mtime": 1790184954.001964,
-    "ast_hash": "0d33c71830dc0d5284951c64da5b798f",
+    "mtime": 1790275411.401607,
+    "ast_hash": "1e1aca21bebe29ad75640fb6fb66aa52",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/locales-panel.tsx": {
-    "mtime": 1790272086.9217966,
-    "ast_hash": "2ced47346a9dc9befdef9b06d45e59f5",
+    "mtime": 1790275409.044457,
+    "ast_hash": "0baf4025e828593b8b6c51e4f162c3e7",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/mapa-clientes.tsx": {
@@ -2245,8 +2245,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/novedades-panel.tsx": {
-    "mtime": 1790185121.6944509,
-    "ast_hash": "8dac748eebb25285dd3c4c3b2c67e565",
+    "mtime": 1790275548.286722,
+    "ast_hash": "5b319046ed81965b4e9cdada392c97b6",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/ruta-impulsador-panel.tsx": {
@@ -2265,8 +2265,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/tareas-impulsador-panel.tsx": {
-    "mtime": 1790110128.7185674,
-    "ast_hash": "a58e16c0a4e47adf86e33cde27629f56",
+    "mtime": 1790275453.1897776,
+    "ast_hash": "20a257ae826d1d1a02fff57ba0fb56cc",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/tokens.ts": {
@@ -2552,6 +2552,11 @@
   "docs/avisos-programados.md": {
     "mtime": 1790273996.0027385,
     "ast_hash": "81523f7188e9c441764bc47eac872e21",
+    "semantic_hash": ""
+  },
+  "apps/web/src/utils/scroll-listado.ts": {
+    "mtime": 1790275546.1417732,
+    "ast_hash": "1629f6a5a0bf18ce889f42f76bda2668",
     "semantic_hash": ""
   }
 }

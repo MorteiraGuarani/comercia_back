@@ -190,7 +190,7 @@ export function RolesPanel() {
   const idEditando = typeof editando === "object" ? editando?.id : undefined;
 
   return (
-    <div className="w-full min-w-0">
+    <div data-inicio-listado className="w-full min-w-0 scroll-mt-20">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-xl font-bold tracking-tight">Roles</h2>

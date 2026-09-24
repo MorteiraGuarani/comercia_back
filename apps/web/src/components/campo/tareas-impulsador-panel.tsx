@@ -288,7 +288,8 @@ export function TareasImpulsadorPanel() {
             return (
               <div
                 key={ag.id}
-                className="rounded-lg p-4 space-y-3"
+                data-inicio-listado
+                className="scroll-mt-20 rounded-lg p-4 space-y-3"
                 style={{
                   background: TOKENS.canvas,
                   border: `1px solid ${estaEnVisita ? TOKENS.frio : TOKENS.line}`,

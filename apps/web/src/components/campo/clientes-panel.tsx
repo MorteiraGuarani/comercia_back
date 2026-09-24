@@ -3,6 +3,7 @@
 import React, { useMemo, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
+import { volverAlInicioDelListado } from "@/utils/scroll-listado";
 import { mensajeError } from "@/utils/error";
 import { prepararImagen } from "@/utils/preparar-imagen";
 import { CapturadorCamara } from "./capturador-camara";
@@ -228,7 +229,8 @@ export function ClientesPanel() {
 
             {/* Tabla de Clientes */}
             <div
-              className="rounded-xl border bg-white shadow-xs overflow-hidden"
+              data-inicio-listado
+              className="scroll-mt-20 rounded-xl border bg-white shadow-xs overflow-hidden"
               style={{ borderColor: TOKENS.line }}
             >
               {lista.cargando && !lista.items.length ? (
@@ -422,7 +424,10 @@ export function ClientesPanel() {
                       <span className="text-[11px] uppercase tracking-wider">Filas:</span>
                       <select
                         value={lista.limit}
-                        onChange={(e) => lista.setLimit(Number(e.target.value))}
+                        onChange={(e) => {
+                          volverAlInicioDelListado(e.currentTarget);
+                          lista.setLimit(Number(e.target.value));
+                        }}
                         className="py-1 px-2 rounded-md border bg-white text-zinc-800 font-semibold text-xs cursor-pointer"
                         style={{ borderColor: TOKENS.line }}
                       >
@@ -438,7 +443,10 @@ export function ClientesPanel() {
                     <button
                       type="button"
                       disabled={lista.page <= 1}
-                      onClick={() => lista.setPage(lista.page - 1)}
+                      onClick={(e) => {
+                        volverAlInicioDelListado(e.currentTarget);
+                        lista.setPage(lista.page - 1);
+                      }}
                       className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border text-xs font-bold uppercase tracking-wider bg-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-zinc-50 cursor-pointer shadow-xs transition"
                       style={{ borderColor: TOKENS.line }}
                     >
@@ -453,7 +461,10 @@ export function ClientesPanel() {
                     <button
                       type="button"
                       disabled={lista.page >= (lista.datos?.totalPages || 1)}
-                      onClick={() => lista.setPage(lista.page + 1)}
+                      onClick={(e) => {
+                        volverAlInicioDelListado(e.currentTarget);
+                        lista.setPage(lista.page + 1);
+                      }}
                       className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border text-xs font-bold uppercase tracking-wider bg-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-zinc-50 cursor-pointer shadow-xs transition"
                       style={{ borderColor: TOKENS.line }}
                     >

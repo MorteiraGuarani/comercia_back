@@ -783,7 +783,8 @@ export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
 
         {tab === "programados" && !esImpulsador && (
           <section
-            className="min-w-0 space-y-3"
+            data-inicio-listado
+            className="min-w-0 space-y-3 scroll-mt-20"
             aria-label="Avisos programados"
           >
             <h2 className="text-lg font-bold text-foreground">

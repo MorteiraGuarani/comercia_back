@@ -297,7 +297,7 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
   );
 
   return (
-    <div className="w-full min-w-0">
+    <div data-inicio-listado className="w-full min-w-0 scroll-mt-20">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-xl font-bold tracking-tight">
@@ -853,7 +853,7 @@ function AsignacionesUsuario({
       {cargando ? (
         <p className="mt-5 text-sm text-muted">Cargando asignaciones...</p>
       ) : datos && datos.items.length > 0 ? (
-        <>
+        <div data-inicio-listado className="scroll-mt-20">
           <ul className="mt-5 space-y-2 md:hidden" aria-label="Locales asignados">
             {datos.items.map((asignacion) => (
               <li key={asignacion.id} className="rounded-xl border border-line bg-surface-raised p-3">
@@ -923,7 +923,7 @@ function AsignacionesUsuario({
               }}
             />
           ) : null}
-        </>
+        </div>
       ) : (
         <p className="mt-5 rounded-xl border border-dashed border-line p-5 text-center text-sm text-muted">
           Todavía no tiene locales asignados.
