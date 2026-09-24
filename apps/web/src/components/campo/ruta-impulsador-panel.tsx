@@ -575,6 +575,7 @@ export function RutaImpulsadorPanel() {
             latitud: mapa.latitud,
             longitud: mapa.longitud,
             radioMetros: mapa.radioMetros,
+            zonaHoraria: "America/Asuncion",
             clienteId: 0,
             contacto: "",
             telefono: "",

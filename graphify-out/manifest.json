@@ -2010,8 +2010,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/types/campo.ts": {
-    "mtime": 1790190281.472833,
-    "ast_hash": "3ffb4524d9d38fb5f1a4a294d90ac3c1",
+    "mtime": 1790271300.4147377,
+    "ast_hash": "29e44c2f1de817bede553b01d579f8ae",
     "semantic_hash": ""
   },
   "docs/operaciones-campo.md": {
@@ -2235,8 +2235,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/locales-panel.tsx": {
-    "mtime": 1790186503.39126,
-    "ast_hash": "b2dcaa46394cfd987d5d1596a3c3284c",
+    "mtime": 1790271409.067609,
+    "ast_hash": "6f834d2717b426cf936178fb0b852497",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/mapa-clientes.tsx": {
@@ -2250,8 +2250,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/ruta-impulsador-panel.tsx": {
-    "mtime": 1790176124.9132926,
-    "ast_hash": "95aefa37b3c9bb9259564842a5905872",
+    "mtime": 1790271360.7061403,
+    "ast_hash": "241ab43778f2c51f860346a255b61d71",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/selector-cliente-combobox.tsx": {

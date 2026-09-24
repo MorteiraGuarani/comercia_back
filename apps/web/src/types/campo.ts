@@ -24,11 +24,26 @@ export interface LocalCampo {
   latitud: number;
   longitud: number;
   radioMetros: number;
+  zonaHoraria: string;
   notas: string;
   activo: boolean;
   cliente: { id: number; nombre: string; logoUrl?: string | null };
   asignaciones?: Array<{ id: number; usuario: PersonaCampo & { rol?: { descripcion: string } | null } }>;
 }
+export type DatosLocalCampo = Pick<
+  LocalCampo,
+  | "clienteId"
+  | "nombre"
+  | "direccion"
+  | "contacto"
+  | "telefono"
+  | "latitud"
+  | "longitud"
+  | "radioMetros"
+  | "zonaHoraria"
+  | "notas"
+  | "activo"
+>;
 export interface HorarioCampo {
   id: number;
   localId: number;

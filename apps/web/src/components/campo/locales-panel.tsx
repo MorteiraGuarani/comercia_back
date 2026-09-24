@@ -23,11 +23,10 @@ import {
   IconoCruz,
   IconoMas,
   IconoTelefono,
-  IconoContacto,
   IconoFlechaIzq,
   IconoFlechaDer,
 } from "./ui/iconos-campo";
-import type { ClienteCampo, LocalCampo } from "@/types/campo";
+import type { ClienteCampo, DatosLocalCampo, LocalCampo } from "@/types/campo";
 
 const SelectorUbicacion = dynamic(() => import("./selector-ubicacion"), {
   ssr: false,
@@ -108,6 +107,7 @@ export function LocalesPanel() {
       latitud: -25.2969,
       longitud: -57.6415,
       radioMetros: 100,
+      zonaHoraria: "America/Asuncion",
       notas: "",
       activo: true,
     });
@@ -566,7 +566,20 @@ export function LocalesPanel() {
                 alert("Debes seleccionar un cliente o cadena comercial.");
                 return;
               }
-              const { id, cliente, ...data } = form;
+              const data: DatosLocalCampo = {
+                clienteId: form.clienteId,
+                nombre: form.nombre,
+                direccion: form.direccion,
+                contacto: form.contacto,
+                telefono: form.telefono,
+                latitud: form.latitud,
+                longitud: form.longitud,
+                radioMetros: form.radioMetros,
+                zonaHoraria: form.zonaHoraria,
+                notas: form.notas,
+                activo: form.activo,
+              };
+              const id = form.id;
               if (
                 await op.ejecutar(id ? "Actualizando local" : "Creando local", () =>
                   apiFetch(`/campo/locales${id ? `/${id}` : ""}`, {
