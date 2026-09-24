@@ -2300,8 +2300,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/ui/selector-fecha-filtro.tsx": {
-    "mtime": 1790176336.7713835,
-    "ast_hash": "08466cb3950b1232b9bd22b9e51fe355",
+    "mtime": 1790255933.1513805,
+    "ast_hash": "24ed436bb9937b10f8bbcb2c2577bf0f",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/ui/stat-chip.tsx": {

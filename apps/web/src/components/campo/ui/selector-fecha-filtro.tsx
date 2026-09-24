@@ -182,13 +182,13 @@ export function SelectorFechaFiltro({ valorActual, onChange }: SelectorFechaFilt
 
       {abierto && (
         <div
-          className="absolute left-0 z-50 mt-2 w-[min(18rem,calc(100vw-2rem))] rounded-xl border border-line bg-surface-raised p-3 text-foreground shadow-2xl animate-in fade-in zoom-in-95 duration-100 sm:left-auto sm:right-0 sm:w-80"
+          className="absolute right-0 z-50 mt-2 max-h-[60dvh] w-[min(18rem,calc(100vw-2rem))] overflow-y-auto rounded-xl border border-line bg-surface-raised p-3 text-foreground shadow-2xl animate-in fade-in zoom-in-95 duration-100 sm:max-h-[70dvh] sm:w-80"
         >
-          <div className="mb-2 flex items-center justify-between border-b border-line pb-2">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-1 border-b border-line pb-2">
             <span className="ft-display text-xs font-bold uppercase tracking-wider text-accent-ink">
               Filtro Temporal
             </span>
-            <span className="text-[11px] text-muted font-mono">
+            <span className="min-w-0 break-all text-right font-mono text-[11px] text-muted">
               {rangoVisible}
             </span>
           </div>
@@ -197,31 +197,31 @@ export function SelectorFechaFiltro({ valorActual, onChange }: SelectorFechaFilt
             <p className="mb-1 text-[11px] font-medium text-muted">
               Rango personalizado
             </p>
-            <div className="grid grid-cols-2 gap-2">
-              <label className="block text-[10px] uppercase tracking-wider text-muted">
+            <div className="grid grid-cols-1 gap-2">
+              <label className="block min-w-0 text-[10px] uppercase tracking-wider text-muted">
                 Desde
                 <input
                   type="date"
                   value={desdePersonalizado}
                   onChange={(e) => setDesdePersonalizado(e.target.value)}
-                  className="mt-1 w-full cursor-pointer rounded border border-line bg-surface-raised px-2 py-1.5 text-xs text-foreground outline-none focus:border-accent-ink focus:ring-2 focus:ring-brand-600/30 ft-mono"
+                  className="mt-1 min-h-11 w-full min-w-0 cursor-pointer rounded border border-line bg-surface-raised px-2 py-1.5 text-xs text-foreground outline-none focus:border-accent-ink focus:ring-2 focus:ring-brand-600/30 ft-mono"
                 />
               </label>
-              <label className="block text-[10px] uppercase tracking-wider text-muted">
+              <label className="block min-w-0 text-[10px] uppercase tracking-wider text-muted">
                 Hasta
                 <input
                   type="date"
                   value={hastaPersonalizado}
                   min={desdePersonalizado}
                   onChange={(e) => setHastaPersonalizado(e.target.value)}
-                  className="mt-1 w-full cursor-pointer rounded border border-line bg-surface-raised px-2 py-1.5 text-xs text-foreground outline-none focus:border-accent-ink focus:ring-2 focus:ring-brand-600/30 ft-mono"
+                  className="mt-1 min-h-11 w-full min-w-0 cursor-pointer rounded border border-line bg-surface-raised px-2 py-1.5 text-xs text-foreground outline-none focus:border-accent-ink focus:ring-2 focus:ring-brand-600/30 ft-mono"
                 />
               </label>
             </div>
             <button
               type="button"
               onClick={aplicarRango}
-              className="mt-2 w-full cursor-pointer rounded-lg border border-line bg-surface-raised px-2 py-1.5 text-xs font-semibold text-foreground hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40"
+              className="mt-2 min-h-11 w-full cursor-pointer rounded-lg border border-line bg-surface-raised px-2 py-1.5 text-xs font-semibold text-foreground hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40"
             >
               Aplicar rango
             </button>
@@ -239,7 +239,7 @@ export function SelectorFechaFiltro({ valorActual, onChange }: SelectorFechaFilt
                     key={p.clave}
                     type="button"
                     onClick={() => seleccionarPreset(p)}
-                    className={`text-left px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center justify-between cursor-pointer ${
+                    className={`flex min-h-11 cursor-pointer items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-xs font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40 ${
                       esActivo
                         ? "bg-accent-ink text-background font-bold shadow"
                         : "border border-line bg-surface-raised text-foreground hover:bg-surface-soft"
