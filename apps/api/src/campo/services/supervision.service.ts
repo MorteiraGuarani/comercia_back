@@ -13,6 +13,7 @@ import {
 import { ParadaRuta } from '../interfaces/parada-ruta.interface';
 import { fechaCampo, rangoConsulta, relojCampo } from '../utils/calendario';
 import { obtenerEquipoCompleto } from '../utils/autorizacion';
+import { DestinatarioTareaCampo } from '../../../generated/prisma/client';
 
 @Injectable()
 export class SupervisionService {
@@ -20,6 +21,20 @@ export class SupervisionService {
     private readonly prisma: PrismaService,
     private readonly acceso: CampoAccesoService,
   ) {}
+
+  private async idsEquipo(u: { id: number; empresaId: number; rolDescripcion: string | null }) {
+    if (u.rolDescripcion !== 'SUPERVISOR_REPOSITORES')
+      return obtenerEquipoCompleto(this.prisma, u.id);
+    const repositores = await this.prisma.usuario.findMany({
+      where: {
+        empresaId: u.empresaId, superiorId: u.id, isActive: true,
+        rol: { descripcion: 'REPOSITOR' },
+      },
+      select: { id: true },
+      take: 10000,
+    });
+    return repositores.map((r) => r.id);
+  }
 
   private formatoHora(date: Date | string | null): string | null {
     if (!date) return null;
@@ -43,18 +58,21 @@ export class SupervisionService {
     const fechaTexto = esRango
       ? `${query.fechaInicio} al ${query.fechaFin}`
       : (query.fecha ?? relojCampo().fecha);
-    const fechaDesdeStr = query.fechaInicio ?? (query.fecha ?? relojCampo().fecha);
+    const fechaDesdeStr =
+      query.fechaInicio ?? query.fecha ?? relojCampo().fecha;
     const fechaHastaStr = query.fechaFin ?? fechaDesdeStr;
     const fechaDesde = fechaCampo(fechaDesdeStr);
     const fechaHasta = fechaCampo(fechaHastaStr);
 
     // Obtener los subordinados del usuario
-    const equipoIds = await obtenerEquipoCompleto(this.prisma, u.id);
+    const equipoIds = await this.idsEquipo(u);
     const subordinadosIds = equipoIds.filter((id) => id !== u.id);
 
     // Si el usuario no tiene subordinados pero es team leader/admin de empresa,
     // buscamos usuarios de la misma empresa con rol inferior o subordinados
-    const idsConsultar = subordinadosIds.length > 0 ? subordinadosIds : [u.id];
+    const idsConsultar = subordinadosIds.length > 0
+      ? subordinadosIds
+      : u.rolDescripcion === 'SUPERVISOR_REPOSITORES' ? [] : [u.id];
 
     const usuarios = await this.prisma.usuario.findMany({
       where: {
@@ -98,19 +116,25 @@ export class SupervisionService {
 
     for (const user of usuarios) {
       const rol = user.rol?.descripcion.toLowerCase().replace(/[^a-z]/g, '');
-      const esTeamleader = rol === 'teamleader' || rol === 'teamleaderimpulsador';
+      const esTeamleader =
+        rol === 'teamleader' || rol === 'teamleaderimpulsador';
       // Asignaciones del colaborador para el período
       const asignaciones = await this.prisma.asignacionCampo.findMany({
         where: {
           activo: true,
           fechaDesde: { lte: fechaHasta },
-          local: { activo: true, cliente: { empresaId: u.empresaId, activo: true } },
+          local: {
+            activo: true,
+            cliente: { empresaId: u.empresaId, activo: true },
+          },
           AND: [
             { OR: [{ fechaHasta: null }, { fechaHasta: { gte: fechaDesde } }] },
             {
               OR: [
                 { usuarioId: user.id },
-                ...(esTeamleader ? [{ usuario: { superiorId: user.id, isActive: true } }] : []),
+                ...(esTeamleader
+                  ? [{ usuario: { superiorId: user.id, isActive: true } }]
+                  : []),
                 {
                   backups: {
                     some: {
@@ -164,7 +188,9 @@ export class SupervisionService {
       if (visitasHoy.length > 0) {
         inicioJornada = this.formatoHora(visitasHoy[0].entrada);
         if (asistencia === 'finalizado') {
-          finJornada = this.formatoHora(visitasHoy[visitasHoy.length - 1].salida);
+          finJornada = this.formatoHora(
+            visitasHoy[visitasHoy.length - 1].salida,
+          );
         }
       }
 
@@ -174,9 +200,13 @@ export class SupervisionService {
 
       // Métricas de ruta del colaborador
       const totalVisitas = Math.max(asignaciones.length, visitasHoy.length);
-      const completadasVisitas = visitasHoy.filter((v) => v.salida !== null).length;
+      const completadasVisitas = visitasHoy.filter(
+        (v) => v.salida !== null,
+      ).length;
       const enCursoVisitas = visitaAbierta ? 1 : 0;
-      const pctRuta = totalVisitas ? Math.round((completadasVisitas / totalVisitas) * 100) : 0;
+      const pctRuta = totalVisitas
+        ? Math.round((completadasVisitas / totalVisitas) * 100)
+        : 0;
       if (esTeamleader && user.superiorId === u.id) {
         liderazgo.totalTeamLeaders++;
         liderazgo.visitasTotales += totalVisitas;
@@ -192,40 +222,57 @@ export class SupervisionService {
 
       // Métricas de tareas del colaborador
       const localIds = Array.from(
-        new Set([...asignaciones.map((a) => a.localId), ...visitasHoy.map((v) => v.localId)]),
+        new Set([
+          ...asignaciones.map((a) => a.localId),
+          ...visitasHoy.map((v) => v.localId),
+        ]),
       );
 
-      const tareasAplicables = esTeamleader ? [] : await this.prisma.tareaCampo.findMany({
-        where: {
-          empresaId: u.empresaId,
-          activo: true,
-          fechaDesde: { lte: fechaHasta },
-          OR: [{ fechaHasta: null }, { fechaHasta: { gte: fechaDesde } }],
-          AND: [
-            {
-              OR: [
-                { todosLocales: true },
-                { locales: { some: { localId: { in: localIds } } } },
+      const tareasAplicables = esTeamleader
+        ? []
+        : await this.prisma.tareaCampo.findMany({
+            where: {
+              empresaId: u.empresaId,
+              activo: true,
+              destinatario: {
+                in: [
+                  rol === 'repositor'
+                    ? DestinatarioTareaCampo.REPOSITOR
+                    : DestinatarioTareaCampo.IMPULSADOR,
+                  DestinatarioTareaCampo.AMBOS,
+                ],
+              },
+              fechaDesde: { lte: fechaHasta },
+              OR: [{ fechaHasta: null }, { fechaHasta: { gte: fechaDesde } }],
+              AND: [
+                {
+                  OR: [
+                    { todosLocales: true },
+                    { locales: { some: { localId: { in: localIds } } } },
+                  ],
+                },
               ],
             },
-          ],
-        },
-        select: {
-          id: true,
-          esObligatoria: true,
-        },
-      });
+            select: {
+              id: true,
+              esObligatoria: true,
+            },
+          });
 
       const cumplimientosIds = new Set(
         visitasHoy.flatMap((v) => v.cumplimientos.map((c) => c.tareaId)),
       );
 
       const totalTareas = tareasAplicables.length;
-      const completadasTareas = tareasAplicables.filter((t) => cumplimientosIds.has(t.id)).length;
+      const completadasTareas = tareasAplicables.filter((t) =>
+        cumplimientosIds.has(t.id),
+      ).length;
       const obligPendientes = tareasAplicables.filter(
         (t) => t.esObligatoria && !cumplimientosIds.has(t.id),
       ).length;
-      const pctTareas = totalTareas ? Math.round((completadasTareas / totalTareas) * 100) : 0;
+      const pctTareas = totalTareas
+        ? Math.round((completadasTareas / totalTareas) * 100)
+        : 0;
 
       totalTareasGlobal += totalTareas;
       totalTareasCompletadasGlobal += completadasTareas;
@@ -242,7 +289,8 @@ export class SupervisionService {
         },
       });
 
-      const iniciales = `${user.nombre[0] ?? ''}${user.apellido[0] ?? ''}`.toUpperCase();
+      const iniciales =
+        `${user.nombre[0] ?? ''}${user.apellido[0] ?? ''}`.toUpperCase();
 
       colaboradores.push({
         id: user.id,
@@ -276,7 +324,9 @@ export class SupervisionService {
       ? Math.round((totalTareasCompletadasGlobal / totalTareasGlobal) * 100)
       : 0;
     liderazgo.pctVisitas = liderazgo.visitasTotales
-      ? Math.round(liderazgo.visitasCompletadas / liderazgo.visitasTotales * 100)
+      ? Math.round(
+          (liderazgo.visitasCompletadas / liderazgo.visitasTotales) * 100,
+        )
       : 0;
 
     return {
@@ -292,7 +342,10 @@ export class SupervisionService {
         total: totalRutaAsignada,
         completadas: totalRutaCompletada,
         enCurso: totalRutaEnCurso,
-        pendientes: Math.max(0, totalRutaAsignada - totalRutaCompletada - totalRutaEnCurso),
+        pendientes: Math.max(
+          0,
+          totalRutaAsignada - totalRutaCompletada - totalRutaEnCurso,
+        ),
         pct: totalRutaPct,
       },
       tareas: {
@@ -318,8 +371,9 @@ export class SupervisionService {
     const fechaDesde = fechaCampo(desde);
     const fechaHasta = fechaCampo(hasta);
 
-    const equipoIds = await obtenerEquipoCompleto(this.prisma, u.id);
-    if (!equipoIds.includes(colaboradorId) && colaboradorId !== u.id) {
+    const equipoIds = await this.idsEquipo(u);
+    if (!equipoIds.includes(colaboradorId) &&
+      (colaboradorId !== u.id || u.rolDescripcion === 'SUPERVISOR_REPOSITORES')) {
       throw new ForbiddenException('No tienes acceso a este colaborador');
     }
 
@@ -343,7 +397,10 @@ export class SupervisionService {
       where: {
         activo: true,
         fechaDesde: { lte: fechaHasta },
-        local: { activo: true, cliente: { empresaId: u.empresaId, activo: true } },
+        local: {
+          activo: true,
+          cliente: { empresaId: u.empresaId, activo: true },
+        },
         AND: [
           { OR: [{ fechaHasta: null }, { fechaHasta: { gte: fechaDesde } }] },
           {
@@ -364,11 +421,17 @@ export class SupervisionService {
         ],
       },
       include: {
+        horarios: {
+          where: { activo: true },
+          select: { entrada: true, salida: true, id: true },
+          orderBy: { entrada: 'asc' },
+          take: 5,
+        },
         local: {
           include: {
             cliente: { select: { id: true, nombre: true } },
             horarios: {
-              where: { activo: true },
+              where: { activo: true, asignacionId: null },
               select: { entrada: true, salida: true, id: true },
               orderBy: { entrada: 'asc' },
               take: 5,
@@ -388,7 +451,7 @@ export class SupervisionService {
           include: {
             cliente: { select: { id: true, nombre: true } },
             horarios: {
-              where: { activo: true },
+              where: { activo: true, asignacionId: null },
               select: { entrada: true, salida: true, id: true },
               orderBy: { entrada: 'asc' },
               take: 5,
@@ -400,10 +463,15 @@ export class SupervisionService {
             tareaId: true,
             nombreTarea: true,
             completadaAt: true,
-            fotos: { select: { id: true, momento: true, creadoAt: true }, take: 2 },
+            fotos: {
+              select: { id: true, momento: true, creadoAt: true },
+              take: 2,
+            },
             comentarios: {
               select: {
-                id: true, comentario: true, creadoAt: true,
+                id: true,
+                comentario: true,
+                creadoAt: true,
                 usuario: { select: { nombre: true, apellido: true } },
               },
               orderBy: { creadoAt: 'desc' },
@@ -420,7 +488,7 @@ export class SupervisionService {
 
     // Primero asignaciones
     for (const a of asignaciones) {
-      const h = a.local.horarios[0];
+      const h = (a.horarios.length ? a.horarios : a.local.horarios)[0];
       const ventana = h ? `${h.entrada} – ${h.salida}` : '08:00 – 18:00';
       paradasMap.set(a.local.id, {
         id: `local-${a.local.id}`,
@@ -440,9 +508,7 @@ export class SupervisionService {
       const existing = paradasMap.get(v.local.id);
       const h = v.local.horarios[0];
       const ventana = h ? `${h.entrada} – ${h.salida}` : '08:00 – 18:00';
-      const estado: ParadaRuta['estado'] = v.salida
-        ? 'completado'
-        : 'en_curso';
+      const estado: ParadaRuta['estado'] = v.salida ? 'completado' : 'en_curso';
 
       paradasMap.set(v.local.id, {
         id: `visita-${v.id}`,
@@ -467,7 +533,8 @@ export class SupervisionService {
         ? 'finalizado'
         : 'sin_iniciar';
 
-    const inicioJornada = visitas.length > 0 ? this.formatoHora(visitas[0].entrada) : null;
+    const inicioJornada =
+      visitas.length > 0 ? this.formatoHora(visitas[0].entrada) : null;
     const finJornada =
       asistencia === 'finalizado' && visitas.length > 0
         ? this.formatoHora(visitas[visitas.length - 1].salida)
@@ -479,6 +546,14 @@ export class SupervisionService {
       where: {
         empresaId: u.empresaId,
         activo: true,
+        destinatario: {
+          in: [
+            user.rol?.descripcion === 'REPOSITOR'
+              ? DestinatarioTareaCampo.REPOSITOR
+              : DestinatarioTareaCampo.IMPULSADOR,
+            DestinatarioTareaCampo.AMBOS,
+          ],
+        },
         fechaDesde: { lte: fechaHasta },
         OR: [{ fechaHasta: null }, { fechaHasta: { gte: fechaDesde } }],
         AND: [
@@ -499,7 +574,9 @@ export class SupervisionService {
     });
 
     const tareasCumplidasSet = new Set(
-      visitas.flatMap((v) => v.cumplimientos.filter((c) => c.completadaAt).map((c) => c.tareaId)),
+      visitas.flatMap((v) =>
+        v.cumplimientos.filter((c) => c.completadaAt).map((c) => c.tareaId),
+      ),
     );
 
     const evidencias = visitas.flatMap((visita) =>
@@ -523,11 +600,24 @@ export class SupervisionService {
     );
 
     // Agrupar por categoría
-    const categoriasMap = new Map<string, { total: number; completadas: number; obligPendiente: boolean; tareas: any[] }>();
+    const categoriasMap = new Map<
+      string,
+      {
+        total: number;
+        completadas: number;
+        obligPendiente: boolean;
+        tareas: any[];
+      }
+    >();
 
     for (const t of tareas) {
       const cat = t.categoria || 'Relevamiento';
-      const curr = categoriasMap.get(cat) ?? { total: 0, completadas: 0, obligPendiente: false, tareas: [] };
+      const curr = categoriasMap.get(cat) ?? {
+        total: 0,
+        completadas: 0,
+        obligPendiente: false,
+        tareas: [],
+      };
       curr.total++;
       const completada = tareasCumplidasSet.has(t.id);
       if (completada) {
@@ -544,10 +634,12 @@ export class SupervisionService {
       categoriasMap.set(cat, curr);
     }
 
-    const tareasCategorias = Array.from(categoriasMap.entries()).map(([categoria, datos]) => ({
-      categoria,
-      ...datos,
-    }));
+    const tareasCategorias = Array.from(categoriasMap.entries()).map(
+      ([categoria, datos]) => ({
+        categoria,
+        ...datos,
+      }),
+    );
 
     // Novedades de hoy
     const novedades = await this.prisma.novedadCampo.findMany({
@@ -574,7 +666,8 @@ export class SupervisionService {
       hora: this.formatoHora(n.creadoAt) ?? 'hoy',
     }));
 
-    const iniciales = `${user.nombre[0] ?? ''}${user.apellido[0] ?? ''}`.toUpperCase();
+    const iniciales =
+      `${user.nombre[0] ?? ''}${user.apellido[0] ?? ''}`.toUpperCase();
 
     return {
       colaborador: {

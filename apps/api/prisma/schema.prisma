@@ -266,6 +266,8 @@ model HorarioCampo {
   id            Int                       @id @default(autoincrement())
   localId       Int                       @map("local_id")
   local         LocalCampo                @relation(fields: [localId], references: [id])
+  asignacionId  Int?                      @map("asignacion_id")
+  asignacion    AsignacionCampo?          @relation(fields: [asignacionId], references: [id])
   frecuencia    FrecuenciaCampo           @default(SEMANAL)
   intervalo     Int                       @default(1)
   diasSemana    Int[]                     @default([]) @map("dias_semana")
@@ -279,6 +281,7 @@ model HorarioCampo {
   eventosUcheck IntegracionUcheckEvento[]
 
   @@index([localId, activo])
+  @@index([asignacionId, activo])
   @@map("campo_horarios")
 }
 
@@ -292,6 +295,7 @@ model AsignacionCampo {
   fechaHasta    DateTime?                 @map("fecha_hasta") @db.Date
   activo        Boolean                   @default(true)
   backups       BackupCampo[]
+  horarios      HorarioCampo[]
   visitas       VisitaCampo[]
   eventosUcheck IntegracionUcheckEvento[]
 
@@ -321,6 +325,7 @@ model TareaCampo {
   empresaId         Int                 @map("empresa_id")
   empresa           Empresa             @relation(fields: [empresaId], references: [id])
   nombre            String              @db.VarChar(120)
+  destinatario      DestinatarioTareaCampo @default(IMPULSADOR)
   descripcion       String              @default("") @db.VarChar(1000)
   todosLocales      Boolean             @default(true) @map("todos_locales")
   fechaDesde        DateTime            @map("fecha_desde") @db.Date
@@ -337,6 +342,12 @@ model TareaCampo {
 
   @@index([empresaId, activo, fechaDesde])
   @@map("campo_tareas")
+}
+
+enum DestinatarioTareaCampo {
+  IMPULSADOR
+  REPOSITOR
+  AMBOS
 }
 
 model TareaLocalCampo {

@@ -25,6 +25,7 @@ import type { RequestConUsuario } from '../auth/interfaces/request-con-usuario.i
 import { CatalogoCampoService } from './catalogo-campo.service';
 import { PlanificacionCampoService } from './planificacion-campo.service';
 import { JornadaCampoService } from './jornada-campo.service';
+import { RepositorCampoService } from './repositor-campo.service';
 import { ComentarioService } from './services/comentario.service';
 import { FotoService } from './services/foto.service';
 import { NotificacionService } from './services/notificacion.service';
@@ -38,9 +39,11 @@ import {
   ClienteCampoDto,
   ConsultaCampoDto,
   EntradaCampoDto,
+  EntradaRepositorCampoDto,
   HorarioCampoDto,
   LocalCampoDto,
   MarcaCampoDto,
+  MarcaRepositorCampoDto,
   TareaCampoDto,
 } from './dto/campo.dto';
 import { CrearComentarioTareaDto } from './dto/comentario-tarea.dto';
@@ -71,6 +74,7 @@ export class CampoController {
     private readonly catalogo: CatalogoCampoService,
     private readonly plan: PlanificacionCampoService,
     private readonly jornada: JornadaCampoService,
+    private readonly repositor: RepositorCampoService,
     private readonly comentarioService: ComentarioService,
     private readonly fotoService: FotoService,
     private readonly notificacionService: NotificacionService,
@@ -233,6 +237,35 @@ export class CampoController {
   ) {
     return this.plan.asignaciones(r.usuarioId, id, q);
   }
+  @Get('asignaciones/:id/horarios') horariosAsignacion(
+    @Req() r: RequestConUsuario,
+    @Param('id', ParseIntPipe) id: number,
+    @Query() q: ConsultaCampoDto,
+  ) {
+    return this.plan.horariosAsignacion(r.usuarioId, id, q);
+  }
+  @Post('asignaciones/:id/horarios') crearHorarioAsignacion(
+    @Req() r: RequestConUsuario,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() d: HorarioCampoDto,
+  ) {
+    return this.plan.guardarHorarioAsignacion(r.usuarioId, id, d);
+  }
+  @Put('asignaciones/:id/horarios/:horarioId') editarHorarioAsignacion(
+    @Req() r: RequestConUsuario,
+    @Param('id', ParseIntPipe) id: number,
+    @Param('horarioId', ParseIntPipe) horarioId: number,
+    @Body() d: HorarioCampoDto,
+  ) {
+    return this.plan.guardarHorarioAsignacion(r.usuarioId, id, d, horarioId);
+  }
+  @Delete('asignaciones/:id/horarios/:horarioId') eliminarHorarioAsignacion(
+    @Req() r: RequestConUsuario,
+    @Param('id', ParseIntPipe) id: number,
+    @Param('horarioId', ParseIntPipe) horarioId: number,
+  ) {
+    return this.plan.eliminarHorarioAsignacion(r.usuarioId, id, horarioId);
+  }
   @Post('locales/:localId/asignaciones') asignar(
     @Req() r: RequestConUsuario,
     @Param('localId', ParseIntPipe) id: number,
@@ -296,18 +329,35 @@ export class CampoController {
   ) {
     return this.jornada.tareas(r.usuarioId, id, q);
   }
-  @Post('jornada/entrada') entrada(
+  @Post('jornada/entrada') async entrada(
     @Req() r: RequestConUsuario,
     @Body() d: EntradaCampoDto,
   ) {
-    return this.jornada.entrada(r.usuarioId, d);
+    return (await this.repositor.esRepositor(r.usuarioId))
+      ? this.repositor.entrada(r.usuarioId, d)
+      : this.jornada.entrada(r.usuarioId, d);
   }
-  @Post('jornada/visitas/:id/salida') salida(
+  @Post('jornada/repositor/entrada') entradaRepositor(
+    @Req() r: RequestConUsuario,
+    @Body() d: EntradaRepositorCampoDto,
+  ) {
+    return this.repositor.entrada(r.usuarioId, d);
+  }
+  @Post('jornada/visitas/:id/salida') async salida(
     @Req() r: RequestConUsuario,
     @Param('id', ParseIntPipe) id: number,
     @Body() d: MarcaCampoDto,
   ) {
-    return this.jornada.salida(r.usuarioId, id, d);
+    return (await this.repositor.esRepositor(r.usuarioId))
+      ? this.repositor.salida(r.usuarioId, id, d)
+      : this.jornada.salida(r.usuarioId, id, d);
+  }
+  @Post('jornada/repositor/visitas/:id/salida') salidaRepositor(
+    @Req() r: RequestConUsuario,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() d: MarcaRepositorCampoDto,
+  ) {
+    return this.repositor.salida(r.usuarioId, id, d);
   }
   @Post('jornada/visitas/:visitaId/tareas/:tareaId') completar(
     @Req() r: RequestConUsuario,

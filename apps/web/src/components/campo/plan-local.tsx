@@ -101,8 +101,11 @@ export function PlanLocal({
 
 // ========== PESTAÑA: HORARIOS Y FRANJAS ==========
 
-function HorariosLocal({ localId }: { localId: number }) {
-  const lista = useListaCampo<HorarioCampo>(`/campo/locales/${localId}/horarios`);
+function HorariosLocal({ localId, asignacionId }: { localId: number; asignacionId?: number }) {
+  const ruta = asignacionId
+    ? `/campo/asignaciones/${asignacionId}/horarios`
+    : `/campo/locales/${localId}/horarios`;
+  const lista = useListaCampo<HorarioCampo>(ruta);
   const op = useOperacionCampo();
   const [form, setForm] = useState<FormHorarioCampo | null>(null);
   const [id, setId] = useState(0);
@@ -129,10 +132,12 @@ function HorariosLocal({ localId }: { localId: number }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h4 className="text-sm font-bold uppercase tracking-wider text-[#1E2320]">
-            Franjas de Atención ({lista.items.length})
+            {asignacionId ? "Franjas propias" : "Franjas predeterminadas"} ({lista.items.length})
           </h4>
           <p className="text-xs text-[#726C60]">
-            Cada franja define una visita requerida. Sin franjas, se permite una visita diaria libre.
+            {asignacionId
+              ? "Estas franjas se aplican solo a este colaborador. Sin ellas se usan las predeterminadas del local."
+              : "Se aplican a todos los colaboradores sin franjas propias."}
           </p>
         </div>
         <button
@@ -155,7 +160,7 @@ function HorariosLocal({ localId }: { localId: number }) {
         >
           <p className="text-sm font-bold text-[#1E2320]">No hay horarios configurados</p>
           <p className="text-xs text-[#726C60] mt-1">
-            Los impulsadores podrán registrar presencia libremente en cualquier momento del día.
+            Podés configurar una franja específica para esta asignación.
           </p>
         </div>
       ) : (
@@ -212,7 +217,7 @@ function HorariosLocal({ localId }: { localId: number }) {
                   type="button"
                   onClick={() =>
                     void op.ejecutar("Quitando horario", async () => {
-                      await apiFetch(`/campo/locales/${localId}/horarios/${h.id}`, {
+                      await apiFetch(`${ruta}/${h.id}`, {
                         method: "DELETE",
                       });
                       lista.refrescar();
@@ -235,7 +240,7 @@ function HorariosLocal({ localId }: { localId: number }) {
             e.preventDefault();
             if (
               await op.ejecutar(id ? "Guardando horario" : "Creando horario", () =>
-                apiFetch(`/campo/locales/${localId}/horarios${id ? `/${id}` : ""}`, {
+                apiFetch(`${ruta}${id ? `/${id}` : ""}`, {
                   method: id ? "PUT" : "POST",
                   // Un input date vacío llega como ""; el contrato de la API
                   // usa null para representar una vigencia sin vencimiento.
@@ -445,13 +450,14 @@ function AsignacionesLocal({ localId }: { localId: number }) {
   const [desde, setDesde] = useState(fechaEnZonaIso(new Date()));
   const [hasta, setHasta] = useState("");
   const [backup, setBackup] = useState<AsignacionCampo | null>(null);
+  const [horariosDe, setHorariosDe] = useState<AsignacionCampo | null>(null);
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h4 className="text-sm font-bold uppercase tracking-wider text-[#1E2320]">
-            Impulsadores Asignados ({lista.items.length})
+            Colaboradores asignados ({lista.items.length})
           </h4>
           <p className="text-xs text-[#726C60]">
             Colaboradores titulares encargados de atender este punto de venta.
@@ -479,7 +485,7 @@ function AsignacionesLocal({ localId }: { localId: number }) {
         >
           <p className="text-sm font-bold text-[#1E2320]">Sin titular asignado</p>
           <p className="text-xs text-[#726C60] mt-1">
-            Asigna un impulsador a este local para que aparezca en su hoja de ruta diaria.
+            Asigná un impulsador o repositor para que aparezca en su ruta diaria.
           </p>
         </div>
       ) : (
@@ -521,6 +527,10 @@ function AsignacionesLocal({ localId }: { localId: number }) {
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-3 border-t mt-3" style={{ borderColor: TOKENS.line }}>
+                <button type="button" onClick={() => setHorariosDe(a)}
+                  className="min-h-11 rounded border border-line bg-surface-raised px-2.5 text-xs font-bold uppercase text-foreground hover:bg-surface-soft focus-visible:ring-2 focus-visible:ring-focus">
+                  Horarios propios
+                </button>
                 <button
                   type="button"
                   onClick={() => setBackup(a)}
@@ -577,7 +587,7 @@ function AsignacionesLocal({ localId }: { localId: number }) {
         >
           <div className="flex items-center justify-between border-b pb-2" style={{ borderColor: TOKENS.line }}>
             <h5 className="text-xs font-bold uppercase tracking-wider text-[#1E2320]">
-              Asignar Impulsador Titular
+              Asignar colaborador titular
             </h5>
             <button
               type="button"
@@ -661,6 +671,12 @@ function AsignacionesLocal({ localId }: { localId: number }) {
             lista.refrescar();
           }}
         />
+      )}
+      {horariosDe && (
+        <Modal titulo={`Horarios · ${horariosDe.usuario.nombre} ${horariosDe.usuario.apellido}`}
+          abierto onCerrar={() => setHorariosDe(null)} ancho="xl">
+          <HorariosLocal localId={localId} asignacionId={horariosDe.id} />
+        </Modal>
       )}
 
       {op.error && (

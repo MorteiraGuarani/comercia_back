@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import { useListaCampo, useOperacionCampo } from "@/hooks/use-lista-campo";
 import { fechaEnZonaIso, formatoFechaHora, queryFechasCampo } from "@/utils/fechas";
@@ -18,7 +19,7 @@ import type {
   VisitaCampo,
 } from "@/types/campo";
 
-export function JornadaPanel({ tareas = false }: { tareas?: boolean }) {
+export function JornadaPanel({ tareas = false, esRepositor = false }: { tareas?: boolean; esRepositor?: boolean }) {
   const hoyStr = fechaEnZonaIso(new Date());
   const [periodo, setPeriodo] = useState<PeriodoFiltro>({
     clave: "hoy",
@@ -32,16 +33,19 @@ export function JornadaPanel({ tareas = false }: { tareas?: boolean }) {
     <>
       <CabeceraCampo
         titulo={tareas ? "Mis tareas del día" : "Mis locales"}
-        detalle="Tu agenda y reemplazos. Podés registrar presencia aunque el local no tenga tareas."
+        detalle={esRepositor
+          ? "Marcá entrada desde Comercia con Ucheck activo en tu teléfono. Completá las tareas antes de salir."
+          : "Tu agenda y reemplazos. Podés registrar presencia aunque el local no tenga tareas."}
       />
       <div className="mb-4">
         <SelectorFechaFiltro valorActual={periodo} onChange={setPeriodo} />
       </div>
-      <AgendaDelDia key={qsFecha} qsFecha={qsFecha} />
+      <AgendaDelDia key={qsFecha} qsFecha={qsFecha} esRepositor={esRepositor} />
     </>
   );
 }
-function AgendaDelDia({ qsFecha }: { qsFecha: string }) {
+function AgendaDelDia({ qsFecha, esRepositor }: { qsFecha: string; esRepositor: boolean }) {
+  const router = useRouter();
   const lista = useListaCampo<AgendaCampo>(`/campo/jornada?${qsFecha}`);
   const [abierta, setAbierta] = useState<VisitaCampo | null>(null);
   const [revision, setRevision] = useState(0);
@@ -592,12 +596,17 @@ function AgendaDelDia({ qsFecha }: { qsFecha: string }) {
           nombre={marca.nombre}
           radioMetros={marca.radioMetros}
           salida={!!marca.visitaId}
+          usarTelefonoUcheck={esRepositor}
           cerrar={() => setMarca(null)}
           guardar={async (datos) => {
             await apiFetch(
               marca.visitaId
-                ? `/campo/jornada/visitas/${marca.visitaId}/salida`
-                : "/campo/jornada/entrada",
+                ? esRepositor
+                  ? `/campo/jornada/repositor/visitas/${marca.visitaId}/salida`
+                  : `/campo/jornada/visitas/${marca.visitaId}/salida`
+                : esRepositor
+                  ? "/campo/jornada/repositor/entrada"
+                  : "/campo/jornada/entrada",
               {
                 method: "POST",
                 body: JSON.stringify({
@@ -613,6 +622,7 @@ function AgendaDelDia({ qsFecha }: { qsFecha: string }) {
             );
             actualizar();
             setMarca(null);
+            if (esRepositor && !marca.visitaId) router.push("/panel/mi-jornada/tareas");
           }}
         />
       ) : null}
@@ -623,14 +633,16 @@ function ModalMarca({
   nombre,
   radioMetros,
   salida,
+  usarTelefonoUcheck,
   cerrar,
   guardar,
 }: {
   nombre: string;
   radioMetros: number;
   salida: boolean;
+  usarTelefonoUcheck: boolean;
   cerrar: () => void;
-  guardar: (datos: MarcaCampo) => Promise<void>;
+  guardar: (datos: MarcaCampo | { nota: string }) => Promise<void>;
 }) {
   const op = useOperacionCampo();
   const [coords, setCoords] = useState<Omit<MarcaCampo, "nota"> | null>(null);
@@ -671,24 +683,30 @@ function ModalMarca({
         onSubmit={async (e) => {
           e.preventDefault();
           await op.ejecutar("Obteniendo ubicación y registrando presencia", async () => {
+            if (usarTelefonoUcheck) {
+              await guardar({ nota });
+              return;
+            }
             const posicion = await obtenerGps();
             setCoords(posicion);
             await guardar({ ...posicion, nota });
           });
         }}
       >
-        <button
+        {!usarTelefonoUcheck ? <button
           type="button"
           className={`${btnGhost} w-full`}
           onClick={() => void ubicar()}
         >
           Obtener mi ubicación
-        </button>
-        <p className="text-sm text-muted">
+        </button> : null}
+        {usarTelefonoUcheck ? (
+          <p className="text-sm text-muted">La ubicación y los datos del dispositivo se tomarán de Ucheck en el teléfono. Mantené el seguimiento activo.</p>
+        ) : <p className="text-sm text-muted">
           {coords
             ? `Ubicación obtenida: ${coords.latitud.toFixed(5)}, ${coords.longitud.toFixed(5)} · precisión ±${Math.round(coords.precisionMetros)} m`
             : "Se necesita GPS para marcar. Al confirmar se obtendrá una ubicación nueva."}
-        </p>
+        </p>}
         <p className="text-sm text-muted">Radio permitido: {radioMetros} m desde el local.</p>
         <CampoTexto
           titulo="Observación (opcional)"
@@ -731,7 +749,7 @@ function TareasDeLocal({
       <p className="mb-4 text-sm text-muted">
         {visita
           ? "Marcá las tareas realizadas en esta visita."
-          : "Registrá entrada para completar tareas. Las tareas no impiden registrar salida."}
+          : "Registrá entrada para completar tareas."}
       </p>
       <TablaCampo
         lista={lista}

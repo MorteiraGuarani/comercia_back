@@ -2,9 +2,13 @@ import { Prisma } from '../../../generated/prisma/client';
 
 function condicionHorario(diaSql: Prisma.Sql) {
   return Prisma.sql`
-    NOT EXISTS (SELECT 1 FROM campo_horarios h WHERE h.local_id = l.id AND h.activo)
+    NOT EXISTS (SELECT 1 FROM campo_horarios h WHERE h.local_id = l.id AND h.activo
+      AND (h.asignacion_id = a.id OR h.asignacion_id IS NULL))
     OR EXISTS (
       SELECT 1 FROM campo_horarios h WHERE h.local_id = l.id AND h.activo
+      AND (h.asignacion_id = a.id OR (h.asignacion_id IS NULL AND NOT EXISTS (
+        SELECT 1 FROM campo_horarios propio WHERE propio.asignacion_id = a.id AND propio.activo
+      )))
       AND h.fecha_desde <= ${diaSql} AND (h.fecha_hasta IS NULL OR h.fecha_hasta >= ${diaSql})
       AND (
         (h.frecuencia = 'DIARIA' AND (${diaSql} - h.fecha_desde) % h.intervalo = 0)
@@ -88,11 +92,15 @@ export function condicionAgenda(
           ))
       )
     ) AND (
-      NOT EXISTS (SELECT 1 FROM campo_horarios h WHERE h.local_id = l.id AND h.activo)
+      NOT EXISTS (SELECT 1 FROM campo_horarios h WHERE h.local_id = l.id AND h.activo
+        AND (h.asignacion_id = a.id OR h.asignacion_id IS NULL))
       OR EXISTS (
         SELECT 1 FROM campo_horarios h
         CROSS JOIN generate_series(${fecha}::date, ${fechaFin}::date, interval '1 day') AS d(dia)
         WHERE h.local_id = l.id AND h.activo
+        AND (h.asignacion_id = a.id OR (h.asignacion_id IS NULL AND NOT EXISTS (
+          SELECT 1 FROM campo_horarios propio WHERE propio.asignacion_id = a.id AND propio.activo
+        )))
         AND h.fecha_desde <= ${dia} AND (h.fecha_hasta IS NULL OR h.fecha_hasta >= ${dia})
         AND (
           (h.frecuencia = 'DIARIA' AND (${dia} - h.fecha_desde) % h.intervalo = 0)

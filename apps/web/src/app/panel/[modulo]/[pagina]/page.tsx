@@ -20,6 +20,9 @@ const SupervisionPanel = dynamic(() =>
 const RutaImpulsadorPanel = dynamic(() =>
   import("@/components/campo/ruta-impulsador-panel").then((m) => m.RutaImpulsadorPanel),
 );
+const JornadaPanel = dynamic(() =>
+  import("@/components/campo/jornada-panel").then((m) => m.JornadaPanel),
+);
 const TareasImpulsadorPanel = dynamic(() =>
   import("@/components/campo/tareas-impulsador-panel").then((m) => m.TareasImpulsadorPanel),
 );
@@ -36,7 +39,7 @@ export default function PaginaModulo({
   params: Promise<{ modulo: string; pagina: string }>;
 }) {
   const { modulo, pagina } = use(params);
-  const { modulos } = usePanel();
+  const { modulos, usuario } = usePanel();
   const mod = modulos.find((item) => item.ruta === modulo);
   const pag = mod?.paginas.find((item) => item.ruta === pagina);
 
@@ -62,11 +65,15 @@ export default function PaginaModulo({
 
   // MÓDULO: MI JORNADA (IMPULSADOR / REPOSITOR DE CAMPO)
   if (modulo === "mi-jornada") {
-    if (pagina === "locales") return <RutaImpulsadorPanel />;
-    if (pagina === "tareas") return <TareasImpulsadorPanel />;
+    if (pagina === "locales") return usuario.rol?.descripcion === "REPOSITOR"
+      ? <JornadaPanel esRepositor />
+      : <RutaImpulsadorPanel />;
+    if (pagina === "tareas") return <TareasImpulsadorPanel esRepositor={usuario.rol?.descripcion === "REPOSITOR"} />;
     if (pagina === "novedades") return <NovedadesPanel esImpulsador={true} />;
     if (pagina === "avisos") return <AvisosPanel esImpulsador={true} />;
-    if (pagina === "agenda") return <RutaImpulsadorPanel />;
+    if (pagina === "agenda") return usuario.rol?.descripcion === "REPOSITOR"
+      ? <JornadaPanel esRepositor />
+      : <RutaImpulsadorPanel />;
   }
 
   return (

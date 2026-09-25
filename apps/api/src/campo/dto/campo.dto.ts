@@ -18,6 +18,7 @@ import {
   ValidateIf,
 } from 'class-validator';
 import {
+  DestinatarioTareaCampo,
   EstadoTareaCampo,
   FrecuenciaCampo,
 } from '../../../generated/prisma/client';
@@ -158,6 +159,8 @@ export class BackupCampoDto extends AsignacionCampoDto {
 }
 
 export class TareaCampoDto extends VigenciaCampoDto {
+  @IsEnum(DestinatarioTareaCampo)
+  destinatario: DestinatarioTareaCampo = DestinatarioTareaCampo.IMPULSADOR;
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.trim() : value,
   )
@@ -191,6 +194,15 @@ export class MarcaCampoDto {
 }
 
 export class EntradaCampoDto extends MarcaCampoDto {
+  @IsInt() @Min(1) @Max(MAX_INT4) asignacionId!: number;
+  @IsOptional() @IsInt() @Min(1) @Max(MAX_INT4) horarioId?: number;
+}
+
+export class MarcaRepositorCampoDto {
+  @IsString() @MaxLength(250) nota = '';
+}
+
+export class EntradaRepositorCampoDto extends MarcaRepositorCampoDto {
   @IsInt() @Min(1) @Max(MAX_INT4) asignacionId!: number;
   @IsOptional() @IsInt() @Min(1) @Max(MAX_INT4) horarioId?: number;
 }

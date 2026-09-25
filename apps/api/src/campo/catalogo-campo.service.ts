@@ -180,16 +180,43 @@ export class CatalogoCampoService {
     });
     if (!cliente) throw new NotFoundException('Cliente no disponible');
     if (id) await this.acceso.local(u.empresaId, id);
-    return id
-      ? this.prisma.localCampo.update({
-          where: { id },
-          data: dto,
-          select: LOCAL_CAMPO_SELECT,
-        })
-      : this.prisma.localCampo.create({
-          data: dto,
-          select: LOCAL_CAMPO_SELECT,
-        });
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM empresas WHERE id = ${u.empresaId} FOR UPDATE`;
+      const direccion = dto.direccion.trim();
+      const repetido = await tx.localCampo.findFirst({
+        where: {
+          activo: true,
+          cliente: { empresaId: u.empresaId },
+          ...(id ? { id: { not: id } } : {}),
+          nombre: { equals: dto.nombre.trim(), mode: 'insensitive' },
+          OR: [
+            ...(direccion
+              ? [
+                  {
+                    direccion: {
+                      equals: direccion,
+                      mode: 'insensitive' as const,
+                    },
+                  },
+                ]
+              : []),
+            { latitud: dto.latitud, longitud: dto.longitud },
+          ],
+        },
+        select: { id: true },
+      });
+      if (repetido)
+        throw new BadRequestException(
+          `El local ya existe (#${repetido.id}); asignalo desde el catálogo`,
+        );
+      return id
+        ? tx.localCampo.update({
+            where: { id },
+            data: dto,
+            select: LOCAL_CAMPO_SELECT,
+          })
+        : tx.localCampo.create({ data: dto, select: LOCAL_CAMPO_SELECT });
+    });
   }
   async eliminarLocal(usuarioId: number, id: number) {
     const u = await this.acceso.gestionar(usuarioId, 'locales');
@@ -275,6 +302,7 @@ export class CatalogoCampoService {
       throw new NotFoundException('Tarea no disponible');
     const data = {
       nombre: dto.nombre,
+      destinatario: dto.destinatario,
       descripcion: dto.descripcion,
       activo: dto.activo,
       todosLocales: dto.todosLocales,

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment -- Jest objectContaining returns any. */
 import type { PrismaService } from '../prisma/prisma.service';
 import type { CampoAccesoService } from './campo-acceso.service';
 
@@ -6,6 +7,36 @@ jest.mock('../prisma/prisma.service', () => ({ PrismaService: class {} }));
 import { PlanificacionCampoService } from './planificacion-campo.service';
 
 describe('PlanificacionCampoService', () => {
+  it('muestra solo repositores directos al supervisor nuevo', async () => {
+    const prisma = {
+      usuario: {
+        count: jest.fn().mockResolvedValue(1),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+    };
+    const acceso = {
+      gestionar: jest.fn().mockResolvedValue({
+        id: 3,
+        empresaId: 10,
+        rolDescripcion: 'SUPERVISOR_REPOSITORES',
+      }),
+    };
+    const service = new PlanificacionCampoService(
+      prisma as unknown as PrismaService,
+      acceso as unknown as CampoAccesoService,
+    );
+    await service.equipo(3, { page: 1, limit: 7 });
+    expect(prisma.usuario.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          empresaId: 10,
+          superiorId: 3,
+          rol: { descripcion: 'REPOSITOR' },
+        }),
+      }),
+    );
+  });
+
   it('busca solo dentro de los colaboradores activos asignados al lider', async () => {
     const prisma = {
       usuario: {

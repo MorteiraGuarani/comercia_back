@@ -35,6 +35,9 @@ export class PlanificacionCampoService {
       superiorId: u.id,
       isActive: true,
       esSuperadmin: false,
+      ...(u.rolDescripcion === 'SUPERVISOR_REPOSITORES'
+        ? { rol: { descripcion: 'REPOSITOR' } }
+        : {}),
       ...(buscar
         ? {
             OR: [
@@ -74,7 +77,7 @@ export class PlanificacionCampoService {
   async horarios(usuarioId: number, localId: number, query: ConsultaCampoDto) {
     const u = await this.acceso.gestionar(usuarioId, 'locales');
     await this.acceso.local(u.empresaId, localId);
-    const where = { localId, activo: true };
+    const where = { localId, asignacionId: null, activo: true };
     const { skip, take, page, limit } = rangoPaginacion(query);
     const [total, items] = await Promise.all([
       this.prisma.horarioCampo.count({ where }),
@@ -93,9 +96,15 @@ export class PlanificacionCampoService {
     localId: number,
     dto: HorarioCampoDto,
     id?: number,
+    asignacionId?: number,
   ) {
     const u = await this.acceso.gestionar(usuarioId, 'locales');
     await this.acceso.local(u.empresaId, localId);
+    if (asignacionId) {
+      const { a } = await this.asignacionDelEquipo(usuarioId, asignacionId);
+      if (a.localId !== localId)
+        throw new NotFoundException('Asignación no disponible');
+    }
     const data = { ...dto, ...vigenciaCampo(dto.fechaDesde, dto.fechaHasta) };
     validarHorario(data);
     return this.prisma.$transaction(async (tx) => {
@@ -103,7 +112,12 @@ export class PlanificacionCampoService {
       await tx.$queryRaw`SELECT id FROM campo_locales WHERE id = ${localId} FOR UPDATE`;
       if (id) {
         const anterior = await tx.horarioCampo.findFirst({
-          where: { id, localId, activo: true },
+          where: {
+            id,
+            localId,
+            asignacionId: asignacionId ?? null,
+            activo: true,
+          },
           select: { id: true },
         });
         if (!anterior) throw new NotFoundException('Horario no disponible');
@@ -114,12 +128,13 @@ export class PlanificacionCampoService {
         });
       }
       if (
-        (await tx.horarioCampo.count({ where: { localId, activo: true } })) >=
-        20
+        (await tx.horarioCampo.count({
+          where: { localId, asignacionId: asignacionId ?? null, activo: true },
+        })) >= 20
       )
         throw new BadRequestException('Máximo 20 franjas activas por local');
       return tx.horarioCampo.create({
-        data: { ...data, localId },
+        data: { ...data, localId, asignacionId: asignacionId ?? null },
         select: HORARIO_CAMPO_SELECT,
       });
     });
@@ -128,7 +143,49 @@ export class PlanificacionCampoService {
     const u = await this.acceso.gestionar(usuarioId, 'locales');
     await this.acceso.local(u.empresaId, localId);
     const resultado = await this.prisma.horarioCampo.updateMany({
-      where: { id, localId },
+      where: { id, localId, asignacionId: null },
+      data: { activo: false },
+    });
+    if (!resultado.count) throw new NotFoundException('Horario no disponible');
+    return { ok: true };
+  }
+  async horariosAsignacion(
+    usuarioId: number,
+    asignacionId: number,
+    query: ConsultaCampoDto,
+  ) {
+    await this.asignacionDelEquipo(usuarioId, asignacionId);
+    const where = { asignacionId, activo: true };
+    const { skip, take, page, limit } = rangoPaginacion(query);
+    const [total, items] = await Promise.all([
+      this.prisma.horarioCampo.count({ where }),
+      this.prisma.horarioCampo.findMany({
+        where,
+        select: HORARIO_CAMPO_SELECT,
+        orderBy: { entrada: 'asc' },
+        skip,
+        take,
+      }),
+    ]);
+    return respuestaPaginada(items, total, page, limit);
+  }
+  async guardarHorarioAsignacion(
+    usuarioId: number,
+    asignacionId: number,
+    dto: HorarioCampoDto,
+    id?: number,
+  ) {
+    const { a } = await this.asignacionDelEquipo(usuarioId, asignacionId);
+    return this.guardarHorario(usuarioId, a.localId, dto, id, asignacionId);
+  }
+  async eliminarHorarioAsignacion(
+    usuarioId: number,
+    asignacionId: number,
+    id: number,
+  ) {
+    await this.asignacionDelEquipo(usuarioId, asignacionId);
+    const resultado = await this.prisma.horarioCampo.updateMany({
+      where: { id, asignacionId, activo: true },
       data: { activo: false },
     });
     if (!resultado.count) throw new NotFoundException('Horario no disponible');
@@ -144,7 +201,13 @@ export class PlanificacionCampoService {
     const where = {
       localId,
       activo: true,
-      usuario: { empresaId: u.empresaId, superiorId: u.id },
+      usuario: {
+        empresaId: u.empresaId,
+        superiorId: u.id,
+        ...(u.rolDescripcion === 'SUPERVISOR_REPOSITORES'
+          ? { rol: { descripcion: 'REPOSITOR' } }
+          : {}),
+      },
     };
     const { skip, take, page, limit } = rangoPaginacion(query);
     const [total, items] = await Promise.all([

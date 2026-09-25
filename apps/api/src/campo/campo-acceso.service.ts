@@ -1,4 +1,8 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AccesoPlataformaService } from '../plataforma/acceso-plataforma.service';
 
@@ -18,10 +22,11 @@ export class CampoAccesoService {
   }
   async ejecutar(usuarioId: number) {
     try {
-      return await this.plataforma.exigirAccesoAlgunaPagina(usuarioId, 'mi-jornada', [
-        'locales',
-        'tareas',
-      ]);
+      return await this.plataforma.exigirAccesoAlgunaPagina(
+        usuarioId,
+        'mi-jornada',
+        ['locales', 'tareas'],
+      );
     } catch (error) {
       if (!(error instanceof ForbiddenException)) throw error;
       const usuario = await this.gestionar(usuarioId, 'locales');
@@ -51,6 +56,18 @@ export class CampoAccesoService {
     });
     if (!usuario)
       throw new NotFoundException('Usuario no disponible en tu equipo');
+    const superior = await this.prisma.usuario.findUnique({
+      where: { id: superiorId },
+      select: { rol: { select: { descripcion: true } } },
+    });
+    if (superior?.rol?.descripcion === 'SUPERVISOR_REPOSITORES') {
+      const colaborador = await this.prisma.usuario.findUnique({
+        where: { id: usuarioId },
+        select: { rol: { select: { descripcion: true } } },
+      });
+      if (colaborador?.rol?.descripcion !== 'REPOSITOR')
+        throw new NotFoundException('Repositor no disponible en tu equipo');
+    }
     await this.ejecutar(usuario.id);
     return usuario;
   }

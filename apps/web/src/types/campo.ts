@@ -87,6 +87,7 @@ export interface BackupCampo {
 export interface TareaCampo {
   id: number;
   nombre: string;
+  destinatario: "IMPULSADOR" | "REPOSITOR" | "AMBOS";
   descripcion: string;
   todosLocales: boolean;
   activo: boolean;
@@ -157,6 +158,7 @@ export interface FormHorarioCampo {
 }
 export interface FormTareaCampo {
   nombre: string;
+  destinatario: "IMPULSADOR" | "REPOSITOR" | "AMBOS";
   descripcion: string;
   todosLocales: boolean;
   activo: boolean;

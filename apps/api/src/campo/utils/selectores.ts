@@ -26,6 +26,7 @@ export const LOCAL_CAMPO_SELECT = {
 export const HORARIO_CAMPO_SELECT = {
   id: true,
   localId: true,
+  asignacionId: true,
   frecuencia: true,
   intervalo: true,
   diasSemana: true,
@@ -58,6 +59,7 @@ export const BACKUP_CAMPO_SELECT = {
 export const TAREA_CAMPO_SELECT = {
   id: true,
   nombre: true,
+  destinatario: true,
   descripcion: true,
   todosLocales: true,
   activo: true,

@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '../../generated/prisma/client';
+import { DestinatarioTareaCampo } from '../../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { rangoPaginacion, respuestaPaginada } from '../common/utils/paginacion';
 import { CampoAccesoService } from './campo-acceso.service';
@@ -68,15 +69,23 @@ export class JornadaCampoService {
             fechaHasta: { gte: fecha },
           },
           take: 1,
-          select: { usuarioId: true, usuario: { select: { superiorId: true, isActive: true } } },
+          select: {
+            usuarioId: true,
+            usuario: { select: { superiorId: true, isActive: true } },
+          },
         },
       },
     });
-    const responsable = a?.backups[0]
-      ? a.backups[0].usuario
-      : a?.usuario;
-    if (!a || ((a.backups[0]?.usuarioId ?? a.usuarioId) !== usuarioId &&
-      !(esTeamleader && responsable?.isActive && responsable.superiorId === usuarioId)))
+    const responsable = a?.backups[0] ? a.backups[0].usuario : a?.usuario;
+    if (
+      !a ||
+      ((a.backups[0]?.usuarioId ?? a.usuarioId) !== usuarioId &&
+        !(
+          esTeamleader &&
+          responsable?.isActive &&
+          responsable.superiorId === usuarioId
+        ))
+    )
       throw new NotFoundException('Asignación no disponible para esta fecha');
     return a;
   }
@@ -110,11 +119,17 @@ export class JornadaCampoService {
         id: true,
         usuarioId: true,
         usuario: { select: { nombre: true, apellido: true } },
+        horarios: {
+          where: { activo: true },
+          take: 20,
+          orderBy: { entrada: 'asc' },
+          select: HORARIO_CAMPO_SELECT,
+        },
         local: {
           select: {
             ...LOCAL_CAMPO_SELECT,
             horarios: {
-              where: { activo: true },
+              where: { activo: true, asignacionId: null },
               take: 20,
               orderBy: { entrada: 'asc' },
               select: HORARIO_CAMPO_SELECT,
@@ -143,7 +158,10 @@ export class JornadaCampoService {
               titular: `${a.usuario.nombre} ${a.usuario.apellido}`,
               local: {
                 ...a.local,
-                horarios: a.local.horarios.filter((h) =>
+                horarios: (a.horarios.length
+                  ? a.horarios
+                  : a.local.horarios
+                ).filter((h) =>
                   ocurreHorarioEnRango(h, fechaDesde, fechaHasta),
                 ),
               },
@@ -180,12 +198,19 @@ export class JornadaCampoService {
             'Cerrá tu visita abierta antes de marcar otra entrada',
           );
         const horarios = await tx.horarioCampo.findMany({
-          where: { localId: a.localId, activo: true },
+          where: {
+            localId: a.localId,
+            activo: true,
+            OR: [{ asignacionId: a.id }, { asignacionId: null }],
+          },
           select: HORARIO_CAMPO_SELECT,
-          take: 20,
+          take: 40,
         });
-        if (horarios.length) {
-          const h = horarios.find((x) => x.id === dto.horarioId);
+        const efectivos = horarios.some((h) => h.asignacionId === a.id)
+          ? horarios.filter((h) => h.asignacionId === a.id)
+          : horarios.filter((h) => h.asignacionId === null);
+        if (efectivos.length) {
+          const h = efectivos.find((x) => x.id === dto.horarioId);
           if (
             !h ||
             !ocurreHorario(h, fecha) ||
@@ -310,8 +335,24 @@ export class JornadaCampoService {
       (a.usuarioId !== u.id && !a.backups.some((b) => b.usuarioId === u.id))
     )
       throw new NotFoundException('Asignación no disponible para esta fecha');
+    const { skip, take, page, limit } = rangoPaginacion(query);
+    if (u.rolDescripcion?.toUpperCase() === 'REPOSITOR') {
+      const abierta = await this.prisma.visitaCampo.findFirst({
+        where: { usuarioId: u.id, asignacionId, salida: null },
+        select: { id: true },
+      });
+      if (!abierta) return respuestaPaginada([], 0, page, limit);
+    }
     const where: Prisma.TareaCampoWhereInput = {
       empresaId: u.empresaId,
+      destinatario: {
+        in: [
+          u.rolDescripcion?.toUpperCase() === 'REPOSITOR'
+            ? DestinatarioTareaCampo.REPOSITOR
+            : DestinatarioTareaCampo.IMPULSADOR,
+          DestinatarioTareaCampo.AMBOS,
+        ],
+      },
       activo: true,
       fechaDesde: { lte: fechaHasta },
       AND: [
@@ -326,7 +367,6 @@ export class JornadaCampoService {
         },
       ],
     };
-    const { skip, take, page, limit } = rangoPaginacion(query);
     const [total, items] = await Promise.all([
       this.prisma.tareaCampo.count({ where }),
       this.prisma.tareaCampo.findMany({
@@ -334,6 +374,7 @@ export class JornadaCampoService {
         select: {
           id: true,
           nombre: true,
+          destinatario: true,
           descripcion: true,
           requiereFotos: true,
           fotosObligatorias: true,
@@ -398,6 +439,14 @@ export class JornadaCampoService {
         where: {
           id: tareaId,
           empresaId: u.empresaId,
+          destinatario: {
+            in: [
+              u.rolDescripcion?.toUpperCase() === 'REPOSITOR'
+                ? DestinatarioTareaCampo.REPOSITOR
+                : DestinatarioTareaCampo.IMPULSADOR,
+              DestinatarioTareaCampo.AMBOS,
+            ],
+          },
           activo: true,
           fechaDesde: { lte: v.fecha },
           AND: [

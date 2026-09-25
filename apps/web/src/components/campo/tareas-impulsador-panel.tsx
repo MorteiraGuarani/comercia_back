@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 import { apiFetch } from "@/lib/api";
 import { useJornadaCompleta } from "@/hooks/use-jornada-completa";
 import { fechaEnZonaIso, queryFechasCampo } from "@/utils/fechas";
@@ -28,7 +29,7 @@ import type {
   TipoNovedad,
 } from "@/types/campo";
 
-export function TareasImpulsadorPanel() {
+export function TareasImpulsadorPanel({ esRepositor = false }: { esRepositor?: boolean }) {
   const hoyStr = fechaEnZonaIso(new Date());
   const [periodo, setPeriodo] = useState<PeriodoFiltro>({
     clave: "hoy",
@@ -229,6 +230,14 @@ export function TareasImpulsadorPanel() {
           />
         }
       />
+      {esRepositor ? (
+        <div className="mx-auto w-full max-w-6xl px-4 pt-4 sm:px-6">
+          <Link href="/panel/mi-jornada/locales"
+            className="inline-flex min-h-11 items-center rounded-lg border border-line bg-surface-raised px-4 text-sm font-semibold text-foreground hover:bg-surface-soft focus-visible:ring-2 focus-visible:ring-focus">
+            Volver a la ruta para marcar salida
+          </Link>
+        </div>
+      ) : null}
 
       <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto w-full min-w-0 space-y-3 sm:space-y-6 flex-1 overflow-y-auto">
         {/* StatChips de Tareas */}
@@ -320,7 +329,9 @@ export function TareasImpulsadorPanel() {
 
                 {tareas.length === 0 ? (
                   <p className="ft-body text-xs text-muted italic">
-                    No hay tareas configuradas para este local.
+                    {esRepositor && !estaEnVisita
+                      ? "Registrá entrada en este local para ver las tareas asignadas."
+                      : "No hay tareas configuradas para este local."}
                   </p>
                 ) : (
                   <div className="space-y-2">

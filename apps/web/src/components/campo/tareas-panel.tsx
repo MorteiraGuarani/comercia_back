@@ -76,6 +76,7 @@ export function TareasPanel() {
 
     setForm({
       nombre: t?.nombre ?? "",
+      destinatario: t?.destinatario ?? "REPOSITOR",
       descripcion: t?.descripcion ?? "",
       categoria: cat,
       esObligatoria: t?.esObligatoria ?? false,
@@ -225,7 +226,7 @@ export function TareasPanel() {
                 <li key={tarea.id} className="p-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-xs text-muted">{tarea.categoria || "Góndola"}</p>
+                      <p className="text-xs text-muted">{tarea.categoria || "Góndola"} · {tarea.destinatario === "AMBOS" ? "Ambos" : tarea.destinatario === "REPOSITOR" ? "Repositor" : "Impulsador"}</p>
                       <h3 className="mt-1 text-sm font-semibold text-foreground">{tarea.nombre}</h3>
                     </div>
                     <div className="flex shrink-0 gap-1">
@@ -252,7 +253,7 @@ export function TareasPanel() {
                 <tbody className="divide-y divide-line">
                   {lista.items.map((tarea) => (
                     <tr key={tarea.id} className="hover:bg-surface-soft">
-                      <td className="max-w-md p-4"><p className="text-xs text-muted">{tarea.categoria || "Góndola"}</p><p className="font-semibold text-foreground">{tarea.nombre}</p><p className="mt-1 line-clamp-2 text-sm text-muted">{tarea.descripcion}</p></td>
+                      <td className="max-w-md p-4"><p className="text-xs text-muted">{tarea.categoria || "Góndola"} · {tarea.destinatario === "AMBOS" ? "Ambos" : tarea.destinatario === "REPOSITOR" ? "Repositor" : "Impulsador"}</p><p className="font-semibold text-foreground">{tarea.nombre}</p><p className="mt-1 line-clamp-2 text-sm text-muted">{tarea.descripcion}</p></td>
                       <td className="p-4"><StatusStamp tone={!tarea.activo ? "sub" : tarea.esObligatoria ? "carne" : "fresco"}>{!tarea.activo ? "Inactiva" : tarea.esObligatoria ? "Obligatoria" : "Activa"}</StatusStamp></td>
                       <td className="p-4 text-muted">{tarea.requiereFotos ? (tarea.fotosObligatorias ? "Antes y después · obligatorias" : "Antes y después · opcionales") : "Sin fotos"}</td>
                       <td className="p-4 text-muted">{tarea.todosLocales ? "Todos los locales" : (tarea.locales?.length ?? 0) + " locales"}</td>
@@ -327,6 +328,21 @@ export function TareasPanel() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
+                <label htmlFor="destinatario-tarea" className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">
+                  Destinatario
+                </label>
+                <select
+                  id="destinatario-tarea"
+                  value={form.destinatario}
+                  onChange={(e) => setForm({ ...form, destinatario: e.target.value as FormTareaCampo["destinatario"] })}
+                  className="min-h-11 w-full rounded-lg border border-line bg-surface-raised p-2.5 text-sm text-foreground focus-visible:ring-2 focus-visible:ring-focus"
+                >
+                  <option value="REPOSITOR">Repositores</option>
+                  <option value="IMPULSADOR">Impulsadores</option>
+                  <option value="AMBOS">Ambos</option>
+                </select>
+              </div>
+              <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">
                   Categoría Operativa
                 </label>
@@ -398,7 +414,7 @@ export function TareasPanel() {
 
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">
-                Instrucciones / Procedimiento para el Impulsador
+                Instrucciones / Procedimiento para el destinatario
               </label>
               <textarea
                 rows={2}
