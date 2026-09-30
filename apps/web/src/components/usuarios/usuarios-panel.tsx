@@ -207,6 +207,7 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
   function abrirEditar(usuario: UsuarioAdmin) {
     setForm({
       ...FORM_INICIAL,
+      correo: usuario.correo,
       rolId: usuario.rol?.id ?? "",
       superiorId: usuario.superior?.id ?? "",
       isActive: usuario.isActive,
@@ -244,6 +245,7 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
         await apiFetch(`${base}/${editando.id}`, {
           method: "PATCH",
           body: JSON.stringify({
+            correo: form.correo.trim().toLowerCase(),
             rolId: form.rolId,
             superiorId: form.superiorId === "" ? null : form.superiorId,
             isActive: form.isActive,
@@ -450,12 +452,20 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
                   onChange={(apellido) => setForm((f) => ({ ...f, apellido }))}
                 />
               </div>
-              <Campo
-                label="Correo"
-                type="email"
-                value={form.correo}
-                onChange={(correo) => setForm((f) => ({ ...f, correo }))}
-              />
+            </>
+          )}
+          <Campo
+            label="Correo"
+            type="email"
+            value={form.correo}
+            onChange={(correo) => setForm((f) => ({ ...f, correo }))}
+          />
+          <p className="text-xs text-muted">
+            Si usa Ucheck con Google, el correo debe coincidir en ambos
+            sistemas.
+          </p>
+          {editando === "nuevo" && (
+            <>
               <Campo
                 label="Nombre de usuario"
                 value={form.nombreLogin}

@@ -1,4 +1,8 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import type { AuthService } from '../auth/auth.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import { UsuariosService } from './usuarios.service';
@@ -16,6 +20,7 @@ describe('UsuariosService - permiso de superadmin', () => {
       findUnique: jest.fn(),
       count: jest.fn(),
       findMany: jest.fn(),
+      update: jest.fn<Promise<unknown>, [unknown]>(),
     },
     rol: { findUnique: jest.fn(), findMany: jest.fn(), count: jest.fn() },
   };
@@ -167,5 +172,77 @@ describe('UsuariosService - permiso de superadmin', () => {
     await expect(
       service.listarRoles(1, { empresaId: 30 }),
     ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  function prepararCambioCorreo() {
+    prisma.usuario.findUnique
+      .mockResolvedValueOnce({
+        id: 1,
+        empresaId: 20,
+        esSuperadmin: true,
+        isActive: true,
+      })
+      .mockResolvedValueOnce({
+        empresaId: 20,
+        rolId: 6,
+        superiorId: null,
+        esSuperadmin: false,
+      });
+    prisma.rol.findUnique.mockResolvedValue({ id: 6, empresaId: 20 });
+    prisma.usuario.update.mockResolvedValue({
+      id: 2,
+      nombre: 'Ana',
+      apellido: 'Rojas',
+      correo: 'ana@gmail.com',
+      nombreLogin: 'ana.rojas',
+      ruc: '1234567-8',
+      celular: '+595981123456',
+      esSuperadmin: false,
+      isActive: true,
+      createdAt: new Date('2026-09-30T12:00:00Z'),
+      empresa: { id: 20, nombre: 'Empresa' },
+      rol: { id: 6, descripcion: 'REPOSITOR' },
+      superior: null,
+    });
+  }
+
+  it('permite actualizar el correo de una cuenta autorizada', async () => {
+    prepararCambioCorreo();
+    await expect(
+      service.actualizar(1, 2, { correo: 'ana@gmail.com' }),
+    ).resolves.toMatchObject({ correo: 'ana@gmail.com' });
+    expect(prisma.usuario.update.mock.calls[0][0]).toMatchObject({
+      where: { id: 2 },
+      data: { correo: 'ana@gmail.com' },
+    });
+  });
+
+  it('devuelve conflicto si el correo ya pertenece a otra cuenta', async () => {
+    prepararCambioCorreo();
+    prisma.usuario.update.mockRejectedValueOnce({ code: 'P2002' });
+    await expect(
+      service.actualizar(1, 2, { correo: 'ana@gmail.com' }),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('impide cambiar el correo de una cuenta de otra empresa', async () => {
+    prisma.usuario.findUnique
+      .mockResolvedValueOnce({
+        id: 10,
+        empresaId: 20,
+        esSuperadmin: false,
+        isActive: true,
+        rol: { descripcion: 'GERENTE' },
+      })
+      .mockResolvedValueOnce({
+        empresaId: 30,
+        rolId: 6,
+        superiorId: null,
+        esSuperadmin: false,
+      });
+    await expect(
+      service.actualizar(10, 2, { correo: 'ana@gmail.com' }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(prisma.usuario.update).not.toHaveBeenCalled();
   });
 });

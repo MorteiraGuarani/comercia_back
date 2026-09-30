@@ -510,8 +510,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/usuarios/dto/usuario.dto.ts": {
-    "mtime": 1790360081.6339884,
-    "ast_hash": "f61f4f4aba0fdcd5344eb671bb64179d",
+    "mtime": 1790782426.0155244,
+    "ast_hash": "7ac29d630dfda0470a3c32fb02522530",
     "semantic_hash": ""
   },
   "apps/api/src/usuarios/interfaces/usuario-admin.interface.ts": {
@@ -530,8 +530,8 @@
     "semantic_hash": "7c2f0a5f859e84cd1f4a1c62c65e314a"
   },
   "apps/api/src/usuarios/usuarios.service.ts": {
-    "mtime": 1790360081.6349943,
-    "ast_hash": "dad3cd9635daacbddb18e80974a1fa4c",
+    "mtime": 1790782759.0844946,
+    "ast_hash": "11c627f2a03f16cc97dbc5147995acc1",
     "semantic_hash": ""
   },
   "apps/api/test/app.e2e-spec.ts": {
@@ -700,8 +700,8 @@
     "semantic_hash": "692f7f4acb1607e8575b72c625e03c79"
   },
   "apps/web/src/components/usuarios/usuarios-panel.tsx": {
-    "mtime": 1790279585.665099,
-    "ast_hash": "fb6aad6d4cac523c8c66a0634e2d87f8",
+    "mtime": 1790782580.334942,
+    "ast_hash": "3da0854236038d15fbae6c9fbb8a00c7",
     "semantic_hash": ""
   },
   "apps/web/src/lib/api.ts": {
@@ -825,8 +825,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/usuarios/usuarios.service.spec.ts": {
-    "mtime": 1788871867.2371078,
-    "ast_hash": "13bc158c4e24b2fb1cdc039755a959dc",
+    "mtime": 1790782795.8805602,
+    "ast_hash": "aef91a669120f514f9aee395d0fc94e6",
     "semantic_hash": ""
   },
   ".agents/skills/vercel-react-best-practices/AGENTS.md": {
@@ -2587,6 +2587,11 @@
   "apps/api/src/campo/repositor-campo.service.ts": {
     "mtime": 1790360409.6433506,
     "ast_hash": "9234a252dfdad7626e68ee924f5759f8",
+    "semantic_hash": ""
+  },
+  "apps/api/src/usuarios/dto/usuario.dto.spec.ts": {
+    "mtime": 1790782426.103612,
+    "ast_hash": "9ac2132073541894a2591d5e53ff1fa0",
     "semantic_hash": ""
   }
 }

@@ -2,6 +2,7 @@ import { Transform, Type } from 'class-transformer';
 import {
   IsBoolean,
   IsDateString,
+  IsEmail,
   IsInt,
   IsOptional,
   IsString,
@@ -9,9 +10,11 @@ import {
   MaxLength,
   Min,
   MinLength,
+  ValidateIf,
 } from 'class-validator';
 import { RegisterDto } from '../../auth/dto/register.dto';
 import { MAX_INT4 } from '../../common/utils/numeros';
+import { lowerTrimString } from '../../common/utils/transforms';
 import { PaginacionDto } from '../../common/utils/paginacion';
 
 export class ListarUsuariosDto extends PaginacionDto {
@@ -37,9 +40,7 @@ export class AsignarUsuarioLocalDto {
   @IsDateString({ strict: false })
   fechaDesde!: string;
 
-  @Transform(({ value }: { value: unknown }) =>
-    value === '' ? null : value,
-  )
+  @Transform(({ value }: { value: unknown }) => (value === '' ? null : value))
   @IsOptional()
   @IsDateString({ strict: false })
   fechaHasta?: string | null;
@@ -63,6 +64,12 @@ export class CrearUsuarioDto extends RegisterDto {
 }
 
 export class ActualizarUsuarioDto {
+  @ValidateIf((_objeto, valor: unknown) => valor !== undefined)
+  @Transform(lowerTrimString)
+  @IsEmail({}, { message: 'el correo no tiene un formato válido' })
+  @MaxLength(120)
+  correo?: string;
+
   @IsOptional()
   @IsInt()
   @Min(1)

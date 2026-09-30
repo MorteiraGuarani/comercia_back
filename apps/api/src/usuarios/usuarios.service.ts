@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -259,7 +260,9 @@ export class UsuariosService {
           localId: true,
           fechaDesde: true,
           fechaHasta: true,
-          local: { select: { nombre: true, cliente: { select: { nombre: true } } } },
+          local: {
+            select: { nombre: true, cliente: { select: { nombre: true } } },
+          },
         },
         orderBy: [{ fechaDesde: 'desc' }, { id: 'desc' }],
         skip,
@@ -297,7 +300,9 @@ export class UsuariosService {
       ? new Date(`${dto.fechaHasta}T00:00:00.000Z`)
       : null;
     if (fechaHasta && fechaHasta < fechaDesde) {
-      throw new BadRequestException('La fecha hasta debe ser posterior al inicio');
+      throw new BadRequestException(
+        'La fecha hasta debe ser posterior al inicio',
+      );
     }
     const solapada = await this.prisma.asignacionCampo.findFirst({
       where: {
@@ -309,15 +314,25 @@ export class UsuariosService {
       },
       select: { id: true },
     });
-    if (solapada) throw new BadRequestException('Ese local ya está asignado en esas fechas');
+    if (solapada)
+      throw new BadRequestException(
+        'Ese local ya está asignado en esas fechas',
+      );
     const asignacion = await this.prisma.asignacionCampo.create({
-      data: { localId: dto.localId, usuarioId: objetivoId, fechaDesde, fechaHasta },
+      data: {
+        localId: dto.localId,
+        usuarioId: objetivoId,
+        fechaDesde,
+        fechaHasta,
+      },
       select: {
         id: true,
         localId: true,
         fechaDesde: true,
         fechaHasta: true,
-        local: { select: { nombre: true, cliente: { select: { nombre: true } } } },
+        local: {
+          select: { nombre: true, cliente: { select: { nombre: true } } },
+        },
       },
     });
     return {
@@ -330,13 +345,18 @@ export class UsuariosService {
     };
   }
 
-  async quitarLocal(usuarioId: number, objetivoId: number, asignacionId: number) {
+  async quitarLocal(
+    usuarioId: number,
+    objetivoId: number,
+    asignacionId: number,
+  ) {
     await this.objetivoAsignable(usuarioId, objetivoId);
     const resultado = await this.prisma.asignacionCampo.updateMany({
       where: { id: asignacionId, usuarioId: objetivoId, activo: true },
       data: { activo: false },
     });
-    if (!resultado.count) throw new NotFoundException('La asignación no existe');
+    if (!resultado.count)
+      throw new NotFoundException('La asignación no existe');
     return { ok: true };
   }
 
@@ -379,13 +399,17 @@ export class UsuariosService {
       throw new NotFoundException('El superior no existe');
     }
     if (superior && rol?.rolId && superior.rolId !== rol.rolId)
-      throw new BadRequestException('El superior debe tener el rol padre del usuario');
+      throw new BadRequestException(
+        'El superior debe tener el rol padre del usuario',
+      );
     if (usuarioEditadoId !== undefined && superior) {
       const visitados = new Set<number>([usuarioEditadoId]);
       let actual: number | null = superior.id;
       while (actual !== null) {
         if (visitados.has(actual))
-          throw new BadRequestException('La jerarquía de usuarios formaría un ciclo');
+          throw new BadRequestException(
+            'La jerarquía de usuarios formaría un ciclo',
+          );
         visitados.add(actual);
         const padre: { superiorId: number | null } | null =
           actual === superior.id
@@ -457,19 +481,34 @@ export class UsuariosService {
       dto.superiorId === undefined ? objetivo.superiorId : dto.superiorId,
       id,
     );
-    const usuario = await this.prisma.usuario.update({
-      where: { id },
-      data: {
-        rolId: dto.rolId,
-        superiorId: dto.superiorId,
-        isActive: dto.isActive,
-        passwordHash: dto.password
-          ? await hashPassword(dto.password)
-          : undefined,
-      },
-      select: SELECT_USUARIO_ADMIN,
-    });
-    return aUsuarioDto(usuario);
+    try {
+      const usuario = await this.prisma.usuario.update({
+        where: { id },
+        data: {
+          correo: dto.correo,
+          rolId: dto.rolId,
+          superiorId: dto.superiorId,
+          isActive: dto.isActive,
+          passwordHash: dto.password
+            ? await hashPassword(dto.password)
+            : undefined,
+        },
+        select: SELECT_USUARIO_ADMIN,
+      });
+      return aUsuarioDto(usuario);
+    } catch (error: unknown) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          'Ya existe un usuario registrado con ese correo',
+        );
+      }
+      throw error;
+    }
   }
 
   // Conserva el registro de la cuenta y bloquea inmediatamente el acceso.
