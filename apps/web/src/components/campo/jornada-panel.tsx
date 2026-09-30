@@ -109,10 +109,10 @@ function AgendaDelDia({ qsFecha, esRepositor }: { qsFecha: string; esRepositor: 
       <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
         <div className="rounded-xl border border-line bg-surface-raised p-3 text-center shadow-sm">
           <div className="text-2xl font-bold leading-none text-foreground">
-            {totalParadas}
+            {lista.datos?.total ?? "—"}
           </div>
           <div className="mt-1 text-[11px] font-medium text-muted">
-            Total paradas
+            Locales asignados
           </div>
         </div>
         <div className="rounded-xl border border-emerald-300/60 bg-emerald-50/50 p-3 text-center shadow-sm dark:border-emerald-800/60 dark:bg-emerald-950/20">
@@ -120,7 +120,7 @@ function AgendaDelDia({ qsFecha, esRepositor }: { qsFecha: string; esRepositor: 
             {visitadas}
           </div>
           <div className="mt-1 text-[11px] font-medium text-emerald-800 dark:text-emerald-300">
-            Visitadas
+            Visitados en esta página
           </div>
         </div>
         <div className="rounded-xl border border-sky-300/60 bg-sky-50/50 p-3 text-center shadow-sm dark:border-sky-800/60 dark:bg-sky-950/20">
@@ -136,7 +136,7 @@ function AgendaDelDia({ qsFecha, esRepositor }: { qsFecha: string; esRepositor: 
             {pendientes}
           </div>
           <div className="mt-1 text-[11px] font-medium text-muted">
-            Pendientes
+            Pendientes en esta página
           </div>
         </div>
       </div>
@@ -200,14 +200,18 @@ function AgendaDelDia({ qsFecha, esRepositor }: { qsFecha: string; esRepositor: 
             type="text"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Buscar local en agenda de hoy…"
-            className="w-full rounded-xl border border-line bg-surface-raised py-2 pl-9 pr-8 text-sm text-foreground outline-none transition placeholder:text-muted focus:border-brand-600 focus:ring-2 focus:ring-brand-600/30"
+            aria-label="Buscar local en esta página de la agenda"
+            name="buscar-local"
+            autoComplete="off"
+            placeholder="Buscar en esta página…"
+            className="min-h-11 w-full rounded-xl border border-line bg-surface-raised py-2 pl-9 pr-12 text-sm text-foreground outline-none transition-colors placeholder:text-muted focus-visible:border-brand-600 focus-visible:ring-2 focus-visible:ring-brand-600/30"
           />
           {busqueda && (
             <button
               type="button"
               onClick={() => setBusqueda("")}
-              className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted hover:text-foreground"
+              aria-label="Limpiar búsqueda de locales"
+              className="absolute inset-y-0 right-0 flex min-w-11 items-center justify-center rounded-r-xl text-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
               title="Limpiar búsqueda"
             >
               <svg
@@ -225,7 +229,7 @@ function AgendaDelDia({ qsFecha, esRepositor }: { qsFecha: string; esRepositor: 
           )}
         </div>
         <div className="text-xs text-muted">
-          <span>{itemsFiltrados.length} locales para esta fecha</span>
+          <span>{itemsFiltrados.length} locales visibles en esta página</span>
         </div>
       </div>
 
@@ -682,7 +686,7 @@ function ModalMarca({
         className="space-y-4"
         onSubmit={async (e) => {
           e.preventDefault();
-          await op.ejecutar("Obteniendo ubicación y registrando presencia", async () => {
+          await op.ejecutar(usarTelefonoUcheck ? "Consultando el teléfono en Ucheck y registrando la visita…" : "Obteniendo ubicación y registrando presencia…", async () => {
             if (usarTelefonoUcheck) {
               await guardar({ nota });
               return;
@@ -701,7 +705,14 @@ function ModalMarca({
           Obtener mi ubicación
         </button> : null}
         {usarTelefonoUcheck ? (
-          <p className="text-sm text-muted">La ubicación y los datos del dispositivo se tomarán de Ucheck en el teléfono. Mantené el seguimiento activo.</p>
+          <div className="rounded-xl border border-line bg-surface-soft p-4 text-sm text-foreground">
+            <p className="font-semibold">Antes de confirmar en Comercia</p>
+            <ol className="mt-2 list-decimal space-y-1 pl-5 text-muted">
+              <li>Abrí Ucheck en el teléfono con tu cuenta de repositor.</li>
+              <li>Esperá el estado “Ubicación confirmada”. Si está pendiente, tocá “Actualizar ubicación”.</li>
+              <li>Mantené Ucheck abierta en segundo plano durante la visita.</li>
+            </ol>
+          </div>
         ) : <p className="text-sm text-muted">
           {coords
             ? `Ubicación obtenida: ${coords.latitud.toFixed(5)}, ${coords.longitud.toFixed(5)} · precisión ±${Math.round(coords.precisionMetros)} m`
@@ -714,7 +725,7 @@ function ModalMarca({
           value={nota}
           onChange={setNota}
         />
-        {op.error ? <p className={errorBox}>{op.error}</p> : null}
+        {op.error ? <p role="alert" className={errorBox}>{op.error}</p> : null}
         <BotonesFormulario ocupado={!!op.mensaje} cancelar={cerrar}>
           Confirmar {salida ? "salida" : "entrada"}
         </BotonesFormulario>

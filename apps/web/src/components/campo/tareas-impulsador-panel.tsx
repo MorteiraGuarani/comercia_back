@@ -5,6 +5,7 @@ import Link from "next/link";
 import { apiFetch } from "@/lib/api";
 import { useJornadaCompleta } from "@/hooks/use-jornada-completa";
 import { fechaEnZonaIso, queryFechasCampo } from "@/utils/fechas";
+import { tareaCumplidaEnVisita } from "@/utils/tareas-campo";
 import { TOKENS } from "./tokens";
 import { StatusStamp } from "./ui/status-stamp";
 import { StatChip } from "./ui/stat-chip";
@@ -201,13 +202,17 @@ export function TareasImpulsadorPanel({ esRepositor = false }: { esRepositor?: b
     (datos) => datos.items,
   );
   const total = todasLasTareas.length;
-  const completadas = todasLasTareas.filter(
-    (t) => (t.visitasCompletadas?.length ?? 0) > 0,
-  ).length;
+  const completadas = Object.entries(tareasPorLocal).reduce(
+    (cantidad, [asignacionId, datos]) => cantidad + datos.items.filter((t) => tareaCumplidaEnVisita(
+      t, abierta?.asignacionId === Number(asignacionId) ? abierta.id : undefined,
+    )).length, 0,
+  );
   const pct = total ? Math.round((completadas / total) * 100) : 0;
-  const obligatoriasPendientes = todasLasTareas.filter(
-    (t) => t.fotosObligatorias && (t.visitasCompletadas?.length ?? 0) === 0,
-  ).length;
+  const obligatoriasPendientes = Object.entries(tareasPorLocal).reduce(
+    (cantidad, [asignacionId, datos]) => cantidad + datos.items.filter((t) => t.fotosObligatorias && !tareaCumplidaEnVisita(
+      t, abierta?.asignacionId === Number(asignacionId) ? abierta.id : undefined,
+    )).length, 0,
+  );
 
   return (
     <div
@@ -234,7 +239,7 @@ export function TareasImpulsadorPanel({ esRepositor = false }: { esRepositor?: b
         <div className="mx-auto w-full max-w-6xl px-4 pt-4 sm:px-6">
           <Link href="/panel/mi-jornada/locales"
             className="inline-flex min-h-11 items-center rounded-lg border border-line bg-surface-raised px-4 text-sm font-semibold text-foreground hover:bg-surface-soft focus-visible:ring-2 focus-visible:ring-focus">
-            Volver a la ruta para marcar salida
+            {abierta ? "Volver a la ruta para marcar salida" : "Ir a la ruta para marcar entrada"}
           </Link>
         </div>
       ) : null}
@@ -267,10 +272,10 @@ export function TareasImpulsadorPanel({ esRepositor = false }: { esRepositor?: b
         )}
         {cargando ? (
           <div className="py-12 text-center text-xs text-muted">
-            Cargando tareas del día...
+            Cargando tareas del día…
           </div>
         ) : error ? (
-          <div className="p-4 rounded-lg bg-red-50 text-red-700 text-xs">
+          <div role="alert" className="p-4 rounded-lg bg-red-50 text-red-700 text-xs dark:bg-red-950 dark:text-red-200">
             {error}
           </div>
         ) : agendas.length === 0 ? (
@@ -305,11 +310,11 @@ export function TareasImpulsadorPanel({ esRepositor = false }: { esRepositor?: b
                 }}
               >
                 <div
-                  className="flex items-center justify-between border-b pb-2"
+                  className="flex flex-wrap items-center justify-between gap-2 border-b pb-2"
                   style={{ borderColor: TOKENS.line }}
                 >
-                  <div>
-                    <h3 className="ft-body font-bold text-sm text-foreground">
+                  <div className="min-w-0">
+                    <h3 className="ft-body break-words font-bold text-sm text-foreground">
                       {ag.local.nombre}
                     </h3>
                     <p className="ft-body text-xs text-muted">
@@ -336,10 +341,7 @@ export function TareasImpulsadorPanel({ esRepositor = false }: { esRepositor?: b
                 ) : (
                   <div className="space-y-2">
                     {tareas.map((t) => {
-                      const cumplida =
-                        abierta && t.visitasCompletadas?.includes(abierta.id);
-                      const cumplidaAlgunaVez =
-                        (t.visitasCompletadas?.length ?? 0) > 0;
+                      const cumplida = tareaCumplidaEnVisita(t, estaEnVisita ? abierta!.id : undefined);
 
                       return (
                         <div
@@ -347,28 +349,28 @@ export function TareasImpulsadorPanel({ esRepositor = false }: { esRepositor?: b
                           className="p-3 rounded-lg border flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
                           style={{
                             borderColor:
-                              cumplida || cumplidaAlgunaVez
+                              cumplida
                                 ? TOKENS.fresco
                                 : TOKENS.line,
                             background:
-                              cumplida || cumplidaAlgunaVez
+                              cumplida
                                 ? `color-mix(in srgb, ${TOKENS.fresco} 8%, ${TOKENS.canvas})`
                                 : TOKENS.canvas,
                           }}
                         >
                           <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className="ft-body font-semibold text-sm text-foreground">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="ft-body break-words font-semibold text-sm text-foreground">
                                 {t.nombre}
                               </p>
                               {t.fotosObligatorias && (
-                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                                <span className="px-1.5 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-700">
                                   Fotos obligatorias
                                 </span>
                               )}
                             </div>
                             {t.descripcion && (
-                              <p className="ft-body text-[11px] text-muted mt-0.5 leading-snug">
+                              <p className="ft-body break-words text-xs text-muted mt-0.5 leading-snug">
                                 {t.descripcion}
                               </p>
                             )}
@@ -387,7 +389,7 @@ export function TareasImpulsadorPanel({ esRepositor = false }: { esRepositor?: b
                                   nombreTarea: t.nombre,
                                 });
                               }}
-                              className="cursor-pointer rounded border border-accent-ink bg-accent-soft px-2 py-1 text-[11px] font-medium text-accent-ink transition hover:bg-surface-soft"
+                              className="inline-flex min-h-11 items-center cursor-pointer rounded border border-accent-ink bg-accent-soft px-3 py-2 text-xs font-medium text-accent-ink transition-colors hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                               title="Reportar novedad sobre esta tarea"
                             >
                               Novedad
@@ -405,7 +407,7 @@ export function TareasImpulsadorPanel({ esRepositor = false }: { esRepositor?: b
                                     obligatorio: t.fotosObligatorias,
                                   })
                                 }
-                                className="px-2.5 py-1 rounded text-[11px] font-medium border border-line bg-surface-raised hover:bg-surface-soft transition cursor-pointer inline-flex items-center gap-1"
+                                className="min-h-11 px-3 py-2 rounded text-xs font-medium border border-line bg-surface-raised hover:bg-surface-soft transition-colors cursor-pointer inline-flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                               >
                                 <IconoCamara className="w-3 h-3" />
                                 <span>Fotos</span>
@@ -423,7 +425,7 @@ export function TareasImpulsadorPanel({ esRepositor = false }: { esRepositor?: b
                                     nombreTarea: t.nombre,
                                   })
                                 }
-                                className="px-2 py-1 rounded text-[11px] font-medium border border-line bg-surface-raised hover:bg-surface-soft transition cursor-pointer inline-flex items-center gap-1"
+                                className="min-h-11 px-3 py-2 rounded text-xs font-medium border border-line bg-surface-raised hover:bg-surface-soft transition-colors cursor-pointer inline-flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                               >
                                 <IconoMensaje className="w-3 h-3" />
                                 <span>Comentarios</span>
@@ -431,7 +433,7 @@ export function TareasImpulsadorPanel({ esRepositor = false }: { esRepositor?: b
                             )}
 
                             {/* Estado y Acción Completar */}
-                            {cumplida || cumplidaAlgunaVez ? (
+                            {cumplida ? (
                               <StatusStamp tone="fresco">CUMPLIDA</StatusStamp>
                             ) : estaEnVisita ? (
                               <button
@@ -440,15 +442,15 @@ export function TareasImpulsadorPanel({ esRepositor = false }: { esRepositor?: b
                                 onClick={() =>
                                   completarTarea(ag.local.id, t.id)
                                 }
-                                className="px-3 py-1 rounded text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 transition disabled:opacity-50 cursor-pointer shadow-sm"
+                                className="min-h-11 px-3 py-2 rounded text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 transition-colors disabled:opacity-50 disabled:cursor-wait cursor-pointer shadow-sm dark:bg-emerald-700 dark:text-white dark:hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                               >
                                 {completandoId === t.id
-                                  ? "Guardando..."
+                                  ? "Guardando…"
                                   : "Completar"}
                               </button>
                             ) : (
                               <span className="text-[11px] text-muted italic">
-                                Check-in requerido
+                                Registrá entrada para completar
                               </span>
                             )}
                           </div>

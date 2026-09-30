@@ -560,13 +560,13 @@
     "semantic_hash": "dfa1f5f6a7037bf39dc510f30b180002"
   },
   "apps/web/next.config.ts": {
-    "mtime": 1789149213.3514104,
-    "ast_hash": "a5001e80a26f9fae3386d713d5823afb",
+    "mtime": 1790798965.9313953,
+    "ast_hash": "79a31c937cc2ac95ae9b451b3e21586f",
     "semantic_hash": ""
   },
   "apps/web/package.json": {
-    "mtime": 1789417414.1814654,
-    "ast_hash": "acc5e3ad8fa5950f56733c4f7729b263",
+    "mtime": 1790799358.8917773,
+    "ast_hash": "19b93b219e049249a8b2d246b91d424b",
     "semantic_hash": ""
   },
   "apps/web/postcss.config.mjs": {
@@ -1650,8 +1650,8 @@
     "semantic_hash": ""
   },
   "apps/web/AGENTS.md": {
-    "mtime": 1790279571.1277018,
-    "ast_hash": "020f3c90a96c0359b5e0f9ed7ce69577",
+    "mtime": 1790799384.4254098,
+    "ast_hash": "dac0e160f4b3fe7233efd90634dde540",
     "semantic_hash": ""
   },
   "apps/web/CLAUDE.md": {
@@ -1860,8 +1860,8 @@
     "semantic_hash": ""
   },
   "scripts/start-production-db-local.mjs": {
-    "mtime": 1789567395.4163783,
-    "ast_hash": "2c558db9c2bfcf1cb1687d2099d7a4c4",
+    "mtime": 1790799359.9961839,
+    "ast_hash": "17660b076069d541877bee08329f0b8a",
     "semantic_hash": ""
   },
   "apps/api/prisma/migrations/20260908120000_roles_por_empresa/migration.sql": {
@@ -1980,8 +1980,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/jornada-panel.tsx": {
-    "mtime": 1790359062.784291,
-    "ast_hash": "03fb18b94d8d68817dab66882daf76f7",
+    "mtime": 1790797715.2423382,
+    "ast_hash": "343669408741f59a66f0584c652df14e",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/mapa-local.tsx": {
@@ -2265,8 +2265,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/tareas-impulsador-panel.tsx": {
-    "mtime": 1790359082.6995022,
-    "ast_hash": "06e65625d60697925572ab81b84feab2",
+    "mtime": 1790797714.3131344,
+    "ast_hash": "d1fc12672cdf9e85bc50c77238537763",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/tokens.ts": {
@@ -2592,6 +2592,26 @@
   "apps/api/src/usuarios/dto/usuario.dto.spec.ts": {
     "mtime": 1790782426.103612,
     "ast_hash": "9ac2132073541894a2591d5e53ff1fa0",
+    "semantic_hash": ""
+  },
+  "apps/web/src/utils/tareas-campo.ts": {
+    "mtime": 1790797713.3392632,
+    "ast_hash": "b260d834d83800f6c71463d85b45df45",
+    "semantic_hash": ""
+  },
+  "scripts/probar-puerto-web.mjs": {
+    "mtime": 1790798967.8317618,
+    "ast_hash": "5b8de33377b46e8f3c32fefd988b1b8b",
+    "semantic_hash": ""
+  },
+  "scripts/probar-tareas-visita.cjs": {
+    "mtime": 1790798410.1003778,
+    "ast_hash": "efe41b1139c9d5bfdd4ccda1cbe7315b",
+    "semantic_hash": ""
+  },
+  "scripts/puerto-web.mjs": {
+    "mtime": 1790798964.0749698,
+    "ast_hash": "507849ed888016cf5b4618be7becef3f",
     "semantic_hash": ""
   }
 }

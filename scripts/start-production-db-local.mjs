@@ -3,12 +3,12 @@ import { existsSync, readFileSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { resolve } from 'node:path';
 import { parse } from 'dotenv';
+import { elegirPuertoWeb } from './puerto-web.mjs';
 
 const mode = process.argv[2] ?? 'all';
 const validModes = new Set(['all', 'tunnel', 'api', 'web']);
 const environmentPath = resolve('.env.production.local');
 const confirmation = 'SI_ENTIENDO_QUE_ES_PRODUCCION';
-const webPort = 3000;
 
 if (!validModes.has(mode)) {
   console.error(
@@ -28,6 +28,8 @@ const parsedEnvironment = parse(readFileSync(environmentPath));
 const databaseUrl = parsedEnvironment.DATABASE_URL;
 const tunnelPort = Number(parsedEnvironment.PROD_TUNNEL_PORT ?? 5435);
 const apiPort = Number(parsedEnvironment.PORT ?? 3001);
+const puertoWebConfigurado = process.env.COMERCIA_WEB_PORT ?? parsedEnvironment.COMERCIA_WEB_PORT;
+let webPort = Number(puertoWebConfigurado ?? 3000);
 const sshHost = parsedEnvironment.PROD_SSH_HOST ?? 'comercia';
 const sshUser = parsedEnvironment.PROD_SSH_USER;
 const sshPort = Number(parsedEnvironment.PROD_SSH_PORT ?? 22);
@@ -53,7 +55,7 @@ if (!Number.isInteger(apiPort) || apiPort < 1 || apiPort > 65535) {
   process.exit(1);
 }
 
-if (apiPort === tunnelPort || apiPort === webPort) {
+if (apiPort === tunnelPort) {
   console.error(
     `PORT=${apiPort} choca con el túnel SSH (:${tunnelPort}) o con Next.js (:${webPort}). NestJS usa 3001, Next.js 3000, túnel 5435.`,
   );
@@ -89,8 +91,9 @@ const apiEnvironment = {
 };
 const webEnvironment = {
   ...process.env,
-  PORT: String(webPort),
-  NEXT_PUBLIC_API_URL: `http://localhost:${apiPort}/api/v1`,
+  NODE_ENV: 'development',
+  NEXT_PUBLIC_API_URL: '/api/v1',
+  COMERCIA_LOCAL_API_PROXY_TARGET: `http://127.0.0.1:${apiPort}`,
 };
 let closed = false;
 let ownedTunnel;
@@ -203,7 +206,8 @@ function startApi() {
 }
 
 function startWeb() {
-  web = spawnNpm(['--prefix', 'apps/web', 'run', 'dev'], webEnvironment);
+  console.log(`Comercia web: http://localhost:${webPort} · API local: ${apiPort}`);
+  web = spawnNpm(['--prefix', 'apps/web', 'run', 'dev', '--', '--port', String(webPort)], webEnvironment);
   web.once('exit', (code) => {
     if (!closed) {
       console.error(`La web local terminó (código ${code ?? 'desconocido'}).`);
@@ -233,14 +237,14 @@ async function main() {
   }
 
   if (mode === 'web') {
-    await verificarPuertoLibre(webPort, 'Next.js');
+    webPort = await elegirPuertoWeb(webPort, [apiPort, tunnelPort], puertoWebConfigurado !== undefined);
     startWeb();
     return;
   }
 
   await verificarPuertoLibre(tunnelPort, 'El túnel SSH');
   await verificarPuertoLibre(apiPort, 'NestJS');
-  await verificarPuertoLibre(webPort, 'Next.js');
+  webPort = await elegirPuertoWeb(webPort, [apiPort, tunnelPort], puertoWebConfigurado !== undefined);
   openTunnel();
   await checkTunnel(true);
   console.log(`Túnel listo en localhost:${tunnelPort}. Iniciando API y web locales...`);
