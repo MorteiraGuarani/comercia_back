@@ -28,7 +28,7 @@ concurrency:
 jobs:
   # Compuerta de calidad: si esto falla, no se construye ni despliega nada.
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -44,7 +44,7 @@ jobs:
         run: npm run test:planificacion --workspace=api
 
   changes:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       api: ${{ steps.filter.outputs.api }}
       web: ${{ steps.filter.outputs.web }}
@@ -73,7 +73,7 @@ jobs:
   build-api:
     needs: [changes, test]
     if: needs.changes.outputs.api == 'true' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
@@ -96,7 +96,7 @@ jobs:
   build-web:
     needs: [changes, test]
     if: needs.changes.outputs.web == 'true' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
@@ -129,7 +129,7 @@ jobs:
       needs.build-web.result != 'failure' && needs.build-web.result != 'cancelled' &&
       (needs.changes.outputs.api == 'true' || needs.changes.outputs.web == 'true' ||
        needs.changes.outputs.infra == 'true' || github.event_name == 'workflow_dispatch')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: production
     steps:
       # Modo LAN: si no hay secrets de SSH configurados (servidor en red privada,
