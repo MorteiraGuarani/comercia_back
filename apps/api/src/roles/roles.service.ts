@@ -29,6 +29,8 @@ const SELECT_ROL_ADMIN = {
   padre: { select: { id: true, descripcion: true } },
   _count: { select: { usuarios: true, hijos: true } },
   equipoCampo: { select: EQUIPO_CAMPO_SELECT },
+  permisosTareas: true,
+  puedeVerSeguimiento: true,
 } as const;
 
 import { aRolAdminDto } from './utils/rol-admin';
@@ -101,6 +103,10 @@ export class RolesService {
     dto: PlanificacionRolDto,
     actual: number | null = null,
   ) {
+    if (dto.permisosTareas?.length && !dto.permisosTareas.includes('CONSULTAR'))
+      throw new BadRequestException(
+        'Habilitá la consulta para administrar tareas',
+      );
     if (dto.nuevoEquipoNombre) {
       if (dto.equipoCampoId || !dto.nuevoEquipoTipo)
         throw new BadRequestException(
@@ -184,6 +190,8 @@ export class RolesService {
             empresaId: dto.empresaId,
             rolId: dto.rolId ?? null,
             equipoCampoId,
+            permisosTareas: dto.permisosTareas ?? [],
+            puedeVerSeguimiento: dto.puedeVerSeguimiento ?? false,
           },
           select: SELECT_ROL_ADMIN,
         });
@@ -240,6 +248,8 @@ export class RolesService {
             descripcion: dto.descripcion?.trim(),
             rolId: dto.rolId,
             equipoCampoId,
+            permisosTareas: dto.permisosTareas,
+            puedeVerSeguimiento: dto.puedeVerSeguimiento,
           },
           select: SELECT_ROL_ADMIN,
         });

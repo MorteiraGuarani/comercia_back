@@ -6,7 +6,10 @@ import { TareaCampoDto } from './dto/campo.dto';
 jest.mock('../prisma/prisma.service', () => ({ PrismaService: class {} }));
 import { CatalogoCampoService } from './catalogo-campo.service';
 
-function contexto(rolDescripcion: string | null) {
+function contexto(
+  rolDescripcion: string | null,
+  permisos?: ('CONSULTAR' | 'CREAR' | 'EDITAR' | 'ARCHIVAR')[],
+) {
   const prisma = {
     tareaCampo: {
       count: jest.fn().mockResolvedValue(1),
@@ -23,6 +26,16 @@ function contexto(rolDescripcion: string | null) {
       id: 3,
       empresaId: 2,
       rolDescripcion,
+      permisosTareas:
+        permisos ??
+        (rolDescripcion?.startsWith('SUPERVISOR')
+          ? ['CONSULTAR', 'CREAR', 'EDITAR', 'ARCHIVAR']
+          : rolDescripcion
+                ?.replace(/[^a-z]/gi, '')
+                .toLowerCase()
+                .startsWith('teamleader')
+            ? ['CONSULTAR']
+            : []),
       equipoCampo: {
         id: 5,
         nombre: 'Equipo',
@@ -41,6 +54,21 @@ function contexto(rolDescripcion: string | null) {
 }
 
 describe('Permisos del catálogo de tareas', () => {
+  it('un nombre nuevo conserva los permisos explícitos y un nombre Supervisor no los concede por sí mismo', async () => {
+    const autorizado = contexto('Responsable Norte', [
+      'CONSULTAR',
+      'CREAR',
+      'EDITAR',
+      'ARCHIVAR',
+    ]);
+    expect(
+      (await autorizado.service.tareas(3, {})).permisos.puedeAdministrar,
+    ).toBe(true);
+    const denegado = contexto('SUPERVISOR', []);
+    await expect(denegado.service.tareas(3, {})).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+  });
   it.each([
     'TeamLeader',
     ' Team Leader ',
@@ -78,7 +106,13 @@ describe('Permisos del catálogo de tareas', () => {
     const { service } = contexto('TeamLeader');
     const resultado = await service.tareas(3, { page: 1, limit: 7 });
     expect(resultado.items).toEqual([{ id: 10, nombre: 'Control de precios' }]);
-    expect(resultado.permisos).toEqual({ puedeAdministrar: false });
+    expect(resultado.permisos).toMatchObject({
+      puedeAdministrar: false,
+      consultar: true,
+      crear: false,
+      editar: false,
+      archivar: false,
+    });
   });
 
   it.each(['SUPERVISOR', 'SUPERVISOR_REPOSITORES'])(
@@ -86,7 +120,7 @@ describe('Permisos del catálogo de tareas', () => {
     async (rol) => {
       const { service } = contexto(rol);
       expect((await service.tareas(3, { page: 1, limit: 7 })).permisos).toEqual(
-        { puedeAdministrar: true },
+        expect.objectContaining({ puedeAdministrar: true }),
       );
     },
   );

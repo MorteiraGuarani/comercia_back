@@ -38,6 +38,8 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run test
+      - name: Validar pendientes de tareas sin navegador
+        run: npm run test:pendientes --workspace=web
       - name: Validar migración y agendas de campo en PostgreSQL aislado
         run: npm run test:planificacion --workspace=api
 

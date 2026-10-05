@@ -10,6 +10,7 @@ import { JornadaCampoService } from '../campo/jornada-campo.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AgendaUcheckDto } from './dto/agenda-ucheck.dto';
 import { MarcacionUcheckDto } from './dto/marcacion-ucheck.dto';
+import { SeguimientoUcheckDto } from './dto/seguimiento-ucheck.dto';
 import {
   destinatarioCampo,
   rolDelEquipoCampo,
@@ -39,10 +40,23 @@ export class IntegracionesUcheckService {
     private readonly jornadaCampo: JornadaCampoService,
   ) {}
 
-  private async usuarioPorCorreo(correo: string) {
+  private async usuarioPorCorreo(correo: string, ucheckUsuarioId?: number) {
+    const vinculo = ucheckUsuarioId
+      ? await this.prisma.identidadUcheck.findUnique({
+          where: { ucheckUsuarioId },
+          select: { usuarioId: true },
+        })
+      : null;
     const usuario = await this.prisma.usuario.findFirst({
       where: {
-        correo: { equals: correoNormalizado(correo), mode: 'insensitive' },
+        ...(vinculo
+          ? { id: vinculo.usuarioId }
+          : {
+              correo: {
+                equals: correoNormalizado(correo),
+                mode: 'insensitive' as const,
+              },
+            }),
         isActive: true,
         esSuperadmin: false,
       },
@@ -50,6 +64,7 @@ export class IntegracionesUcheckService {
         id: true,
         empresaId: true,
         correo: true,
+        permitirVinculoAutomatico: true,
         nombre: true,
         apellido: true,
         rol: {
@@ -65,12 +80,23 @@ export class IntegracionesUcheckService {
       throw new NotFoundException(
         'El correo no corresponde a un usuario activo de Comercia',
       );
+    if (
+      ucheckUsuarioId &&
+      !vinculo &&
+      usuario.permitirVinculoAutomatico === false
+    )
+      throw new ConflictException(
+        'El administrador debe vincular esta cuenta con Ucheck',
+      );
     await this.accesoCampo.ejecutar(usuario.id);
     return usuario;
   }
 
   async agenda(query: AgendaUcheckDto) {
-    const usuario = await this.usuarioPorCorreo(query.correo);
+    const usuario = await this.usuarioPorCorreo(
+      query.correo,
+      query.ucheckUsuarioId,
+    );
     const pagina = await this.jornadaCampo.agenda(usuario.id, {
       fecha: query.fecha,
       page: query.page,
@@ -85,6 +111,85 @@ export class IntegracionesUcheckService {
       empresa: usuario.empresa,
       ...pagina,
     };
+  }
+
+  async registrarSeguimiento(dto: SeguimientoUcheckDto) {
+    const reportadaEn = new Date(dto.reportadaEn);
+    if (reportadaEn.getTime() > Date.now() + 15000)
+      throw new BadRequestException('Fecha de seguimiento inválida');
+    const vinculo = await this.prisma.identidadUcheck.findUnique({
+      where: { ucheckUsuarioId: dto.ucheckUsuarioId },
+      select: { usuarioId: true },
+    });
+    const usuario = vinculo
+      ? await this.prisma.usuario.findFirst({
+          where: { id: vinculo.usuarioId, isActive: true, esSuperadmin: false },
+          select: { id: true },
+        })
+      : await this.usuarioPorCorreo(dto.correo);
+    if (!usuario) throw new NotFoundException('Cuenta de campo no disponible');
+    await this.accesoCampo.ejecutar(usuario.id);
+    if (
+      dto.activo &&
+      (dto.latitud == null ||
+        dto.longitud == null ||
+        dto.precisionMetros == null ||
+        !dto.capturadaEn)
+    )
+      throw new BadRequestException('Faltan datos de ubicación');
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM usuarios WHERE id = ${usuario.id} FOR UPDATE`;
+      {
+        const permiso = await tx.usuario.findUnique({
+          where: { id: usuario.id },
+          select: { permitirVinculoAutomatico: true },
+        });
+        const existente = await tx.identidadUcheck.findUnique({
+          where: { usuarioId: usuario.id },
+          select: { ucheckUsuarioId: true },
+        });
+        if (existente && existente.ucheckUsuarioId !== dto.ucheckUsuarioId)
+          throw new ConflictException(
+            'La cuenta ya está vinculada a otra identidad',
+          );
+        if (!existente && !permiso?.permitirVinculoAutomatico)
+          throw new ConflictException(
+            'El administrador debe vincular esta cuenta con Ucheck',
+          );
+        if (!existente)
+          await tx.identidadUcheck.create({
+            data: {
+              usuarioId: usuario.id,
+              ucheckUsuarioId: dto.ucheckUsuarioId,
+              correoVinculado: correoNormalizado(dto.correo),
+            },
+          });
+      }
+      const anterior = await tx.seguimientoCampo.findUnique({
+        where: { usuarioId: usuario.id },
+        select: { reportadaEn: true },
+      });
+      if (anterior && anterior.reportadaEn >= reportadaEn)
+        return { ok: true, omitida: true };
+      const data = {
+        jornadaId: dto.jornadaId,
+        activo: dto.activo,
+        iniciadaEn: new Date(dto.iniciadaEn),
+        reportadaEn,
+        recibidaEn: new Date(),
+        latitud: dto.activo ? dto.latitud : null,
+        longitud: dto.activo ? dto.longitud : null,
+        precisionMetros: dto.activo ? dto.precisionMetros : null,
+        capturadaEn: dto.activo ? new Date(dto.capturadaEn!) : null,
+      };
+      await tx.seguimientoCampo.upsert({
+        where: { usuarioId: usuario.id },
+        create: { usuarioId: usuario.id, ...data },
+        update: data,
+        select: { usuarioId: true },
+      });
+      return { ok: true };
+    });
   }
 
   async registrarMarcacion(dto: MarcacionUcheckDto) {
@@ -105,7 +210,10 @@ export class IntegracionesUcheckService {
         visitaId: repetido.visitaId,
       };
 
-    const usuario = await this.usuarioPorCorreo(dto.correoUsuario);
+    const usuario = await this.usuarioPorCorreo(
+      dto.correoUsuario,
+      dto.ucheckUsuarioId,
+    );
     const fecha = fechaSql(dto.fecha);
     const rol = usuario.rol?.descripcion.toLowerCase().replace(/[^a-z]/g, '');
     const esTeamleader = rol === 'teamleader' || rol === 'teamleaderimpulsador';
@@ -331,6 +439,30 @@ export class IntegracionesUcheckService {
             : Prisma.JsonNull,
         },
       });
+      const operacion = await tx.operacionCampo.findFirst({
+        where: {
+          usuarioId: usuario.id,
+          ucheckJornadaId: dto.ucheckJornadaId,
+          tipo: dto.tipo,
+        },
+        select: { id: true, nota: true },
+      });
+      if (operacion) {
+        await tx.operacionCampo.update({
+          where: { id: operacion.id },
+          data: { estado: 'CONFIRMADA' },
+          select: { id: true },
+        });
+        if (operacion.nota)
+          await tx.visitaCampo.update({
+            where: { id: visita.id },
+            data:
+              dto.tipo === 'ENTRADA'
+                ? { notaEntrada: operacion.nota }
+                : { notaSalida: operacion.nota },
+            select: { id: true },
+          });
+      }
       return {
         ok: true,
         duplicado: false,

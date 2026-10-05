@@ -1,7 +1,21 @@
-import { IsEmail, IsString, Matches, MaxLength } from 'class-validator';
+import {
+  IsEmail,
+  IsString,
+  Matches,
+  MaxLength,
+  IsOptional,
+  IsInt,
+  Min,
+} from 'class-validator';
+import { Type } from 'class-transformer';
 import { PaginacionDto } from '../../common/utils/paginacion';
 
 export class AgendaUcheckDto extends PaginacionDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  ucheckUsuarioId?: number;
   @IsEmail()
   @MaxLength(254)
   correo!: string;

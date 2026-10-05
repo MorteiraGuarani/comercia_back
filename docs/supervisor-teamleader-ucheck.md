@@ -8,7 +8,7 @@ El resumen **Presentismo** muestra al Supervisor los colaboradores de toda su ca
 
 ## Catálogo de tareas
 
-El ABM de tareas está reservado a los roles `SUPERVISOR` y `SUPERVISOR_REPOSITORES`, con sus permisos de página y equipo operativo. El TeamLeader tiene una vista de consulta con búsqueda, filtros, instrucciones y vigencia, sin botones de alta, edición o eliminación. La API rechaza esas operaciones para TeamLeader, Impulsador, Repositor y otros roles aunque se les habilite la página del catálogo. El Impulsador conserva la ejecución de sus tareas asignadas en Mi jornada.
+El ABM de tareas se configura mediante permisos explícitos del rol (consultar, crear, editar y archivar), además de sus permisos de página y equipo operativo. La configuración inicial reserva la administración a `SUPERVISOR` y `SUPERVISOR_REPOSITORES`. TeamLeader tiene solo consulta con búsqueda, filtros, instrucciones y vigencia. Impulsador y Repositor conservan la ejecución de sus tareas asignadas sin ABM. Habilitar únicamente una página no concede permisos de administración. Véase [confiabilidad y seguimiento](mejoras/2026-10-05-confiabilidad-y-seguimiento.md).
 
 ## Ruta del TeamLeader
 

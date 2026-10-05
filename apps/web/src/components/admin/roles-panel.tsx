@@ -26,6 +26,8 @@ const FORM_INICIAL: FormRol = {
   modoEquipo: "ninguno",
   nuevoEquipoNombre: "",
   nuevoEquipoTipo: "IMPULSADOR",
+  permisosTareas: [],
+  puedeVerSeguimiento: false,
 };
 
 function ListaRolesMovil({
@@ -149,6 +151,8 @@ export function RolesPanel() {
             rolId: rol.padre?.id ?? "",
             equipoCampoId: rol.equipoCampo?.id ?? "",
             modoEquipo: rol.equipoCampo ? "existente" : "ninguno",
+            permisosTareas: rol.permisosTareas ?? [],
+            puedeVerSeguimiento: rol.puedeVerSeguimiento ?? false,
           },
     );
     setError(null);
@@ -173,6 +177,8 @@ export function RolesPanel() {
             ...(editando === "nuevo" ? { empresaId: form.empresaId } : {}),
             descripcion: form.descripcion.trim(),
             rolId: form.rolId === "" ? null : form.rolId,
+            permisosTareas: form.permisosTareas,
+            puedeVerSeguimiento: form.puedeVerSeguimiento,
             ...(form.modoEquipo === "nuevo"
               ? {
                   nuevoEquipoNombre: form.nuevoEquipoNombre.trim(),
@@ -533,6 +539,64 @@ export function RolesPanel() {
               ) : null}
             </fieldset>
           ) : null}
+          <fieldset className="space-y-2 rounded-xl border border-line p-3 text-sm text-foreground">
+            <legend className="px-1 font-semibold">Permisos operativos</legend>
+            <p className="text-xs text-muted">
+              La configuración inicial reserva la administración de tareas a
+              supervisores. Los colaboradores ejecutan sus tareas desde Mi
+              jornada. Renombrar un rol conserva estos permisos.
+            </p>
+            {(["CONSULTAR", "CREAR", "EDITAR", "ARCHIVAR"] as const).map(
+              (accion) => (
+                <label
+                  key={accion}
+                  className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg px-2 hover:bg-surface-soft focus-within:ring-2 focus-within:ring-focus"
+                >
+                  <input
+                    type="checkbox"
+                    checked={form.permisosTareas.includes(accion)}
+                    onChange={(e) =>
+                      setForm((actual) => ({
+                        ...actual,
+                        permisosTareas: e.target.checked
+                          ? [
+                              ...new Set([
+                                ...actual.permisosTareas,
+                                accion,
+                                "CONSULTAR" as const,
+                              ]),
+                            ]
+                          : accion === "CONSULTAR"
+                            ? []
+                            : actual.permisosTareas.filter((a) => a !== accion),
+                      }))
+                    }
+                  />
+                  {
+                    {
+                      CONSULTAR: "Consultar el catálogo de tareas",
+                      CREAR: "Crear tareas",
+                      EDITAR: "Editar tareas",
+                      ARCHIVAR: "Archivar tareas",
+                    }[accion]
+                  }
+                </label>
+              ),
+            )}
+            <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg px-2 hover:bg-surface-soft focus-within:ring-2 focus-within:ring-focus">
+              <input
+                type="checkbox"
+                checked={form.puedeVerSeguimiento}
+                onChange={(e) =>
+                  setForm((actual) => ({
+                    ...actual,
+                    puedeVerSeguimiento: e.target.checked,
+                  }))
+                }
+              />
+              Ver seguimiento en vivo de sus colaboradores
+            </label>
+          </fieldset>
           {error ? <p className={errorBox}>{error}</p> : null}
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <button

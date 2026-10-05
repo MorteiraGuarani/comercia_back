@@ -26,7 +26,9 @@ describe('UcheckSsoService', () => {
         create: jest.fn().mockResolvedValue({ id: 1 }),
       },
       usuario: {
-        findMany: jest.fn().mockResolvedValue([{ id: 7 }]),
+        findMany: jest
+          .fn()
+          .mockResolvedValue([{ id: 7, permitirVinculoAutomatico: true }]),
       },
     };
     const config = {

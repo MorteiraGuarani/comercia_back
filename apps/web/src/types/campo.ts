@@ -2,7 +2,13 @@ import type { RespuestaPaginada } from "./paginacion";
 
 export interface RespuestaCatalogoTareasCampo extends RespuestaPaginada<TareaCampo> {
   resumen: { total: number; obligatorias: number; conFotos: number };
-  permisos: { puedeAdministrar: boolean };
+  permisos: {
+    puedeAdministrar: boolean;
+    consultar: boolean;
+    crear: boolean;
+    editar: boolean;
+    archivar: boolean;
+  };
 }
 
 export interface ClienteCampo {
@@ -87,6 +93,8 @@ export interface BackupCampo {
 }
 export interface TareaCampo {
   id: number;
+  version: number;
+  archivadaEn: string | null;
   nombre: string;
   destinatario: "IMPULSADOR" | "REPOSITOR" | "AMBOS";
   descripcion: string;
@@ -134,6 +142,7 @@ export interface AgendaCampo {
 }
 export interface TareaJornadaCampo {
   id: number;
+  iniciadaAt?: string | null;
   nombre: string;
   descripcion: string;
   requiereFotos: boolean;

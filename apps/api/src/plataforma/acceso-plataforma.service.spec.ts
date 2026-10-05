@@ -50,6 +50,8 @@ describe('AccesoPlataformaService', () => {
       rolId: 5,
       rolDescripcion: null,
       equipoCampo: null,
+      permisosTareas: [],
+      puedeVerSeguimiento: false,
     });
   });
 
@@ -90,6 +92,8 @@ describe('AccesoPlataformaService', () => {
       rolId: 5,
       rolDescripcion: null,
       equipoCampo: null,
+      permisosTareas: [],
+      puedeVerSeguimiento: false,
     });
   });
 
@@ -159,6 +163,8 @@ describe('AccesoPlataformaService', () => {
         rolId: 5,
         rolDescripcion: null,
         equipoCampo: null,
+        permisosTareas: [],
+        puedeVerSeguimiento: false,
       },
       modulosRutas: ['supervisor', 'repositor'],
     });

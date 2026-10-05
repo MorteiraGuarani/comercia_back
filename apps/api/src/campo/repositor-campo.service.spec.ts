@@ -44,7 +44,14 @@ describe('RepositorCampoService', () => {
     );
     expect(prisma.tareaCampo.count).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({ empresaId: 1, activo: true }),
+        where: expect.objectContaining({
+          empresaId: 1,
+          equipoCampoId: 2,
+          OR: expect.arrayContaining([
+            expect.objectContaining({ activo: true }),
+            { cumplimientos: { some: { visitaId: 9, completadaAt: null } } },
+          ]),
+        }),
       }),
     );
     expect(prisma.usuario.findUnique).not.toHaveBeenCalled();

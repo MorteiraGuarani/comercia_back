@@ -11,6 +11,9 @@ import { Paginacion } from "@/components/paginacion";
 import { IconoMas } from "@/components/icono-mas";
 import { usePanel } from "@/components/panel/contexto";
 import { destinatarioCampo } from "@/utils/equipo-campo";
+import { SelectorLocalesTarea } from "./selector-locales-tarea";
+import { HistorialTarea } from "./historial-tarea";
+import type { RespuestaPaginada } from "@/types/paginacion";
 import { TOKENS } from "./tokens";
 import { StatusStamp } from "./ui/status-stamp";
 import { StatChip } from "./ui/stat-chip";
@@ -26,7 +29,6 @@ import {
 import type {
   FormTareaCampo,
   TareaCampo,
-  LocalCampo,
   RespuestaCatalogoTareasCampo,
 } from "@/types/campo";
 
@@ -51,13 +53,20 @@ export function TareasPanel() {
     "todas" | "obligatorias" | "con_fotos"
   >("todas");
   const [buscar, setBuscar] = useState("");
+  const [archivo, setArchivo] = useState<"activas" | "archivadas" | "todas">(
+    "activas",
+  );
   const parametros = new URLSearchParams({ buscar });
+  parametros.set("archivo", archivo);
   if (categoriaFiltro !== "Todas") parametros.set("categoria", categoriaFiltro);
   if (filtroTipo !== "todas") parametros.set("tipo", filtroTipo);
   const lista = useListaCampo<TareaCampo>(`/campo/tareas?${parametros}`, 0, 7);
   const datos = lista.datos as RespuestaCatalogoTareasCampo | null;
   const resumen = datos?.resumen;
   const puedeAdministrar = datos?.permisos?.puedeAdministrar === true;
+  const puedeCrear = datos?.permisos?.crear === true;
+  const puedeEditar = datos?.permisos?.editar === true;
+  const puedeArchivar = datos?.permisos?.archivar === true;
   const { setPage } = lista;
 
   useEffect(() => {
@@ -69,26 +78,46 @@ export function TareasPanel() {
   }, [busqueda, setPage]);
 
   const [id, setId] = useState(0);
+  const [versionEsperada, setVersionEsperada] = useState(1);
+  const [historial, setHistorial] = useState<TareaCampo | null>(null);
   const [form, setForm] = useState<FormTareaCampo | null>(null);
   const [categoriaPersonalizada, setCategoriaPersonalizada] = useState(false);
-  const formularioAbierto = !!form && puedeAdministrar;
+  const formularioAbierto = !!form && (id ? puedeEditar : puedeCrear);
 
-  // Lista de locales para selector
-  const [localesDisponibles, setLocalesDisponibles] = useState<LocalCampo[]>(
-    [],
+  const [nombresLocales, setNombresLocales] = useState<Record<number, string>>(
+    {},
   );
-  const [busquedaLocal, setBusquedaLocal] = useState("");
 
-  useEffect(() => {
-    if (!formularioAbierto) return;
-    apiFetch<{ items: LocalCampo[] }>("/campo/locales?limit=50")
-      .then((res) => setLocalesDisponibles(res.items || []))
-      .catch(() => undefined);
-  }, [formularioAbierto]);
-
-  function abrir(t?: TareaCampo) {
-    if (!destinatario || !puedeAdministrar) return;
+  async function abrir(t?: TareaCampo) {
+    if (!destinatario || (t ? !puedeEditar || t.archivadaEn : !puedeCrear))
+      return;
+    let localIds = t?.locales.map((x) => x.local.id) ?? [];
+    const nombres: Record<number, string> = {};
+    for (const local of t?.locales ?? [])
+      nombres[local.local.id] = local.local.nombre;
+    if (t && !t.todosLocales) {
+      const seleccion: number[] = [];
+      const ok = await op.ejecutar("Cargando locales asignados", async () => {
+        let page = 1,
+          totalPages = 1;
+        do {
+          const r = await apiFetch<
+            RespuestaPaginada<{ id: number; nombre: string }>
+          >(`/campo/tareas/${t.id}/locales?page=${page}&limit=50`);
+          for (const local of r.items) {
+            seleccion.push(local.id);
+            nombres[local.id] = local.nombre;
+          }
+          totalPages = r.totalPages;
+          page += 1;
+        } while (page <= totalPages);
+      });
+      if (!ok) return;
+      localIds = seleccion;
+    }
+    setNombresLocales(nombres);
     setId(t?.id ?? 0);
+    setVersionEsperada(t?.version ?? 1);
     op.limpiarError();
 
     const cat = t?.categoria || "Góndola";
@@ -106,21 +135,21 @@ export function TareasPanel() {
       activo: t?.activo ?? true,
       fechaDesde: fechaCalendario(t?.fechaDesde) ?? fechaEnZonaIso(new Date()),
       fechaHasta: fechaCalendario(t?.fechaHasta) ?? "",
-      localIds: t?.locales.map((x) => x.local.id) ?? [],
+      localIds,
       requiereFotos: t?.requiereFotos ?? false,
       fotosObligatorias: t?.fotosObligatorias ?? false,
     });
   }
 
   async function eliminar(tarea: TareaCampo) {
-    if (!puedeAdministrar) return;
+    if (!puedeArchivar || tarea.archivadaEn) return;
     if (
       !window.confirm(
-        `¿Eliminar la tarea «${tarea.nombre}» del catálogo? Esta acción no se puede deshacer.`,
+        `¿Archivar la tarea «${tarea.nombre}»? Se conservarán sus cumplimientos, versiones y evidencias.`,
       )
     )
       return;
-    await op.ejecutar("Eliminando tarea", async () => {
+    await op.ejecutar("Archivando tarea", async () => {
       await apiFetch(`/campo/tareas/${tarea.id}`, { method: "DELETE" });
       lista.refrescar();
     });
@@ -139,7 +168,7 @@ export function TareasPanel() {
             : "Consultá las instrucciones y el alcance de las tareas · Solo lectura"
         }
         right={
-          puedeAdministrar ? (
+          puedeCrear ? (
             <button
               type="button"
               onClick={() => abrir()}
@@ -159,6 +188,21 @@ export function TareasPanel() {
         data-inicio-listado
         className="max-w-7xl min-w-0 mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-3 sm:space-y-5 scroll-mt-20"
       >
+        <label className="block text-sm text-foreground">
+          Estado del catálogo
+          <select
+            value={archivo}
+            onChange={(e) => {
+              setArchivo(e.target.value as typeof archivo);
+              lista.setPage(1);
+            }}
+            className="mt-1 min-h-11 rounded-lg border border-line bg-surface-raised px-3 text-foreground"
+          >
+            <option value="activas">Sin archivar</option>
+            <option value="archivadas">Archivadas</option>
+            <option value="todas">Todas</option>
+          </select>
+        </label>
         {/* Filtros por Categoría */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
           {["Todas", ...CATEGORIAS_PRESET].map((cat) => {
@@ -312,22 +356,26 @@ export function TareasPanel() {
                         {tarea.nombre}
                       </h3>
                     </div>
-                    {puedeAdministrar ? (
+                    {puedeAdministrar && !tarea.archivadaEn ? (
                       <div className="flex shrink-0 gap-1">
-                        <BotonEditar
-                          onClick={() => abrir(tarea)}
-                          etiqueta={`Editar tarea ${tarea.nombre}`}
-                          modo="texto"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => void eliminar(tarea)}
-                          disabled={!!op.mensaje}
-                          aria-label={"Eliminar " + tarea.nombre}
-                          className="grid h-11 w-11 place-items-center rounded-md border border-red-200 text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950"
-                        >
-                          <IconoEliminar className="h-4 w-4" />
-                        </button>
+                        {puedeEditar ? (
+                          <BotonEditar
+                            onClick={() => abrir(tarea)}
+                            etiqueta={`Editar tarea ${tarea.nombre}`}
+                            modo="texto"
+                          />
+                        ) : null}
+                        {puedeArchivar ? (
+                          <button
+                            type="button"
+                            onClick={() => void eliminar(tarea)}
+                            disabled={!!op.mensaje}
+                            aria-label={"Archivar " + tarea.nombre}
+                            className="grid h-11 w-11 place-items-center rounded-md border border-red-200 text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950"
+                          >
+                            <IconoEliminar className="h-4 w-4" />
+                          </button>
+                        ) : null}
                       </div>
                     ) : null}
                   </div>
@@ -341,11 +389,13 @@ export function TareasPanel() {
                             : "fresco"
                       }
                     >
-                      {!tarea.activo
-                        ? "Inactiva"
-                        : tarea.esObligatoria
-                          ? "Obligatoria"
-                          : "Activa"}
+                      {tarea.archivadaEn
+                        ? "Archivada"
+                        : !tarea.activo
+                          ? "Inactiva"
+                          : tarea.esObligatoria
+                            ? "Obligatoria"
+                            : "Activa"}
                     </StatusStamp>
                     <span>
                       {tarea.requiereFotos
@@ -373,6 +423,13 @@ export function TareasPanel() {
                       {tarea.fechaHasta?.slice(0, 10) ?? "Sin fecha de fin"}
                     </p>
                   </details>
+                  <button
+                    type="button"
+                    className="min-h-11 rounded-lg px-2 text-xs text-foreground hover:bg-surface-soft"
+                    onClick={() => setHistorial(tarea)}
+                  >
+                    Historial · versión {tarea.version}
+                  </button>
                 </li>
               ))}
             </ul>
@@ -420,6 +477,13 @@ export function TareasPanel() {
                               "Sin fecha de fin"}
                           </p>
                         </details>
+                        <button
+                          type="button"
+                          className="min-h-11 rounded-lg px-2 text-xs text-foreground hover:bg-surface-soft"
+                          onClick={() => setHistorial(tarea)}
+                        >
+                          Historial · versión {tarea.version}
+                        </button>
                       </td>
                       <td className="p-4">
                         <StatusStamp
@@ -431,11 +495,13 @@ export function TareasPanel() {
                                 : "fresco"
                           }
                         >
-                          {!tarea.activo
-                            ? "Inactiva"
-                            : tarea.esObligatoria
-                              ? "Obligatoria"
-                              : "Activa"}
+                          {tarea.archivadaEn
+                            ? "Archivada"
+                            : !tarea.activo
+                              ? "Inactiva"
+                              : tarea.esObligatoria
+                                ? "Obligatoria"
+                                : "Activa"}
                         </StatusStamp>
                       </td>
                       <td className="p-4 text-muted">
@@ -453,18 +519,22 @@ export function TareasPanel() {
                       {puedeAdministrar ? (
                         <td className="p-4">
                           <div className="flex flex-wrap gap-2">
-                            <BotonEditar
-                              onClick={() => abrir(tarea)}
-                              etiqueta={`Editar tarea ${tarea.nombre}`}
-                            />
-                            <button
-                              type="button"
-                              onClick={() => void eliminar(tarea)}
-                              disabled={!!op.mensaje}
-                              className="min-h-11 rounded-md border border-red-200 px-3 text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950"
-                            >
-                              Eliminar
-                            </button>
+                            {puedeEditar && !tarea.archivadaEn ? (
+                              <BotonEditar
+                                onClick={() => abrir(tarea)}
+                                etiqueta={`Editar tarea ${tarea.nombre}`}
+                              />
+                            ) : null}
+                            {puedeArchivar && !tarea.archivadaEn ? (
+                              <button
+                                type="button"
+                                onClick={() => void eliminar(tarea)}
+                                disabled={!!op.mensaje}
+                                className="min-h-11 rounded-md border border-red-200 px-3 text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950"
+                              >
+                                Archivar
+                              </button>
+                            ) : null}
                           </div>
                         </td>
                       ) : null}
@@ -486,6 +556,13 @@ export function TareasPanel() {
       </main>
 
       {/* Modal de Creación / Edición */}
+      {historial ? (
+        <HistorialTarea
+          tareaId={historial.id}
+          nombre={historial.nombre}
+          cerrar={() => setHistorial(null)}
+        />
+      ) : null}
       <Modal
         titulo={id ? `Editar Tarea · ${form?.nombre}` : "Crear Nueva Tarea"}
         abierto={formularioAbierto}
@@ -494,11 +571,11 @@ export function TareasPanel() {
         }}
         ancho="lg"
       >
-        {form && puedeAdministrar && (
+        {form && formularioAbierto && (
           <form
             onSubmit={async (e) => {
               e.preventDefault();
-              if (!puedeAdministrar) return;
+              if (!formularioAbierto) return;
               if (
                 await op.ejecutar(
                   id ? "Actualizando tarea" : "Creando tarea",
@@ -507,6 +584,7 @@ export function TareasPanel() {
                       method: id ? "PUT" : "POST",
                       body: JSON.stringify({
                         ...form,
+                        ...(id ? { versionEsperada } : {}),
                         fechaDesde:
                           fechaCalendario(form.fechaDesde) ?? form.fechaDesde,
                         fechaHasta: fechaCalendario(form.fechaHasta),
@@ -741,70 +819,16 @@ export function TareasPanel() {
                 </button>
               </div>
 
-              {/* Selector de locales específicos si no es global */}
-              {!form.todosLocales && (
-                <div
-                  className="p-3 rounded-xl border bg-surface-raised space-y-2"
-                  style={{ borderColor: TOKENS.line }}
-                >
-                  <input
-                    type="text"
-                    value={busquedaLocal}
-                    onChange={(e) => setBusquedaLocal(e.target.value)}
-                    placeholder="Filtrar locales por nombre..."
-                    className="w-full p-2 text-xs rounded border mb-2"
-                    style={{ borderColor: TOKENS.line }}
-                  />
-
-                  <div className="max-h-40 overflow-y-auto space-y-1 pr-1">
-                    {localesDisponibles
-                      .filter(
-                        (l) =>
-                          !busquedaLocal.trim() ||
-                          l.nombre
-                            .toLowerCase()
-                            .includes(busquedaLocal.toLowerCase()),
-                      )
-                      .map((loc) => {
-                        const seleccionado = form.localIds.includes(loc.id);
-                        return (
-                          <label
-                            key={loc.id}
-                            className={`flex items-center gap-2 p-2 rounded text-xs cursor-pointer ${
-                              seleccionado
-                                ? "bg-[#EAF0F6] font-semibold"
-                                : "hover:bg-gray-50"
-                            }`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={seleccionado}
-                              onChange={(e) => {
-                                setForm({
-                                  ...form,
-                                  localIds: e.target.checked
-                                    ? [...form.localIds, loc.id]
-                                    : form.localIds.filter(
-                                        (id) => id !== loc.id,
-                                      ),
-                                });
-                              }}
-                              className="w-3.5 h-3.5 rounded"
-                            />
-                            <span>{loc.nombre}</span>
-                            <span className="text-muted font-mono text-[10px]">
-                              ({loc.cliente.nombre})
-                            </span>
-                          </label>
-                        );
-                      })}
-                  </div>
-
-                  <p className="text-[11px] font-mono text-muted">
-                    {form.localIds.length} locales seleccionados
-                  </p>
-                </div>
-              )}
+              {!form.todosLocales ? (
+                <SelectorLocalesTarea
+                  ids={form.localIds}
+                  nombres={nombresLocales}
+                  onChange={(ids, nombres) => {
+                    setForm({ ...form, localIds: ids });
+                    setNombresLocales(nombres);
+                  }}
+                />
+              ) : null}
             </div>
 
             {/* Vigencia */}

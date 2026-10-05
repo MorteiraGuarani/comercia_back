@@ -59,6 +59,8 @@ export const BACKUP_CAMPO_SELECT = {
 } as const;
 export const TAREA_CAMPO_SELECT = {
   id: true,
+  version: true,
+  archivadaEn: true,
   nombre: true,
   destinatario: true,
   descripcion: true,

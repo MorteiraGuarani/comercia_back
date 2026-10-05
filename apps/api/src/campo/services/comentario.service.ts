@@ -1,3 +1,4 @@
+import { detalleTarea } from '../utils/version-tarea';
 import {
   ForbiddenException,
   Injectable,
@@ -11,7 +12,10 @@ import {
 } from '../dto/comentario-tarea.dto';
 import { verificarAccesoCumplimiento, esLiderDe } from '../utils/autorizacion';
 import { NotificacionService } from './notificacion.service';
-import { prepararEvidencia, tareaParaEvidencia } from '../utils/evidencia-tarea';
+import {
+  prepararEvidencia,
+  tareaParaEvidencia,
+} from '../utils/evidencia-tarea';
 
 @Injectable()
 export class ComentarioService {
@@ -31,6 +35,26 @@ export class ComentarioService {
     tareaId: number,
     dto: CrearComentarioTareaDto,
   ): Promise<ComentarioTareaDto> {
+    if (dto.operacionId) {
+      const anterior = await this.prisma.comentarioTareaCampo.findFirst({
+        where: {
+          operacionId: dto.operacionId,
+          usuarioId,
+          cumplimientoVisitaId: visitaId,
+          cumplimientoTareaId: tareaId,
+        },
+        select: {
+          id: true,
+          comentario: true,
+          usuario: { select: { id: true, nombre: true, apellido: true } },
+          creadoAt: true,
+          leidoPorLider: true,
+          leidoAt: true,
+        },
+      });
+      if (anterior)
+        return { ...anterior, leidoAt: anterior.leidoAt ?? undefined };
+    }
     // Verificar que el cumplimiento existe
     const cumplimiento = await this.prisma.cumplimientoCampo.findUnique({
       where: {
@@ -57,11 +81,29 @@ export class ComentarioService {
     }
     let nombreTarea = cumplimiento?.nombreTarea;
     if (!cumplimiento) {
-      const tarea = await tareaParaEvidencia(this.prisma, usuarioId, empresaId, visitaId, tareaId);
-      await prepararEvidencia(this.prisma, visitaId, tareaId, tarea.nombre);
+      const tarea = await tareaParaEvidencia(
+        this.prisma,
+        usuarioId,
+        empresaId,
+        visitaId,
+        tareaId,
+      );
+      await prepararEvidencia(
+        this.prisma,
+        visitaId,
+        tareaId,
+        tarea.nombre,
+        tarea.version,
+        detalleTarea(tarea),
+      );
       nombreTarea = tarea.nombre;
     }
 
+    await this.prisma.cumplimientoCampo.update({
+      where: { visitaId_tareaId: { visitaId, tareaId } },
+      data: { actividadEn: new Date() },
+      select: { tareaId: true },
+    });
     // Crear el comentario
     const comentario = await this.prisma.comentarioTareaCampo.create({
       data: {
@@ -69,6 +111,7 @@ export class ComentarioService {
         cumplimientoTareaId: tareaId,
         usuarioId,
         comentario: dto.comentario,
+        operacionId: dto.operacionId,
       },
       select: {
         id: true,
@@ -89,10 +132,15 @@ export class ComentarioService {
     // Crear notificación para el líder
     try {
       await this.notificacionService.crearNotificacionComentario(
-        empresaId, usuarioId, comentario.id, nombreTarea!,
+        empresaId,
+        usuarioId,
+        comentario.id,
+        nombreTarea!,
       );
     } catch {
-      this.logger.warn('Comentario guardado; no se pudo generar su notificación');
+      this.logger.warn(
+        'Comentario guardado; no se pudo generar su notificación',
+      );
     }
 
     return {

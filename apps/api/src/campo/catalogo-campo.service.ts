@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { rangoPaginacion, respuestaPaginada } from '../common/utils/paginacion';
@@ -27,8 +28,9 @@ import {
 } from './utils/equipo-campo';
 import {
   exigirAdministracionTareas,
-  puedeAdministrarCatalogoTareas,
+  permisosCatalogoTareas,
 } from './utils/permisos-tareas';
+import { detalleTarea } from './utils/version-tarea';
 
 @Injectable()
 export class CatalogoCampoService {
@@ -243,6 +245,7 @@ export class CatalogoCampoService {
   }
   async tareas(usuarioId: number, query: ConsultaTareasCampoDto) {
     const u = await this.acceso.gestionar(usuarioId, 'tareas');
+    exigirAdministracionTareas(u.permisosTareas, 'CONSULTAR');
     const alcance = {
       empresaId: u.empresaId,
       equipoCampoId: exigirEquipoCampo(u.equipoCampo).id,
@@ -250,6 +253,11 @@ export class CatalogoCampoService {
     };
     const where = {
       ...alcance,
+      ...(query.archivo === 'todas'
+        ? {}
+        : {
+            archivadaEn: query.archivo === 'archivadas' ? { not: null } : null,
+          }),
       ...(query.categoria ? { categoria: query.categoria } : {}),
       ...(query.tipo === 'obligatorias' ? { esObligatoria: true } : {}),
       ...(query.tipo === 'con_fotos' ? { requiereFotos: true } : {}),
@@ -294,14 +302,12 @@ export class CatalogoCampoService {
     return {
       ...respuestaPaginada(items, total, page, limit),
       resumen: { total: totalCatalogo, obligatorias, conFotos },
-      permisos: {
-        puedeAdministrar: puedeAdministrarCatalogoTareas(u.rolDescripcion),
-      },
+      permisos: permisosCatalogoTareas(u.permisosTareas),
     };
   }
   async guardarTarea(usuarioId: number, dto: TareaCampoDto, id?: number) {
     const u = await this.acceso.gestionar(usuarioId, 'tareas');
-    exigirAdministracionTareas(u.rolDescripcion);
+    exigirAdministracionTareas(u.permisosTareas, id ? 'EDITAR' : 'CREAR');
     const destinatario = destinatarioCampo(u.equipoCampo);
     const equipoCampoId = exigirEquipoCampo(u.equipoCampo).id;
     if (dto.destinatario && dto.destinatario !== destinatario)
@@ -344,23 +350,52 @@ export class CatalogoCampoService {
     };
     // Las tareas globales se resuelven al consultar: incluyen también locales futuros.
     return this.prisma.$transaction(async (tx) => {
+      if (id) {
+        await tx.$queryRaw`SELECT id FROM campo_tareas WHERE id = ${id} FOR UPDATE`;
+        const actual = await tx.tareaCampo.findFirst({
+          where: { id, empresaId: u.empresaId, equipoCampoId },
+          select: { archivadaEn: true, version: true },
+        });
+        if (!actual) throw new NotFoundException('Tarea no disponible');
+        if (actual.archivadaEn)
+          throw new BadRequestException(
+            'Las tareas archivadas conservan su historial y no se editan',
+          );
+        if (
+          dto.versionEsperada !== undefined &&
+          actual.version !== dto.versionEsperada
+        )
+          throw new ConflictException(
+            'La tarea cambió. Actualizá el catálogo y volvé a abrirla antes de guardar',
+          );
+      }
       if (id) await tx.tareaLocalCampo.deleteMany({ where: { tareaId: id } });
       const locales = { create: dto.localIds.map((localId) => ({ localId })) };
-      return id
+      const tarea = id
         ? tx.tareaCampo.update({
             where: { id },
-            data: { ...data, locales },
+            data: { ...data, locales, version: { increment: 1 } },
             select: TAREA_CAMPO_SELECT,
           })
         : tx.tareaCampo.create({
             data: { ...data, empresaId: u.empresaId, locales },
             select: TAREA_CAMPO_SELECT,
           });
+      const guardada = await tarea;
+      await tx.versionTareaCampo.create({
+        data: {
+          tareaId: guardada.id,
+          version: guardada.version,
+          autorId: usuarioId,
+          contenido: detalleTarea({ ...guardada, localIds: dto.localIds }),
+        },
+      });
+      return guardada;
     });
   }
   async eliminarTarea(usuarioId: number, id: number) {
     const u = await this.acceso.gestionar(usuarioId, 'tareas');
-    exigirAdministracionTareas(u.rolDescripcion);
+    exigirAdministracionTareas(u.permisosTareas, 'ARCHIVAR');
     const tarea = await this.prisma.tareaCampo.findFirst({
       where: {
         id,
@@ -372,14 +407,96 @@ export class CatalogoCampoService {
     });
     if (!tarea) throw new NotFoundException('Tarea no disponible');
     await this.prisma.$transaction(async (tx) => {
-      await tx.novedadCampo.updateMany({
-        where: { tareaId: id },
-        data: { tareaId: null },
+      await tx.$queryRaw`SELECT id FROM campo_tareas WHERE id = ${id} FOR UPDATE`;
+      const actual = await tx.tareaCampo.findFirst({
+        where: {
+          id,
+          empresaId: u.empresaId,
+          equipoCampoId: exigirEquipoCampo(u.equipoCampo).id,
+        },
+        select: { archivadaEn: true },
       });
-      await tx.cumplimientoCampo.deleteMany({ where: { tareaId: id } });
-      await tx.tareaLocalCampo.deleteMany({ where: { tareaId: id } });
-      await tx.tareaCampo.delete({ where: { id } });
+      if (!actual) throw new NotFoundException('Tarea no disponible');
+      if (actual.archivadaEn) return;
+      const archivada = await tx.tareaCampo.update({
+        where: { id },
+        data: {
+          activo: false,
+          archivadaEn: new Date(),
+          version: { increment: 1 },
+        },
+        select: TAREA_CAMPO_SELECT,
+      });
+      await tx.versionTareaCampo.create({
+        data: {
+          tareaId: id,
+          version: archivada.version,
+          autorId: usuarioId,
+          contenido: detalleTarea(archivada),
+        },
+      });
     });
     return { ok: true };
+  }
+
+  async versionesTarea(usuarioId: number, id: number, query: ConsultaCampoDto) {
+    const u = await this.acceso.gestionar(usuarioId, 'tareas');
+    exigirAdministracionTareas(u.permisosTareas, 'CONSULTAR');
+    const tarea = await this.prisma.tareaCampo.findFirst({
+      where: {
+        id,
+        empresaId: u.empresaId,
+        equipoCampoId: exigirEquipoCampo(u.equipoCampo).id,
+      },
+      select: { id: true },
+    });
+    if (!tarea) throw new NotFoundException('Tarea no disponible');
+    const { skip, take, page, limit } = rangoPaginacion(query);
+    const where = { tareaId: id };
+    const [total, items] = await Promise.all([
+      this.prisma.versionTareaCampo.count({ where }),
+      this.prisma.versionTareaCampo.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { version: 'desc' },
+        select: { version: true, contenido: true, creadaEn: true },
+      }),
+    ]);
+    return respuestaPaginada(items, total, page, limit);
+  }
+
+  async localesTarea(usuarioId: number, id: number, query: ConsultaCampoDto) {
+    const u = await this.acceso.gestionar(usuarioId, 'tareas');
+    exigirAdministracionTareas(u.permisosTareas, 'CONSULTAR');
+    if (
+      !(await this.prisma.tareaCampo.findFirst({
+        where: {
+          id,
+          empresaId: u.empresaId,
+          equipoCampoId: exigirEquipoCampo(u.equipoCampo).id,
+        },
+        select: { id: true },
+      }))
+    )
+      throw new NotFoundException('Tarea no disponible');
+    const { skip, take, page, limit } = rangoPaginacion(query);
+    const where = { tareaId: id };
+    const [total, filas] = await Promise.all([
+      this.prisma.tareaLocalCampo.count({ where }),
+      this.prisma.tareaLocalCampo.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { localId: 'asc' },
+        select: { localId: true, local: { select: { nombre: true } } },
+      }),
+    ]);
+    return respuestaPaginada(
+      filas.map((x) => ({ id: x.localId, nombre: x.local.nombre })),
+      total,
+      page,
+      limit,
+    );
   }
 }

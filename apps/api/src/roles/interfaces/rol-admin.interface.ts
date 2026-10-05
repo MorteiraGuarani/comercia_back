@@ -1,4 +1,5 @@
 import type { EquipoCampoDto } from './equipo-campo.interface';
+import type { AccionTareaCampo } from '../../../generated/prisma/client';
 
 export interface RolAdminFila {
   empresa: { id: number; nombre: string };
@@ -7,6 +8,8 @@ export interface RolAdminFila {
   padre: { id: number; descripcion: string } | null;
   _count: { usuarios: number; hijos: number };
   equipoCampo?: EquipoCampoDto | null;
+  permisosTareas?: AccionTareaCampo[];
+  puedeVerSeguimiento?: boolean;
 }
 
 export interface RolAdminDto {
@@ -17,4 +20,6 @@ export interface RolAdminDto {
   usuariosCount: number;
   hijosCount: number;
   equipoCampo: EquipoCampoDto | null;
+  permisosTareas: AccionTareaCampo[];
+  puedeVerSeguimiento: boolean;
 }

@@ -4,6 +4,7 @@ export interface EquipoCampo {
   tipo: "IMPULSADOR" | "REPOSITOR";
   activo: boolean;
 }
+export type AccionTareaCampo = "CONSULTAR" | "CREAR" | "EDITAR" | "ARCHIVAR";
 
 export interface RolAdmin {
   empresa: { id: number; nombre: string };
@@ -13,6 +14,8 @@ export interface RolAdmin {
   usuariosCount: number;
   hijosCount: number;
   equipoCampo: EquipoCampo | null;
+  permisosTareas: AccionTareaCampo[];
+  puedeVerSeguimiento: boolean;
 }
 
 export interface FormRol {
@@ -23,4 +26,6 @@ export interface FormRol {
   modoEquipo: "ninguno" | "existente" | "nuevo";
   nuevoEquipoNombre: string;
   nuevoEquipoTipo: "IMPULSADOR" | "REPOSITOR";
+  permisosTareas: AccionTareaCampo[];
+  puedeVerSeguimiento: boolean;
 }

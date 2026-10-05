@@ -1,4 +1,4 @@
-import { IsEnum, IsNotEmpty } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsOptional, IsUUID } from 'class-validator';
 
 /**
  * Enum para momento de la foto (debe coincidir con Prisma)
@@ -12,6 +12,7 @@ export enum MomentoFotoDto {
  * DTO para subir foto de tarea (usado con multipart/form-data)
  */
 export class SubirFotoTareaDto {
+  @IsOptional() @IsUUID() operacionId?: string;
   @IsNotEmpty({ message: 'Debe especificar el momento de la foto' })
   @IsEnum(MomentoFotoDto, { message: 'El momento debe ser ANTES o DESPUES' })
   momento: MomentoFotoDto;

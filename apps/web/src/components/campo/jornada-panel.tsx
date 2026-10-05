@@ -1,10 +1,19 @@
 "use client";
+import { EstadoTelefono } from "./estado-telefono";
+import type { MarcacionPendiente } from "@/types/seguimiento";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import { useListaCampo, useOperacionCampo } from "@/hooks/use-lista-campo";
-import { fechaEnZonaIso, formatoFechaHora, queryFechasCampo } from "@/utils/fechas";
-import { SelectorFechaFiltro, type PeriodoFiltro } from "./ui/selector-fecha-filtro";
+import {
+  fechaEnZonaIso,
+  formatoFechaHora,
+  queryFechasCampo,
+} from "@/utils/fechas";
+import {
+  SelectorFechaFiltro,
+  type PeriodoFiltro,
+} from "./ui/selector-fecha-filtro";
 import { Modal } from "@/components/modal";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { btnGhost, btnPrimary, errorBox } from "@/components/ui";
@@ -19,7 +28,13 @@ import type {
   VisitaCampo,
 } from "@/types/campo";
 
-export function JornadaPanel({ tareas = false, esRepositor = false }: { tareas?: boolean; esRepositor?: boolean }) {
+export function JornadaPanel({
+  tareas = false,
+  esRepositor = false,
+}: {
+  tareas?: boolean;
+  esRepositor?: boolean;
+}) {
   const hoyStr = fechaEnZonaIso(new Date());
   const [periodo, setPeriodo] = useState<PeriodoFiltro>({
     clave: "hoy",
@@ -33,10 +48,17 @@ export function JornadaPanel({ tareas = false, esRepositor = false }: { tareas?:
     <div className="min-w-0 w-full px-4 py-5 sm:px-6 lg:px-8">
       <CabeceraCampo
         titulo={tareas ? "Mis tareas del día" : "Mis locales"}
-        detalle={esRepositor
-          ? "Marcá entrada desde Comercia con Ucheck activo en tu teléfono. Completá las tareas antes de salir."
-          : "Tu agenda y reemplazos. Podés registrar presencia aunque el local no tenga tareas."}
+        detalle={
+          esRepositor
+            ? "Marcá entrada desde Comercia con Ucheck activo en tu teléfono. Completá las tareas antes de salir."
+            : "Tu agenda y reemplazos. Podés registrar presencia aunque el local no tenga tareas."
+        }
       />
+      {esRepositor ? (
+        <div className="mb-4">
+          <EstadoTelefono />
+        </div>
+      ) : null}
       <div className="mb-4">
         <SelectorFechaFiltro valorActual={periodo} onChange={setPeriodo} />
       </div>
@@ -44,7 +66,13 @@ export function JornadaPanel({ tareas = false, esRepositor = false }: { tareas?:
     </div>
   );
 }
-function AgendaDelDia({ qsFecha, esRepositor }: { qsFecha: string; esRepositor: boolean }) {
+function AgendaDelDia({
+  qsFecha,
+  esRepositor,
+}: {
+  qsFecha: string;
+  esRepositor: boolean;
+}) {
   const router = useRouter();
   const lista = useListaCampo<AgendaCampo>(`/campo/jornada?${qsFecha}`);
   const [abierta, setAbierta] = useState<VisitaCampo | null>(null);
@@ -97,9 +125,22 @@ function AgendaDelDia({ qsFecha, esRepositor }: { qsFecha: string; esRepositor: 
 
   // Métricas del día (StatChips estilo HTML)
   const totalParadas = lista.items.length;
-  const visitadas = lista.items.filter((a) => a.visitas.some((v) => v.salida)).length;
+  const visitadas = lista.items.filter((a) =>
+    a.visitas.some((v) => v.salida),
+  ).length;
   const enCurso = abierta ? 1 : 0;
-  const pendientes = Math.max(0, totalParadas - visitadas - (abierta && lista.items.some(a => a.local.id === abierta.local.id && !a.visitas.some(v => v.salida)) ? 1 : 0));
+  const pendientes = Math.max(
+    0,
+    totalParadas -
+      visitadas -
+      (abierta &&
+      lista.items.some(
+        (a) =>
+          a.local.id === abierta.local.id && !a.visitas.some((v) => v.salida),
+      )
+        ? 1
+        : 0),
+  );
 
   return (
     <>
@@ -170,7 +211,14 @@ function AgendaDelDia({ qsFecha, esRepositor }: { qsFecha: string; esRepositor: 
               })
             }
           >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" aria-hidden="true">
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              strokeWidth="2"
+              aria-hidden="true"
+            >
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
               <polyline points="16 17 21 12 16 7" />
               <line x1="21" y1="12" x2="9" y2="12" />
@@ -257,8 +305,12 @@ function AgendaDelDia({ qsFecha, esRepositor }: { qsFecha: string; esRepositor: 
                   </svg>
                 </div>
                 <div>
-                  <strong className="block font-semibold text-foreground">{a.local.nombre}</strong>
-                  <p className="text-xs text-brand-700 dark:text-brand-400 font-medium">{a.local.cliente.nombre}</p>
+                  <strong className="block font-semibold text-foreground">
+                    {a.local.nombre}
+                  </strong>
+                  <p className="text-xs text-brand-700 dark:text-brand-400 font-medium">
+                    {a.local.cliente.nombre}
+                  </p>
                 </div>
               </div>
             ),
@@ -315,7 +367,11 @@ function AgendaDelDia({ qsFecha, esRepositor }: { qsFecha: string; esRepositor: 
                         : "bg-surface-soft text-muted border-line"
                   }`}
                 >
-                  {estaEnCurso ? "EN CURSO" : tieneVisitaCerrada ? "VISITADO" : "PENDIENTE"}
+                  {estaEnCurso
+                    ? "EN CURSO"
+                    : tieneVisitaCerrada
+                      ? "VISITADO"
+                      : "PENDIENTE"}
                 </span>
               );
             },
@@ -403,7 +459,9 @@ function AgendaDelDia({ qsFecha, esRepositor }: { qsFecha: string; esRepositor: 
                       <path d="M12 21c-4-4.6-7-8.3-7-11.5A7 7 0 0 1 19 9.5C19 12.7 16 16.4 12 21z" />
                       <circle cx="12" cy="9.5" r="2.3" />
                     </svg>
-                    <span className="truncate">{a.local.direccion || "Sin dirección"}</span>
+                    <span className="truncate">
+                      {a.local.direccion || "Sin dirección"}
+                    </span>
                   </p>
 
                   <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -431,47 +489,49 @@ function AgendaDelDia({ qsFecha, esRepositor }: { qsFecha: string; esRepositor: 
               {/* Botones de acción móvil (touch-friendly >= 44px) */}
               <div className="mt-3.5 flex flex-wrap items-center gap-2 border-t border-line/60 pt-3">
                 {hoy && !abierta ? (
-                  (a.local.horarios.length ? a.local.horarios : [null]).map((h) => {
-                    const realizada = a.visitas.some(
-                      (v) => v.horarioId === (h?.id ?? null),
-                    );
-                    return (
-                      <button
-                        key={h?.id ?? 0}
-                        type="button"
-                        disabled={realizada}
-                        onClick={() =>
-                          setMarca({
-                            asignacionId: a.id,
-                            horarioId: h?.id,
-                            nombre: a.local.nombre,
-                            radioMetros: a.local.radioMetros,
-                          })
-                        }
-                        className={`min-h-11 flex-1 rounded-lg px-3 py-2 text-xs font-semibold shadow-sm transition-colors flex items-center justify-center gap-1.5 ${
-                          realizada
-                            ? "border border-line bg-surface-soft text-muted opacity-60 cursor-not-allowed"
-                            : "bg-brand-600 text-white hover:bg-brand-700 dark:bg-brand-500 dark:hover:bg-brand-600"
-                        }`}
-                      >
-                        <svg
-                          className="h-3.5 w-3.5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                          strokeWidth="2"
-                          aria-hidden="true"
+                  (a.local.horarios.length ? a.local.horarios : [null]).map(
+                    (h) => {
+                      const realizada = a.visitas.some(
+                        (v) => v.horarioId === (h?.id ?? null),
+                      );
+                      return (
+                        <button
+                          key={h?.id ?? 0}
+                          type="button"
+                          disabled={realizada}
+                          onClick={() =>
+                            setMarca({
+                              asignacionId: a.id,
+                              horarioId: h?.id,
+                              nombre: a.local.nombre,
+                              radioMetros: a.local.radioMetros,
+                            })
+                          }
+                          className={`min-h-11 flex-1 rounded-lg px-3 py-2 text-xs font-semibold shadow-sm transition-colors flex items-center justify-center gap-1.5 ${
+                            realizada
+                              ? "border border-line bg-surface-soft text-muted opacity-60 cursor-not-allowed"
+                              : "bg-brand-600 text-white hover:bg-brand-700 dark:bg-brand-500 dark:hover:bg-brand-600"
+                          }`}
                         >
-                          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
-                          <polyline points="10 17 15 12 10 7" />
-                          <line x1="15" y1="12" x2="3" y2="12" />
-                        </svg>
-                        {realizada
-                          ? "Registrada"
-                          : `Marcar entrada${h ? ` (${h.entrada})` : ""}`}
-                      </button>
-                    );
-                  })
+                          <svg
+                            className="h-3.5 w-3.5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            strokeWidth="2"
+                            aria-hidden="true"
+                          >
+                            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                            <polyline points="10 17 15 12 10 7" />
+                            <line x1="15" y1="12" x2="3" y2="12" />
+                          </svg>
+                          {realizada
+                            ? "Registrada"
+                            : `Marcar entrada${h ? ` (${h.entrada})` : ""}`}
+                        </button>
+                      );
+                    },
+                  )
                 ) : estaEnCurso ? (
                   <button
                     type="button"
@@ -584,7 +644,11 @@ function AgendaDelDia({ qsFecha, esRepositor }: { qsFecha: string; esRepositor: 
         )}
       />
       <div className="mt-7">
-        <VisitasPanel key={`visitas-${revision}`} fechaInicial={hoyStr} propia />
+        <VisitasPanel
+          key={`visitas-${revision}`}
+          fechaInicial={hoyStr}
+          propia
+        />
       </div>
       {mapa ? <MapaLocal local={mapa} cerrar={() => setMapa(null)} /> : null}
       {tareas ? (
@@ -601,9 +665,17 @@ function AgendaDelDia({ qsFecha, esRepositor }: { qsFecha: string; esRepositor: 
           radioMetros={marca.radioMetros}
           salida={!!marca.visitaId}
           usarTelefonoUcheck={esRepositor}
+          alConfirmarPendiente={() => {
+            actualizar();
+            setMarca(null);
+          }}
           cerrar={() => setMarca(null)}
           guardar={async (datos) => {
-            await apiFetch(
+            const resultado = await apiFetch<{
+              estado?: "CONFIRMADA" | "PENDIENTE";
+              mensaje?: string;
+              operacionId?: string;
+            }>(
               marca.visitaId
                 ? esRepositor
                   ? `/campo/jornada/repositor/visitas/${marca.visitaId}/salida`
@@ -624,9 +696,18 @@ function AgendaDelDia({ qsFecha, esRepositor }: { qsFecha: string; esRepositor: 
                 }),
               },
             );
+            if (resultado.estado === "PENDIENTE" && resultado.operacionId)
+              return {
+                estado: "PENDIENTE",
+                operacionId: resultado.operacionId,
+                mensaje:
+                  resultado.mensaje ??
+                  "Marcación guardada en Ucheck, pendiente de sincronización.",
+              } satisfies MarcacionPendiente;
             actualizar();
             setMarca(null);
-            if (esRepositor && !marca.visitaId) router.push("/panel/mi-jornada/tareas");
+            if (esRepositor && !marca.visitaId)
+              router.push("/panel/mi-jornada/tareas");
           }}
         />
       ) : null}
@@ -640,31 +721,44 @@ function ModalMarca({
   usarTelefonoUcheck,
   cerrar,
   guardar,
+  alConfirmarPendiente,
 }: {
   nombre: string;
   radioMetros: number;
   salida: boolean;
   usarTelefonoUcheck: boolean;
   cerrar: () => void;
-  guardar: (datos: MarcaCampo | { nota: string }) => Promise<void>;
+  guardar: (
+    datos: MarcaCampo | { nota: string },
+  ) => Promise<void | MarcacionPendiente>;
+  alConfirmarPendiente: () => void;
 }) {
   const op = useOperacionCampo();
   const [coords, setCoords] = useState<Omit<MarcaCampo, "nota"> | null>(null);
   const [nota, setNota] = useState("");
+  const [pendiente, setPendiente] = useState<MarcacionPendiente | null>(null);
   function obtenerGps(): Promise<Omit<MarcaCampo, "nota">> {
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
-        reject(new Error("GPS no disponible. Activá la ubicación para marcar."));
+        reject(
+          new Error("GPS no disponible. Activá la ubicación para marcar."),
+        );
         return;
       }
       navigator.geolocation.getCurrentPosition(
-        (p) => resolve({
-          latitud: p.coords.latitude,
-          longitud: p.coords.longitude,
-          precisionMetros: p.coords.accuracy,
-          capturadaEn: new Date(p.timestamp).toISOString(),
-        }),
-        () => reject(new Error("No se pudo obtener GPS. Activá la ubicación y reintentá.")),
+        (p) =>
+          resolve({
+            latitud: p.coords.latitude,
+            longitud: p.coords.longitude,
+            precisionMetros: p.coords.accuracy,
+            capturadaEn: new Date(p.timestamp).toISOString(),
+          }),
+        () =>
+          reject(
+            new Error(
+              "No se pudo obtener GPS. Activá la ubicación y reintentá.",
+            ),
+          ),
         { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 },
       );
     });
@@ -686,48 +780,96 @@ function ModalMarca({
         className="space-y-4"
         onSubmit={async (e) => {
           e.preventDefault();
-          await op.ejecutar(usarTelefonoUcheck ? "Consultando el teléfono en Ucheck y registrando la visita…" : "Obteniendo ubicación y registrando presencia…", async () => {
-            if (usarTelefonoUcheck) {
-              await guardar({ nota });
-              return;
-            }
-            const posicion = await obtenerGps();
-            setCoords(posicion);
-            await guardar({ ...posicion, nota });
-          });
+          if (pendiente) {
+            await op.ejecutar(
+              "Consultando la confirmación de la marcación",
+              async () => {
+                const estado = await apiFetch<{
+                  estado: string;
+                  mensaje: string;
+                }>(
+                  `/campo/jornada/repositor/operaciones/${pendiente.operacionId}`,
+                );
+                if (estado.estado === "CONFIRMADA") alConfirmarPendiente();
+                else setPendiente({ ...pendiente, mensaje: estado.mensaje });
+              },
+            );
+            return;
+          }
+          await op.ejecutar(
+            usarTelefonoUcheck
+              ? "Consultando el teléfono en Ucheck y registrando la visita…"
+              : "Obteniendo ubicación y registrando presencia…",
+            async () => {
+              if (usarTelefonoUcheck) {
+                const resultado = await guardar({ nota });
+                if (resultado?.estado === "PENDIENTE") setPendiente(resultado);
+                return;
+              }
+              const posicion = await obtenerGps();
+              setCoords(posicion);
+              await guardar({ ...posicion, nota });
+            },
+          );
         }}
       >
-        {!usarTelefonoUcheck ? <button
-          type="button"
-          className={`${btnGhost} w-full`}
-          onClick={() => void ubicar()}
-        >
-          Obtener mi ubicación
-        </button> : null}
+        {!usarTelefonoUcheck ? (
+          <button
+            type="button"
+            className={`${btnGhost} w-full`}
+            onClick={() => void ubicar()}
+          >
+            Obtener mi ubicación
+          </button>
+        ) : null}
         {usarTelefonoUcheck ? (
           <div className="rounded-xl border border-line bg-surface-soft p-4 text-sm text-foreground">
+            <EstadoTelefono />
             <p className="font-semibold">Antes de confirmar en Comercia</p>
             <ol className="mt-2 list-decimal space-y-1 pl-5 text-muted">
               <li>Abrí Ucheck en el teléfono con tu cuenta de repositor.</li>
-              <li>Esperá el estado “Ubicación confirmada”. Si está pendiente, tocá “Actualizar ubicación”.</li>
-              <li>Mantené Ucheck abierta en segundo plano durante la visita.</li>
+              <li>
+                Esperá el estado “Ubicación confirmada”. Si está pendiente, tocá
+                “Actualizar ubicación”.
+              </li>
+              <li>
+                Mantené Ucheck abierta en segundo plano durante la visita.
+              </li>
             </ol>
           </div>
-        ) : <p className="text-sm text-muted">
-          {coords
-            ? `Ubicación obtenida: ${coords.latitud.toFixed(5)}, ${coords.longitud.toFixed(5)} · precisión ±${Math.round(coords.precisionMetros)} m`
-            : "Se necesita GPS para marcar. Al confirmar se obtendrá una ubicación nueva."}
-        </p>}
-        <p className="text-sm text-muted">Radio permitido: {radioMetros} m desde el local.</p>
+        ) : (
+          <p className="text-sm text-muted">
+            {coords
+              ? `Ubicación obtenida: ${coords.latitud.toFixed(5)}, ${coords.longitud.toFixed(5)} · precisión ±${Math.round(coords.precisionMetros)} m`
+              : "Se necesita GPS para marcar. Al confirmar se obtendrá una ubicación nueva."}
+          </p>
+        )}
+        <p className="text-sm text-muted">
+          Radio permitido: {radioMetros} m desde el local.
+        </p>
         <CampoTexto
           titulo="Observación (opcional)"
           maxLength={250}
           value={nota}
           onChange={setNota}
         />
-        {op.error ? <p role="alert" className={errorBox}>{op.error}</p> : null}
+        {op.error ? (
+          <p role="alert" className={errorBox}>
+            {op.error}
+          </p>
+        ) : null}
+        {pendiente ? (
+          <p
+            role="status"
+            className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100"
+          >
+            {pendiente.mensaje}
+          </p>
+        ) : null}
         <BotonesFormulario ocupado={!!op.mensaje} cancelar={cerrar}>
-          Confirmar {salida ? "salida" : "entrada"}
+          {pendiente
+            ? "Consultar confirmación"
+            : `Confirmar ${salida ? "salida" : "entrada"}`}
         </BotonesFormulario>
       </form>
       <PantallaCarga visible={!!op.mensaje} mensaje={op.mensaje} />

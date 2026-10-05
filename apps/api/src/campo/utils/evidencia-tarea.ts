@@ -5,10 +5,16 @@ import {
   exigirEquipoCampo,
   EQUIPO_CAMPO_SELECT,
 } from './equipo-campo';
+import { TAREA_CAMPO_SELECT } from './selectores';
+import type { Prisma } from '../../../generated/prisma/client';
+import { datosTareaRegistrada } from './version-tarea';
 
 // Valida la misma visita, empresa, vigencia y alcance que completar una tarea.
 export async function tareaParaEvidencia(
-  prisma: PrismaService,
+  prisma: Pick<
+    PrismaService,
+    'visitaCampo' | 'tareaCampo' | 'cumplimientoCampo'
+  >,
   usuarioId: number,
   empresaId: number,
   visitaId: number,
@@ -38,35 +44,54 @@ export async function tareaParaEvidencia(
   });
   if (!visita) throw new NotFoundException('Visita abierta no disponible');
   const destinatario = destinatarioCampo(visita.usuario.rol?.equipoCampo);
+  const registro = await prisma.cumplimientoCampo.findUnique({
+    where: { visitaId_tareaId: { visitaId, tareaId } },
+    select: { versionTarea: true, detalleTarea: true },
+  });
   const tarea = await prisma.tareaCampo.findFirst({
     where: {
       id: tareaId,
       empresaId,
-      activo: true,
-      fechaDesde: { lte: visita.fecha },
       destinatario,
       equipoCampoId: exigirEquipoCampo(visita.usuario.rol?.equipoCampo).id,
-      AND: [
-        { OR: [{ fechaHasta: null }, { fechaHasta: { gte: visita.fecha } }] },
-        {
-          OR: [
-            { todosLocales: true },
-            { locales: { some: { localId: visita.localId } } },
-          ],
-        },
-      ],
+      ...(registro
+        ? {}
+        : {
+            activo: true,
+            fechaDesde: { lte: visita.fecha },
+            AND: [
+              {
+                OR: [
+                  { fechaHasta: null },
+                  { fechaHasta: { gte: visita.fecha } },
+                ],
+              },
+              {
+                OR: [
+                  { todosLocales: true },
+                  { locales: { some: { localId: visita.localId } } },
+                ],
+              },
+            ],
+          }),
     },
-    select: { id: true, nombre: true, requiereFotos: true },
+    select: TAREA_CAMPO_SELECT,
   });
   if (!tarea) throw new NotFoundException('Tarea no disponible');
-  return tarea;
+  return datosTareaRegistrada(
+    tarea,
+    registro?.detalleTarea,
+    registro?.versionTarea,
+  );
 }
 
 export async function prepararEvidencia(
-  prisma: PrismaService,
+  prisma: Pick<PrismaService, 'cumplimientoCampo'>,
   visitaId: number,
   tareaId: number,
   nombreTarea: string,
+  versionTarea = 1,
+  detalleTarea?: Prisma.InputJsonValue,
 ) {
   return prisma.cumplimientoCampo.upsert({
     where: { visitaId_tareaId: { visitaId, tareaId } },
@@ -76,6 +101,8 @@ export async function prepararEvidencia(
       nombreTarea,
       completadaAt: null,
       fotosValidadas: false,
+      versionTarea,
+      detalleTarea,
     },
     update: {},
     select: { tareaId: true },

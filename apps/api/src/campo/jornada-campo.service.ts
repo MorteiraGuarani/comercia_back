@@ -10,6 +10,8 @@ import {
   rolDelEquipoCampo,
   exigirEquipoCampo,
 } from './utils/equipo-campo';
+import { datosTareaRegistrada, detalleTarea } from './utils/version-tarea';
+import { prepararEvidencia, tareaParaEvidencia } from './utils/evidencia-tarea';
 import { PrismaService } from '../prisma/prisma.service';
 import { rangoPaginacion, respuestaPaginada } from '../common/utils/paginacion';
 import { CampoAccesoService } from './campo-acceso.service';
@@ -387,17 +389,34 @@ export class JornadaCampoService {
       empresaId: u.empresaId,
       equipoCampoId: exigirEquipoCampo(u.equipoCampo).id,
       destinatario: destinatarioCampo(u.equipoCampo),
-      activo: true,
-      fechaDesde: { lte: fechaHasta },
-      AND: [
+      OR: [
         {
-          OR: [{ fechaHasta: null }, { fechaHasta: { gte: fechaDesde } }],
+          activo: true,
+          fechaDesde: { lte: fechaHasta },
+          AND: [
+            {
+              OR: [{ fechaHasta: null }, { fechaHasta: { gte: fechaDesde } }],
+            },
+            {
+              OR: [
+                { todosLocales: true },
+                { locales: { some: { localId: a.localId } } },
+              ],
+            },
+          ],
         },
         {
-          OR: [
-            { todosLocales: true },
-            { locales: { some: { localId: a.localId } } },
-          ],
+          cumplimientos: {
+            some: {
+              completadaAt: null,
+              visita: {
+                usuarioId,
+                asignacionId,
+                salida: null,
+                fecha: { gte: fechaDesde, lte: fechaHasta },
+              },
+            },
+          },
         },
       ],
     };
@@ -428,6 +447,10 @@ export class JornadaCampoService {
             select: {
               visitaId: true,
               completadaAt: true,
+              iniciadaAt: true,
+              detalleTarea: true,
+              versionTarea: true,
+              visita: { select: { salida: true } },
               fotos: { select: { momento: true }, take: 2 },
             },
           },
@@ -439,7 +462,17 @@ export class JornadaCampoService {
     ]);
     return respuestaPaginada(
       items.map(({ cumplimientos, ...t }) => ({
-        ...t,
+        ...datosTareaRegistrada(
+          t,
+          cumplimientos.find((c) => c.completadaAt === null && !c.visita.salida)
+            ?.detalleTarea,
+          cumplimientos.find((c) => c.completadaAt === null && !c.visita.salida)
+            ?.versionTarea,
+        ),
+        iniciadaAt:
+          cumplimientos.find(
+            (c) => c.iniciadaAt && c.completadaAt === null && !c.visita.salida,
+          )?.iniciadaAt ?? null,
         visitasCompletadas: cumplimientos
           .filter((c) => c.completadaAt !== null)
           .map((c) => c.visitaId),
@@ -455,6 +488,33 @@ export class JornadaCampoService {
       limit,
     );
   }
+  async iniciarTarea(usuarioId: number, visitaId: number, tareaId: number) {
+    const u = await this.acceso.ejecutar(usuarioId);
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM campo_visitas WHERE id = ${visitaId} FOR UPDATE`;
+      const tarea = await tareaParaEvidencia(
+        tx,
+        usuarioId,
+        u.empresaId,
+        visitaId,
+        tareaId,
+      );
+      await prepararEvidencia(
+        tx,
+        visitaId,
+        tareaId,
+        tarea.nombre,
+        tarea.version,
+        detalleTarea(tarea),
+      );
+      await tx.cumplimientoCampo.updateMany({
+        where: { visitaId, tareaId, completadaAt: null, iniciadaAt: null },
+        data: { iniciadaAt: new Date(), actividadEn: new Date() },
+      });
+      return { ok: true };
+    });
+  }
+
   async completar(usuarioId: number, visitaId: number, tareaId: number) {
     const u = await this.acceso.ejecutar(usuarioId);
     return this.prisma.$transaction(async (tx) => {
@@ -463,38 +523,64 @@ export class JornadaCampoService {
         where: {
           id: visitaId,
           usuarioId: u.id,
-          salida: null,
           local: { cliente: { empresaId: u.empresaId } },
         },
-        select: { id: true, localId: true, fecha: true },
+        select: { id: true, localId: true, fecha: true, salida: true },
       });
       if (!v) throw new NotFoundException('Visita abierta no disponible');
-      const tarea = await tx.tareaCampo.findFirst({
+      const previo = await tx.cumplimientoCampo.findUnique({
+        where: { visitaId_tareaId: { visitaId, tareaId } },
+        select: { completadaAt: true, detalleTarea: true, versionTarea: true },
+      });
+      if (previo?.completadaAt) return { ok: true };
+      if (v.salida)
+        throw new BadRequestException(
+          'La visita ya terminó; conservá la acción pendiente para su revisión',
+        );
+      const actual = await tx.tareaCampo.findFirst({
         where: {
           id: tareaId,
           empresaId: u.empresaId,
           equipoCampoId: exigirEquipoCampo(u.equipoCampo).id,
           destinatario: destinatarioCampo(u.equipoCampo),
-          activo: true,
-          fechaDesde: { lte: v.fecha },
-          AND: [
-            { OR: [{ fechaHasta: null }, { fechaHasta: { gte: v.fecha } }] },
-            {
-              OR: [
-                { todosLocales: true },
-                { locales: { some: { localId: v.localId } } },
-              ],
-            },
-          ],
+          ...(previo
+            ? {}
+            : {
+                activo: true,
+                fechaDesde: { lte: v.fecha },
+                AND: [
+                  {
+                    OR: [
+                      { fechaHasta: null },
+                      { fechaHasta: { gte: v.fecha } },
+                    ],
+                  },
+                  {
+                    OR: [
+                      { todosLocales: true },
+                      { locales: { some: { localId: v.localId } } },
+                    ],
+                  },
+                ],
+              }),
         },
         select: {
           id: true,
           nombre: true,
           requiereFotos: true,
           fotosObligatorias: true,
+          version: true,
+          descripcion: true,
+          categoria: true,
+          esObligatoria: true,
         },
       });
-      if (!tarea) throw new NotFoundException('Tarea no disponible');
+      if (!actual) throw new NotFoundException('Tarea no disponible');
+      const tarea = datosTareaRegistrada(
+        actual,
+        previo?.detalleTarea,
+        previo?.versionTarea,
+      );
 
       // Validar fotos obligatorias
       if (tarea.requiereFotos && tarea.fotosObligatorias) {
@@ -535,6 +621,8 @@ export class JornadaCampoService {
           tareaId,
           nombreTarea: tarea.nombre,
           fotosValidadas,
+          versionTarea: tarea.version,
+          detalleTarea: detalleTarea(tarea),
         },
         update: { fotosValidadas, completadaAt: new Date() },
         select: { tareaId: true },

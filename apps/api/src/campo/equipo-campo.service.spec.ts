@@ -48,6 +48,7 @@ function contexto(rol: string, equipo: DestinatarioTareaCampo) {
     },
   ];
   const prisma = {
+    versionTareaCampo: { create: jest.fn() },
     localCampo: { count: jest.fn().mockResolvedValue(0) },
     tareaCampo: {
       findFirst: jest.fn().mockImplementation(
@@ -71,9 +72,12 @@ function contexto(rol: string, equipo: DestinatarioTareaCampo) {
       ),
       create: jest
         .fn()
-        .mockImplementation(
-          ({ data }: { data: { destinatario: string } }) => data,
-        ),
+        .mockImplementation(({ data }: { data: { destinatario: string } }) => ({
+          ...data,
+          id: 4,
+          version: 1,
+          archivadaEn: null,
+        })),
       update: jest.fn(),
       delete: jest.fn(),
     },
@@ -100,6 +104,7 @@ function contexto(rol: string, equipo: DestinatarioTareaCampo) {
       id: 3,
       empresaId: 10,
       rolDescripcion: rol,
+      permisosTareas: ['CONSULTAR', 'CREAR', 'EDITAR', 'ARCHIVAR'],
       equipoCampo: {
         id: equipoCampoId,
         nombre: 'Equipo prueba',

@@ -33,6 +33,7 @@ import { NovedadService } from './services/novedad.service';
 import { AvisoService } from './services/aviso.service';
 import { SupervisionService } from './services/supervision.service';
 import { AdjuntoCampoService } from './services/adjunto-campo.service';
+import { SeguimientoService } from './services/seguimiento.service';
 import {
   AsignacionCampoDto,
   BackupCampoDto,
@@ -82,7 +83,15 @@ export class CampoController {
     private readonly avisoService: AvisoService,
     private readonly supervisionService: SupervisionService,
     private readonly adjuntoCampoService: AdjuntoCampoService,
+    private readonly seguimientoService: SeguimientoService,
   ) {}
+
+  @Get('seguimiento') seguimiento(
+    @Req() r: RequestConUsuario,
+    @Query() q: ConsultaCampoDto,
+  ) {
+    return this.seguimientoService.equipo(r.usuarioId, q);
+  }
 
   @Get('clientes') clientes(
     @Req() r: RequestConUsuario,
@@ -179,6 +188,22 @@ export class CampoController {
     @Body() d: TareaCampoDto,
   ) {
     return this.catalogo.guardarTarea(r.usuarioId, d);
+  }
+
+  @Get('tareas/:id/versiones') versionesTarea(
+    @Req() r: RequestConUsuario,
+    @Param('id', ParseIntPipe) id: number,
+    @Query() q: ConsultaCampoDto,
+  ) {
+    return this.catalogo.versionesTarea(r.usuarioId, id, q);
+  }
+
+  @Get('tareas/:id/locales') localesTarea(
+    @Req() r: RequestConUsuario,
+    @Param('id', ParseIntPipe) id: number,
+    @Query() q: ConsultaCampoDto,
+  ) {
+    return this.catalogo.localesTarea(r.usuarioId, id, q);
   }
   @Put('tareas/:id') editarTarea(
     @Req() r: RequestConUsuario,
@@ -316,6 +341,27 @@ export class CampoController {
   @Get('jornada/abierta') abierta(@Req() r: RequestConUsuario) {
     return this.jornada.abierta(r.usuarioId);
   }
+
+  @Get('jornada/repositor/telefono') estadoTelefono(
+    @Req() r: RequestConUsuario,
+  ) {
+    return this.repositor.estadoTelefono(r.usuarioId);
+  }
+
+  @Get('jornada/repositor/operaciones/:id') estadoOperacion(
+    @Req() r: RequestConUsuario,
+    @Param('id') id: string,
+  ) {
+    return this.repositor.estadoOperacion(r.usuarioId, id);
+  }
+
+  @Post('jornada/visitas/:visitaId/tareas/:tareaId/iniciar') iniciarTarea(
+    @Req() r: RequestConUsuario,
+    @Param('visitaId', ParseIntPipe) visitaId: number,
+    @Param('tareaId', ParseIntPipe) tareaId: number,
+  ) {
+    return this.jornada.iniciarTarea(r.usuarioId, visitaId, tareaId);
+  }
   @Get('jornada/visitas') misVisitas(
     @Req() r: RequestConUsuario,
     @Query() q: ConsultaCampoDto,
@@ -420,6 +466,7 @@ export class CampoController {
       tareaId,
       dto.momento,
       file,
+      dto.operacionId,
     );
   }
 

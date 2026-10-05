@@ -159,6 +159,7 @@ export class BackupCampoDto extends AsignacionCampoDto {
 }
 
 export class TareaCampoDto extends VigenciaCampoDto {
+  @IsOptional() @IsInt() @Min(1) @Max(MAX_INT4) versionEsperada?: number;
   @IsOptional()
   @IsEnum(DestinatarioTareaCampo)
   destinatario?: DestinatarioTareaCampo;

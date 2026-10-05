@@ -8,12 +8,30 @@ import {
   MaxLength,
   Min,
   MinLength,
+  IsArray,
+  IsBoolean,
+  ArrayUnique,
+  ArrayMaxSize,
+  IsEnum,
+  ValidateIf,
 } from 'class-validator';
 import { MAX_INT4 } from '../../common/utils/numeros';
 import { PaginacionDto } from '../../common/utils/paginacion';
-import { DestinatarioTareaCampo } from '../../../generated/prisma/client';
+import {
+  AccionTareaCampo,
+  DestinatarioTareaCampo,
+} from '../../../generated/prisma/client';
 
 export class PlanificacionRolDto {
+  @ValidateIf((_obj, value: unknown) => value !== undefined)
+  @IsArray()
+  @ArrayUnique()
+  @ArrayMaxSize(4)
+  @IsEnum(AccionTareaCampo, { each: true })
+  permisosTareas?: AccionTareaCampo[];
+  @ValidateIf((_obj, value: unknown) => value !== undefined)
+  @IsBoolean()
+  puedeVerSeguimiento?: boolean;
   @IsOptional()
   @Type(() => Number)
   @IsInt()

@@ -67,6 +67,8 @@ describe('RolesService', () => {
           usuariosCount: 4,
           hijosCount: 1,
           equipoCampo: null,
+          permisosTareas: [],
+          puedeVerSeguimiento: false,
         },
       ],
       total: 8,
@@ -135,6 +137,8 @@ describe('RolesService', () => {
           descripcion: 'Gerente',
           rolId: null,
           equipoCampoId: null,
+          permisosTareas: [],
+          puedeVerSeguimiento: false,
         },
       }),
     );

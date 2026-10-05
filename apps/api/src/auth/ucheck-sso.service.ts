@@ -113,7 +113,7 @@ export class UcheckSsoService {
         correo: { equals: identidad.correo, mode: 'insensitive' },
         isActive: true,
       },
-      select: { id: true },
+      select: { id: true, permitirVinculoAutomatico: true },
       take: 2,
     });
     if (candidatos.length !== 1) {
@@ -121,6 +121,10 @@ export class UcheckSsoService {
         'No hay una cuenta única y activa de Comercia para este correo',
       );
     }
+    if (!candidatos[0].permitirVinculoAutomatico)
+      throw new UnauthorizedException(
+        'El administrador debe vincular esta cuenta con Ucheck',
+      );
 
     try {
       await this.prisma.identidadUcheck.create({

@@ -13,6 +13,11 @@ const LocalesPanel = dynamic(() =>
 const TareasPanel = dynamic(() =>
   import("@/components/campo/tareas-panel").then((m) => m.TareasPanel),
 );
+const SeguimientoPanel = dynamic(() =>
+  import("@/components/campo/seguimiento-panel").then(
+    (m) => m.SeguimientoPanel,
+  ),
+);
 // Nuevos paneles modulares con el diseño editorial y paridad Desktop/Mobile
 const SupervisionPanel = dynamic(() =>
   import("@/components/campo/supervision-panel").then(
@@ -61,6 +66,7 @@ export default function PaginaModulo({
 
   // MÓDULO: GESTIÓN DE CAMPO (SUPERVISOR / TEAM LEADER)
   if (modulo === "gestion-campo") {
+    if (pagina === "seguimiento") return <SeguimientoPanel />;
     if (pagina === "visitas") return <SupervisionPanel />;
     if (pagina === "novedades") return <NovedadesPanel esImpulsador={false} />;
     if (pagina === "avisos") return <AvisosPanel esImpulsador={false} />;

@@ -8,6 +8,7 @@ import { PGlite } from '@electric-sql/pglite';
 const require = createRequire(import.meta.url);
 const { condicionAgenda } = require('../dist/src/campo/utils/agenda-sql.js');
 const db = new PGlite();
+let fallo=false;
 try {
   await db.exec(`
     CREATE TABLE empresas (id INT PRIMARY KEY, nombre TEXT);
@@ -292,12 +293,38 @@ try {
     (await rows('SELECT COUNT(*)::int AS n FROM campo_locales'))[0].n,
     5,
   );
+  const equipoImp=await grupoId('IMPULSADOR');
+  await db.exec(`
+    INSERT INTO roles(id,empresa_id,descripcion,equipo_campo_id) VALUES(90,10,'SUPERVISOR',${equipoImp}),(91,10,'TeamLeader',${equipoImp});
+    CREATE TYPE "TipoEventoUcheck" AS ENUM('ENTRADA','SALIDA');
+    CREATE TABLE modulos(id SERIAL PRIMARY KEY,ruta TEXT UNIQUE);
+    CREATE TABLE paginas(id SERIAL PRIMARY KEY,modulo_id INTEGER,nombre TEXT,ruta TEXT,icono TEXT,orden INT,activo BOOLEAN,created_at TIMESTAMP,updated_at TIMESTAMP,UNIQUE(modulo_id,ruta));
+    CREATE TABLE empresa_paginas(empresa_id INTEGER,pagina_id INTEGER,rol_ids INTEGER[],created_at TIMESTAMP,UNIQUE(empresa_id,pagina_id));
+    INSERT INTO modulos(ruta)VALUES('gestion-campo');
+  `);
+  for(const nombre of ['20261006090000_confiabilidad_tareas','20261006092000_seguimiento_operativo']) {
+    await db.exec(await readFile(new URL(`../prisma/migrations/${nombre}/migration.sql`,import.meta.url),'utf8'));
+  }
+  const permisos=await rows('SELECT id,permisos_tareas::text[] AS permisos_tareas,puede_ver_seguimiento FROM roles WHERE id IN (90,91) ORDER BY id');
+  assert.deepEqual(permisos[0].permisos_tareas,['CONSULTAR','CREAR','EDITAR','ARCHIVAR']);
+  assert.deepEqual(permisos[1].permisos_tareas,['CONSULTAR']);
+  assert.equal(permisos[0].puede_ver_seguimiento,true);assert.equal(permisos[1].puede_ver_seguimiento,false);
+  const original=(await db.query('SELECT contenido FROM campo_tarea_versiones WHERE tarea_id=$1 AND version=1',[nuevaId])).rows[0].contenido;
+  await db.query("UPDATE campo_tareas SET nombre='Instrucciones nuevas',descripcion='Cambio posterior',version=2,activo=false,archivada_en=CURRENT_TIMESTAMP WHERE id=$1",[nuevaId]);
+  assert.equal((await db.query('SELECT detalle_tarea FROM campo_cumplimientos WHERE visita_id=2 AND tarea_id=$1',[nuevaId])).rows[0].detalle_tarea.nombre,original.nombre);
+  assert.equal((await rows('SELECT COUNT(*)::int AS n FROM campo_cumplimientos'))[0].n,3);
+  assert.equal((await rows('SELECT COUNT(*)::int AS n FROM campo_tarea_fotos'))[0].n,2);
+  assert.equal((await rows('SELECT COUNT(*)::int AS n FROM campo_tarea_comentarios'))[0].n,2);
+  await assert.rejects(db.query('DELETE FROM campo_tareas WHERE id=$1',[nuevaId]),/fkey/);
+  const paginaSeguimiento=(await rows("SELECT id FROM paginas WHERE ruta='seguimiento'"))[0].id;
+  assert.deepEqual((await db.query('SELECT rol_ids FROM empresa_paginas WHERE empresa_id=10 AND pagina_id=$1',[paginaSeguimiento])).rows[0].rol_ids,[90]);
   console.log(
     'OK: migración, evidencias, locales compartidos y agendas separadas por equipo.',
   );
 } catch (error) {
   console.error('Fallo de migracion/agenda:', error.message);
-  process.exitCode = 1;
+  fallo=true;
 } finally {
   await db.close();
 }
+if(fallo)process.exitCode=1;

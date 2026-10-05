@@ -15,11 +15,13 @@ import { NovedadService } from './services/novedad.service';
 import { AvisoService } from './services/aviso.service';
 import { SupervisionService } from './services/supervision.service';
 import { AdjuntoCampoService } from './services/adjunto-campo.service';
+import { SeguimientoService } from './services/seguimiento.service';
 
 @Module({
   imports: [AuthModule, PrismaModule, PlataformaModule],
   controllers: [CampoController],
   providers: [
+    SeguimientoService,
     CampoAccesoService,
     CatalogoCampoService,
     PlanificacionCampoService,

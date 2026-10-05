@@ -35,6 +35,8 @@ export class AccesoPlataformaService {
         rol: {
           select: {
             descripcion: true,
+            permisosTareas: true,
+            puedeVerSeguimiento: true,
             equipoCampo: { select: EQUIPO_CAMPO_SELECT },
           },
         },
@@ -98,6 +100,8 @@ export class AccesoPlataformaService {
       rolId: usuario.rolId,
       rolDescripcion: usuario.rol?.descripcion ?? null,
       equipoCampo: usuario.rol?.equipoCampo ?? null,
+      permisosTareas: usuario.rol?.permisosTareas ?? [],
+      puedeVerSeguimiento: usuario.rol?.puedeVerSeguimiento ?? false,
     };
   }
 
@@ -159,6 +163,8 @@ export class AccesoPlataformaService {
         rol: {
           select: {
             descripcion: true,
+            permisosTareas: true,
+            puedeVerSeguimiento: true,
             equipoCampo: { select: EQUIPO_CAMPO_SELECT },
           },
         },
@@ -228,6 +234,8 @@ export class AccesoPlataformaService {
           rolId: usuario.rolId,
           rolDescripcion: usuario.rol?.descripcion ?? null,
           equipoCampo: usuario.rol?.equipoCampo ?? null,
+          permisosTareas: usuario.rol?.permisosTareas ?? [],
+          puedeVerSeguimiento: usuario.rol?.puedeVerSeguimiento ?? false,
         },
         modulosRutas: [...new Set(rutasConAcceso)],
       };

@@ -156,6 +156,8 @@ model Rol {
   usuarios    Usuario[]
   equipoCampoId Int? @map("equipo_campo_id")
   equipoCampo EquipoCampo? @relation(fields: [equipoCampoId, empresaId], references: [id, empresaId], onDelete: NoAction, onUpdate: NoAction)
+  permisosTareas AccionTareaCampo[] @default([]) @map("permisos_tareas")
+  puedeVerSeguimiento Boolean @default(false) @map("puede_ver_seguimiento")
 
   @@unique([empresaId, descripcion])
   @@unique([id, empresaId])
@@ -212,6 +214,9 @@ model Usuario {
   lecturasAvisos          AvisoLecturaCampo[]
   adjuntosCampo           AdjuntoCampo[]
   identidadUcheck         IdentidadUcheck?
+  permitirVinculoAutomatico Boolean @default(true) @map("permitir_vinculo_automatico")
+  seguimientoCampo SeguimientoCampo?
+  operacionesCampo OperacionCampo[]
   esSuperadmin            Boolean                   @default(false) @map("es_superadmin")
   isActive                Boolean                   @default(true) @map("is_active")
   createdAt               DateTime                  @default(now()) @map("created_at")
@@ -232,6 +237,38 @@ model IdentidadUcheck {
   updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
 
   @@map("identidades_ucheck")
+}
+
+model SeguimientoCampo {
+  usuarioId Int @id @map("usuario_id")
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  jornadaId String @map("jornada_id") @db.VarChar(36)
+  activo Boolean @default(false)
+  iniciadaEn DateTime @map("iniciada_en")
+  reportadaEn DateTime @map("reportada_en")
+  recibidaEn DateTime @default(now()) @map("recibida_en")
+  latitud Float?
+  longitud Float?
+  precisionMetros Float? @map("precision_metros")
+  capturadaEn DateTime? @map("capturada_en")
+
+  @@index([activo,recibidaEn])
+  @@map("campo_seguimiento")
+}
+
+model OperacionCampo {
+  id String @id @db.VarChar(80)
+  usuarioId Int @map("usuario_id")
+  usuario Usuario @relation(fields: [usuarioId],references:[id],onDelete:Restrict)
+  ucheckJornadaId Int @map("ucheck_jornada_id")
+  tipo TipoEventoUcheck
+  estado String @default("PENDIENTE") @db.VarChar(16)
+  nota String @default("") @db.VarChar(250)
+  creadaEn DateTime @default(now()) @map("creada_en")
+  actualizadaEn DateTime @default(now()) @updatedAt @map("actualizada_en")
+
+  @@index([usuarioId,estado])
+  @@map("campo_operaciones")
 }
 
 model ClienteCampo {
@@ -362,6 +399,9 @@ model TareaCampo {
   categoria         String              @default("Relevamiento") @db.VarChar(60)
   estado            EstadoTareaCampo    @default(ABIERTA)
   esObligatoria     Boolean             @default(false) @map("es_obligatoria")
+  archivadaEn DateTime? @map("archivada_en")
+  version Int @default(1)
+  versiones VersionTareaCampo[]
   locales           TareaLocalCampo[]
   cumplimientos     CumplimientoCampo[]
   novedades         NovedadCampo[]
@@ -370,6 +410,26 @@ model TareaCampo {
   @@index([empresaId, destinatario, activo])
   @@index([empresaId, equipoCampoId, activo])
   @@map("campo_tareas")
+}
+
+enum AccionTareaCampo {
+  CONSULTAR
+  CREAR
+  EDITAR
+  ARCHIVAR
+}
+
+model VersionTareaCampo {
+  id Int @id @default(autoincrement())
+  tareaId Int @map("tarea_id")
+  tarea TareaCampo @relation(fields: [tareaId], references: [id], onDelete: Restrict)
+  version Int
+  contenido Json
+  autorId Int? @map("autor_id")
+  creadaEn DateTime @default(now()) @map("creada_en")
+
+  @@unique([tareaId,version])
+  @@map("campo_tarea_versiones")
 }
 
 enum DestinatarioTareaCampo {
@@ -485,6 +545,10 @@ model CumplimientoCampo {
   // Null mientras se adjuntan evidencias; se completa explícitamente después.
   completadaAt   DateTime?              @default(now()) @map("completada_at")
   fotosValidadas Boolean                @default(true) @map("fotos_validadas")
+  versionTarea Int @default(1) @map("version_tarea")
+  detalleTarea Json? @map("detalle_tarea")
+  actividadEn DateTime @default(now()) @updatedAt @map("actividad_en")
+  iniciadaAt DateTime? @map("iniciada_at")
   comentarios    ComentarioTareaCampo[]
   fotos          FotoTareaCampo[]
 
@@ -515,6 +579,7 @@ model ComentarioTareaCampo {
   usuarioId            Int               @map("usuario_id")
   usuario              Usuario           @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
   comentario           String            @db.VarChar(500)
+  operacionId String? @unique @map("operacion_id") @db.VarChar(36)
   creadoAt             DateTime          @default(now()) @map("creado_at")
   leidoPorLider        Boolean           @default(false) @map("leido_por_lider")
   leidoAt              DateTime?         @map("leido_at")
@@ -533,6 +598,7 @@ model FotoTareaCampo {
   usuarioId            Int               @map("usuario_id")
   usuario              Usuario           @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
   momento              MomentoFotoCampo
+  operacionId String? @unique @map("operacion_id") @db.VarChar(36)
   rutaArchivo          String            @map("ruta_archivo") @db.VarChar(500)
   mimeType             String            @map("mime_type") @db.VarChar(50)
   tamanioBytes         Int               @map("tamanio_bytes")

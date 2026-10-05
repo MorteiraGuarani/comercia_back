@@ -1,7 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { crearComentario, listarComentarios, marcarComentarioLeido } from "@/lib/api-tareas";
+import { listarComentarios, marcarComentarioLeido } from "@/lib/api-tareas";
+import { usePanel } from "@/components/panel/contexto";
+import {
+  enviarAccionTarea,
+  guardarBorrador,
+  leerBorrador,
+} from "@/lib/pendientes-tareas";
+import { useRef } from "react";
 import type { ComentarioTarea } from "@/types/campo";
 import { mostrarToast } from "@/components/toast/toast-controller";
 
@@ -11,11 +18,35 @@ interface PanelComentariosProps {
   esLider?: boolean;
 }
 
-export function PanelComentarios({ visitaId, tareaId, esLider = false }: PanelComentariosProps) {
+export function PanelComentarios({
+  visitaId,
+  tareaId,
+  esLider = false,
+}: PanelComentariosProps) {
+  const { usuario } = usePanel();
+  const borradorListo = useRef(false);
+  const claveBorrador = `comentario:${visitaId}:${tareaId}`;
   const [comentarios, setComentarios] = useState<ComentarioTarea[]>([]);
   const [cargando, setCargando] = useState(true);
   const [enviando, setEnviando] = useState(false);
   const [texto, setTexto] = useState("");
+  useEffect(() => {
+    let vigente = true;
+    borradorListo.current = false;
+    void leerBorrador(usuario.id, claveBorrador)
+      .then((t) => {
+        if (vigente) {
+          setTexto(t);
+          borradorListo.current = true;
+        }
+      })
+      .catch(() => {
+        borradorListo.current = true;
+      });
+    return () => {
+      vigente = false;
+    };
+  }, [usuario.id, claveBorrador]);
 
   useEffect(() => {
     let activo = true;
@@ -41,8 +72,21 @@ export function PanelComentarios({ visitaId, tareaId, esLider = false }: PanelCo
 
     setEnviando(true);
     try {
-      await crearComentario(visitaId, tareaId, { comentario: texto.trim() });
+      const resultado = await enviarAccionTarea<ComentarioTarea>(
+        usuario.id,
+        `/campo/jornada/visitas/${visitaId}/tareas/${tareaId}/comentarios`,
+        "Comentario de tarea",
+        { comentario: texto.trim() },
+      );
       setTexto("");
+      await guardarBorrador(usuario.id, claveBorrador, "");
+      if (resultado.pendiente) {
+        mostrarToast(
+          "exito",
+          "Comentario guardado en este dispositivo, pendiente de envío",
+        );
+        return;
+      }
       mostrarToast("exito", "Comentario enviado");
       const data = await listarComentarios(visitaId, tareaId);
       setComentarios(data);
@@ -121,7 +165,18 @@ export function PanelComentarios({ visitaId, tareaId, esLider = false }: PanelCo
         <form onSubmit={handleEnviar} className="space-y-3">
           <textarea
             value={texto}
-            onChange={(e) => setTexto(e.target.value)}
+            onChange={(e) => {
+              const nuevo = e.target.value;
+              setTexto(nuevo);
+              if (borradorListo.current)
+                void guardarBorrador(usuario.id, claveBorrador, nuevo).catch(
+                  () =>
+                    mostrarToast(
+                      "error",
+                      "No se pudo conservar el borrador en este dispositivo",
+                    ),
+                );
+            }}
             placeholder="Escribe un comentario..."
             maxLength={500}
             rows={3}

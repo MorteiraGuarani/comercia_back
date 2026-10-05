@@ -21,6 +21,7 @@ describe('Catálogo de tareas', () => {
     const acceso = {
       gestionar: jest.fn().mockResolvedValue({
         empresaId: 10,
+        permisosTareas: ['CONSULTAR', 'CREAR', 'EDITAR', 'ARCHIVAR'],
         equipoCampo: {
           id: 1,
           nombre: 'Impulsadores',
@@ -62,6 +63,7 @@ describe('Catálogo de tareas', () => {
       gestionar: jest.fn().mockResolvedValue({
         id: 1,
         empresaId: 10,
+        permisosTareas: ['CONSULTAR', 'CREAR', 'EDITAR', 'ARCHIVAR'],
         equipoCampo: {
           id: 1,
           nombre: 'Impulsadores',
@@ -90,6 +92,7 @@ describe('Catálogo de tareas', () => {
           empresaId: 10,
           destinatario: 'IMPULSADOR',
           equipoCampoId: 1,
+          archivadaEn: null,
           categoria: 'Precios',
           requiereFotos: true,
           OR: [

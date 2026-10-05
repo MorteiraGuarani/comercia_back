@@ -11,6 +11,8 @@ export function aRolAdminDto(rol: RolAdminFila): RolAdminDto {
     padre: rol.padre,
     usuariosCount: rol._count.usuarios,
     hijosCount: rol._count.hijos,
+    permisosTareas: rol.permisosTareas ?? [],
+    puedeVerSeguimiento: rol.puedeVerSeguimiento ?? false,
     equipoCampo: rol.equipoCampo
       ? {
           id: rol.equipoCampo.id,

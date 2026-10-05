@@ -58,6 +58,7 @@ describe('Evidencias antes de completar una tarea', () => {
         }),
       },
       cumplimientoCampo: {
+        update: jest.fn(),
         upsert: jest.fn().mockResolvedValue({ tareaId: 40 }),
         findUnique: jest.fn(),
       },

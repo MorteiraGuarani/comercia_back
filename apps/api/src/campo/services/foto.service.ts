@@ -1,3 +1,4 @@
+import { detalleTarea } from '../utils/version-tarea';
 import {
   BadRequestException,
   ForbiddenException,
@@ -36,9 +37,37 @@ export class FotoService {
     tareaId: number,
     momento: MomentoFotoDto,
     file: Express.Multer.File,
+    operacionId?: string,
   ): Promise<FotoTareaDto> {
     // Validar archivo
     validarArchivoImagen(file);
+    if (operacionId) {
+      const anterior = await this.prisma.fotoTareaCampo.findFirst({
+        where: {
+          operacionId,
+          usuarioId,
+          cumplimientoVisitaId: visitaId,
+          cumplimientoTareaId: tareaId,
+          momento,
+        },
+        select: {
+          id: true,
+          momento: true,
+          rutaArchivo: true,
+          mimeType: true,
+          tamanioBytes: true,
+          creadoAt: true,
+        },
+      });
+      if (anterior) {
+        try {
+          unlinkSync(file.path);
+        } catch {
+          /* El archivo temporal puede haberse eliminado. */
+        }
+        return anterior;
+      }
+    }
 
     const tarea = await tareaParaEvidencia(
       this.prisma,
@@ -51,7 +80,19 @@ export class FotoService {
       throw new BadRequestException('Esta tarea no admite fotos');
     }
     // Crear un borrador para las evidencias, sin contabilizar una tarea cumplida.
-    await prepararEvidencia(this.prisma, visitaId, tareaId, tarea.nombre);
+    await prepararEvidencia(
+      this.prisma,
+      visitaId,
+      tareaId,
+      tarea.nombre,
+      tarea.version,
+      detalleTarea(tarea),
+    );
+    await this.prisma.cumplimientoCampo.update({
+      where: { visitaId_tareaId: { visitaId, tareaId } },
+      data: { actividadEn: new Date() },
+      select: { tareaId: true },
+    });
 
     // Verificar si ya existe una foto para este momento
     const fotoExistente = await this.prisma.fotoTareaCampo.findUnique({
@@ -70,6 +111,7 @@ export class FotoService {
         where: { id: fotoExistente.id },
         data: {
           rutaArchivo: file.path,
+          operacionId,
           mimeType: file.mimetype,
           tamanioBytes: file.size,
           creadoAt: new Date(),
@@ -109,6 +151,7 @@ export class FotoService {
         cumplimientoTareaId: tareaId,
         usuarioId,
         momento: momento,
+        operacionId,
         rutaArchivo: file.path,
         mimeType: file.mimetype,
         tamanioBytes: file.size,

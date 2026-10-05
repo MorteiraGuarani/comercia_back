@@ -1,14 +1,23 @@
 import { ForbiddenException } from '@nestjs/common';
+import type { AccionTareaCampo } from '../../../generated/prisma/client';
 
-export function puedeAdministrarCatalogoTareas(rolDescripcion: string | null) {
-  const rol = rolDescripcion?.toLowerCase().replace(/[^a-z]/g, '');
-  return rol === 'supervisor' || rol === 'supervisorrepositores';
+export function permisosCatalogoTareas(permisos: AccionTareaCampo[] = []) {
+  return {
+    consultar: permisos.includes('CONSULTAR'),
+    crear: permisos.includes('CREAR'),
+    editar: permisos.includes('EDITAR'),
+    archivar: permisos.includes('ARCHIVAR'),
+    puedeAdministrar: permisos.some((p) => p !== 'CONSULTAR'),
+  };
 }
 
-export function exigirAdministracionTareas(rolDescripcion: string | null) {
-  if (!puedeAdministrarCatalogoTareas(rolDescripcion)) {
+export function exigirAdministracionTareas(
+  permisos: AccionTareaCampo[] = [],
+  accion: AccionTareaCampo = 'EDITAR',
+) {
+  if (!permisos.includes(accion)) {
     throw new ForbiddenException(
-      'Solo el Supervisor puede administrar el catálogo de tareas',
+      'Tu rol no tiene permiso para esta operación de tareas',
     );
   }
 }

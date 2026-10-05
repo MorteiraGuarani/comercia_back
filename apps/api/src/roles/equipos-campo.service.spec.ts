@@ -105,6 +105,8 @@ describe('Equipos operativos configurables', () => {
           descripcion: 'Mercaderista Auxiliar',
           rolId: null,
           equipoCampoId: 2,
+          permisosTareas: [],
+          puedeVerSeguimiento: false,
         },
       }),
     );
@@ -141,6 +143,8 @@ describe('Equipos operativos configurables', () => {
           descripcion: 'Supervisor Norte',
           rolId: null,
           equipoCampoId: 4,
+          permisosTareas: [],
+          puedeVerSeguimiento: false,
         },
       }),
     );

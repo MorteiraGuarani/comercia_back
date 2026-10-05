@@ -1,8 +1,12 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { apiFetch } from "@/lib/api";
+import { enviarAccionTarea } from "@/lib/pendientes-tareas";
+import { usePanel } from "@/components/panel/contexto";
+import { PendientesTareas } from "./pendientes-tareas";
+import { mostrarToast } from "@/components/toast/toast-controller";
 import { useJornadaCompleta } from "@/hooks/use-jornada-completa";
 import { fechaEnZonaIso, queryFechasCampo } from "@/utils/fechas";
 import { tareaCumplidaEnVisita } from "@/utils/tareas-campo";
@@ -30,7 +34,12 @@ import type {
   TipoNovedad,
 } from "@/types/campo";
 
-export function TareasImpulsadorPanel({ esRepositor = false }: { esRepositor?: boolean }) {
+export function TareasImpulsadorPanel({
+  esRepositor = false,
+}: {
+  esRepositor?: boolean;
+}) {
+  const { usuario } = usePanel();
   const hoyStr = fechaEnZonaIso(new Date());
   const [periodo, setPeriodo] = useState<PeriodoFiltro>({
     clave: "hoy",
@@ -98,7 +107,7 @@ export function TareasImpulsadorPanel({ esRepositor = false }: { esRepositor?: b
     revision,
   ]);
   const cargando = jornada.cargando || consulta !== consultaTerminada;
-  const cargarDatos = () => setRevision((n) => n + 1);
+  const cargarDatos = useCallback(() => setRevision((n) => n + 1), []);
   useEffect(() => {
     if (jornada.cargando) return;
     let vigente = true;
@@ -142,14 +151,47 @@ export function TareasImpulsadorPanel({ esRepositor = false }: { esRepositor?: b
   ]);
 
   // Completar tarea
+  const iniciarTarea = async (localId: number, tareaId: number) => {
+    if (!abierta || abierta.local.id !== localId || completandoId) return;
+    setCompletandoId(tareaId);
+    setErrorAccion("");
+    try {
+      const r = await enviarAccionTarea(
+        usuario.id,
+        `/campo/jornada/visitas/${abierta.id}/tareas/${tareaId}/iniciar`,
+        "Inicio de tarea",
+      );
+      if (r.pendiente)
+        mostrarToast(
+          "exito",
+          "Inicio guardado en el dispositivo, pendiente de envío",
+        );
+      else cargarDatos();
+    } catch (e) {
+      setErrorAccion(
+        e instanceof Error ? e.message : "No se pudo iniciar la tarea",
+      );
+    } finally {
+      setCompletandoId(null);
+    }
+  };
   const completarTarea = async (localId: number, tareaId: number) => {
     if (!abierta || abierta.local.id !== localId || completandoId) return;
     try {
       setCompletandoId(tareaId);
       setErrorAccion("");
-      await apiFetch(`/campo/jornada/visitas/${abierta.id}/tareas/${tareaId}`, {
-        method: "POST",
-      });
+      const resultado = await enviarAccionTarea(
+        usuario.id,
+        `/campo/jornada/visitas/${abierta.id}/tareas/${tareaId}`,
+        "Completar tarea",
+      );
+      if (resultado.pendiente) {
+        mostrarToast(
+          "exito",
+          "Acción guardada en el dispositivo; la tarea aún está pendiente de confirmar",
+        );
+        return;
+      }
       // Recargar tareas
       await cargarDatos();
     } catch (e: unknown) {
@@ -203,15 +245,33 @@ export function TareasImpulsadorPanel({ esRepositor = false }: { esRepositor?: b
   );
   const total = todasLasTareas.length;
   const completadas = Object.entries(tareasPorLocal).reduce(
-    (cantidad, [asignacionId, datos]) => cantidad + datos.items.filter((t) => tareaCumplidaEnVisita(
-      t, abierta?.asignacionId === Number(asignacionId) ? abierta.id : undefined,
-    )).length, 0,
+    (cantidad, [asignacionId, datos]) =>
+      cantidad +
+      datos.items.filter((t) =>
+        tareaCumplidaEnVisita(
+          t,
+          abierta?.asignacionId === Number(asignacionId)
+            ? abierta.id
+            : undefined,
+        ),
+      ).length,
+    0,
   );
   const pct = total ? Math.round((completadas / total) * 100) : 0;
   const obligatoriasPendientes = Object.entries(tareasPorLocal).reduce(
-    (cantidad, [asignacionId, datos]) => cantidad + datos.items.filter((t) => t.fotosObligatorias && !tareaCumplidaEnVisita(
-      t, abierta?.asignacionId === Number(asignacionId) ? abierta.id : undefined,
-    )).length, 0,
+    (cantidad, [asignacionId, datos]) =>
+      cantidad +
+      datos.items.filter(
+        (t) =>
+          t.fotosObligatorias &&
+          !tareaCumplidaEnVisita(
+            t,
+            abierta?.asignacionId === Number(asignacionId)
+              ? abierta.id
+              : undefined,
+          ),
+      ).length,
+    0,
   );
 
   return (
@@ -222,6 +282,9 @@ export function TareasImpulsadorPanel({ esRepositor = false }: { esRepositor?: b
         color: TOKENS.ink,
       }}
     >
+      <div className="px-4 pt-3 sm:px-6">
+        <PendientesTareas onSincronizar={cargarDatos} />
+      </div>
       <TopBar
         title="Mis Tareas del Día"
         subtitle="Cumplimiento y registro de actividades operativas"
@@ -237,9 +300,13 @@ export function TareasImpulsadorPanel({ esRepositor = false }: { esRepositor?: b
       />
       {esRepositor ? (
         <div className="mx-auto w-full max-w-6xl px-4 pt-4 sm:px-6">
-          <Link href="/panel/mi-jornada/locales"
-            className="inline-flex min-h-11 items-center rounded-lg border border-line bg-surface-raised px-4 text-sm font-semibold text-foreground hover:bg-surface-soft focus-visible:ring-2 focus-visible:ring-focus">
-            {abierta ? "Volver a la ruta para marcar salida" : "Ir a la ruta para marcar entrada"}
+          <Link
+            href="/panel/mi-jornada/locales"
+            className="inline-flex min-h-11 items-center rounded-lg border border-line bg-surface-raised px-4 text-sm font-semibold text-foreground hover:bg-surface-soft focus-visible:ring-2 focus-visible:ring-focus"
+          >
+            {abierta
+              ? "Volver a la ruta para marcar salida"
+              : "Ir a la ruta para marcar entrada"}
           </Link>
         </div>
       ) : null}
@@ -275,7 +342,10 @@ export function TareasImpulsadorPanel({ esRepositor = false }: { esRepositor?: b
             Cargando tareas del día…
           </div>
         ) : error ? (
-          <div role="alert" className="p-4 rounded-lg bg-red-50 text-red-700 text-xs dark:bg-red-950 dark:text-red-200">
+          <div
+            role="alert"
+            className="p-4 rounded-lg bg-red-50 text-red-700 text-xs dark:bg-red-950 dark:text-red-200"
+          >
             {error}
           </div>
         ) : agendas.length === 0 ? (
@@ -341,21 +411,20 @@ export function TareasImpulsadorPanel({ esRepositor = false }: { esRepositor?: b
                 ) : (
                   <div className="space-y-2">
                     {tareas.map((t) => {
-                      const cumplida = tareaCumplidaEnVisita(t, estaEnVisita ? abierta!.id : undefined);
+                      const cumplida = tareaCumplidaEnVisita(
+                        t,
+                        estaEnVisita ? abierta!.id : undefined,
+                      );
 
                       return (
                         <div
                           key={t.id}
                           className="p-3 rounded-lg border flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
                           style={{
-                            borderColor:
-                              cumplida
-                                ? TOKENS.fresco
-                                : TOKENS.line,
-                            background:
-                              cumplida
-                                ? `color-mix(in srgb, ${TOKENS.fresco} 8%, ${TOKENS.canvas})`
-                                : TOKENS.canvas,
+                            borderColor: cumplida ? TOKENS.fresco : TOKENS.line,
+                            background: cumplida
+                              ? `color-mix(in srgb, ${TOKENS.fresco} 8%, ${TOKENS.canvas})`
+                              : TOKENS.canvas,
                           }}
                         >
                           <div className="min-w-0">
@@ -433,6 +502,22 @@ export function TareasImpulsadorPanel({ esRepositor = false }: { esRepositor?: b
                             )}
 
                             {/* Estado y Acción Completar */}
+                            {!cumplida && estaEnVisita ? (
+                              t.iniciadaAt ? (
+                                <StatusStamp tone="carne">EN CURSO</StatusStamp>
+                              ) : (
+                                <button
+                                  type="button"
+                                  disabled={completandoId !== null}
+                                  onClick={() =>
+                                    void iniciarTarea(ag.local.id, t.id)
+                                  }
+                                  className="min-h-11 rounded-lg border border-line px-3 text-xs font-semibold text-foreground hover:bg-surface-soft disabled:opacity-50"
+                                >
+                                  Empezar tarea
+                                </button>
+                              )
+                            ) : null}
                             {cumplida ? (
                               <StatusStamp tone="fresco">CUMPLIDA</StatusStamp>
                             ) : estaEnVisita ? (

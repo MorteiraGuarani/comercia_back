@@ -17,6 +17,7 @@ import type {
   UsuarioLocalAsignacion,
 } from "@/types/usuario";
 import { Modal } from "@/components/modal";
+import { VinculoUcheck } from "./vinculo-ucheck";
 import { Paginacion } from "@/components/paginacion";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import {
@@ -120,7 +121,12 @@ function ListaUsuariosMovil({
             </p>
           ) : (
             <>
-              <BotonEditar onClick={() => onEditar(usuario)} etiqueta={`Editar usuario ${usuario.nombre} ${usuario.apellido}`} modo="texto" className="mt-2 w-full" />
+              <BotonEditar
+                onClick={() => onEditar(usuario)}
+                etiqueta={`Editar usuario ${usuario.nombre} ${usuario.apellido}`}
+                modo="texto"
+                className="mt-2 w-full"
+              />
               <button
                 type="button"
                 onClick={() => onLocales(usuario)}
@@ -392,7 +398,10 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
                     </span>
                   ) : (
                     <div className="flex justify-end gap-2">
-                      <BotonEditar onClick={() => abrirEditar(usuario)} etiqueta={`Editar usuario ${usuario.nombre} ${usuario.apellido}`} />
+                      <BotonEditar
+                        onClick={() => abrirEditar(usuario)}
+                        etiqueta={`Editar usuario ${usuario.nombre} ${usuario.apellido}`}
+                      />
                       <button
                         type="button"
                         onClick={() => setLocalesUsuario(usuario)}
@@ -496,14 +505,20 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
                   <label className={labelBase}>
                     DV
                     <input
-                      value={form.ruc.length >= 3 ? calcularDvRucPy(form.ruc) : ""}
+                      value={
+                        form.ruc.length >= 3 ? calcularDvRucPy(form.ruc) : ""
+                      }
                       readOnly
                       aria-label="Dígito verificador calculado"
                       className={`${inputBase} text-center`}
                     />
                   </label>
                 </div>
-                <p id="ruc-calculado" className="mt-2 text-xs text-muted" aria-live="polite">
+                <p
+                  id="ruc-calculado"
+                  className="mt-2 text-xs text-muted"
+                  aria-live="polite"
+                >
                   {form.ruc.length >= 3
                     ? `RUC completo: ${form.ruc}-${calcularDvRucPy(form.ruc)}`
                     : "Ingresá de 3 a 8 números; el dígito verificador se calcula automáticamente."}
@@ -617,6 +632,9 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
               Usuario activo
             </label>
           )}
+          {editando && editando !== "nuevo" && meta?.esSuperadmin ? (
+            <VinculoUcheck key={editando.id} usuarioId={editando.id} />
+          ) : null}
           {error && <p className={errorBox}>{error}</p>}
           <div className="flex justify-end gap-2">
             <button
@@ -716,7 +734,8 @@ function AsignacionesUsuario({
   usuario: UsuarioAdmin;
   onCerrar: () => void;
 }) {
-  const [datos, setDatos] = useState<RespuestaPaginada<UsuarioLocalAsignacion> | null>(null);
+  const [datos, setDatos] =
+    useState<RespuestaPaginada<UsuarioLocalAsignacion> | null>(null);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(7);
   const [localId, setLocalId] = useState<number | "">("");
@@ -782,14 +801,14 @@ function AsignacionesUsuario({
   }
 
   async function quitar(asignacion: UsuarioLocalAsignacion) {
-    if (!window.confirm(`¿Quitar ${asignacion.nombreLocal} de este usuario?`)) return;
+    if (!window.confirm(`¿Quitar ${asignacion.nombreLocal} de este usuario?`))
+      return;
     setGuardando(true);
     setError(null);
     try {
-      await apiFetch(
-        `${base}/${usuario.id}/asignaciones/${asignacion.id}`,
-        { method: "DELETE" },
-      );
+      await apiFetch(`${base}/${usuario.id}/asignaciones/${asignacion.id}`, {
+        method: "DELETE",
+      });
       cargar();
     } catch (problema) {
       setError(
@@ -810,10 +829,13 @@ function AsignacionesUsuario({
       ancho="lg"
     >
       <p className="text-sm text-muted">
-        Las tareas configuradas para estos locales aparecerán automáticamente en su agenda
-        durante la vigencia de cada asignación.
+        Las tareas configuradas para estos locales aparecerán automáticamente en
+        su agenda durante la vigencia de cada asignación.
       </p>
-      <form onSubmit={asignar} className="mt-5 space-y-3 rounded-xl border border-line bg-surface-soft p-4">
+      <form
+        onSubmit={asignar}
+        className="mt-5 space-y-3 rounded-xl border border-line bg-surface-soft p-4"
+      >
         <SelectorPaginado
           key={`${base}-${usuario.id}`}
           url={`${base}/locales?empresaId=${usuario.empresa.id}`}
@@ -853,13 +875,23 @@ function AsignacionesUsuario({
         <p className="mt-5 text-sm text-muted">Cargando asignaciones...</p>
       ) : datos && datos.items.length > 0 ? (
         <div data-inicio-listado className="scroll-mt-20">
-          <ul className="mt-5 space-y-2 md:hidden" aria-label="Locales asignados">
+          <ul
+            className="mt-5 space-y-2 md:hidden"
+            aria-label="Locales asignados"
+          >
             {datos.items.map((asignacion) => (
-              <li key={asignacion.id} className="rounded-xl border border-line bg-surface-raised p-3">
+              <li
+                key={asignacion.id}
+                className="rounded-xl border border-line bg-surface-raised p-3"
+              >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="truncate font-semibold">{asignacion.nombreLocal}</p>
-                    <p className="truncate text-xs text-muted">{asignacion.nombreCliente}</p>
+                    <p className="truncate font-semibold">
+                      {asignacion.nombreLocal}
+                    </p>
+                    <p className="truncate text-xs text-muted">
+                      {asignacion.nombreCliente}
+                    </p>
                   </div>
                   <button
                     type="button"
@@ -871,7 +903,8 @@ function AsignacionesUsuario({
                   </button>
                 </div>
                 <p className="mt-2 text-xs text-muted">
-                  Vigencia: {asignacion.fechaDesde.slice(0, 10)} · {asignacion.fechaHasta?.slice(0, 10) ?? "sin fecha de fin"}
+                  Vigencia: {asignacion.fechaDesde.slice(0, 10)} ·{" "}
+                  {asignacion.fechaHasta?.slice(0, 10) ?? "sin fecha de fin"}
                 </p>
               </li>
             ))}
@@ -889,10 +922,13 @@ function AsignacionesUsuario({
               <tbody className="divide-y divide-line bg-surface-raised">
                 {datos.items.map((asignacion) => (
                   <tr key={asignacion.id}>
-                    <td className="px-4 py-3 font-medium">{asignacion.nombreLocal}</td>
+                    <td className="px-4 py-3 font-medium">
+                      {asignacion.nombreLocal}
+                    </td>
                     <td className="px-4 py-3">{asignacion.nombreCliente}</td>
                     <td className="px-4 py-3 text-muted">
-                      {asignacion.fechaDesde.slice(0, 10)} · {asignacion.fechaHasta?.slice(0, 10) ?? "Sin fin"}
+                      {asignacion.fechaDesde.slice(0, 10)} ·{" "}
+                      {asignacion.fechaHasta?.slice(0, 10) ?? "Sin fin"}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <button
