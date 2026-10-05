@@ -12,7 +12,7 @@ Las migraciones de desarrollo se aplicaron con respaldo: Comercia tiene 48 termi
 
 API Ucheck desplegada del commit `61482f97448ec67d355963b608c4a7c16c425482`, contenedor saludable y health HTTP 200. Producción tiene 21 migraciones aplicadas, incluyendo `20261006091000_seguimiento_campo`.
 
-El APK [1.2.9, versionCode 20](http://172.19.0.140:3002/descargas/UCHECK-v1.2.9.apk) está publicado con la firma existente. SHA-256: `9ae3a6fd41df3f660a55e546524d2da660d78419e9df729267395f2bfdaaeed6`. Se verificaron firma, checksum remoto y descarga HTTP 200 de 83.234.047 bytes. La documentación completa está en el repositorio Ucheck, `docs/mejoras/entrega-seguimiento-produccion.md`.
+El APK [1.2.9, versionCode 20](http://182.160.29.45:3002/descargas/UCHECK-v1.2.9.apk) está publicado con la firma existente. SHA-256: `9ae3a6fd41df3f660a55e546524d2da660d78419e9df729267395f2bfdaaeed6`. Se verificaron firma, checksum remoto y descarga HTTP 200 de 83.234.047 bytes, incluyendo su dirección pública. La documentación completa está en el repositorio Ucheck, `docs/mejoras/entrega-seguimiento-produccion.md`.
 
 ## Despliegue de Comercia confirmado
 
