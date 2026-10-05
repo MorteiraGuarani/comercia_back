@@ -25,6 +25,10 @@ import {
   rolDelEquipoCampo,
   exigirEquipoCampo,
 } from './utils/equipo-campo';
+import {
+  exigirAdministracionTareas,
+  puedeAdministrarCatalogoTareas,
+} from './utils/permisos-tareas';
 
 @Injectable()
 export class CatalogoCampoService {
@@ -290,10 +294,14 @@ export class CatalogoCampoService {
     return {
       ...respuestaPaginada(items, total, page, limit),
       resumen: { total: totalCatalogo, obligatorias, conFotos },
+      permisos: {
+        puedeAdministrar: puedeAdministrarCatalogoTareas(u.rolDescripcion),
+      },
     };
   }
   async guardarTarea(usuarioId: number, dto: TareaCampoDto, id?: number) {
     const u = await this.acceso.gestionar(usuarioId, 'tareas');
+    exigirAdministracionTareas(u.rolDescripcion);
     const destinatario = destinatarioCampo(u.equipoCampo);
     const equipoCampoId = exigirEquipoCampo(u.equipoCampo).id;
     if (dto.destinatario && dto.destinatario !== destinatario)
@@ -352,6 +360,7 @@ export class CatalogoCampoService {
   }
   async eliminarTarea(usuarioId: number, id: number) {
     const u = await this.acceso.gestionar(usuarioId, 'tareas');
+    exigirAdministracionTareas(u.rolDescripcion);
     const tarea = await this.prisma.tareaCampo.findFirst({
       where: {
         id,

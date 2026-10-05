@@ -2,6 +2,7 @@ import type { RespuestaPaginada } from "./paginacion";
 
 export interface RespuestaCatalogoTareasCampo extends RespuestaPaginada<TareaCampo> {
   resumen: { total: number; obligatorias: number; conFotos: number };
+  permisos: { puedeAdministrar: boolean };
 }
 
 export interface ClienteCampo {

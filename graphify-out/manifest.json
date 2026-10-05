@@ -1925,8 +1925,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/campo/catalogo-campo.service.ts": {
-    "mtime": 1791209689.4678214,
-    "ast_hash": "078f21d7b2d58d58c301bb24247d1806",
+    "mtime": 1791211895.0912638,
+    "ast_hash": "8937e462837a64271c701c48a58d17d1",
     "semantic_hash": ""
   },
   "apps/api/src/campo/dto/campo.dto.ts": {
@@ -2000,8 +2000,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/tareas-panel.tsx": {
-    "mtime": 1791209689.946707,
-    "ast_hash": "66e9399b2a3258704da6e9340e42acb0",
+    "mtime": 1791212098.0680256,
+    "ast_hash": "d272158a588e0930da0ef9111f42d040",
     "semantic_hash": ""
   },
   "apps/web/src/hooks/use-lista-campo.ts": {
@@ -2010,8 +2010,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/types/campo.ts": {
-    "mtime": 1790358305.3204184,
-    "ast_hash": "d0903c2da392a14e541953d4f7e6b666",
+    "mtime": 1791211895.484957,
+    "ast_hash": "b4ad09001bc9ef80d04a7665d9d4665c",
     "semantic_hash": ""
   },
   "docs/operaciones-campo.md": {
@@ -2515,8 +2515,8 @@
     "semantic_hash": ""
   },
   "docs/supervisor-teamleader-ucheck.md": {
-    "mtime": 1790190685.684601,
-    "ast_hash": "54c96d87ba97819493144aa93b9fab72",
+    "mtime": 1791212093.9063563,
+    "ast_hash": "c46926ea772ad36d35fbf3e06bfe81b7",
     "semantic_hash": ""
   },
   "apps/api/prisma/migrations/20260924120000_avisos_programados_y_destinatarios/migration.sql": {
@@ -2620,8 +2620,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/campo/equipo-campo.service.spec.ts": {
-    "mtime": 1791209981.650004,
-    "ast_hash": "ea96da1942c33e36335da5746436d96a",
+    "mtime": 1791212006.756803,
+    "ast_hash": "9a1ed3dab3ce4be9f30e4a8a1dff7a01",
     "semantic_hash": ""
   },
   "apps/api/src/campo/utils/equipo-campo.ts": {
@@ -2657,6 +2657,16 @@
   "apps/api/src/roles/interfaces/equipo-campo.interface.ts": {
     "mtime": 1791206695.39898,
     "ast_hash": "f80c03a4c72e1909c8bb635ca6d70f10",
+    "semantic_hash": ""
+  },
+  "apps/api/src/campo/catalogo-tareas-permisos.service.spec.ts": {
+    "mtime": 1791212097.8104887,
+    "ast_hash": "04163941074a5ec7d301ab90a68f3f74",
+    "semantic_hash": ""
+  },
+  "apps/api/src/campo/utils/permisos-tareas.ts": {
+    "mtime": 1791212097.8104887,
+    "ast_hash": "6a119f9cd2a8dc2ee2c8c9eb0e939cca",
     "semantic_hash": ""
   }
 }

@@ -174,7 +174,7 @@ describe.each(casos)('Separación de equipo: %s', (rol, equipo, otroEquipo) => {
 
   it('impide editar y borrar tareas de otro equipo con el mismo tipo de trabajador', async () => {
     const { catalogo, prisma } = contexto(
-      'Nombre completamente nuevo',
+      'SUPERVISOR',
       DestinatarioTareaCampo.IMPULSADOR,
     );
     const dto = Object.assign(new TareaCampoDto(), {
@@ -213,7 +213,7 @@ describe.each(casos)('Separación de equipo: %s', (rol, equipo, otroEquipo) => {
 describe('Roles sin nombre conocido', () => {
   it('usa la configuración del equipo aunque el nombre del rol sugiera otro perfil', async () => {
     const { catalogo, prisma } = contexto(
-      'REPOSITOR',
+      'SUPERVISOR_REPOSITORES',
       DestinatarioTareaCampo.IMPULSADOR,
     );
     await catalogo.guardarTarea(

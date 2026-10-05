@@ -55,7 +55,9 @@ export function TareasPanel() {
   if (categoriaFiltro !== "Todas") parametros.set("categoria", categoriaFiltro);
   if (filtroTipo !== "todas") parametros.set("tipo", filtroTipo);
   const lista = useListaCampo<TareaCampo>(`/campo/tareas?${parametros}`, 0, 7);
-  const resumen = (lista.datos as RespuestaCatalogoTareasCampo | null)?.resumen;
+  const datos = lista.datos as RespuestaCatalogoTareasCampo | null;
+  const resumen = datos?.resumen;
+  const puedeAdministrar = datos?.permisos?.puedeAdministrar === true;
   const { setPage } = lista;
 
   useEffect(() => {
@@ -69,6 +71,7 @@ export function TareasPanel() {
   const [id, setId] = useState(0);
   const [form, setForm] = useState<FormTareaCampo | null>(null);
   const [categoriaPersonalizada, setCategoriaPersonalizada] = useState(false);
+  const formularioAbierto = !!form && puedeAdministrar;
 
   // Lista de locales para selector
   const [localesDisponibles, setLocalesDisponibles] = useState<LocalCampo[]>(
@@ -77,13 +80,14 @@ export function TareasPanel() {
   const [busquedaLocal, setBusquedaLocal] = useState("");
 
   useEffect(() => {
-    apiFetch<{ items: LocalCampo[] }>("/campo/locales?limit=100")
+    if (!formularioAbierto) return;
+    apiFetch<{ items: LocalCampo[] }>("/campo/locales?limit=50")
       .then((res) => setLocalesDisponibles(res.items || []))
       .catch(() => undefined);
-  }, []);
+  }, [formularioAbierto]);
 
   function abrir(t?: TareaCampo) {
-    if (!destinatario) return;
+    if (!destinatario || !puedeAdministrar) return;
     setId(t?.id ?? 0);
     op.limpiarError();
 
@@ -109,6 +113,7 @@ export function TareasPanel() {
   }
 
   async function eliminar(tarea: TareaCampo) {
+    if (!puedeAdministrar) return;
     if (
       !window.confirm(
         `¿Eliminar la tarea «${tarea.nombre}» del catálogo? Esta acción no se puede deshacer.`,
@@ -128,19 +133,25 @@ export function TareasPanel() {
     >
       <TopBar
         title="Catálogo de Tareas"
-        subtitle="Repositorio de tareas operativas y protocolos para el equipo en calle"
+        subtitle={
+          puedeAdministrar
+            ? "Repositorio de tareas operativas y protocolos para el equipo en calle"
+            : "Consultá las instrucciones y el alcance de las tareas · Solo lectura"
+        }
         right={
-          <button
-            type="button"
-            onClick={() => abrir()}
-            disabled={!destinatario}
-            aria-label="Crear tarea"
-            title="Crear tarea"
-            className="grid h-11 w-11 place-items-center rounded-lg text-white transition-colors hover:brightness-110"
-            style={{ backgroundColor: TOKENS.carne }}
-          >
-            <IconoMas className="w-4 h-4" />
-          </button>
+          puedeAdministrar ? (
+            <button
+              type="button"
+              onClick={() => abrir()}
+              disabled={!destinatario}
+              aria-label="Crear tarea"
+              title="Crear tarea"
+              className="grid h-11 w-11 place-items-center rounded-lg text-white transition-colors hover:brightness-110"
+              style={{ backgroundColor: TOKENS.carne }}
+            >
+              <IconoMas className="w-4 h-4" />
+            </button>
+          ) : null
         }
       />
 
@@ -301,22 +312,24 @@ export function TareasPanel() {
                         {tarea.nombre}
                       </h3>
                     </div>
-                    <div className="flex shrink-0 gap-1">
-                      <BotonEditar
-                        onClick={() => abrir(tarea)}
-                        etiqueta={`Editar tarea ${tarea.nombre}`}
-                        modo="texto"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => void eliminar(tarea)}
-                        disabled={!!op.mensaje}
-                        aria-label={"Eliminar " + tarea.nombre}
-                        className="grid h-11 w-11 place-items-center rounded-md border border-red-200 text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950"
-                      >
-                        <IconoEliminar className="h-4 w-4" />
-                      </button>
-                    </div>
+                    {puedeAdministrar ? (
+                      <div className="flex shrink-0 gap-1">
+                        <BotonEditar
+                          onClick={() => abrir(tarea)}
+                          etiqueta={`Editar tarea ${tarea.nombre}`}
+                          modo="texto"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => void eliminar(tarea)}
+                          disabled={!!op.mensaje}
+                          aria-label={"Eliminar " + tarea.nombre}
+                          className="grid h-11 w-11 place-items-center rounded-md border border-red-200 text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950"
+                        >
+                          <IconoEliminar className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted">
                     <StatusStamp
@@ -371,9 +384,11 @@ export function TareasPanel() {
                     <th className="p-4">Estado</th>
                     <th className="p-4">Fotos</th>
                     <th className="p-4">Alcance</th>
-                    <th className="p-4">
-                      <span className="sr-only">Acciones</span>
-                    </th>
+                    {puedeAdministrar ? (
+                      <th className="p-4">
+                        <span className="sr-only">Acciones</span>
+                      </th>
+                    ) : null}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-line">
@@ -391,9 +406,20 @@ export function TareasPanel() {
                         <p className="font-semibold text-foreground">
                           {tarea.nombre}
                         </p>
-                        <p className="mt-1 line-clamp-2 text-sm text-muted">
-                          {tarea.descripcion}
-                        </p>
+                        <details className="mt-1 text-sm text-muted">
+                          <summary className="flex min-h-11 cursor-pointer items-center rounded-md text-xs hover:text-foreground focus-visible:outline-2 focus-visible:outline-focus">
+                            Ver instrucciones y vigencia
+                          </summary>
+                          <p className="whitespace-pre-wrap break-words">
+                            {tarea.descripcion ||
+                              "Sin instrucciones adicionales."}
+                          </p>
+                          <p className="mt-2 text-xs">
+                            {tarea.fechaDesde.slice(0, 10)} ·{" "}
+                            {tarea.fechaHasta?.slice(0, 10) ??
+                              "Sin fecha de fin"}
+                          </p>
+                        </details>
                       </td>
                       <td className="p-4">
                         <StatusStamp
@@ -424,22 +450,24 @@ export function TareasPanel() {
                           ? "Todos los locales"
                           : (tarea.locales?.length ?? 0) + " locales"}
                       </td>
-                      <td className="p-4">
-                        <div className="flex flex-wrap gap-2">
-                          <BotonEditar
-                            onClick={() => abrir(tarea)}
-                            etiqueta={`Editar tarea ${tarea.nombre}`}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => void eliminar(tarea)}
-                            disabled={!!op.mensaje}
-                            className="min-h-11 rounded-md border border-red-200 px-3 text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950"
-                          >
-                            Eliminar
-                          </button>
-                        </div>
-                      </td>
+                      {puedeAdministrar ? (
+                        <td className="p-4">
+                          <div className="flex flex-wrap gap-2">
+                            <BotonEditar
+                              onClick={() => abrir(tarea)}
+                              etiqueta={`Editar tarea ${tarea.nombre}`}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => void eliminar(tarea)}
+                              disabled={!!op.mensaje}
+                              className="min-h-11 rounded-md border border-red-200 px-3 text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950"
+                            >
+                              Eliminar
+                            </button>
+                          </div>
+                        </td>
+                      ) : null}
                     </tr>
                   ))}
                 </tbody>
@@ -460,16 +488,17 @@ export function TareasPanel() {
       {/* Modal de Creación / Edición */}
       <Modal
         titulo={id ? `Editar Tarea · ${form?.nombre}` : "Crear Nueva Tarea"}
-        abierto={!!form}
+        abierto={formularioAbierto}
         onCerrar={() => {
           if (!op.mensaje) setForm(null);
         }}
         ancho="lg"
       >
-        {form && (
+        {form && puedeAdministrar && (
           <form
             onSubmit={async (e) => {
               e.preventDefault();
+              if (!puedeAdministrar) return;
               if (
                 await op.ejecutar(
                   id ? "Actualizando tarea" : "Creando tarea",

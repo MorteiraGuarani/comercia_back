@@ -6,6 +6,10 @@ En cada empresa, el rol `SUPERVISOR` está encima de `TeamLeader` y comparte las
 
 El resumen **Presentismo** muestra al Supervisor los colaboradores de toda su cadena de mando y, cuando tiene TeamLeaders directos, KPI adicionales sobre sus visitas propias. Las evidencias, novedades y avisos usan la misma cadena real de superiores para autorizar el acceso. Un Supervisor no ve el equipo de otro Supervisor por compartir rol.
 
+## Catálogo de tareas
+
+El ABM de tareas está reservado a los roles `SUPERVISOR` y `SUPERVISOR_REPOSITORES`, con sus permisos de página y equipo operativo. El TeamLeader tiene una vista de consulta con búsqueda, filtros, instrucciones y vigencia, sin botones de alta, edición o eliminación. La API rechaza esas operaciones para TeamLeader, Impulsador, Repositor y otros roles aunque se les habilite la página del catálogo. El Impulsador conserva la ejecución de sus tareas asignadas en Mi jornada.
+
 ## Ruta del TeamLeader
 
 La agenda del TeamLeader se calcula cada día desde las asignaciones vigentes de sus colaboradores **directos**. Hereda el local y sus horarios actuales, sin crear otra asignación ni copiar el catálogo de locales. Si varios colaboradores tienen el mismo local, se presenta una sola parada por local. La visita que marca el TeamLeader es independiente de la visita del impulsador: conserva su propio usuario, entrada, salida y ubicación, vinculadas a la asignación original como referencia. El TeamLeader no completa automáticamente las tareas del impulsador.
