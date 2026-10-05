@@ -1,6 +1,6 @@
 # Confiabilidad y seguimiento operativo
 
-Fecha: 2026-10-05. Implementación terminada y validada localmente. El resultado de producción se registra en `entrega-seguimiento-produccion.md`.
+Fecha: 2026-10-05. Implementación terminada y publicada en producción. Las verificaciones y limitaciones se registran en `entrega-seguimiento-produccion.md`.
 
 ## Alcance aprobado
 
