@@ -6,7 +6,12 @@ jest.mock('../prisma/prisma.service', () => ({ PrismaService: class {} }));
 describe('Alcance de campo', () => {
   it('rechaza usuarios fuera del equipo y consulta empresa y superior', async () => {
     const prisma = {
-      usuario: { findFirst: jest.fn().mockResolvedValue(null) },
+      usuario: {
+        findFirst: jest
+          .fn()
+          .mockResolvedValueOnce({ rol: { descripcion: 'TeamLeader' } })
+          .mockResolvedValueOnce(null),
+      },
     };
     const plataforma = { exigirAccesoAlgunaPagina: jest.fn() };
     const service = new CampoAccesoService(
@@ -23,6 +28,9 @@ describe('Alcance de campo', () => {
         superiorId: 20,
         isActive: true,
         esSuperadmin: false,
+        rol: {
+          descripcion: { notIn: ['REPOSITOR', 'SUPERVISOR_REPOSITORES'] },
+        },
       },
       select: { id: true },
     });

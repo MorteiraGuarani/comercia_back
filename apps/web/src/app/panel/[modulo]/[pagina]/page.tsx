@@ -45,7 +45,7 @@ export default function PaginaModulo({
 
   if (!mod || !pag) {
     return (
-      <div className="rounded-xl border border-line bg-surface-raised p-8 text-center">
+      <div className="m-4 min-w-0 rounded-xl border border-line bg-surface-raised p-6 text-center sm:m-6">
         <p className="text-sm text-zinc-500 dark:text-zinc-400">
           Esta página no está disponible para tu empresa.
         </p>
@@ -77,7 +77,7 @@ export default function PaginaModulo({
   }
 
   return (
-    <div>
+    <div className="min-w-0 w-full px-4 py-5 sm:px-6 lg:px-8">
       <p className="text-xs font-medium uppercase tracking-wide text-brand-700 dark:text-brand-400">
         {mod.nombre}
       </p>

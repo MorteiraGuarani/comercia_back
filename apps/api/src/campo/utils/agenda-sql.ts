@@ -1,13 +1,19 @@
-import { Prisma } from '../../../generated/prisma/client';
+import {
+  DestinatarioTareaCampo,
+  Prisma,
+} from '../../../generated/prisma/client';
 
-function condicionHorario(diaSql: Prisma.Sql) {
+function condicionHorario(
+  diaSql: Prisma.Sql,
+  destinatario: DestinatarioTareaCampo,
+) {
   return Prisma.sql`
-    NOT EXISTS (SELECT 1 FROM campo_horarios h WHERE h.local_id = l.id AND h.activo
+    NOT EXISTS (SELECT 1 FROM campo_horarios h WHERE h.local_id = l.id AND h.activo AND h.destinatario = ${destinatario}::"DestinatarioTareaCampo"
       AND (h.asignacion_id = a.id OR h.asignacion_id IS NULL))
     OR EXISTS (
-      SELECT 1 FROM campo_horarios h WHERE h.local_id = l.id AND h.activo
+      SELECT 1 FROM campo_horarios h WHERE h.local_id = l.id AND h.activo AND h.destinatario = ${destinatario}::"DestinatarioTareaCampo"
       AND (h.asignacion_id = a.id OR (h.asignacion_id IS NULL AND NOT EXISTS (
-        SELECT 1 FROM campo_horarios propio WHERE propio.asignacion_id = a.id AND propio.activo
+        SELECT 1 FROM campo_horarios propio WHERE propio.asignacion_id = a.id AND propio.activo AND propio.destinatario = ${destinatario}::"DestinatarioTareaCampo"
       )))
       AND h.fecha_desde <= ${diaSql} AND (h.fecha_hasta IS NULL OR h.fecha_hasta >= ${diaSql})
       AND (
@@ -49,11 +55,19 @@ export function condicionAgenda(
   usuarioId: number,
   fecha: string,
   fechaFin = fecha,
+  destinatario: DestinatarioTareaCampo = DestinatarioTareaCampo.IMPULSADOR,
 ) {
+  const tipoAsignacion = Prisma.sql`EXISTS (
+    SELECT 1 FROM usuarios titular JOIN roles r ON r.id = titular.rol_id AND r.empresa_id = titular.empresa_id
+    WHERE titular.id = a.usuario_id AND titular.empresa_id = ${empresaId}
+      AND CASE WHEN regexp_replace(lower(r.descripcion), '[^a-z]', '', 'g') = 'repositor'
+        THEN 'REPOSITOR' ELSE 'IMPULSADOR' END = ${destinatario}
+  )`;
   if (fecha === fechaFin) {
     const dia = Prisma.sql`${fecha}::date`;
     return Prisma.sql`
       c.empresa_id = ${empresaId} AND c.activo AND l.activo AND a.activo
+      AND ${tipoAsignacion}
       AND a.fecha_desde <= ${dia} AND (a.fecha_hasta IS NULL OR a.fecha_hasta >= ${dia})
       AND (
         (a.usuario_id = ${usuarioId} AND NOT EXISTS (
@@ -63,12 +77,13 @@ export function condicionAgenda(
           SELECT 1 FROM campo_backups b WHERE b.asignacion_id = a.id AND b.activo AND b.usuario_id = ${usuarioId}
           AND ${dia} BETWEEN b.fecha_desde AND b.fecha_hasta
         ) OR ${condicionEquipo(usuarioId, dia)}
-      ) AND (${condicionHorario(dia)})`;
+      ) AND (${condicionHorario(dia, destinatario)})`;
   }
 
   const dia = Prisma.sql`(d.dia::date)`;
   return Prisma.sql`
     c.empresa_id = ${empresaId} AND c.activo AND l.activo AND a.activo
+    AND ${tipoAsignacion}
     AND a.fecha_desde <= ${fechaFin}::date AND (a.fecha_hasta IS NULL OR a.fecha_hasta >= ${fecha}::date)
     AND (
       (a.usuario_id = ${usuarioId} AND NOT EXISTS (
@@ -92,14 +107,14 @@ export function condicionAgenda(
           ))
       )
     ) AND (
-      NOT EXISTS (SELECT 1 FROM campo_horarios h WHERE h.local_id = l.id AND h.activo
+      NOT EXISTS (SELECT 1 FROM campo_horarios h WHERE h.local_id = l.id AND h.activo AND h.destinatario = ${destinatario}::"DestinatarioTareaCampo"
         AND (h.asignacion_id = a.id OR h.asignacion_id IS NULL))
       OR EXISTS (
         SELECT 1 FROM campo_horarios h
         CROSS JOIN generate_series(${fecha}::date, ${fechaFin}::date, interval '1 day') AS d(dia)
-        WHERE h.local_id = l.id AND h.activo
+        WHERE h.local_id = l.id AND h.activo AND h.destinatario = ${destinatario}::"DestinatarioTareaCampo"
         AND (h.asignacion_id = a.id OR (h.asignacion_id IS NULL AND NOT EXISTS (
-          SELECT 1 FROM campo_horarios propio WHERE propio.asignacion_id = a.id AND propio.activo
+          SELECT 1 FROM campo_horarios propio WHERE propio.asignacion_id = a.id AND propio.activo AND propio.destinatario = ${destinatario}::"DestinatarioTareaCampo"
         )))
         AND h.fecha_desde <= ${dia} AND (h.fecha_hasta IS NULL OR h.fecha_hasta >= ${dia})
         AND (

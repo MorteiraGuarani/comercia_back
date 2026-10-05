@@ -109,19 +109,35 @@ export class RepositorCampoService {
     const asignacion = await this.prisma.asignacionCampo.findFirst({
       where: {
         id: dto.asignacionId,
+        usuario: { rol: { descripcion: 'REPOSITOR' } },
         activo: true,
         fechaDesde: { lte: fecha },
         AND: [
           { OR: [{ fechaHasta: null }, { fechaHasta: { gte: fecha } }] },
-          { OR: [
-            { usuarioId, backups: { none: {
-              activo: true, fechaDesde: { lte: fecha }, fechaHasta: { gte: fecha },
-            } } },
-            { backups: { some: {
-              usuarioId, activo: true,
-              fechaDesde: { lte: fecha }, fechaHasta: { gte: fecha },
-            } } },
-          ] },
+          {
+            OR: [
+              {
+                usuarioId,
+                backups: {
+                  none: {
+                    activo: true,
+                    fechaDesde: { lte: fecha },
+                    fechaHasta: { gte: fecha },
+                  },
+                },
+              },
+              {
+                backups: {
+                  some: {
+                    usuarioId,
+                    activo: true,
+                    fechaDesde: { lte: fecha },
+                    fechaHasta: { gte: fecha },
+                  },
+                },
+              },
+            ],
+          },
         ],
         local: {
           activo: true,
@@ -186,9 +202,7 @@ export class RepositorCampoService {
       where: {
         empresaId: u.empresaId,
         activo: true,
-        destinatario: {
-          in: [DestinatarioTareaCampo.REPOSITOR, DestinatarioTareaCampo.AMBOS],
-        },
+        destinatario: DestinatarioTareaCampo.REPOSITOR,
         fechaDesde: { lte: visita.fecha },
         AND: [
           { OR: [{ fechaHasta: null }, { fechaHasta: { gte: visita.fecha } }] },

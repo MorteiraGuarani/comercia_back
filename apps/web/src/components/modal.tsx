@@ -75,7 +75,7 @@ export function Modal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.97, y: 6 }}
             transition={{ duration: 0.18, ease: "easeOut" }}
-            className={`relative w-full ${anchoClase} max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-[1.4rem] border border-line bg-surface-raised p-4 shadow-[0_28px_80px_rgba(0,0,0,0.3)] outline-none sm:p-6`}
+            className={`relative min-w-0 w-full ${anchoClase} max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain rounded-[1.4rem] border border-line bg-surface-raised p-4 shadow-[0_28px_80px_rgba(0,0,0,0.3)] outline-none sm:p-6`}
           >
             <header className="flex items-start justify-between gap-4">
               <h2 className="min-w-0 flex-1 break-words text-lg font-extrabold tracking-[-0.025em]">{titulo}</h2>
@@ -90,7 +90,7 @@ export function Modal({
                 </svg>
               </button>
             </header>
-            <div className="mt-4">{children}</div>
+            <div className="mt-4 min-w-0 w-full">{children}</div>
           </motion.div>
         </div>
       )}

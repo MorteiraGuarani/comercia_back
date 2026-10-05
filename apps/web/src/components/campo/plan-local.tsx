@@ -8,6 +8,8 @@ import { Modal } from "@/components/modal";
 import { BotonEditar } from "@/components/boton-editar";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { SelectorPaginado } from "@/components/selector-paginado";
+import { usePanel } from "@/components/panel/contexto";
+import { destinatarioCampo } from "@/utils/equipo-campo";
 import { TOKENS } from "./tokens";
 import { StatusStamp } from "./ui/status-stamp";
 import { IconoMas } from "@/components/icono-mas";
@@ -32,21 +34,24 @@ export function PlanLocal({
   cerrar: () => void;
 }) {
   const [vista, setVista] = useState<"horarios" | "equipo">("horarios");
+  const { usuario } = usePanel();
+  const equipo = destinatarioCampo(usuario.rol?.descripcion) === "REPOSITOR" ? "Repositores" : "Impulsadores";
 
   return (
     <Modal
-      titulo={`Planificación Operativa · ${local.nombre}`}
+      titulo={`Planificación · ${local.nombre}`}
       abierto
       onCerrar={cerrar}
       ancho="xl"
     >
-      <div className="campo-screen space-y-5">
+      <div className="campo-screen min-w-0 w-full space-y-5">
+        <p className="text-sm text-muted">Equipo: <strong className="text-foreground">{equipo}</strong>. Los horarios y colaboradores se configuran para este equipo.</p>
         {/* Banner de Contexto */}
         <div
           className="p-3.5 rounded-xl border flex flex-wrap items-center justify-between gap-2"
           style={{ backgroundColor: TOKENS.canvas, borderColor: TOKENS.line }}
         >
-          <div>
+          <div className="min-w-0 flex-1 break-words">
             <span className="text-xs font-bold uppercase tracking-wider text-[#726C60]">
               Cuenta Comercial
             </span>
@@ -168,7 +173,7 @@ function HorariosLocal({ localId, asignacionId }: { localId: number; asignacionI
           {lista.items.map((h) => (
             <div
               key={h.id}
-              className="p-4 rounded-xl border flex flex-col justify-between"
+              className="min-w-0 p-3 sm:p-4 rounded-xl border flex flex-col justify-between"
               style={{ backgroundColor: TOKENS.canvas, borderColor: TOKENS.line }}
             >
               <div>
@@ -493,14 +498,14 @@ function AsignacionesLocal({ localId }: { localId: number }) {
           {lista.items.map((a) => (
             <div
               key={a.id}
-              className="p-4 rounded-xl border flex flex-col justify-between"
+              className="min-w-0 p-3 sm:p-4 rounded-xl border flex flex-col justify-between"
               style={{ backgroundColor: TOKENS.canvas, borderColor: TOKENS.line }}
             >
               <div>
                 <div className="flex items-center justify-between gap-2 mb-2">
-                  <div className="flex items-center gap-2.5">
+                  <div className="flex min-w-0 items-center gap-2.5">
                     <div
-                      className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs border"
+                      className="w-8 h-8 shrink-0 rounded-full flex items-center justify-center font-bold text-xs border"
                       style={{
                         backgroundColor: TOKENS.bone,
                         borderColor: TOKENS.line,
@@ -510,7 +515,7 @@ function AsignacionesLocal({ localId }: { localId: number }) {
                       {a.usuario.nombre[0]}
                       {a.usuario.apellido ? a.usuario.apellido[0] : ""}
                     </div>
-                    <div>
+                    <div className="min-w-0 break-words">
                       <strong className="block text-sm text-[#1E2320] leading-tight">
                         {a.usuario.nombre} {a.usuario.apellido}
                       </strong>
@@ -526,19 +531,20 @@ function AsignacionesLocal({ localId }: { localId: number }) {
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t mt-3" style={{ borderColor: TOKENS.line }}>
+              <div className="grid min-w-0 grid-cols-2 gap-2 border-t pt-3 mt-3" style={{ borderColor: TOKENS.line }}>
                 <button type="button" onClick={() => setHorariosDe(a)}
-                  className="min-h-11 rounded border border-line bg-surface-raised px-2.5 text-xs font-bold uppercase text-foreground hover:bg-surface-soft focus-visible:ring-2 focus-visible:ring-focus">
-                  Horarios propios
+                  aria-label={`Horarios de ${a.usuario.nombre} ${a.usuario.apellido}`}
+                  className="min-h-11 min-w-0 whitespace-nowrap rounded-lg border border-line bg-surface-raised px-2 text-xs font-semibold text-foreground hover:bg-surface-soft focus-visible:ring-2 focus-visible:ring-focus">
+                  Horarios
                 </button>
                 <button
                   type="button"
                   onClick={() => setBackup(a)}
-                  className="px-2.5 py-1 text-xs font-bold uppercase tracking-wider rounded border bg-white hover:bg-gray-50 flex items-center gap-1.5 cursor-pointer"
-                  style={{ borderColor: TOKENS.line }}
+                  aria-label={`Reemplazos de ${a.usuario.nombre} ${a.usuario.apellido}`}
+                  className="min-h-11 min-w-0 whitespace-nowrap rounded-lg border border-line bg-surface-raised px-2 text-xs font-semibold text-foreground hover:bg-surface-soft flex items-center justify-center gap-1 focus-visible:ring-2 focus-visible:ring-focus"
                 >
                   <IconoRefrescar className="w-3.5 h-3.5" />
-                  <span>Gestionar Reemplazos</span>
+                  <span>Reemplazos</span>
                 </button>
                 <button
                   type="button"
@@ -550,7 +556,8 @@ function AsignacionesLocal({ localId }: { localId: number }) {
                       lista.refrescar();
                     })
                   }
-                  className="px-2.5 py-1 text-xs font-bold uppercase tracking-wider rounded border text-red-600 border-red-200 bg-red-50 hover:bg-red-100"
+                  aria-label={`Quitar asignación de ${a.usuario.nombre} ${a.usuario.apellido}`}
+                  className="col-span-2 min-h-11 min-w-0 whitespace-nowrap rounded-lg border border-red-200 bg-red-50 px-3 text-xs font-semibold text-red-700 hover:bg-red-100 focus-visible:ring-2 focus-visible:ring-focus dark:border-red-800 dark:bg-red-950 dark:text-red-300 dark:hover:bg-red-900"
                 >
                   Quitar
                 </button>

@@ -1,5 +1,6 @@
 import { ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { destinatarioCampo } from './equipo-campo';
 
 /** Comprueba la cadena real de superiores, dentro de una misma empresa. */
 export async function esLiderDe(
@@ -8,7 +9,9 @@ export async function esLiderDe(
   subordinadoUserId: number,
 ): Promise<boolean> {
   if (liderUserId === subordinadoUserId) return false;
-  return (await obtenerEquipoCompleto(prisma, liderUserId)).includes(subordinadoUserId);
+  return (await obtenerEquipoCompleto(prisma, liderUserId)).includes(
+    subordinadoUserId,
+  );
 }
 
 /**
@@ -142,18 +145,35 @@ export async function verificarAccesoCumplimiento(
     // Todavía puede no haber evidencias: abrir el panel no completa la tarea.
     const visita = await prisma.visitaCampo.findUnique({
       where: { id: visitaId },
-      select: { usuarioId: true, localId: true, fecha: true, local: { select: { cliente: { select: { empresaId: true } } } } },
+      select: {
+        usuarioId: true,
+        usuario: { select: { rol: { select: { descripcion: true } } } },
+        localId: true,
+        fecha: true,
+        local: { select: { cliente: { select: { empresaId: true } } } },
+      },
     });
-    if (!visita || (visita.usuarioId !== usuarioId && !(await esLiderDe(prisma, usuarioId, visita.usuarioId)))) {
+    if (
+      !visita ||
+      (visita.usuarioId !== usuarioId &&
+        !(await esLiderDe(prisma, usuarioId, visita.usuarioId)))
+    ) {
       throw new ForbiddenException('Tarea no disponible');
     }
     const tarea = await prisma.tareaCampo.findFirst({
       where: {
-        id: tareaId, empresaId: visita.local.cliente.empresaId,
+        id: tareaId,
+        empresaId: visita.local.cliente.empresaId,
+        destinatario: destinatarioCampo(visita.usuario.rol?.descripcion),
         fechaDesde: { lte: visita.fecha },
         AND: [
           { OR: [{ fechaHasta: null }, { fechaHasta: { gte: visita.fecha } }] },
-          { OR: [{ todosLocales: true }, { locales: { some: { localId: visita.localId } } }] },
+          {
+            OR: [
+              { todosLocales: true },
+              { locales: { some: { localId: visita.localId } } },
+            ],
+          },
         ],
       },
       select: { id: true },

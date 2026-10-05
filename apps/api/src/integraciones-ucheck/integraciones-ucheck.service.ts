@@ -10,6 +10,10 @@ import { JornadaCampoService } from '../campo/jornada-campo.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AgendaUcheckDto } from './dto/agenda-ucheck.dto';
 import { MarcacionUcheckDto } from './dto/marcacion-ucheck.dto';
+import {
+  destinatarioCampo,
+  rolDelEquipoCampo,
+} from '../campo/utils/equipo-campo';
 
 function correoNormalizado(correo: string) {
   return correo.trim().toLowerCase();
@@ -122,6 +126,7 @@ export class IntegracionesUcheckService {
         where: {
           id: dto.asignacionId,
           localId: dto.localId,
+          usuario: { rol: rolDelEquipoCampo(usuario.rol?.descripcion) },
           fechaDesde: { lte: fecha },
           OR: [{ fechaHasta: null }, { fechaHasta: { gte: fecha } }],
           local: { cliente: { empresaId: usuario.empresaId } },
@@ -139,24 +144,30 @@ export class IntegracionesUcheckService {
                     },
                   },
                 },
-                ...(esTeamleader ? [
-                  {
-                    usuario: { superiorId: usuario.id, isActive: true },
-                    backups: { none: {
-                      activo: true,
-                      fechaDesde: { lte: fecha },
-                      fechaHasta: { gte: fecha },
-                    } },
-                  },
-                  {
-                    backups: { some: {
-                      activo: true,
-                      fechaDesde: { lte: fecha },
-                      fechaHasta: { gte: fecha },
-                      usuario: { superiorId: usuario.id, isActive: true },
-                    } },
-                  },
-                ] : []),
+                ...(esTeamleader
+                  ? [
+                      {
+                        usuario: { superiorId: usuario.id, isActive: true },
+                        backups: {
+                          none: {
+                            activo: true,
+                            fechaDesde: { lte: fecha },
+                            fechaHasta: { gte: fecha },
+                          },
+                        },
+                      },
+                      {
+                        backups: {
+                          some: {
+                            activo: true,
+                            fechaDesde: { lte: fecha },
+                            fechaHasta: { gte: fecha },
+                            usuario: { superiorId: usuario.id, isActive: true },
+                          },
+                        },
+                      },
+                    ]
+                  : []),
               ],
             },
           ],
@@ -170,7 +181,14 @@ export class IntegracionesUcheckService {
 
       if (dto.horarioId) {
         const horario = await tx.horarioCampo.findFirst({
-          where: { id: dto.horarioId, localId: dto.localId },
+          where: {
+            id: dto.horarioId,
+            localId: dto.localId,
+            OR: [{ asignacionId: dto.asignacionId }, { asignacionId: null }],
+            ...(dto.tipo === 'ENTRADA'
+              ? { destinatario: destinatarioCampo(usuario.rol?.descripcion) }
+              : {}),
+          },
           select: { id: true },
         });
         if (!horario)

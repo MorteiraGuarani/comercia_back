@@ -29,15 +29,15 @@ export function Paginacion({
   const hasta = Math.min(page * limit, total);
 
   const botonBase =
-    "grid h-10 min-w-10 place-items-center rounded-xl border border-control-line bg-surface-raised px-2 text-sm shadow-sm transition hover:border-brand-500 hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 disabled:cursor-not-allowed disabled:bg-surface-soft disabled:text-muted";
+    "grid h-11 min-w-11 shrink-0 place-items-center rounded-xl border border-control-line bg-surface-raised px-2 text-sm shadow-sm transition hover:border-brand-500 hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 disabled:cursor-not-allowed disabled:bg-surface-soft disabled:text-muted";
 
   return (
-    <div className="flex flex-col items-center justify-between gap-3 pt-4 sm:flex-row">
+    <div className="flex min-w-0 w-full flex-col items-center justify-between gap-3 pt-4 sm:flex-row sm:flex-wrap">
       <p className="text-xs text-muted [font-variant-numeric:tabular-nums]">
         {desde}–{hasta} de {total} registros
       </p>
 
-      <div className="flex items-center gap-2">
+      <div className="flex max-w-full min-w-0 flex-wrap items-center justify-center gap-2">
         <label className="flex items-center gap-1.5 text-xs text-muted">
           Por página
           <select
@@ -46,7 +46,7 @@ export function Paginacion({
               if (desplazarAlInicio) volverAlInicioDelListado(e.currentTarget);
               onLimitChange(Number(e.target.value));
             }}
-            className="min-h-10 rounded-xl border border-control-line bg-surface-raised px-2 py-1.5 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/55"
+            className="min-h-11 rounded-xl border border-control-line bg-surface-raised px-2 py-1.5 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/55"
           >
             {OPCIONES_POR_PAGINA.map((n) => (
               <option key={n} value={n}>

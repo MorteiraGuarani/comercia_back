@@ -20,6 +20,7 @@ import {
 } from './utils/selectores';
 import { fechaCampo, relojCampo, vigenciaCampo } from './utils/calendario';
 import { ConsultaTareasCampoDto } from './dto/consulta-tareas.dto';
+import { destinatarioCampo, rolDelEquipoCampo } from './utils/equipo-campo';
 
 @Injectable()
 export class CatalogoCampoService {
@@ -147,6 +148,10 @@ export class CatalogoCampoService {
           asignaciones: {
             where: {
               activo: true,
+              usuario: {
+                superiorId: u.id,
+                rol: rolDelEquipoCampo(u.rolDescripcion),
+              },
               fechaDesde: { lte: hoy },
               OR: [{ fechaHasta: null }, { fechaHasta: { gte: hoy } }],
             },
@@ -230,8 +235,12 @@ export class CatalogoCampoService {
   }
   async tareas(usuarioId: number, query: ConsultaTareasCampoDto) {
     const u = await this.acceso.gestionar(usuarioId, 'tareas');
-    const where = {
+    const alcance = {
       empresaId: u.empresaId,
+      destinatario: destinatarioCampo(u.rolDescripcion),
+    };
+    const where = {
+      ...alcance,
       ...(query.categoria ? { categoria: query.categoria } : {}),
       ...(query.tipo === 'obligatorias' ? { esObligatoria: true } : {}),
       ...(query.tipo === 'con_fotos' ? { requiereFotos: true } : {}),
@@ -265,12 +274,12 @@ export class CatalogoCampoService {
           skip,
           take,
         }),
-        this.prisma.tareaCampo.count({ where: { empresaId: u.empresaId } }),
+        this.prisma.tareaCampo.count({ where: alcance }),
         this.prisma.tareaCampo.count({
-          where: { empresaId: u.empresaId, esObligatoria: true },
+          where: { ...alcance, esObligatoria: true },
         }),
         this.prisma.tareaCampo.count({
-          where: { empresaId: u.empresaId, requiereFotos: true },
+          where: { ...alcance, requiereFotos: true },
         }),
       ]);
     return {
@@ -280,6 +289,11 @@ export class CatalogoCampoService {
   }
   async guardarTarea(usuarioId: number, dto: TareaCampoDto, id?: number) {
     const u = await this.acceso.gestionar(usuarioId, 'tareas');
+    const destinatario = destinatarioCampo(u.rolDescripcion);
+    if (dto.destinatario && dto.destinatario !== destinatario)
+      throw new BadRequestException(
+        'Solo podés crear tareas para tu tipo de equipo',
+      );
     if (dto.todosLocales && dto.localIds.length)
       throw new BadRequestException(
         'Elegí todos los locales o una selección específica',
@@ -295,14 +309,14 @@ export class CatalogoCampoService {
     if (
       id &&
       !(await this.prisma.tareaCampo.findFirst({
-        where: { id, empresaId: u.empresaId },
+        where: { id, empresaId: u.empresaId, destinatario },
         select: { id: true },
       }))
     )
       throw new NotFoundException('Tarea no disponible');
     const data = {
       nombre: dto.nombre,
-      destinatario: dto.destinatario,
+      destinatario,
       descripcion: dto.descripcion,
       activo: dto.activo,
       todosLocales: dto.todosLocales,
@@ -332,7 +346,11 @@ export class CatalogoCampoService {
   async eliminarTarea(usuarioId: number, id: number) {
     const u = await this.acceso.gestionar(usuarioId, 'tareas');
     const tarea = await this.prisma.tareaCampo.findFirst({
-      where: { id, empresaId: u.empresaId },
+      where: {
+        id,
+        empresaId: u.empresaId,
+        destinatario: destinatarioCampo(u.rolDescripcion),
+      },
       select: { id: true },
     });
     if (!tarea) throw new NotFoundException('Tarea no disponible');

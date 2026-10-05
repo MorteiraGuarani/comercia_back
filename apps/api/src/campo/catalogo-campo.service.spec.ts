@@ -71,6 +71,7 @@ describe('Catálogo de tareas', () => {
         take: 7,
         where: {
           empresaId: 10,
+          destinatario: 'IMPULSADOR',
           categoria: 'Precios',
           requiereFotos: true,
           OR: [

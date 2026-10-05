@@ -13,7 +13,7 @@ import {
 import { ParadaRuta } from '../interfaces/parada-ruta.interface';
 import { fechaCampo, rangoConsulta, relojCampo } from '../utils/calendario';
 import { obtenerEquipoCompleto } from '../utils/autorizacion';
-import { DestinatarioTareaCampo } from '../../../generated/prisma/client';
+import { destinatarioCampo } from '../utils/equipo-campo';
 
 @Injectable()
 export class SupervisionService {
@@ -22,12 +22,18 @@ export class SupervisionService {
     private readonly acceso: CampoAccesoService,
   ) {}
 
-  private async idsEquipo(u: { id: number; empresaId: number; rolDescripcion: string | null }) {
+  private async idsEquipo(u: {
+    id: number;
+    empresaId: number;
+    rolDescripcion: string | null;
+  }) {
     if (u.rolDescripcion !== 'SUPERVISOR_REPOSITORES')
       return obtenerEquipoCompleto(this.prisma, u.id);
     const repositores = await this.prisma.usuario.findMany({
       where: {
-        empresaId: u.empresaId, superiorId: u.id, isActive: true,
+        empresaId: u.empresaId,
+        superiorId: u.id,
+        isActive: true,
         rol: { descripcion: 'REPOSITOR' },
       },
       select: { id: true },
@@ -70,9 +76,12 @@ export class SupervisionService {
 
     // Si el usuario no tiene subordinados pero es team leader/admin de empresa,
     // buscamos usuarios de la misma empresa con rol inferior o subordinados
-    const idsConsultar = subordinadosIds.length > 0
-      ? subordinadosIds
-      : u.rolDescripcion === 'SUPERVISOR_REPOSITORES' ? [] : [u.id];
+    const idsConsultar =
+      subordinadosIds.length > 0
+        ? subordinadosIds
+        : u.rolDescripcion === 'SUPERVISOR_REPOSITORES'
+          ? []
+          : [u.id];
 
     const usuarios = await this.prisma.usuario.findMany({
       where: {
@@ -234,14 +243,7 @@ export class SupervisionService {
             where: {
               empresaId: u.empresaId,
               activo: true,
-              destinatario: {
-                in: [
-                  rol === 'repositor'
-                    ? DestinatarioTareaCampo.REPOSITOR
-                    : DestinatarioTareaCampo.IMPULSADOR,
-                  DestinatarioTareaCampo.AMBOS,
-                ],
-              },
+              destinatario: destinatarioCampo(rol),
               fechaDesde: { lte: fechaHasta },
               OR: [{ fechaHasta: null }, { fechaHasta: { gte: fechaDesde } }],
               AND: [
@@ -372,8 +374,10 @@ export class SupervisionService {
     const fechaHasta = fechaCampo(hasta);
 
     const equipoIds = await this.idsEquipo(u);
-    if (!equipoIds.includes(colaboradorId) &&
-      (colaboradorId !== u.id || u.rolDescripcion === 'SUPERVISOR_REPOSITORES')) {
+    if (
+      !equipoIds.includes(colaboradorId) &&
+      (colaboradorId !== u.id || u.rolDescripcion === 'SUPERVISOR_REPOSITORES')
+    ) {
       throw new ForbiddenException('No tienes acceso a este colaborador');
     }
 
@@ -422,7 +426,10 @@ export class SupervisionService {
       },
       include: {
         horarios: {
-          where: { activo: true },
+          where: {
+            activo: true,
+            destinatario: destinatarioCampo(user.rol?.descripcion),
+          },
           select: { entrada: true, salida: true, id: true },
           orderBy: { entrada: 'asc' },
           take: 5,
@@ -431,7 +438,11 @@ export class SupervisionService {
           include: {
             cliente: { select: { id: true, nombre: true } },
             horarios: {
-              where: { activo: true, asignacionId: null },
+              where: {
+                activo: true,
+                asignacionId: null,
+                destinatario: destinatarioCampo(user.rol?.descripcion),
+              },
               select: { entrada: true, salida: true, id: true },
               orderBy: { entrada: 'asc' },
               take: 5,
@@ -451,7 +462,11 @@ export class SupervisionService {
           include: {
             cliente: { select: { id: true, nombre: true } },
             horarios: {
-              where: { activo: true, asignacionId: null },
+              where: {
+                activo: true,
+                asignacionId: null,
+                destinatario: destinatarioCampo(user.rol?.descripcion),
+              },
               select: { entrada: true, salida: true, id: true },
               orderBy: { entrada: 'asc' },
               take: 5,
@@ -546,14 +561,7 @@ export class SupervisionService {
       where: {
         empresaId: u.empresaId,
         activo: true,
-        destinatario: {
-          in: [
-            user.rol?.descripcion === 'REPOSITOR'
-              ? DestinatarioTareaCampo.REPOSITOR
-              : DestinatarioTareaCampo.IMPULSADOR,
-            DestinatarioTareaCampo.AMBOS,
-          ],
-        },
+        destinatario: destinatarioCampo(user.rol?.descripcion),
         fechaDesde: { lte: fechaHasta },
         OR: [{ fechaHasta: null }, { fechaHasta: { gte: fechaDesde } }],
         AND: [

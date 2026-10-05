@@ -66,6 +66,7 @@ describe('PlanificacionCampoService', () => {
     });
 
     const where = {
+      rol: { descripcion: { notIn: ['REPOSITOR', 'SUPERVISOR_REPOSITORES'] } },
       empresaId: 10,
       superiorId: 3,
       isActive: true,

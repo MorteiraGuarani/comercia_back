@@ -9,6 +9,8 @@ import { BotonEditar } from "@/components/boton-editar";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { Paginacion } from "@/components/paginacion";
 import { IconoMas } from "@/components/icono-mas";
+import { usePanel } from "@/components/panel/contexto";
+import { destinatarioCampo } from "@/utils/equipo-campo";
 import { TOKENS } from "./tokens";
 import { StatusStamp } from "./ui/status-stamp";
 import { StatChip } from "./ui/stat-chip";
@@ -35,6 +37,8 @@ const CATEGORIAS_PRESET = [
 
 export function TareasPanel() {
   const op = useOperacionCampo();
+  const { usuario } = usePanel();
+  const destinatario = destinatarioCampo(usuario.rol?.descripcion);
 
   const [busqueda, setBusqueda] = useState("");
   const [categoriaFiltro, setCategoriaFiltro] = useState<string>("Todas");
@@ -76,7 +80,7 @@ export function TareasPanel() {
 
     setForm({
       nombre: t?.nombre ?? "",
-      destinatario: t?.destinatario ?? "REPOSITOR",
+      destinatario,
       descripcion: t?.descripcion ?? "",
       categoria: cat,
       esObligatoria: t?.esObligatoria ?? false,
@@ -334,13 +338,12 @@ export function TareasPanel() {
                 <select
                   id="destinatario-tarea"
                   value={form.destinatario}
-                  onChange={(e) => setForm({ ...form, destinatario: e.target.value as FormTareaCampo["destinatario"] })}
+                  disabled
                   className="min-h-11 w-full rounded-lg border border-line bg-surface-raised p-2.5 text-sm text-foreground focus-visible:ring-2 focus-visible:ring-focus"
                 >
-                  <option value="REPOSITOR">Repositores</option>
-                  <option value="IMPULSADOR">Impulsadores</option>
-                  <option value="AMBOS">Ambos</option>
+                  <option value={destinatario}>{destinatario === "REPOSITOR" ? "Repositores" : "Impulsadores"}</option>
                 </select>
+                <p className="mt-1 text-xs text-muted">Se asigna automáticamente según tu equipo.</p>
               </div>
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">

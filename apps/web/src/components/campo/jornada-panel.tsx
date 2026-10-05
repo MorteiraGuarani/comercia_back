@@ -30,7 +30,7 @@ export function JornadaPanel({ tareas = false, esRepositor = false }: { tareas?:
   });
   const qsFecha = queryFechasCampo(periodo) || `fecha=${hoyStr}`;
   return (
-    <>
+    <div className="min-w-0 w-full px-4 py-5 sm:px-6 lg:px-8">
       <CabeceraCampo
         titulo={tareas ? "Mis tareas del día" : "Mis locales"}
         detalle={esRepositor
@@ -41,7 +41,7 @@ export function JornadaPanel({ tareas = false, esRepositor = false }: { tareas?:
         <SelectorFechaFiltro valorActual={periodo} onChange={setPeriodo} />
       </div>
       <AgendaDelDia key={qsFecha} qsFecha={qsFecha} esRepositor={esRepositor} />
-    </>
+    </div>
   );
 }
 function AgendaDelDia({ qsFecha, esRepositor }: { qsFecha: string; esRepositor: boolean }) {

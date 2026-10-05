@@ -268,6 +268,7 @@ model HorarioCampo {
   local         LocalCampo                @relation(fields: [localId], references: [id])
   asignacionId  Int?                      @map("asignacion_id")
   asignacion    AsignacionCampo?          @relation(fields: [asignacionId], references: [id])
+  destinatario  DestinatarioTareaCampo    @default(IMPULSADOR)
   frecuencia    FrecuenciaCampo           @default(SEMANAL)
   intervalo     Int                       @default(1)
   diasSemana    Int[]                     @default([]) @map("dias_semana")
@@ -282,6 +283,7 @@ model HorarioCampo {
 
   @@index([localId, activo])
   @@index([asignacionId, activo])
+  @@index([localId, destinatario, activo])
   @@map("campo_horarios")
 }
 
@@ -341,6 +343,7 @@ model TareaCampo {
   novedades         NovedadCampo[]
 
   @@index([empresaId, activo, fechaDesde])
+  @@index([empresaId, destinatario, activo])
   @@map("campo_tareas")
 }
 

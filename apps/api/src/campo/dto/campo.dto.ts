@@ -159,8 +159,9 @@ export class BackupCampoDto extends AsignacionCampoDto {
 }
 
 export class TareaCampoDto extends VigenciaCampoDto {
+  @IsOptional()
   @IsEnum(DestinatarioTareaCampo)
-  destinatario: DestinatarioTareaCampo = DestinatarioTareaCampo.IMPULSADOR;
+  destinatario?: DestinatarioTareaCampo;
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.trim() : value,
   )

@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AccesoPlataformaService } from '../plataforma/acceso-plataforma.service';
+import { rolDelEquipoCampo } from './utils/equipo-campo';
 
 @Injectable()
 export class CampoAccesoService {
@@ -44,6 +45,12 @@ export class CampoAccesoService {
     return local;
   }
   async subordinado(empresaId: number, superiorId: number, usuarioId: number) {
+    const superior = await this.prisma.usuario.findFirst({
+      where: { id: superiorId, empresaId, isActive: true },
+      select: { rol: { select: { descripcion: true } } },
+    });
+    if (!superior)
+      throw new NotFoundException('Usuario no disponible en tu equipo');
     const usuario = await this.prisma.usuario.findFirst({
       where: {
         id: usuarioId,
@@ -51,23 +58,12 @@ export class CampoAccesoService {
         superiorId,
         isActive: true,
         esSuperadmin: false,
+        rol: rolDelEquipoCampo(superior.rol?.descripcion),
       },
       select: { id: true },
     });
     if (!usuario)
       throw new NotFoundException('Usuario no disponible en tu equipo');
-    const superior = await this.prisma.usuario.findUnique({
-      where: { id: superiorId },
-      select: { rol: { select: { descripcion: true } } },
-    });
-    if (superior?.rol?.descripcion === 'SUPERVISOR_REPOSITORES') {
-      const colaborador = await this.prisma.usuario.findUnique({
-        where: { id: usuarioId },
-        select: { rol: { select: { descripcion: true } } },
-      });
-      if (colaborador?.rol?.descripcion !== 'REPOSITOR')
-        throw new NotFoundException('Repositor no disponible en tu equipo');
-    }
     await this.ejecutar(usuario.id);
     return usuario;
   }

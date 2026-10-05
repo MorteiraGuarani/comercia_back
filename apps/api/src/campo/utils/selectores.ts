@@ -27,6 +27,7 @@ export const HORARIO_CAMPO_SELECT = {
   id: true,
   localId: true,
   asignacionId: true,
+  destinatario: true,
   frecuencia: true,
   intervalo: true,
   diasSemana: true,

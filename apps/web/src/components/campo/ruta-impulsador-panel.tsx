@@ -272,7 +272,7 @@ export function RutaImpulsadorPanel() {
         }
       />
 
-      <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto w-full space-y-6 flex-1 overflow-y-auto">
+      <div className="min-w-0 p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto w-full space-y-6 flex-1">
         {/* StatChips estilo editorial */}
         <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 sm:grid sm:grid-cols-4 sm:overflow-visible">
           <div className="min-w-[8.25rem] flex-1">
@@ -334,7 +334,7 @@ export function RutaImpulsadorPanel() {
           </div>
         )}
 
-        <div className="flex flex-row gap-2">
+        <div className="grid min-w-0 grid-cols-2 gap-2">
           <button
             type="button"
             onClick={() => void calcularRuta()}

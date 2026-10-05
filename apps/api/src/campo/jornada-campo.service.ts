@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '../../generated/prisma/client';
-import { DestinatarioTareaCampo } from '../../generated/prisma/client';
+import { destinatarioCampo, rolDelEquipoCampo } from './utils/equipo-campo';
 import { PrismaService } from '../prisma/prisma.service';
 import { rangoPaginacion, respuestaPaginada } from '../common/utils/paginacion';
 import { CampoAccesoService } from './campo-acceso.service';
@@ -47,10 +47,12 @@ export class JornadaCampoService {
     id: number,
     fecha: Date,
     esTeamleader: boolean,
+    rolDescripcion?: string | null,
   ) {
     const a = await tx.asignacionCampo.findFirst({
       where: {
         id,
+        usuario: { rol: rolDelEquipoCampo(rolDescripcion) },
         activo: true,
         fechaDesde: { lte: fecha },
         OR: [{ fechaHasta: null }, { fechaHasta: { gte: fecha } }],
@@ -98,7 +100,13 @@ export class JornadaCampoService {
     const fechaDesde = fechaCampo(desde);
     const fechaHasta = fechaCampo(hasta);
     const { skip, take, page, limit } = rangoPaginacion(query);
-    const condicion = condicionAgenda(u.empresaId, u.id, desde, hasta);
+    const condicion = condicionAgenda(
+      u.empresaId,
+      u.id,
+      desde,
+      hasta,
+      destinatarioCampo(u.rolDescripcion),
+    );
     const base = Prisma.sql`FROM campo_asignaciones a JOIN campo_locales l ON l.id = a.local_id JOIN campo_clientes c ON c.id = l.cliente_id WHERE ${condicion}`;
     const [conteo, ids] = await Promise.all([
       this.prisma.$queryRaw<TotalAgenda[]>(
@@ -120,7 +128,10 @@ export class JornadaCampoService {
         usuarioId: true,
         usuario: { select: { nombre: true, apellido: true } },
         horarios: {
-          where: { activo: true },
+          where: {
+            activo: true,
+            destinatario: destinatarioCampo(u.rolDescripcion),
+          },
           take: 20,
           orderBy: { entrada: 'asc' },
           select: HORARIO_CAMPO_SELECT,
@@ -129,7 +140,11 @@ export class JornadaCampoService {
           select: {
             ...LOCAL_CAMPO_SELECT,
             horarios: {
-              where: { activo: true, asignacionId: null },
+              where: {
+                activo: true,
+                asignacionId: null,
+                destinatario: destinatarioCampo(u.rolDescripcion),
+              },
               take: 20,
               orderBy: { entrada: 'asc' },
               select: HORARIO_CAMPO_SELECT,
@@ -191,6 +206,7 @@ export class JornadaCampoService {
           dto.asignacionId,
           fecha,
           esTeamleader,
+          u.rolDescripcion,
         );
         const distancia = comprobarMarcaEnLocal(dto, a.local, ahora);
         if (await tx.visitaCampo.count({ where: { usuarioId, salida: null } }))
@@ -200,6 +216,7 @@ export class JornadaCampoService {
         const horarios = await tx.horarioCampo.findMany({
           where: {
             localId: a.localId,
+            destinatario: destinatarioCampo(u.rolDescripcion),
             activo: true,
             OR: [{ asignacionId: a.id }, { asignacionId: null }],
           },
@@ -308,6 +325,7 @@ export class JornadaCampoService {
     const a = await this.prisma.asignacionCampo.findFirst({
       where: {
         id: asignacionId,
+        usuario: { rol: rolDelEquipoCampo(u.rolDescripcion) },
         activo: true,
         fechaDesde: { lte: fechaHasta },
         OR: [{ fechaHasta: null }, { fechaHasta: { gte: fechaDesde } }],
@@ -345,14 +363,7 @@ export class JornadaCampoService {
     }
     const where: Prisma.TareaCampoWhereInput = {
       empresaId: u.empresaId,
-      destinatario: {
-        in: [
-          u.rolDescripcion?.toUpperCase() === 'REPOSITOR'
-            ? DestinatarioTareaCampo.REPOSITOR
-            : DestinatarioTareaCampo.IMPULSADOR,
-          DestinatarioTareaCampo.AMBOS,
-        ],
-      },
+      destinatario: destinatarioCampo(u.rolDescripcion),
       activo: true,
       fechaDesde: { lte: fechaHasta },
       AND: [
@@ -439,14 +450,7 @@ export class JornadaCampoService {
         where: {
           id: tareaId,
           empresaId: u.empresaId,
-          destinatario: {
-            in: [
-              u.rolDescripcion?.toUpperCase() === 'REPOSITOR'
-                ? DestinatarioTareaCampo.REPOSITOR
-                : DestinatarioTareaCampo.IMPULSADOR,
-              DestinatarioTareaCampo.AMBOS,
-            ],
-          },
+          destinatario: destinatarioCampo(u.rolDescripcion),
           activo: true,
           fechaDesde: { lte: v.fecha },
           AND: [

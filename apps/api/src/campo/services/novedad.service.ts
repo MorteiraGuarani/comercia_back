@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import type { Prisma } from '../../../generated/prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { destinatarioCampo } from '../utils/equipo-campo';
 import { NotificacionService } from './notificacion.service';
 import {
   ActualizarEstadoNovedadDto,
@@ -87,8 +88,22 @@ export class NovedadService {
 
       // Validar tarea opcional
       if (dto.tareaId) {
+        const usuario = await this.prisma.usuario.findFirst({
+          where: { id: usuarioId, empresaId, isActive: true },
+          select: { rol: { select: { descripcion: true } } },
+        });
+        if (!usuario) throw new NotFoundException('Tarea no disponible');
         const tarea = await this.prisma.tareaCampo.findFirst({
-          where: { id: dto.tareaId, empresaId, activo: true },
+          where: {
+            id: dto.tareaId,
+            empresaId,
+            activo: true,
+            destinatario: destinatarioCampo(usuario.rol?.descripcion),
+            OR: [
+              { todosLocales: true },
+              { locales: { some: { localId: dto.localId } } },
+            ],
+          },
           select: { id: true, nombre: true },
         });
         if (!tarea) {
