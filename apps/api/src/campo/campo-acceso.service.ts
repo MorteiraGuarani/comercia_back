@@ -5,7 +5,11 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AccesoPlataformaService } from '../plataforma/acceso-plataforma.service';
-import { rolDelEquipoCampo } from './utils/equipo-campo';
+import {
+  rolDelEquipoCampo,
+  exigirEquipoCampo,
+  EQUIPO_CAMPO_SELECT,
+} from './utils/equipo-campo';
 
 @Injectable()
 export class CampoAccesoService {
@@ -14,20 +18,24 @@ export class CampoAccesoService {
     private readonly plataforma: AccesoPlataformaService,
   ) {}
 
-  gestionar(usuarioId: number, pagina: string) {
-    return this.plataforma.exigirAccesoPagina(
+  async gestionar(usuarioId: number, pagina: string) {
+    const usuario = await this.plataforma.exigirAccesoPagina(
       usuarioId,
       'gestion-campo',
       pagina,
     );
+    exigirEquipoCampo(usuario.equipoCampo);
+    return usuario;
   }
   async ejecutar(usuarioId: number) {
     try {
-      return await this.plataforma.exigirAccesoAlgunaPagina(
+      const usuario = await this.plataforma.exigirAccesoAlgunaPagina(
         usuarioId,
         'mi-jornada',
         ['locales', 'tareas'],
       );
+      exigirEquipoCampo(usuario.equipoCampo);
+      return usuario;
     } catch (error) {
       if (!(error instanceof ForbiddenException)) throw error;
       const usuario = await this.gestionar(usuarioId, 'locales');
@@ -47,7 +55,9 @@ export class CampoAccesoService {
   async subordinado(empresaId: number, superiorId: number, usuarioId: number) {
     const superior = await this.prisma.usuario.findFirst({
       where: { id: superiorId, empresaId, isActive: true },
-      select: { rol: { select: { descripcion: true } } },
+      select: {
+        rol: { select: { equipoCampo: { select: EQUIPO_CAMPO_SELECT } } },
+      },
     });
     if (!superior)
       throw new NotFoundException('Usuario no disponible en tu equipo');
@@ -58,7 +68,7 @@ export class CampoAccesoService {
         superiorId,
         isActive: true,
         esSuperadmin: false,
-        rol: rolDelEquipoCampo(superior.rol?.descripcion),
+        rol: rolDelEquipoCampo(superior.rol?.equipoCampo),
       },
       select: { id: true },
     });

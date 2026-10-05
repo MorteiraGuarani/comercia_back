@@ -82,7 +82,7 @@ export class AuthService {
           celular: celularE164,
           passwordHash,
         },
-        include: { empresa: true, rol: true },
+        include: { empresa: true, rol: { include: { equipoCampo: true } } },
       })
       .catch((e: unknown) => {
         // Carrera entre el chequeo y el insert: el índice único manda (409, no 500)
@@ -113,7 +113,7 @@ export class AuthService {
       where: {
         OR: [{ correo: dto.identificador }, { nombreLogin: dto.identificador }],
       },
-      include: { empresa: true, rol: true },
+      include: { empresa: true, rol: { include: { equipoCampo: true } } },
     });
 
     // Mismo mensaje exista o no el usuario: no revelar quiénes están registrados
@@ -154,7 +154,7 @@ export class AuthService {
     // app necesita resolver el fallback antes de contar con un JWT.
     const usuarios = await this.prisma.usuario.findMany({
       where: { celular: { in: telefonos } },
-      include: { empresa: true, rol: true },
+      include: { empresa: true, rol: { include: { equipoCampo: true } } },
       take: 2,
     });
     if (usuarios.length !== 1 || !usuarios[0].isActive) {
@@ -171,7 +171,7 @@ export class AuthService {
   async me(usuarioId: number): Promise<UsuarioSesion> {
     const usuario = await this.prisma.usuario.findUnique({
       where: { id: usuarioId },
-      include: { empresa: true, rol: true },
+      include: { empresa: true, rol: { include: { equipoCampo: true } } },
     });
     if (!usuario || !usuario.isActive) {
       throw new UnauthorizedException();
@@ -184,7 +184,7 @@ export class AuthService {
   ): Promise<{ usuario: UsuarioSesion; token: string }> {
     const usuario = await this.prisma.usuario.findUnique({
       where: { id: usuarioId },
-      include: { empresa: true, rol: true },
+      include: { empresa: true, rol: { include: { equipoCampo: true } } },
     });
     if (!usuario?.isActive) {
       throw new UnauthorizedException(
@@ -212,7 +212,16 @@ export class AuthService {
     celular: string;
     esSuperadmin: boolean;
     empresa: { id: number; nombre: string };
-    rol: { id: number; descripcion: string } | null;
+    rol: {
+      id: number;
+      descripcion: string;
+      equipoCampo: {
+        id: number;
+        nombre: string;
+        tipo: import('../../generated/prisma/client').DestinatarioTareaCampo;
+        activo: boolean;
+      } | null;
+    } | null;
   }): UsuarioSesion {
     return {
       id: usuario.id,
@@ -229,7 +238,18 @@ export class AuthService {
       ),
       empresa: { id: usuario.empresa.id, nombre: usuario.empresa.nombre },
       rol: usuario.rol
-        ? { id: usuario.rol.id, descripcion: usuario.rol.descripcion }
+        ? {
+            id: usuario.rol.id,
+            descripcion: usuario.rol.descripcion,
+            equipoCampo: usuario.rol.equipoCampo
+              ? {
+                  id: usuario.rol.equipoCampo.id,
+                  nombre: usuario.rol.equipoCampo.nombre,
+                  tipo: usuario.rol.equipoCampo.tipo,
+                  activo: usuario.rol.equipoCampo.activo,
+                }
+              : null,
+          }
         : null,
     };
   }

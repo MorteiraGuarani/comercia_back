@@ -1,6 +1,7 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsInt,
+  IsIn,
   IsOptional,
   IsString,
   Max,
@@ -10,6 +11,41 @@ import {
 } from 'class-validator';
 import { MAX_INT4 } from '../../common/utils/numeros';
 import { PaginacionDto } from '../../common/utils/paginacion';
+import { DestinatarioTareaCampo } from '../../../generated/prisma/client';
+
+export class PlanificacionRolDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(MAX_INT4)
+  equipoCampoId?: number | null;
+
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : value,
+  )
+  @IsString()
+  @MinLength(2)
+  @MaxLength(120)
+  nuevoEquipoNombre?: string;
+
+  @IsOptional()
+  @IsIn([DestinatarioTareaCampo.IMPULSADOR, DestinatarioTareaCampo.REPOSITOR])
+  nuevoEquipoTipo?: DestinatarioTareaCampo;
+}
+
+export class ListarEquiposCampoDto extends PaginacionDto {
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(MAX_INT4)
+  empresaId!: number;
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  buscar?: string;
+}
 
 export class ListarRolesDto extends PaginacionDto {
   @IsOptional()
@@ -20,7 +56,7 @@ export class ListarRolesDto extends PaginacionDto {
   empresaId?: number;
 }
 
-export class CrearRolDto {
+export class CrearRolDto extends PlanificacionRolDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
@@ -40,7 +76,7 @@ export class CrearRolDto {
   rolId?: number | null;
 }
 
-export class ActualizarRolDto {
+export class ActualizarRolDto extends PlanificacionRolDto {
   @IsOptional()
   @IsString()
   @MinLength(2)

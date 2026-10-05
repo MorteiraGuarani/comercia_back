@@ -1,19 +1,13 @@
-import {
-  DestinatarioTareaCampo,
-  Prisma,
-} from '../../../generated/prisma/client';
+import { Prisma } from '../../../generated/prisma/client';
 
-function condicionHorario(
-  diaSql: Prisma.Sql,
-  destinatario: DestinatarioTareaCampo,
-) {
+function condicionHorario(diaSql: Prisma.Sql, equipoCampoId: number) {
   return Prisma.sql`
-    NOT EXISTS (SELECT 1 FROM campo_horarios h WHERE h.local_id = l.id AND h.activo AND h.destinatario = ${destinatario}::"DestinatarioTareaCampo"
+    NOT EXISTS (SELECT 1 FROM campo_horarios h WHERE h.local_id = l.id AND h.activo AND h.equipo_campo_id = ${equipoCampoId}
       AND (h.asignacion_id = a.id OR h.asignacion_id IS NULL))
     OR EXISTS (
-      SELECT 1 FROM campo_horarios h WHERE h.local_id = l.id AND h.activo AND h.destinatario = ${destinatario}::"DestinatarioTareaCampo"
+      SELECT 1 FROM campo_horarios h WHERE h.local_id = l.id AND h.activo AND h.equipo_campo_id = ${equipoCampoId}
       AND (h.asignacion_id = a.id OR (h.asignacion_id IS NULL AND NOT EXISTS (
-        SELECT 1 FROM campo_horarios propio WHERE propio.asignacion_id = a.id AND propio.activo AND propio.destinatario = ${destinatario}::"DestinatarioTareaCampo"
+        SELECT 1 FROM campo_horarios propio WHERE propio.asignacion_id = a.id AND propio.activo AND propio.equipo_campo_id = ${equipoCampoId}
       )))
       AND h.fecha_desde <= ${diaSql} AND (h.fecha_hasta IS NULL OR h.fecha_hasta >= ${diaSql})
       AND (
@@ -29,13 +23,18 @@ function condicionHorario(
 
 // Un TeamLeader comparte la ruta de sus colaboradores directos. La asignación
 // sigue siendo del impulsador; cada persona conserva su propia visita.
-function condicionEquipo(usuarioId: number, diaSql: Prisma.Sql) {
+function condicionEquipo(
+  usuarioId: number,
+  diaSql: Prisma.Sql,
+  equipoCampoId: number,
+) {
   return Prisma.sql`EXISTS (
     SELECT 1 FROM usuarios lider
     JOIN roles rol ON rol.id = lider.rol_id AND rol.empresa_id = lider.empresa_id
     JOIN usuarios colaborador ON colaborador.superior_id = lider.id
+    JOIN roles colaborador_rol ON colaborador_rol.id = colaborador.rol_id AND colaborador_rol.empresa_id = colaborador.empresa_id
     WHERE lider.id = ${usuarioId} AND lider.is_active AND colaborador.is_active
-      AND colaborador.empresa_id = lider.empresa_id
+      AND colaborador.empresa_id = lider.empresa_id AND colaborador_rol.equipo_campo_id = ${equipoCampoId}
       AND regexp_replace(lower(rol.descripcion), '[^a-z]', '', 'g')
         IN ('teamleader', 'teamleaderimpulsador')
       AND colaborador.id = COALESCE((
@@ -55,13 +54,12 @@ export function condicionAgenda(
   usuarioId: number,
   fecha: string,
   fechaFin = fecha,
-  destinatario: DestinatarioTareaCampo = DestinatarioTareaCampo.IMPULSADOR,
+  equipoCampoId: number,
 ) {
   const tipoAsignacion = Prisma.sql`EXISTS (
     SELECT 1 FROM usuarios titular JOIN roles r ON r.id = titular.rol_id AND r.empresa_id = titular.empresa_id
     WHERE titular.id = a.usuario_id AND titular.empresa_id = ${empresaId}
-      AND CASE WHEN regexp_replace(lower(r.descripcion), '[^a-z]', '', 'g') = 'repositor'
-        THEN 'REPOSITOR' ELSE 'IMPULSADOR' END = ${destinatario}
+      AND r.equipo_campo_id = ${equipoCampoId}
   )`;
   if (fecha === fechaFin) {
     const dia = Prisma.sql`${fecha}::date`;
@@ -76,8 +74,8 @@ export function condicionAgenda(
         )) OR EXISTS (
           SELECT 1 FROM campo_backups b WHERE b.asignacion_id = a.id AND b.activo AND b.usuario_id = ${usuarioId}
           AND ${dia} BETWEEN b.fecha_desde AND b.fecha_hasta
-        ) OR ${condicionEquipo(usuarioId, dia)}
-      ) AND (${condicionHorario(dia, destinatario)})`;
+        ) OR ${condicionEquipo(usuarioId, dia, equipoCampoId)}
+      ) AND (${condicionHorario(dia, equipoCampoId)})`;
   }
 
   const dia = Prisma.sql`(d.dia::date)`;
@@ -96,8 +94,9 @@ export function condicionAgenda(
         SELECT 1 FROM usuarios lider
         JOIN roles rol ON rol.id = lider.rol_id AND rol.empresa_id = lider.empresa_id
         JOIN usuarios colaborador ON colaborador.superior_id = lider.id
+    JOIN roles colaborador_rol ON colaborador_rol.id = colaborador.rol_id AND colaborador_rol.empresa_id = colaborador.empresa_id
         WHERE lider.id = ${usuarioId} AND lider.is_active AND colaborador.is_active
-          AND colaborador.empresa_id = lider.empresa_id
+          AND colaborador.empresa_id = lider.empresa_id AND colaborador_rol.equipo_campo_id = ${equipoCampoId}
           AND regexp_replace(lower(rol.descripcion), '[^a-z]', '', 'g')
             IN ('teamleader', 'teamleaderimpulsador')
           AND (colaborador.id = a.usuario_id OR EXISTS (
@@ -107,14 +106,14 @@ export function condicionAgenda(
           ))
       )
     ) AND (
-      NOT EXISTS (SELECT 1 FROM campo_horarios h WHERE h.local_id = l.id AND h.activo AND h.destinatario = ${destinatario}::"DestinatarioTareaCampo"
+      NOT EXISTS (SELECT 1 FROM campo_horarios h WHERE h.local_id = l.id AND h.activo AND h.equipo_campo_id = ${equipoCampoId}
         AND (h.asignacion_id = a.id OR h.asignacion_id IS NULL))
       OR EXISTS (
         SELECT 1 FROM campo_horarios h
         CROSS JOIN generate_series(${fecha}::date, ${fechaFin}::date, interval '1 day') AS d(dia)
-        WHERE h.local_id = l.id AND h.activo AND h.destinatario = ${destinatario}::"DestinatarioTareaCampo"
+        WHERE h.local_id = l.id AND h.activo AND h.equipo_campo_id = ${equipoCampoId}
         AND (h.asignacion_id = a.id OR (h.asignacion_id IS NULL AND NOT EXISTS (
-          SELECT 1 FROM campo_horarios propio WHERE propio.asignacion_id = a.id AND propio.activo AND propio.destinatario = ${destinatario}::"DestinatarioTareaCampo"
+          SELECT 1 FROM campo_horarios propio WHERE propio.asignacion_id = a.id AND propio.activo AND propio.equipo_campo_id = ${equipoCampoId}
         )))
         AND h.fecha_desde <= ${dia} AND (h.fecha_hasta IS NULL OR h.fecha_hasta >= ${dia})
         AND (

@@ -20,7 +20,11 @@ import {
 } from './utils/selectores';
 import { fechaCampo, relojCampo, vigenciaCampo } from './utils/calendario';
 import { ConsultaTareasCampoDto } from './dto/consulta-tareas.dto';
-import { destinatarioCampo, rolDelEquipoCampo } from './utils/equipo-campo';
+import {
+  destinatarioCampo,
+  rolDelEquipoCampo,
+  exigirEquipoCampo,
+} from './utils/equipo-campo';
 
 @Injectable()
 export class CatalogoCampoService {
@@ -150,7 +154,7 @@ export class CatalogoCampoService {
               activo: true,
               usuario: {
                 superiorId: u.id,
-                rol: rolDelEquipoCampo(u.rolDescripcion),
+                rol: rolDelEquipoCampo(u.equipoCampo),
               },
               fechaDesde: { lte: hoy },
               OR: [{ fechaHasta: null }, { fechaHasta: { gte: hoy } }],
@@ -237,7 +241,8 @@ export class CatalogoCampoService {
     const u = await this.acceso.gestionar(usuarioId, 'tareas');
     const alcance = {
       empresaId: u.empresaId,
-      destinatario: destinatarioCampo(u.rolDescripcion),
+      equipoCampoId: exigirEquipoCampo(u.equipoCampo).id,
+      destinatario: destinatarioCampo(u.equipoCampo),
     };
     const where = {
       ...alcance,
@@ -289,7 +294,8 @@ export class CatalogoCampoService {
   }
   async guardarTarea(usuarioId: number, dto: TareaCampoDto, id?: number) {
     const u = await this.acceso.gestionar(usuarioId, 'tareas');
-    const destinatario = destinatarioCampo(u.rolDescripcion);
+    const destinatario = destinatarioCampo(u.equipoCampo);
+    const equipoCampoId = exigirEquipoCampo(u.equipoCampo).id;
     if (dto.destinatario && dto.destinatario !== destinatario)
       throw new BadRequestException(
         'Solo podés crear tareas para tu tipo de equipo',
@@ -309,7 +315,7 @@ export class CatalogoCampoService {
     if (
       id &&
       !(await this.prisma.tareaCampo.findFirst({
-        where: { id, empresaId: u.empresaId, destinatario },
+        where: { id, empresaId: u.empresaId, destinatario, equipoCampoId },
         select: { id: true },
       }))
     )
@@ -317,6 +323,7 @@ export class CatalogoCampoService {
     const data = {
       nombre: dto.nombre,
       destinatario,
+      equipoCampoId,
       descripcion: dto.descripcion,
       activo: dto.activo,
       todosLocales: dto.todosLocales,
@@ -349,7 +356,8 @@ export class CatalogoCampoService {
       where: {
         id,
         empresaId: u.empresaId,
-        destinatario: destinatarioCampo(u.rolDescripcion),
+        equipoCampoId: exigirEquipoCampo(u.equipoCampo).id,
+        destinatario: destinatarioCampo(u.equipoCampo),
       },
       select: { id: true },
     });

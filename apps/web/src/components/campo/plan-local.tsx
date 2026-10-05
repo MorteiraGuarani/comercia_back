@@ -9,15 +9,10 @@ import { BotonEditar } from "@/components/boton-editar";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { SelectorPaginado } from "@/components/selector-paginado";
 import { usePanel } from "@/components/panel/contexto";
-import { destinatarioCampo } from "@/utils/equipo-campo";
 import { TOKENS } from "./tokens";
 import { StatusStamp } from "./ui/status-stamp";
 import { IconoMas } from "@/components/icono-mas";
-import {
-  IconoEquipo,
-  IconoRefrescar,
-  IconoCruz,
-} from "./ui/iconos-campo";
+import { IconoEquipo, IconoRefrescar, IconoCruz } from "./ui/iconos-campo";
 import type {
   AsignacionCampo,
   BackupCampo,
@@ -35,7 +30,7 @@ export function PlanLocal({
 }) {
   const [vista, setVista] = useState<"horarios" | "equipo">("horarios");
   const { usuario } = usePanel();
-  const equipo = destinatarioCampo(usuario.rol?.descripcion) === "REPOSITOR" ? "Repositores" : "Impulsadores";
+  const equipo = usuario.rol?.equipoCampo?.nombre ?? "Sin equipo operativo";
 
   return (
     <Modal
@@ -45,7 +40,10 @@ export function PlanLocal({
       ancho="xl"
     >
       <div className="campo-screen min-w-0 w-full space-y-5">
-        <p className="text-sm text-muted">Equipo: <strong className="text-foreground">{equipo}</strong>. Los horarios y colaboradores se configuran para este equipo.</p>
+        <p className="text-sm text-muted">
+          Equipo: <strong className="text-foreground">{equipo}</strong>. Los
+          horarios y colaboradores se configuran para este equipo.
+        </p>
         {/* Banner de Contexto */}
         <div
           className="p-3.5 rounded-xl border flex flex-wrap items-center justify-between gap-2"
@@ -56,7 +54,8 @@ export function PlanLocal({
               Cuenta Comercial
             </span>
             <p className="text-sm font-bold text-[#1E2320]">
-              {local.cliente.nombre} — {local.direccion || "Sin dirección fijada"}
+              {local.cliente.nombre} —{" "}
+              {local.direccion || "Sin dirección fijada"}
             </p>
           </div>
           <StatusStamp tone="frio" size="sm">
@@ -65,7 +64,10 @@ export function PlanLocal({
         </div>
 
         {/* Segmented Tab Selector */}
-        <div className="flex min-w-0 flex-wrap gap-2 border-b pb-3" style={{ borderColor: TOKENS.line }}>
+        <div
+          className="flex min-w-0 flex-wrap gap-2 border-b pb-3"
+          style={{ borderColor: TOKENS.line }}
+        >
           <button
             type="button"
             onClick={() => setVista("horarios")}
@@ -74,9 +76,14 @@ export function PlanLocal({
                 ? "bg-[#1E2320] text-white shadow-sm"
                 : "bg-white text-[#726C60] hover:text-[#1E2320] border"
             }`}
-            style={{ borderColor: vista === "horarios" ? "transparent" : TOKENS.line }}
+            style={{
+              borderColor: vista === "horarios" ? "transparent" : TOKENS.line,
+            }}
           >
-            <span className="sm:hidden">Horarios</span><span className="hidden sm:inline">⏰ Horarios &amp; Franjas de Visita</span>
+            <span className="sm:hidden">Horarios</span>
+            <span className="hidden sm:inline">
+              ⏰ Horarios &amp; Franjas de Visita
+            </span>
           </button>
           <button
             type="button"
@@ -86,7 +93,9 @@ export function PlanLocal({
                 ? "bg-[#1E2320] text-white shadow-sm"
                 : "bg-white text-[#726C60] hover:text-[#1E2320] border"
             }`}
-            style={{ borderColor: vista === "equipo" ? "transparent" : TOKENS.line }}
+            style={{
+              borderColor: vista === "equipo" ? "transparent" : TOKENS.line,
+            }}
           >
             <IconoEquipo className="h-3.5 w-3.5" />
             <span>Equipo</span>
@@ -106,7 +115,13 @@ export function PlanLocal({
 
 // ========== PESTAÑA: HORARIOS Y FRANJAS ==========
 
-function HorariosLocal({ localId, asignacionId }: { localId: number; asignacionId?: number }) {
+function HorariosLocal({
+  localId,
+  asignacionId,
+}: {
+  localId: number;
+  asignacionId?: number;
+}) {
   const ruta = asignacionId
     ? `/campo/asignaciones/${asignacionId}/horarios`
     : `/campo/locales/${localId}/horarios`;
@@ -137,7 +152,8 @@ function HorariosLocal({ localId, asignacionId }: { localId: number; asignacionI
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h4 className="text-sm font-bold uppercase tracking-wider text-[#1E2320]">
-            {asignacionId ? "Franjas propias" : "Franjas predeterminadas"} ({lista.items.length})
+            {asignacionId ? "Franjas propias" : "Franjas predeterminadas"} (
+            {lista.items.length})
           </h4>
           <p className="text-xs text-[#726C60]">
             {asignacionId
@@ -163,7 +179,9 @@ function HorariosLocal({ localId, asignacionId }: { localId: number; asignacionI
           className="p-8 text-center rounded-xl border"
           style={{ backgroundColor: TOKENS.canvas, borderColor: TOKENS.line }}
         >
-          <p className="text-sm font-bold text-[#1E2320]">No hay horarios configurados</p>
+          <p className="text-sm font-bold text-[#1E2320]">
+            No hay horarios configurados
+          </p>
           <p className="text-xs text-[#726C60] mt-1">
             Podés configurar una franja específica para esta asignación.
           </p>
@@ -174,7 +192,10 @@ function HorariosLocal({ localId, asignacionId }: { localId: number; asignacionI
             <div
               key={h.id}
               className="min-w-0 p-3 sm:p-4 rounded-xl border flex flex-col justify-between"
-              style={{ backgroundColor: TOKENS.canvas, borderColor: TOKENS.line }}
+              style={{
+                backgroundColor: TOKENS.canvas,
+                borderColor: TOKENS.line,
+              }}
             >
               <div>
                 <div className="flex items-center justify-between gap-2 mb-2">
@@ -212,12 +233,22 @@ function HorariosLocal({ localId, asignacionId }: { localId: number; asignacionI
                 </div>
 
                 <p className="text-[11px] font-mono text-[#726C60]">
-                  Vigencia: {h.fechaDesde.slice(0, 10)} {h.fechaHasta ? `hasta ${h.fechaHasta.slice(0, 10)}` : "· Sin vencimiento"}
+                  Vigencia: {h.fechaDesde.slice(0, 10)}{" "}
+                  {h.fechaHasta
+                    ? `hasta ${h.fechaHasta.slice(0, 10)}`
+                    : "· Sin vencimiento"}
                 </p>
               </div>
 
-              <div className="flex flex-wrap items-center justify-end gap-2 pt-3 border-t mt-3" style={{ borderColor: TOKENS.line }}>
-                <BotonEditar onClick={() => abrir(h)} etiqueta={`Editar horario ${h.id}`} modo="texto" />
+              <div
+                className="flex flex-wrap items-center justify-end gap-2 pt-3 border-t mt-3"
+                style={{ borderColor: TOKENS.line }}
+              >
+                <BotonEditar
+                  onClick={() => abrir(h)}
+                  etiqueta={`Editar horario ${h.id}`}
+                  modo="texto"
+                />
                 <button
                   type="button"
                   onClick={() =>
@@ -244,16 +275,20 @@ function HorariosLocal({ localId, asignacionId }: { localId: number; asignacionI
           onSubmit={async (e) => {
             e.preventDefault();
             if (
-              await op.ejecutar(id ? "Guardando horario" : "Creando horario", () =>
-                apiFetch(`${ruta}${id ? `/${id}` : ""}`, {
-                  method: id ? "PUT" : "POST",
-                  // Un input date vacío llega como ""; el contrato de la API
-                  // usa null para representar una vigencia sin vencimiento.
-                  body: JSON.stringify({
-                    ...form,
-                    fechaHasta: form.fechaHasta?.trim() ? form.fechaHasta.slice(0, 10) : null,
+              await op.ejecutar(
+                id ? "Guardando horario" : "Creando horario",
+                () =>
+                  apiFetch(`${ruta}${id ? `/${id}` : ""}`, {
+                    method: id ? "PUT" : "POST",
+                    // Un input date vacío llega como ""; el contrato de la API
+                    // usa null para representar una vigencia sin vencimiento.
+                    body: JSON.stringify({
+                      ...form,
+                      fechaHasta: form.fechaHasta?.trim()
+                        ? form.fechaHasta.slice(0, 10)
+                        : null,
+                    }),
                   }),
-                }),
               )
             ) {
               setForm(null);
@@ -263,7 +298,10 @@ function HorariosLocal({ localId, asignacionId }: { localId: number; asignacionI
           className="p-5 rounded-xl border space-y-4 bg-white shadow-sm mt-4"
           style={{ borderColor: TOKENS.line }}
         >
-          <div className="flex min-w-0 items-start justify-between gap-3 border-b pb-2" style={{ borderColor: TOKENS.line }}>
+          <div
+            className="flex min-w-0 items-start justify-between gap-3 border-b pb-2"
+            style={{ borderColor: TOKENS.line }}
+          >
             <h5 className="text-xs font-bold uppercase tracking-wider text-[#1E2320]">
               {id ? "Editar Franja Horaria" : "Nueva Franja Horaria"}
             </h5>
@@ -287,7 +325,8 @@ function HorariosLocal({ localId, asignacionId }: { localId: number; asignacionI
                 onChange={(e) =>
                   setForm({
                     ...form,
-                    frecuencia: e.target.value as FormHorarioCampo["frecuencia"],
+                    frecuencia: e.target
+                      .value as FormHorarioCampo["frecuencia"],
                   })
                 }
                 className="w-full p-2.5 rounded-lg border bg-white text-sm font-sans focus:outline-none focus:ring-2 focus:ring-[#1E2320]"
@@ -309,7 +348,9 @@ function HorariosLocal({ localId, asignacionId }: { localId: number; asignacionI
                 max={30}
                 required
                 value={form.intervalo}
-                onChange={(e) => setForm({ ...form, intervalo: Number(e.target.value) })}
+                onChange={(e) =>
+                  setForm({ ...form, intervalo: Number(e.target.value) })
+                }
                 className="w-full p-2.5 rounded-lg border bg-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#1E2320]"
                 style={{ borderColor: TOKENS.line }}
               />
@@ -393,7 +434,9 @@ function HorariosLocal({ localId, asignacionId }: { localId: number; asignacionI
                 type="date"
                 required
                 value={form.fechaDesde}
-                onChange={(e) => setForm({ ...form, fechaDesde: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, fechaDesde: e.target.value })
+                }
                 className="w-full p-2.5 rounded-lg border bg-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#1E2320]"
                 style={{ borderColor: TOKENS.line }}
               />
@@ -407,14 +450,19 @@ function HorariosLocal({ localId, asignacionId }: { localId: number; asignacionI
                 type="date"
                 min={form.fechaDesde}
                 value={form.fechaHasta}
-                onChange={(e) => setForm({ ...form, fechaHasta: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, fechaHasta: e.target.value })
+                }
                 className="w-full p-2.5 rounded-lg border bg-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#1E2320]"
                 style={{ borderColor: TOKENS.line }}
               />
             </div>
           </div>
 
-          <div className="flex flex-col-reverse gap-2 pt-2 border-t sm:flex-row sm:justify-end" style={{ borderColor: TOKENS.line }}>
+          <div
+            className="flex flex-col-reverse gap-2 pt-2 border-t sm:flex-row sm:justify-end"
+            style={{ borderColor: TOKENS.line }}
+          >
             <button
               type="button"
               onClick={() => setForm(null)}
@@ -436,11 +484,17 @@ function HorariosLocal({ localId, asignacionId }: { localId: number; asignacionI
       )}
 
       {op.error && (
-        <div role="alert" className="p-3 rounded-lg border text-xs font-medium text-red-700 bg-red-50 border-red-200">
+        <div
+          role="alert"
+          className="p-3 rounded-lg border text-xs font-medium text-red-700 bg-red-50 border-red-200"
+        >
           {op.error}
         </div>
       )}
-      <PantallaCarga visible={!!op.mensaje} mensaje={op.mensaje ?? "Procesando"} />
+      <PantallaCarga
+        visible={!!op.mensaje}
+        mensaje={op.mensaje ?? "Procesando"}
+      />
     </div>
   );
 }
@@ -448,7 +502,9 @@ function HorariosLocal({ localId, asignacionId }: { localId: number; asignacionI
 // ========== PESTAÑA: ASIGNACIONES Y BACKUPS ==========
 
 function AsignacionesLocal({ localId }: { localId: number }) {
-  const lista = useListaCampo<AsignacionCampo>(`/campo/locales/${localId}/asignaciones`);
+  const lista = useListaCampo<AsignacionCampo>(
+    `/campo/locales/${localId}/asignaciones`,
+  );
   const op = useOperacionCampo();
   const [crear, setCrear] = useState(false);
   const [usuarioId, setUsuarioId] = useState<number | "">("");
@@ -488,9 +544,12 @@ function AsignacionesLocal({ localId }: { localId: number }) {
           className="p-8 text-center rounded-xl border"
           style={{ backgroundColor: TOKENS.canvas, borderColor: TOKENS.line }}
         >
-          <p className="text-sm font-bold text-[#1E2320]">Sin titular asignado</p>
+          <p className="text-sm font-bold text-[#1E2320]">
+            Sin titular asignado
+          </p>
           <p className="text-xs text-[#726C60] mt-1">
-            Asigná un impulsador o repositor para que aparezca en su ruta diaria.
+            Asigná un impulsador o repositor para que aparezca en su ruta
+            diaria.
           </p>
         </div>
       ) : (
@@ -499,7 +558,10 @@ function AsignacionesLocal({ localId }: { localId: number }) {
             <div
               key={a.id}
               className="min-w-0 p-3 sm:p-4 rounded-xl border flex flex-col justify-between"
-              style={{ backgroundColor: TOKENS.canvas, borderColor: TOKENS.line }}
+              style={{
+                backgroundColor: TOKENS.canvas,
+                borderColor: TOKENS.line,
+              }}
             >
               <div>
                 <div className="flex items-center justify-between gap-2 mb-2">
@@ -520,7 +582,10 @@ function AsignacionesLocal({ localId }: { localId: number }) {
                         {a.usuario.nombre} {a.usuario.apellido}
                       </strong>
                       <span className="text-[11px] font-mono text-[#726C60]">
-                        Desde {a.fechaDesde.slice(0, 10)} {a.fechaHasta ? `hasta ${a.fechaHasta.slice(0, 10)}` : "· Indefinido"}
+                        Desde {a.fechaDesde.slice(0, 10)}{" "}
+                        {a.fechaHasta
+                          ? `hasta ${a.fechaHasta.slice(0, 10)}`
+                          : "· Indefinido"}
                       </span>
                     </div>
                   </div>
@@ -531,10 +596,16 @@ function AsignacionesLocal({ localId }: { localId: number }) {
                 </div>
               </div>
 
-              <div className="grid min-w-0 grid-cols-2 gap-2 border-t pt-3 mt-3" style={{ borderColor: TOKENS.line }}>
-                <button type="button" onClick={() => setHorariosDe(a)}
+              <div
+                className="grid min-w-0 grid-cols-2 gap-2 border-t pt-3 mt-3"
+                style={{ borderColor: TOKENS.line }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setHorariosDe(a)}
                   aria-label={`Horarios de ${a.usuario.nombre} ${a.usuario.apellido}`}
-                  className="min-h-11 min-w-0 whitespace-nowrap rounded-lg border border-line bg-surface-raised px-2 text-xs font-semibold text-foreground hover:bg-surface-soft focus-visible:ring-2 focus-visible:ring-focus">
+                  className="min-h-11 min-w-0 whitespace-nowrap rounded-lg border border-line bg-surface-raised px-2 text-xs font-semibold text-foreground hover:bg-surface-soft focus-visible:ring-2 focus-visible:ring-focus"
+                >
                   Horarios
                 </button>
                 <button
@@ -592,7 +663,10 @@ function AsignacionesLocal({ localId }: { localId: number }) {
           className="p-5 rounded-xl border space-y-4 bg-white shadow-sm mt-4"
           style={{ borderColor: TOKENS.line }}
         >
-          <div className="flex items-center justify-between border-b pb-2" style={{ borderColor: TOKENS.line }}>
+          <div
+            className="flex items-center justify-between border-b pb-2"
+            style={{ borderColor: TOKENS.line }}
+          >
             <h5 className="text-xs font-bold uppercase tracking-wider text-[#1E2320]">
               Asignar colaborador titular
             </h5>
@@ -648,7 +722,10 @@ function AsignacionesLocal({ localId }: { localId: number }) {
             </div>
           </div>
 
-          <div className="flex flex-col-reverse gap-2 pt-2 border-t sm:flex-row sm:justify-end" style={{ borderColor: TOKENS.line }}>
+          <div
+            className="flex flex-col-reverse gap-2 pt-2 border-t sm:flex-row sm:justify-end"
+            style={{ borderColor: TOKENS.line }}
+          >
             <button
               type="button"
               onClick={() => setCrear(false)}
@@ -680,8 +757,12 @@ function AsignacionesLocal({ localId }: { localId: number }) {
         />
       )}
       {horariosDe && (
-        <Modal titulo={`Horarios · ${horariosDe.usuario.nombre} ${horariosDe.usuario.apellido}`}
-          abierto onCerrar={() => setHorariosDe(null)} ancho="xl">
+        <Modal
+          titulo={`Horarios · ${horariosDe.usuario.nombre} ${horariosDe.usuario.apellido}`}
+          abierto
+          onCerrar={() => setHorariosDe(null)}
+          ancho="xl"
+        >
           <HorariosLocal localId={localId} asignacionId={horariosDe.id} />
         </Modal>
       )}
@@ -691,7 +772,10 @@ function AsignacionesLocal({ localId }: { localId: number }) {
           {op.error}
         </div>
       )}
-      <PantallaCarga visible={!!op.mensaje} mensaje={op.mensaje ?? "Procesando"} />
+      <PantallaCarga
+        visible={!!op.mensaje}
+        mensaje={op.mensaje ?? "Procesando"}
+      />
     </div>
   );
 }
@@ -724,7 +808,8 @@ function ModalBackups({
     >
       <div className="space-y-4">
         <p className="text-xs text-[#726C60]">
-          Designa suplentes temporales para cubrir licencias, vacaciones o refuerzos puntuales.
+          Designa suplentes temporales para cubrir licencias, vacaciones o
+          refuerzos puntuales.
         </p>
 
         <div className="flex min-w-0 flex-wrap justify-between items-center gap-2">
@@ -748,7 +833,9 @@ function ModalBackups({
             className="p-6 text-center rounded-xl border"
             style={{ backgroundColor: TOKENS.canvas, borderColor: TOKENS.line }}
           >
-            <p className="text-sm font-semibold text-[#1E2320]">Sin reemplazos registrados</p>
+            <p className="text-sm font-semibold text-[#1E2320]">
+              Sin reemplazos registrados
+            </p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -756,7 +843,10 @@ function ModalBackups({
               <div
                 key={b.id}
                 className="p-3.5 rounded-xl border flex items-center justify-between gap-3"
-                style={{ backgroundColor: TOKENS.canvas, borderColor: TOKENS.line }}
+                style={{
+                  backgroundColor: TOKENS.canvas,
+                  borderColor: TOKENS.line,
+                }}
               >
                 <div>
                   <div className="flex items-center gap-2">
@@ -768,7 +858,10 @@ function ModalBackups({
                     </StatusStamp>
                   </div>
                   <p className="text-xs text-[#726C60] mt-0.5">
-                    Motivo: <span className="text-[#1E2320] font-medium">{b.motivo}</span>
+                    Motivo:{" "}
+                    <span className="text-[#1E2320] font-medium">
+                      {b.motivo}
+                    </span>
                   </p>
                   <p className="text-[11px] font-mono text-[#726C60]">
                     {b.fechaDesde.slice(0, 10)} al {b.fechaHasta.slice(0, 10)}
@@ -820,7 +913,10 @@ function ModalBackups({
             className="p-4 rounded-xl border space-y-3 bg-white shadow-sm mt-3"
             style={{ borderColor: TOKENS.line }}
           >
-            <div className="flex justify-between items-center border-b pb-2" style={{ borderColor: TOKENS.line }}>
+            <div
+              className="flex justify-between items-center border-b pb-2"
+              style={{ borderColor: TOKENS.line }}
+            >
               <h6 className="text-xs font-bold uppercase tracking-wider text-[#1E2320]">
                 Nuevo Reemplazo
               </h6>
@@ -891,7 +987,10 @@ function ModalBackups({
               />
             </div>
 
-            <div className="flex flex-col-reverse gap-2 pt-2 border-t sm:flex-row sm:justify-end" style={{ borderColor: TOKENS.line }}>
+            <div
+              className="flex flex-col-reverse gap-2 pt-2 border-t sm:flex-row sm:justify-end"
+              style={{ borderColor: TOKENS.line }}
+            >
               <button
                 type="button"
                 onClick={() => setCrear(false)}
@@ -911,7 +1010,10 @@ function ModalBackups({
           </form>
         )}
 
-        <div className="flex justify-end pt-3 border-t" style={{ borderColor: TOKENS.line }}>
+        <div
+          className="flex justify-end pt-3 border-t"
+          style={{ borderColor: TOKENS.line }}
+        >
           <button
             type="button"
             onClick={cerrar}

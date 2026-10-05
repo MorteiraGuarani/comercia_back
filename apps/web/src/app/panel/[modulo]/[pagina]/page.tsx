@@ -15,16 +15,22 @@ const TareasPanel = dynamic(() =>
 );
 // Nuevos paneles modulares con el diseño editorial y paridad Desktop/Mobile
 const SupervisionPanel = dynamic(() =>
-  import("@/components/campo/supervision-panel").then((m) => m.SupervisionPanel),
+  import("@/components/campo/supervision-panel").then(
+    (m) => m.SupervisionPanel,
+  ),
 );
 const RutaImpulsadorPanel = dynamic(() =>
-  import("@/components/campo/ruta-impulsador-panel").then((m) => m.RutaImpulsadorPanel),
+  import("@/components/campo/ruta-impulsador-panel").then(
+    (m) => m.RutaImpulsadorPanel,
+  ),
 );
 const JornadaPanel = dynamic(() =>
   import("@/components/campo/jornada-panel").then((m) => m.JornadaPanel),
 );
 const TareasImpulsadorPanel = dynamic(() =>
-  import("@/components/campo/tareas-impulsador-panel").then((m) => m.TareasImpulsadorPanel),
+  import("@/components/campo/tareas-impulsador-panel").then(
+    (m) => m.TareasImpulsadorPanel,
+  ),
 );
 const NovedadesPanel = dynamic(() =>
   import("@/components/campo/novedades-panel").then((m) => m.NovedadesPanel),
@@ -65,15 +71,31 @@ export default function PaginaModulo({
 
   // MÓDULO: MI JORNADA (IMPULSADOR / REPOSITOR DE CAMPO)
   if (modulo === "mi-jornada") {
-    if (pagina === "locales") return usuario.rol?.descripcion === "REPOSITOR"
-      ? <JornadaPanel esRepositor />
-      : <RutaImpulsadorPanel />;
-    if (pagina === "tareas") return <TareasImpulsadorPanel esRepositor={usuario.rol?.descripcion === "REPOSITOR"} />;
+    if (pagina === "locales")
+      return usuario.rol?.equipoCampo?.activo &&
+        usuario.rol.equipoCampo.tipo === "REPOSITOR" ? (
+        <JornadaPanel esRepositor />
+      ) : (
+        <RutaImpulsadorPanel />
+      );
+    if (pagina === "tareas")
+      return (
+        <TareasImpulsadorPanel
+          esRepositor={
+            usuario.rol?.equipoCampo?.activo &&
+            usuario.rol.equipoCampo.tipo === "REPOSITOR"
+          }
+        />
+      );
     if (pagina === "novedades") return <NovedadesPanel esImpulsador={true} />;
     if (pagina === "avisos") return <AvisosPanel esImpulsador={true} />;
-    if (pagina === "agenda") return usuario.rol?.descripcion === "REPOSITOR"
-      ? <JornadaPanel esRepositor />
-      : <RutaImpulsadorPanel />;
+    if (pagina === "agenda")
+      return usuario.rol?.equipoCampo?.activo &&
+        usuario.rol.equipoCampo.tipo === "REPOSITOR" ? (
+        <JornadaPanel esRepositor />
+      ) : (
+        <RutaImpulsadorPanel />
+      );
   }
 
   return (

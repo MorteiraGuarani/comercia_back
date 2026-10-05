@@ -19,7 +19,11 @@ import {
 } from './utils/selectores';
 import { validarHorario, vigenciaCampo } from './utils/calendario';
 import { Prisma } from '../../generated/prisma/client';
-import { destinatarioCampo, rolDelEquipoCampo } from './utils/equipo-campo';
+import {
+  destinatarioCampo,
+  rolDelEquipoCampo,
+  exigirEquipoCampo,
+} from './utils/equipo-campo';
 
 @Injectable()
 export class PlanificacionCampoService {
@@ -36,7 +40,7 @@ export class PlanificacionCampoService {
       superiorId: u.id,
       isActive: true,
       esSuperadmin: false,
-      rol: rolDelEquipoCampo(u.rolDescripcion),
+      rol: rolDelEquipoCampo(u.equipoCampo),
       ...(buscar
         ? {
             OR: [
@@ -79,7 +83,8 @@ export class PlanificacionCampoService {
     const where = {
       localId,
       asignacionId: null,
-      destinatario: destinatarioCampo(u.rolDescripcion),
+      equipoCampoId: exigirEquipoCampo(u.equipoCampo).id,
+      destinatario: destinatarioCampo(u.equipoCampo),
       activo: true,
     };
     const { skip, take, page, limit } = rangoPaginacion(query);
@@ -104,7 +109,8 @@ export class PlanificacionCampoService {
   ) {
     const u = await this.acceso.gestionar(usuarioId, 'locales');
     await this.acceso.local(u.empresaId, localId);
-    const destinatario = destinatarioCampo(u.rolDescripcion);
+    const destinatario = destinatarioCampo(u.equipoCampo);
+    const equipoCampoId = exigirEquipoCampo(u.equipoCampo).id;
     if (asignacionId) {
       const { a } = await this.asignacionDelEquipo(usuarioId, asignacionId);
       if (a.localId !== localId)
@@ -122,6 +128,7 @@ export class PlanificacionCampoService {
             localId,
             asignacionId: asignacionId ?? null,
             destinatario,
+            equipoCampoId,
             activo: true,
           },
           select: { id: true },
@@ -139,6 +146,7 @@ export class PlanificacionCampoService {
             localId,
             asignacionId: asignacionId ?? null,
             destinatario,
+            equipoCampoId,
             activo: true,
           },
         })) >= 20
@@ -150,6 +158,7 @@ export class PlanificacionCampoService {
           localId,
           asignacionId: asignacionId ?? null,
           destinatario,
+          equipoCampoId,
         },
         select: HORARIO_CAMPO_SELECT,
       });
@@ -163,7 +172,8 @@ export class PlanificacionCampoService {
         id,
         localId,
         asignacionId: null,
-        destinatario: destinatarioCampo(u.rolDescripcion),
+        equipoCampoId: exigirEquipoCampo(u.equipoCampo).id,
+        destinatario: destinatarioCampo(u.equipoCampo),
       },
       data: { activo: false },
     });
@@ -178,7 +188,8 @@ export class PlanificacionCampoService {
     const { u } = await this.asignacionDelEquipo(usuarioId, asignacionId);
     const where = {
       asignacionId,
-      destinatario: destinatarioCampo(u.rolDescripcion),
+      equipoCampoId: exigirEquipoCampo(u.equipoCampo).id,
+      destinatario: destinatarioCampo(u.equipoCampo),
       activo: true,
     };
     const { skip, take, page, limit } = rangoPaginacion(query);
@@ -213,7 +224,8 @@ export class PlanificacionCampoService {
       where: {
         id,
         asignacionId,
-        destinatario: destinatarioCampo(u.rolDescripcion),
+        equipoCampoId: exigirEquipoCampo(u.equipoCampo).id,
+        destinatario: destinatarioCampo(u.equipoCampo),
         activo: true,
       },
       data: { activo: false },
@@ -234,7 +246,7 @@ export class PlanificacionCampoService {
       usuario: {
         empresaId: u.empresaId,
         superiorId: u.id,
-        rol: rolDelEquipoCampo(u.rolDescripcion),
+        rol: rolDelEquipoCampo(u.equipoCampo),
       },
     };
     const { skip, take, page, limit } = rangoPaginacion(query);
@@ -289,7 +301,7 @@ export class PlanificacionCampoService {
         usuario: {
           empresaId: u.empresaId,
           superiorId: u.id,
-          rol: rolDelEquipoCampo(u.rolDescripcion),
+          rol: rolDelEquipoCampo(u.equipoCampo),
         },
       },
       select: {

@@ -6,7 +6,11 @@ import {
 } from '@nestjs/common';
 import type { Prisma } from '../../../generated/prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { destinatarioCampo } from '../utils/equipo-campo';
+import {
+  destinatarioCampo,
+  exigirEquipoCampo,
+  EQUIPO_CAMPO_SELECT,
+} from '../utils/equipo-campo';
 import { NotificacionService } from './notificacion.service';
 import {
   ActualizarEstadoNovedadDto,
@@ -90,7 +94,14 @@ export class NovedadService {
       if (dto.tareaId) {
         const usuario = await this.prisma.usuario.findFirst({
           where: { id: usuarioId, empresaId, isActive: true },
-          select: { rol: { select: { descripcion: true } } },
+          select: {
+            rol: {
+              select: {
+                descripcion: true,
+                equipoCampo: { select: EQUIPO_CAMPO_SELECT },
+              },
+            },
+          },
         });
         if (!usuario) throw new NotFoundException('Tarea no disponible');
         const tarea = await this.prisma.tareaCampo.findFirst({
@@ -98,7 +109,8 @@ export class NovedadService {
             id: dto.tareaId,
             empresaId,
             activo: true,
-            destinatario: destinatarioCampo(usuario.rol?.descripcion),
+            equipoCampoId: exigirEquipoCampo(usuario.rol?.equipoCampo).id,
+            destinatario: destinatarioCampo(usuario.rol?.equipoCampo),
             OR: [
               { todosLocales: true },
               { locales: { some: { localId: dto.localId } } },

@@ -11,6 +11,7 @@ import { CampoAccesoService } from './campo-acceso.service';
 import { fechaCampo, relojCampo } from './utils/calendario';
 import { VISITA_CAMPO_SELECT } from './utils/selectores';
 import { DestinatarioTareaCampo } from '../../generated/prisma/client';
+import { exigirEquipoCampo, EQUIPO_CAMPO_SELECT } from './utils/equipo-campo';
 import type {
   EntradaRepositorCampoDto,
   MarcaRepositorCampoDto,
@@ -27,7 +28,7 @@ export class RepositorCampoService {
 
   async esRepositor(usuarioId: number) {
     const usuario = await this.acceso.ejecutar(usuarioId);
-    return usuario.rolDescripcion?.toUpperCase() === 'REPOSITOR';
+    return exigirEquipoCampo(usuario.equipoCampo).tipo === 'REPOSITOR';
   }
 
   private async enviar(datos: {
@@ -42,10 +43,19 @@ export class RepositorCampoService {
       select: {
         correo: true,
         isActive: true,
-        rol: { select: { descripcion: true } },
+        rol: {
+          select: {
+            descripcion: true,
+            equipoCampo: { select: EQUIPO_CAMPO_SELECT },
+          },
+        },
       },
     });
-    if (!usuario?.isActive || usuario.rol?.descripcion !== 'REPOSITOR')
+    if (
+      !usuario?.isActive ||
+      usuario.rol?.equipoCampo?.tipo !== 'REPOSITOR' ||
+      !usuario.rol.equipoCampo.activo
+    )
       throw new ForbiddenException('Marcación no disponible');
     const base = this.config.get<string>('integrations.ucheckApiUrl');
     const secreto = this.config.get<string>('integrations.ucheckSecret');
@@ -102,14 +112,16 @@ export class RepositorCampoService {
 
   async entrada(usuarioId: number, dto: EntradaRepositorCampoDto) {
     const u = await this.acceso.ejecutar(usuarioId);
-    if (u.rolDescripcion?.toUpperCase() !== 'REPOSITOR')
+    if (exigirEquipoCampo(u.equipoCampo).tipo !== 'REPOSITOR')
       throw new ForbiddenException('Marcación no disponible');
     const hoy = relojCampo().fecha;
     const fecha = fechaCampo(hoy);
     const asignacion = await this.prisma.asignacionCampo.findFirst({
       where: {
         id: dto.asignacionId,
-        usuario: { rol: { descripcion: 'REPOSITOR' } },
+        usuario: {
+          rol: { equipoCampoId: exigirEquipoCampo(u.equipoCampo).id },
+        },
         activo: true,
         fechaDesde: { lte: fecha },
         AND: [
@@ -177,7 +189,7 @@ export class RepositorCampoService {
     dto: MarcaRepositorCampoDto,
   ) {
     const u = await this.acceso.ejecutar(usuarioId);
-    if (u.rolDescripcion?.toUpperCase() !== 'REPOSITOR')
+    if (exigirEquipoCampo(u.equipoCampo).tipo !== 'REPOSITOR')
       throw new ForbiddenException('Marcación no disponible');
     const visita = await this.prisma.visitaCampo.findFirst({
       where: {
@@ -203,6 +215,7 @@ export class RepositorCampoService {
         empresaId: u.empresaId,
         activo: true,
         destinatario: DestinatarioTareaCampo.REPOSITOR,
+        equipoCampoId: exigirEquipoCampo(u.equipoCampo).id,
         fechaDesde: { lte: visita.fecha },
         AND: [
           { OR: [{ fechaHasta: null }, { fechaHasta: { gte: visita.fecha } }] },

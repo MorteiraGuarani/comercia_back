@@ -1,6 +1,10 @@
 import { NotFoundException } from '@nestjs/common';
 import type { PrismaService } from '../../prisma/prisma.service';
-import { destinatarioCampo } from './equipo-campo';
+import {
+  destinatarioCampo,
+  exigirEquipoCampo,
+  EQUIPO_CAMPO_SELECT,
+} from './equipo-campo';
 
 // Valida la misma visita, empresa, vigencia y alcance que completar una tarea.
 export async function tareaParaEvidencia(
@@ -20,11 +24,20 @@ export async function tareaParaEvidencia(
     select: {
       localId: true,
       fecha: true,
-      usuario: { select: { rol: { select: { descripcion: true } } } },
+      usuario: {
+        select: {
+          rol: {
+            select: {
+              descripcion: true,
+              equipoCampo: { select: EQUIPO_CAMPO_SELECT },
+            },
+          },
+        },
+      },
     },
   });
   if (!visita) throw new NotFoundException('Visita abierta no disponible');
-  const destinatario = destinatarioCampo(visita.usuario.rol?.descripcion);
+  const destinatario = destinatarioCampo(visita.usuario.rol?.equipoCampo);
   const tarea = await prisma.tareaCampo.findFirst({
     where: {
       id: tareaId,
@@ -32,6 +45,7 @@ export async function tareaParaEvidencia(
       activo: true,
       fechaDesde: { lte: visita.fecha },
       destinatario,
+      equipoCampoId: exigirEquipoCampo(visita.usuario.rol?.equipoCampo).id,
       AND: [
         { OR: [{ fechaHasta: null }, { fechaHasta: { gte: visita.fecha } }] },
         {

@@ -18,7 +18,15 @@ import { ApiError, apiFetch } from "@/lib/api";
 import type { RespuestaPaginada } from "@/types/paginacion";
 import type { RolAdmin, FormRol } from "@/types/rol";
 
-const FORM_INICIAL: FormRol = { empresaId: "", descripcion: "", rolId: "" };
+const FORM_INICIAL: FormRol = {
+  empresaId: "",
+  descripcion: "",
+  rolId: "",
+  equipoCampoId: "",
+  modoEquipo: "ninguno",
+  nuevoEquipoNombre: "",
+  nuevoEquipoTipo: "IMPULSADOR",
+};
 
 function ListaRolesMovil({
   roles,
@@ -38,10 +46,16 @@ function ListaRolesMovil({
             key={rol.id}
             className="rounded-xl border border-line bg-surface-raised p-4 [content-visibility:auto]"
           >
-            <p className="font-semibold text-foreground">{rol.descripcion}</p>
+            <p className="break-words font-semibold text-foreground">
+              {rol.descripcion}
+            </p>
             <p className="mt-1 text-sm text-muted">{rol.empresa.nombre}</p>
             <p className="mt-1 text-xs text-muted">
               Superior: {rol.padre?.descripcion ?? "Sin superior"}
+            </p>
+            <p className="mt-1 break-words text-xs text-muted">
+              Equipo operativo:{" "}
+              {rol.equipoCampo?.nombre ?? "Sin planificación de campo"}
             </p>
             <div className="mt-3 grid grid-cols-2 gap-2 border-t border-line pt-3 text-center text-xs">
               <p className="rounded-lg bg-surface-soft px-2 py-2 text-muted">
@@ -58,7 +72,11 @@ function ListaRolesMovil({
               </p>
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2">
-              <BotonEditar onClick={() => onEditar(rol)} etiqueta={`Editar rol ${rol.descripcion}`} modo="texto" />
+              <BotonEditar
+                onClick={() => onEditar(rol)}
+                etiqueta={`Editar rol ${rol.descripcion}`}
+                modo="texto"
+              />
               <button
                 type="button"
                 onClick={() => onEliminar(rol)}
@@ -83,7 +101,9 @@ function ListaRolesMovil({
 export function RolesPanel() {
   const [datos, setDatos] = useState<RespuestaPaginada<RolAdmin> | null>(null);
   const [empresaId, setEmpresaId] = useState<number | "">("");
-  const [consultaTerminada, setConsultaTerminada] = useState<string | null>(null);
+  const [consultaTerminada, setConsultaTerminada] = useState<string | null>(
+    null,
+  );
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(7);
   const [editando, setEditando] = useState<RolAdmin | "nuevo" | null>(null);
@@ -123,9 +143,12 @@ export function RolesPanel() {
       rol === "nuevo"
         ? { ...FORM_INICIAL, empresaId }
         : {
+            ...FORM_INICIAL,
             empresaId: rol.empresa.id,
             descripcion: rol.descripcion,
             rolId: rol.padre?.id ?? "",
+            equipoCampoId: rol.equipoCampo?.id ?? "",
+            modoEquipo: rol.equipoCampo ? "existente" : "ninguno",
           },
     );
     setError(null);
@@ -135,6 +158,10 @@ export function RolesPanel() {
   async function guardar(evento: React.FormEvent) {
     evento.preventDefault();
     if (!editando || guardando || form.empresaId === "") return;
+    if (form.modoEquipo === "existente" && form.equipoCampoId === "") {
+      setError("Seleccioná un equipo operativo");
+      return;
+    }
     setGuardando(true);
     setError(null);
     try {
@@ -146,6 +173,15 @@ export function RolesPanel() {
             ...(editando === "nuevo" ? { empresaId: form.empresaId } : {}),
             descripcion: form.descripcion.trim(),
             rolId: form.rolId === "" ? null : form.rolId,
+            ...(form.modoEquipo === "nuevo"
+              ? {
+                  nuevoEquipoNombre: form.nuevoEquipoNombre.trim(),
+                  nuevoEquipoTipo: form.nuevoEquipoTipo,
+                }
+              : {
+                  equipoCampoId:
+                    form.modoEquipo === "existente" ? form.equipoCampoId : null,
+                }),
           }),
         },
       );
@@ -271,6 +307,10 @@ export function RolesPanel() {
                     >
                       <td className="px-4 py-3 font-semibold text-foreground">
                         {rol.descripcion}
+                        <p className="mt-1 max-w-xs break-words text-xs font-normal text-muted">
+                          Equipo:{" "}
+                          {rol.equipoCampo?.nombre ?? "Sin planificación"}
+                        </p>
                       </td>
                       <td className="px-4 py-3 text-muted">
                         {rol.empresa.nombre}
@@ -286,7 +326,10 @@ export function RolesPanel() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-2">
-                          <BotonEditar onClick={() => abrir(rol)} etiqueta={`Editar rol ${rol.descripcion}`} />
+                          <BotonEditar
+                            onClick={() => abrir(rol)}
+                            etiqueta={`Editar rol ${rol.descripcion}`}
+                          />
                           <button
                             type="button"
                             onClick={() => {
@@ -339,7 +382,14 @@ export function RolesPanel() {
               required
               vacio="Seleccioná una empresa"
               onChange={(id) =>
-                setForm((actual) => ({ ...actual, empresaId: id, rolId: "" }))
+                setForm((actual) => ({
+                  ...actual,
+                  empresaId: id,
+                  rolId: "",
+                  equipoCampoId: "",
+                  modoEquipo: "ninguno",
+                  nuevoEquipoNombre: "",
+                }))
               }
             />
           ) : editando ? (
@@ -379,6 +429,109 @@ export function RolesPanel() {
               }
               onChange={(id) => setForm((actual) => ({ ...actual, rolId: id }))}
             />
+          ) : null}
+          {form.empresaId !== "" ? (
+            <fieldset className="min-w-0 space-y-3 rounded-xl border border-line p-3">
+              <legend className="px-1 text-sm font-semibold">
+                Equipo operativo
+              </legend>
+              <p className="text-xs leading-relaxed text-muted">
+                El supervisor y sus colaboradores deben usar el mismo equipo.
+                Las tareas y horarios de equipos diferentes quedan separados,
+                aunque compartan local.
+              </p>
+              <div className="space-y-2">
+                {(
+                  [
+                    ["ninguno", "Sin planificación de campo"],
+                    ["existente", "Usar un equipo existente"],
+                    ["nuevo", "Crear un equipo nuevo"],
+                  ] as const
+                ).map(([modo, etiqueta]) => (
+                  <label
+                    key={modo}
+                    className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-line px-3 py-2 text-sm text-foreground hover:bg-surface-soft focus-within:ring-2 focus-within:ring-focus"
+                  >
+                    <input
+                      type="radio"
+                      name="modo-equipo"
+                      value={modo}
+                      checked={form.modoEquipo === modo}
+                      onChange={() =>
+                        setForm((actual) => ({ ...actual, modoEquipo: modo }))
+                      }
+                    />
+                    <span>{etiqueta}</span>
+                  </label>
+                ))}
+              </div>
+              {form.modoEquipo === "existente" ? (
+                <SelectorPaginado
+                  key={`equipo-${form.empresaId}`}
+                  url={`/admin/roles/equipos?empresaId=${form.empresaId}`}
+                  etiqueta="Equipo"
+                  buscable
+                  required
+                  value={form.equipoCampoId}
+                  vacio="Seleccioná un equipo"
+                  seleccionActual={
+                    editando &&
+                    editando !== "nuevo" &&
+                    editando.equipoCampo?.id === form.equipoCampoId
+                      ? editando.equipoCampo.nombre
+                      : undefined
+                  }
+                  onChange={(id) =>
+                    setForm((actual) => ({ ...actual, equipoCampoId: id }))
+                  }
+                />
+              ) : null}
+              {form.modoEquipo === "nuevo" ? (
+                <div className="space-y-3">
+                  <label className={labelBase}>
+                    Nombre del equipo
+                    <input
+                      name="nuevo-equipo-nombre"
+                      autoComplete="off"
+                      value={form.nuevoEquipoNombre}
+                      minLength={2}
+                      maxLength={120}
+                      required
+                      placeholder="Ej.: Promotores Norte"
+                      className={inputBase}
+                      onChange={(evento) =>
+                        setForm((actual) => ({
+                          ...actual,
+                          nuevoEquipoNombre: evento.target.value,
+                        }))
+                      }
+                    />
+                  </label>
+                  <label className={labelBase}>
+                    Tipo de trabajo
+                    <select
+                      name="nuevo-equipo-tipo"
+                      value={form.nuevoEquipoTipo}
+                      className={inputBase}
+                      onChange={(evento) =>
+                        setForm((actual) => ({
+                          ...actual,
+                          nuevoEquipoTipo: evento.target
+                            .value as FormRol["nuevoEquipoTipo"],
+                        }))
+                      }
+                    >
+                      <option value="IMPULSADOR">
+                        Visitas de impulsadores
+                      </option>
+                      <option value="REPOSITOR">
+                        Visitas y tareas de repositores
+                      </option>
+                    </select>
+                  </label>
+                </div>
+              ) : null}
+            </fieldset>
           ) : null}
           {error ? <p className={errorBox}>{error}</p> : null}
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">

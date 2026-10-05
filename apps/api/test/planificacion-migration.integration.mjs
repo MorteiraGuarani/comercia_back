@@ -10,6 +10,8 @@ const { condicionAgenda } = require('../dist/src/campo/utils/agenda-sql.js');
 const db = new PGlite();
 try {
   await db.exec(`
+    CREATE TABLE empresas (id INT PRIMARY KEY, nombre TEXT);
+    INSERT INTO empresas VALUES (10,'Empresa A'),(20,'Empresa B');
     CREATE TYPE "DestinatarioTareaCampo" AS ENUM ('IMPULSADOR','REPOSITOR','AMBOS');
     CREATE TABLE roles (id INT PRIMARY KEY, empresa_id INT, descripcion TEXT);
     CREATE TABLE usuarios (id INT PRIMARY KEY, empresa_id INT, rol_id INT REFERENCES roles,
@@ -183,13 +185,37 @@ try {
     INSERT INTO campo_horarios(local_id,destinatario,dias_semana) VALUES (4,'REPOSITOR','{2}');
     INSERT INTO campo_backups VALUES (1,1,2,true,'2026-10-06','2026-10-06');
   `);
+  await db.exec("INSERT INTO roles VALUES(4,10,'Cargo Nuevo')");
+  await db.exec(
+    await readFile(
+      new URL(
+        '../prisma/migrations/20261005160000_equipos_operativos_configurables/migration.sql',
+        import.meta.url,
+      ),
+      'utf8',
+    ),
+  );
+  assert.equal(
+    (await rows('SELECT equipo_campo_id FROM roles WHERE id=4'))[0]
+      .equipo_campo_id,
+    null,
+  );
+  const grupoId = async (tipo) =>
+    (
+      await db.query(
+        'SELECT id FROM campo_equipos_operativos WHERE empresa_id=10 AND tipo=$1',
+        [tipo],
+      )
+    ).rows[0].id;
   const agenda = async (usuarioId, destinatario, hasta = '2026-10-05') => {
     const sql = condicionAgenda(
       10,
       usuarioId,
       '2026-10-05',
       hasta,
-      destinatario,
+      typeof destinatario === 'number'
+        ? destinatario
+        : await grupoId(destinatario),
     );
     const result = await db.query(
       `SELECT DISTINCT l.id FROM campo_asignaciones a
@@ -203,9 +229,75 @@ try {
   assert.deepEqual(await agenda(2, 'REPOSITOR'), [3]);
   assert.deepEqual(await agenda(2, 'REPOSITOR', '2026-10-06'), [1, 3]);
   assert.deepEqual(await agenda(3, 'REPOSITOR', '2026-10-06'), []);
+  // Dos roles nuevos, mismo perfil de impulsador y mismo local, distintos equipos.
+  const equipoA = (
+    await db.query(
+      "INSERT INTO campo_equipos_operativos(empresa_id,nombre,tipo) VALUES(10,'Promocion A','IMPULSADOR') RETURNING id",
+    )
+  ).rows[0].id;
+  const equipoB = (
+    await db.query(
+      "INSERT INTO campo_equipos_operativos(empresa_id,nombre,tipo) VALUES(10,'Promocion B','IMPULSADOR') RETURNING id",
+    )
+  ).rows[0].id;
+  await db.query('UPDATE roles SET equipo_campo_id=$1 WHERE id=4', [equipoA]);
+  await db.query(
+    "INSERT INTO roles(id,empresa_id,descripcion,equipo_campo_id) VALUES(5,10,'Otro Cargo Nuevo',$1)",
+    [equipoB],
+  );
+  await db.exec(
+    'INSERT INTO usuarios(id,empresa_id,rol_id) VALUES(4,10,4),(5,10,5); INSERT INTO campo_asignaciones(id,local_id,usuario_id) VALUES(7,4,4),(8,4,5)',
+  );
+  await db.query(
+    "INSERT INTO campo_horarios(local_id,destinatario,equipo_campo_id,dias_semana) VALUES(4,'IMPULSADOR',$1,'{1}'),(4,'IMPULSADOR',$2,'{2}')",
+    [equipoA, equipoB],
+  );
+  await db.query(
+    "INSERT INTO campo_tareas(empresa_id,nombre,destinatario,equipo_campo_id) VALUES(10,'Solo A','IMPULSADOR',$1),(10,'Solo B','IMPULSADOR',$2)",
+    [equipoA, equipoB],
+  );
+  assert.deepEqual(await agenda(4, equipoA), [4]);
+  assert.deepEqual(await agenda(5, equipoB), []);
+  assert.deepEqual(await agenda(5, equipoB, '2026-10-06'), [4]);
+  assert.deepEqual(
+    (
+      await db.query(
+        'SELECT nombre FROM campo_tareas WHERE empresa_id=10 AND equipo_campo_id=$1',
+        [equipoA],
+      )
+    ).rows,
+    [{ nombre: 'Solo A' }],
+  );
+  assert.deepEqual(
+    (
+      await db.query(
+        'SELECT nombre FROM campo_tareas WHERE empresa_id=10 AND equipo_campo_id=$1',
+        [equipoB],
+      )
+    ).rows,
+    [{ nombre: 'Solo B' }],
+  );
+  await assert.rejects(
+    db.query('UPDATE roles SET equipo_campo_id=$1 WHERE id=3', [equipoA]),
+    /fkey/,
+  );
+  await assert.rejects(
+    db.query(
+      "INSERT INTO campo_tareas(empresa_id,nombre,destinatario,equipo_campo_id) VALUES(20,'Ajena','IMPULSADOR',$1)",
+      [equipoA],
+    ),
+    /fkey/,
+  );
+  assert.equal(
+    (await rows('SELECT COUNT(*)::int AS n FROM campo_locales'))[0].n,
+    5,
+  );
   console.log(
     'OK: migración, evidencias, locales compartidos y agendas separadas por equipo.',
   );
+} catch (error) {
+  console.error('Fallo de migracion/agenda:', error.message);
+  process.exitCode = 1;
 } finally {
   await db.close();
 }

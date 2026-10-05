@@ -12,6 +12,8 @@ jest.mock('../prisma/prisma.service', () => ({
 
 describe('RolesService', () => {
   const prisma = {
+    $transaction: jest.fn(),
+    $queryRaw: jest.fn(),
     usuario: { findUnique: jest.fn() },
     empresa: { findUnique: jest.fn() },
     empresaModulo: { count: jest.fn() },
@@ -29,6 +31,9 @@ describe('RolesService', () => {
 
   beforeEach(() => {
     jest.resetAllMocks();
+    prisma.$transaction.mockImplementation((fn: (tx: unknown) => unknown) =>
+      fn(prisma),
+    );
     prisma.usuario.findUnique.mockResolvedValue({
       esSuperadmin: true,
       isActive: true,
@@ -61,6 +66,7 @@ describe('RolesService', () => {
           padre: { id: 1, descripcion: 'Gerencia' },
           usuariosCount: 4,
           hijosCount: 1,
+          equipoCampo: null,
         },
       ],
       total: 8,
@@ -124,7 +130,12 @@ describe('RolesService', () => {
     await service.crear(1, { empresaId: 20, descripcion: 'Gerente' });
     expect(prisma.rol.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: { empresaId: 20, descripcion: 'Gerente', rolId: null },
+        data: {
+          empresaId: 20,
+          descripcion: 'Gerente',
+          rolId: null,
+          equipoCampoId: null,
+        },
       }),
     );
   });

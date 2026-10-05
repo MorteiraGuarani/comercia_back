@@ -19,6 +19,12 @@ describe('PlanificacionCampoService', () => {
         id: 3,
         empresaId: 10,
         rolDescripcion: 'SUPERVISOR_REPOSITORES',
+        equipoCampo: {
+          id: 2,
+          nombre: 'Repositores',
+          tipo: 'REPOSITOR',
+          activo: true,
+        },
       }),
     };
     const service = new PlanificacionCampoService(
@@ -31,7 +37,7 @@ describe('PlanificacionCampoService', () => {
         where: expect.objectContaining({
           empresaId: 10,
           superiorId: 3,
-          rol: { descripcion: 'REPOSITOR' },
+          rol: { equipoCampoId: 2 },
         }),
       }),
     );
@@ -52,7 +58,16 @@ describe('PlanificacionCampoService', () => {
       },
     };
     const acceso = {
-      gestionar: jest.fn().mockResolvedValue({ id: 3, empresaId: 10 }),
+      gestionar: jest.fn().mockResolvedValue({
+        id: 3,
+        empresaId: 10,
+        equipoCampo: {
+          id: 1,
+          nombre: 'Impulsadores',
+          tipo: 'IMPULSADOR',
+          activo: true,
+        },
+      }),
     };
     const service = new PlanificacionCampoService(
       prisma as unknown as PrismaService,
@@ -66,7 +81,7 @@ describe('PlanificacionCampoService', () => {
     });
 
     const where = {
-      rol: { descripcion: { notIn: ['REPOSITOR', 'SUPERVISOR_REPOSITORES'] } },
+      rol: { equipoCampoId: 1 },
       empresaId: 10,
       superiorId: 3,
       isActive: true,

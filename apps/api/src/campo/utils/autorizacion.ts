@@ -1,6 +1,10 @@
 import { ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { destinatarioCampo } from './equipo-campo';
+import {
+  destinatarioCampo,
+  exigirEquipoCampo,
+  EQUIPO_CAMPO_SELECT,
+} from './equipo-campo';
 
 /** Comprueba la cadena real de superiores, dentro de una misma empresa. */
 export async function esLiderDe(
@@ -29,9 +33,14 @@ export async function obtenerEquipoCompleto(
 
   const lider = await prisma.usuario.findUnique({
     where: { id: liderUserId },
-    select: { id: true, empresaId: true, isActive: true },
+    select: {
+      id: true,
+      empresaId: true,
+      isActive: true,
+      rol: { select: { equipoCampoId: true } },
+    },
   });
-  if (!lider?.isActive) return [];
+  if (!lider?.isActive || !lider.rol?.equipoCampoId) return [];
   const ids = [lider.id];
   // La consulta incluye empresa y estado en cada nivel; un rol compartido nunca
   // concede acceso a los subordinados de otro líder.
@@ -43,6 +52,7 @@ export async function obtenerEquipoCompleto(
         empresaId: lider.empresaId,
         isActive: true,
         esSuperadmin: false,
+        rol: { equipoCampoId: lider.rol.equipoCampoId },
       },
       select: { id: true },
       take: 10000,
@@ -67,13 +77,15 @@ export async function obtenerLiderDirecto(
     select: {
       empresaId: true,
       superiorId: true,
+      rol: { select: { equipoCampoId: true } },
     },
   });
 
-  if (!usuario?.superiorId) return null;
+  if (!usuario?.superiorId || !usuario.rol?.equipoCampoId) return null;
   const superior = await prisma.usuario.findFirst({
     where: {
       id: usuario.superiorId,
+      rol: { equipoCampoId: usuario.rol.equipoCampoId },
       empresaId: usuario.empresaId,
       isActive: true,
     },
@@ -147,7 +159,16 @@ export async function verificarAccesoCumplimiento(
       where: { id: visitaId },
       select: {
         usuarioId: true,
-        usuario: { select: { rol: { select: { descripcion: true } } } },
+        usuario: {
+          select: {
+            rol: {
+              select: {
+                descripcion: true,
+                equipoCampo: { select: EQUIPO_CAMPO_SELECT },
+              },
+            },
+          },
+        },
         localId: true,
         fecha: true,
         local: { select: { cliente: { select: { empresaId: true } } } },
@@ -164,7 +185,8 @@ export async function verificarAccesoCumplimiento(
       where: {
         id: tareaId,
         empresaId: visita.local.cliente.empresaId,
-        destinatario: destinatarioCampo(visita.usuario.rol?.descripcion),
+        destinatario: destinatarioCampo(visita.usuario.rol?.equipoCampo),
+        equipoCampoId: exigirEquipoCampo(visita.usuario.rol?.equipoCampo).id,
         fechaDesde: { lte: visita.fecha },
         AND: [
           { OR: [{ fechaHasta: null }, { fechaHasta: { gte: visita.fecha } }] },

@@ -15,39 +15,112 @@ describe('SupervisionService', () => {
           id: 1,
           empresaId: 1,
           isActive: true,
+          rol: { equipoCampoId: 1 },
         }),
-        findMany: jest.fn().mockImplementation(({ where }: { where: { superiorId?: { in: number[] } } }) =>
-          where.superiorId?.in.includes(1) ? [{ id: 2 }] : []),
+        findMany: jest
+          .fn()
+          .mockImplementation(
+            ({ where }: { where: { superiorId?: { in: number[] } } }) =>
+              where.superiorId?.in.includes(1) ? [{ id: 2 }] : [],
+          ),
         findFirst: jest.fn().mockResolvedValue({
-          id: 2, nombre: 'Ana', apellido: 'Pérez', celular: '', correo: '',
-          rol: { descripcion: 'Impulsador' },
+          id: 2,
+          nombre: 'Ana',
+          apellido: 'Pérez',
+          celular: '',
+          correo: '',
+          rol: {
+            descripcion: 'Impulsador',
+            equipoCampo: {
+              id: 1,
+              nombre: 'Impulsadores',
+              tipo: 'IMPULSADOR',
+              activo: true,
+            },
+          },
         }),
       },
       asignacionCampo: { findMany: jest.fn().mockResolvedValue([]) },
-      visitaCampo: { findMany: jest.fn().mockResolvedValue([{
-        id: 50,
-        fecha: new Date('2026-09-17T00:00:00.000Z'),
-        entrada: new Date('2026-09-17T08:00:00.000Z'),
-        salida: null,
-        local: { id: 8, nombre: 'Local 8', cliente: { nombre: 'Cliente' }, horarios: [] },
-        cumplimientos: [
-          { tareaId: 10, nombreTarea: 'Exhibición', completadaAt: new Date('2026-09-17T09:00:00.000Z'), fotos: [{ id: 7, momento: 'ANTES', creadoAt: new Date() }, { id: 8, momento: 'DESPUES', creadoAt: new Date() }], comentarios: [{ id: 4, comentario: 'Realizado', creadoAt: new Date(), usuario: { nombre: 'Ana', apellido: 'Pérez' } }] },
-          { tareaId: 11, nombreTarea: 'Inventario', completadaAt: null, fotos: [], comentarios: [] },
-        ],
-      }]) },
-      tareaCampo: { findMany: jest.fn().mockResolvedValue([
-        { id: 10, nombre: 'Exhibición', categoria: 'Tienda', esObligatoria: true },
-        { id: 11, nombre: 'Inventario', categoria: 'Tienda', esObligatoria: true },
-      ]) },
+      visitaCampo: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: 50,
+            fecha: new Date('2026-09-17T00:00:00.000Z'),
+            entrada: new Date('2026-09-17T08:00:00.000Z'),
+            salida: null,
+            local: {
+              id: 8,
+              nombre: 'Local 8',
+              cliente: { nombre: 'Cliente' },
+              horarios: [],
+            },
+            cumplimientos: [
+              {
+                tareaId: 10,
+                nombreTarea: 'Exhibición',
+                completadaAt: new Date('2026-09-17T09:00:00.000Z'),
+                fotos: [
+                  { id: 7, momento: 'ANTES', creadoAt: new Date() },
+                  { id: 8, momento: 'DESPUES', creadoAt: new Date() },
+                ],
+                comentarios: [
+                  {
+                    id: 4,
+                    comentario: 'Realizado',
+                    creadoAt: new Date(),
+                    usuario: { nombre: 'Ana', apellido: 'Pérez' },
+                  },
+                ],
+              },
+              {
+                tareaId: 11,
+                nombreTarea: 'Inventario',
+                completadaAt: null,
+                fotos: [],
+                comentarios: [],
+              },
+            ],
+          },
+        ]),
+      },
+      tareaCampo: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: 10,
+            nombre: 'Exhibición',
+            categoria: 'Tienda',
+            esObligatoria: true,
+          },
+          {
+            id: 11,
+            nombre: 'Inventario',
+            categoria: 'Tienda',
+            esObligatoria: true,
+          },
+        ]),
+      },
       novedadCampo: { findMany: jest.fn().mockResolvedValue([]) },
     };
-    const acceso = { gestionar: jest.fn().mockResolvedValue({ id: 1, empresaId: 1 }) };
+    const acceso = {
+      gestionar: jest.fn().mockResolvedValue({
+        id: 1,
+        empresaId: 1,
+        equipoCampo: {
+          id: 1,
+          nombre: 'Impulsadores',
+          tipo: 'IMPULSADOR',
+          activo: true,
+        },
+      }),
+    };
     const service = new SupervisionService(
       prisma as unknown as PrismaService,
       acceso as unknown as CampoAccesoService,
     );
 
-    const detalle = await service.detalleColaborador(1, 2, { fecha: '2026-09-17' });
+    const detalle = await service.detalleColaborador(1, 2, {
+      fecha: '2026-09-17',
+    });
 
     expect(detalle.tareasCategorias[0].completadas).toBe(1);
     expect(detalle.evidencias).toHaveLength(2);
@@ -62,27 +135,47 @@ describe('SupervisionService', () => {
         findUnique: jest
           .fn()
           .mockImplementation(({ where }: { where: { id: number } }) => {
-          if (where.id === 1) {
+            if (where.id === 1) {
+              return Promise.resolve({
+                id: 1,
+                empresaId: 10,
+                isActive: true,
+                rol: { equipoCampoId: 1 },
+              });
+            }
             return Promise.resolve({
-              id: 1,
+              id: where.id,
               empresaId: 10,
               isActive: true,
             });
-          }
-          return Promise.resolve({ id: where.id, empresaId: 10, isActive: true });
           }),
-        findMany: jest.fn().mockImplementation(({ where }: { where: { superiorId?: { in: number[] } } }) =>
-          where.superiorId ?
-          (where.superiorId.in.includes(1) ? [{ id: 2 }] : []) : [
-          {
-            id: 2,
-            nombre: 'Diego',
-            apellido: 'Ramírez',
-            celular: '11223344',
-            superiorId: 1,
-            rol: { descripcion: 'Impulsador' },
-          },
-        ]),
+        findMany: jest
+          .fn()
+          .mockImplementation(
+            ({ where }: { where: { superiorId?: { in: number[] } } }) =>
+              where.superiorId
+                ? where.superiorId.in.includes(1)
+                  ? [{ id: 2 }]
+                  : []
+                : [
+                    {
+                      id: 2,
+                      nombre: 'Diego',
+                      apellido: 'Ramírez',
+                      celular: '11223344',
+                      superiorId: 1,
+                      rol: {
+                        descripcion: 'Impulsador',
+                        equipoCampo: {
+                          id: 1,
+                          nombre: 'Impulsadores',
+                          tipo: 'IMPULSADOR',
+                          activo: true,
+                        },
+                      },
+                    },
+                  ],
+          ),
       },
       asignacionCampo: {
         findMany: jest.fn().mockResolvedValue([{ id: 10, localId: 100 }]),
@@ -109,7 +202,16 @@ describe('SupervisionService', () => {
       },
     };
     const acceso = {
-      gestionar: jest.fn().mockResolvedValue({ id: 1, empresaId: 10 }),
+      gestionar: jest.fn().mockResolvedValue({
+        id: 1,
+        empresaId: 10,
+        equipoCampo: {
+          id: 1,
+          nombre: 'Impulsadores',
+          tipo: 'IMPULSADOR',
+          activo: true,
+        },
+      }),
     };
 
     const service = new SupervisionService(

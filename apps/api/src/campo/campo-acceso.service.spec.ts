@@ -9,7 +9,17 @@ describe('Alcance de campo', () => {
       usuario: {
         findFirst: jest
           .fn()
-          .mockResolvedValueOnce({ rol: { descripcion: 'TeamLeader' } })
+          .mockResolvedValueOnce({
+            rol: {
+              descripcion: 'TeamLeader',
+              equipoCampo: {
+                id: 1,
+                nombre: 'Impulsadores',
+                tipo: 'IMPULSADOR',
+                activo: true,
+              },
+            },
+          })
           .mockResolvedValueOnce(null),
       },
     };
@@ -28,9 +38,7 @@ describe('Alcance de campo', () => {
         superiorId: 20,
         isActive: true,
         esSuperadmin: false,
-        rol: {
-          descripcion: { notIn: ['REPOSITOR', 'SUPERVISOR_REPOSITORES'] },
-        },
+        rol: { equipoCampoId: 1 },
       },
       select: { id: true },
     });
@@ -38,8 +46,24 @@ describe('Alcance de campo', () => {
   });
   it('usa permisos de módulos en lugar de nombres de roles', async () => {
     const plataforma = {
-      exigirAccesoPagina: jest.fn().mockResolvedValue({ id: 1 }),
-      exigirAccesoAlgunaPagina: jest.fn().mockResolvedValue({ id: 1 }),
+      exigirAccesoPagina: jest.fn().mockResolvedValue({
+        id: 1,
+        equipoCampo: {
+          id: 1,
+          nombre: 'Impulsadores',
+          tipo: 'IMPULSADOR',
+          activo: true,
+        },
+      }),
+      exigirAccesoAlgunaPagina: jest.fn().mockResolvedValue({
+        id: 1,
+        equipoCampo: {
+          id: 1,
+          nombre: 'Impulsadores',
+          tipo: 'IMPULSADOR',
+          activo: true,
+        },
+      }),
     };
     const service = new CampoAccesoService(
       {} as PrismaService,

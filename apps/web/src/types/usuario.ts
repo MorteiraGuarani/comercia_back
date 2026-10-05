@@ -10,7 +10,11 @@ export interface UsuarioSesion {
   esSuperadmin: boolean;
   puedeAdministrarUsuarios: boolean;
   empresa: { id: number; nombre: string };
-  rol: { id: number; descripcion: string } | null;
+  rol: {
+    id: number;
+    descripcion: string;
+    equipoCampo: EquipoCampo | null;
+  } | null;
 }
 
 export interface UsuarioAdmin {
@@ -42,3 +46,4 @@ export interface UsuarioLocalAsignacion {
   fechaDesde: string;
   fechaHasta: string | null;
 }
+import type { EquipoCampo } from "./rol";

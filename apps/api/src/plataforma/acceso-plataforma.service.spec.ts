@@ -49,6 +49,7 @@ describe('AccesoPlataformaService', () => {
       empresaId: 20,
       rolId: 5,
       rolDescripcion: null,
+      equipoCampo: null,
     });
   });
 
@@ -88,6 +89,7 @@ describe('AccesoPlataformaService', () => {
       empresaId: 20,
       rolId: 5,
       rolDescripcion: null,
+      equipoCampo: null,
     });
   });
 
@@ -156,6 +158,7 @@ describe('AccesoPlataformaService', () => {
         empresaId: 20,
         rolId: 5,
         rolDescripcion: null,
+        equipoCampo: null,
       },
       modulosRutas: ['supervisor', 'repositor'],
     });

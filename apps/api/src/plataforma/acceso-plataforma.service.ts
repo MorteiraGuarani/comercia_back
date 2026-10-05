@@ -7,6 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import type { UsuarioConAcceso } from './interfaces/usuario-con-acceso.interface';
 import type { AccesoModulos } from './interfaces/acceso-modulos.interface';
 import { rolVe } from './utils/visibilidad';
+import { EQUIPO_CAMPO_SELECT } from '../campo/utils/equipo-campo';
 
 // Control de acceso del plano de DATOS de un módulo (no solo del menú):
 // verifica que la empresa del usuario tenga habilitado el módulo Y que el rol
@@ -31,7 +32,12 @@ export class AccesoPlataformaService {
         empresaId: true,
         rolId: true,
         isActive: true,
-        rol: { select: { descripcion: true } },
+        rol: {
+          select: {
+            descripcion: true,
+            equipoCampo: { select: EQUIPO_CAMPO_SELECT },
+          },
+        },
       },
     });
     if (!usuario || !usuario.isActive) {
@@ -91,6 +97,7 @@ export class AccesoPlataformaService {
       empresaId: usuario.empresaId,
       rolId: usuario.rolId,
       rolDescripcion: usuario.rol?.descripcion ?? null,
+      equipoCampo: usuario.rol?.equipoCampo ?? null,
     };
   }
 
@@ -149,7 +156,12 @@ export class AccesoPlataformaService {
         empresaId: true,
         rolId: true,
         isActive: true,
-        rol: { select: { descripcion: true } },
+        rol: {
+          select: {
+            descripcion: true,
+            equipoCampo: { select: EQUIPO_CAMPO_SELECT },
+          },
+        },
       },
     });
     if (!usuario || !usuario.isActive) {
@@ -215,6 +227,7 @@ export class AccesoPlataformaService {
           empresaId: usuario.empresaId,
           rolId: usuario.rolId,
           rolDescripcion: usuario.rol?.descripcion ?? null,
+          equipoCampo: usuario.rol?.equipoCampo ?? null,
         },
         modulosRutas: [...new Set(rutasConAcceso)],
       };

@@ -19,7 +19,15 @@ describe('Catálogo de tareas', () => {
       $transaction: jest.fn().mockImplementation((fn) => fn(tx)),
     };
     const acceso = {
-      gestionar: jest.fn().mockResolvedValue({ empresaId: 10 }),
+      gestionar: jest.fn().mockResolvedValue({
+        empresaId: 10,
+        equipoCampo: {
+          id: 1,
+          nombre: 'Impulsadores',
+          tipo: 'IMPULSADOR',
+          activo: true,
+        },
+      }),
     };
     const service = new CatalogoCampoService(
       prisma as unknown as PrismaService,
@@ -51,7 +59,16 @@ describe('Catálogo de tareas', () => {
       },
     };
     const acceso = {
-      gestionar: jest.fn().mockResolvedValue({ id: 1, empresaId: 10 }),
+      gestionar: jest.fn().mockResolvedValue({
+        id: 1,
+        empresaId: 10,
+        equipoCampo: {
+          id: 1,
+          nombre: 'Impulsadores',
+          tipo: 'IMPULSADOR',
+          activo: true,
+        },
+      }),
     };
     const service = new CatalogoCampoService(
       prisma as unknown as PrismaService,
@@ -72,6 +89,7 @@ describe('Catálogo de tareas', () => {
         where: {
           empresaId: 10,
           destinatario: 'IMPULSADOR',
+          equipoCampoId: 1,
           categoria: 'Precios',
           requiereFotos: true,
           OR: [

@@ -36,7 +36,17 @@ describe('Evidencias antes de completar una tarea', () => {
           id: 20,
           localId: 30,
           fecha: new Date('2026-09-17'),
-          usuario: { rol: null },
+          usuario: {
+            rol: {
+              descripcion: 'Operador nuevo',
+              equipoCampo: {
+                id: 1,
+                nombre: 'Impulsadores',
+                tipo: 'IMPULSADOR',
+                activo: true,
+              },
+            },
+          },
         }),
       },
       tareaCampo: {
@@ -78,7 +88,16 @@ describe('Evidencias antes de completar una tarea', () => {
     const jornada = new JornadaCampoService(
       prisma as unknown as PrismaService,
       {
-        ejecutar: jest.fn().mockResolvedValue({ id: 1, empresaId: 10 }),
+        ejecutar: jest.fn().mockResolvedValue({
+          id: 1,
+          empresaId: 10,
+          equipoCampo: {
+            id: 1,
+            nombre: 'Impulsadores',
+            tipo: 'IMPULSADOR',
+            activo: true,
+          },
+        }),
       } as unknown as CampoAccesoService,
     );
     const archivo = {

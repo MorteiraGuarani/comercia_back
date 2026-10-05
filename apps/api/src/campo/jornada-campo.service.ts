@@ -5,7 +5,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '../../generated/prisma/client';
-import { destinatarioCampo, rolDelEquipoCampo } from './utils/equipo-campo';
+import {
+  destinatarioCampo,
+  rolDelEquipoCampo,
+  exigirEquipoCampo,
+} from './utils/equipo-campo';
 import { PrismaService } from '../prisma/prisma.service';
 import { rangoPaginacion, respuestaPaginada } from '../common/utils/paginacion';
 import { CampoAccesoService } from './campo-acceso.service';
@@ -47,12 +51,14 @@ export class JornadaCampoService {
     id: number,
     fecha: Date,
     esTeamleader: boolean,
-    rolDescripcion?: string | null,
+    equipoCampo?:
+      | import('../roles/interfaces/equipo-campo.interface').EquipoCampoDto
+      | null,
   ) {
     const a = await tx.asignacionCampo.findFirst({
       where: {
         id,
-        usuario: { rol: rolDelEquipoCampo(rolDescripcion) },
+        usuario: { rol: rolDelEquipoCampo(equipoCampo) },
         activo: true,
         fechaDesde: { lte: fecha },
         OR: [{ fechaHasta: null }, { fechaHasta: { gte: fecha } }],
@@ -63,7 +69,13 @@ export class JornadaCampoService {
         localId: true,
         local: { select: { latitud: true, longitud: true, radioMetros: true } },
         usuarioId: true,
-        usuario: { select: { superiorId: true, isActive: true } },
+        usuario: {
+          select: {
+            superiorId: true,
+            isActive: true,
+            rol: { select: { equipoCampoId: true } },
+          },
+        },
         backups: {
           where: {
             activo: true,
@@ -73,7 +85,13 @@ export class JornadaCampoService {
           take: 1,
           select: {
             usuarioId: true,
-            usuario: { select: { superiorId: true, isActive: true } },
+            usuario: {
+              select: {
+                superiorId: true,
+                isActive: true,
+                rol: { select: { equipoCampoId: true } },
+              },
+            },
           },
         },
       },
@@ -85,7 +103,8 @@ export class JornadaCampoService {
         !(
           esTeamleader &&
           responsable?.isActive &&
-          responsable.superiorId === usuarioId
+          responsable.superiorId === usuarioId &&
+          responsable.rol?.equipoCampoId === exigirEquipoCampo(equipoCampo).id
         ))
     )
       throw new NotFoundException('Asignación no disponible para esta fecha');
@@ -105,7 +124,7 @@ export class JornadaCampoService {
       u.id,
       desde,
       hasta,
-      destinatarioCampo(u.rolDescripcion),
+      exigirEquipoCampo(u.equipoCampo).id,
     );
     const base = Prisma.sql`FROM campo_asignaciones a JOIN campo_locales l ON l.id = a.local_id JOIN campo_clientes c ON c.id = l.cliente_id WHERE ${condicion}`;
     const [conteo, ids] = await Promise.all([
@@ -130,7 +149,8 @@ export class JornadaCampoService {
         horarios: {
           where: {
             activo: true,
-            destinatario: destinatarioCampo(u.rolDescripcion),
+            equipoCampoId: exigirEquipoCampo(u.equipoCampo).id,
+            destinatario: destinatarioCampo(u.equipoCampo),
           },
           take: 20,
           orderBy: { entrada: 'asc' },
@@ -143,7 +163,8 @@ export class JornadaCampoService {
               where: {
                 activo: true,
                 asignacionId: null,
-                destinatario: destinatarioCampo(u.rolDescripcion),
+                equipoCampoId: exigirEquipoCampo(u.equipoCampo).id,
+                destinatario: destinatarioCampo(u.equipoCampo),
               },
               take: 20,
               orderBy: { entrada: 'asc' },
@@ -206,7 +227,7 @@ export class JornadaCampoService {
           dto.asignacionId,
           fecha,
           esTeamleader,
-          u.rolDescripcion,
+          u.equipoCampo,
         );
         const distancia = comprobarMarcaEnLocal(dto, a.local, ahora);
         if (await tx.visitaCampo.count({ where: { usuarioId, salida: null } }))
@@ -216,7 +237,8 @@ export class JornadaCampoService {
         const horarios = await tx.horarioCampo.findMany({
           where: {
             localId: a.localId,
-            destinatario: destinatarioCampo(u.rolDescripcion),
+            equipoCampoId: exigirEquipoCampo(u.equipoCampo).id,
+            destinatario: destinatarioCampo(u.equipoCampo),
             activo: true,
             OR: [{ asignacionId: a.id }, { asignacionId: null }],
           },
@@ -325,7 +347,7 @@ export class JornadaCampoService {
     const a = await this.prisma.asignacionCampo.findFirst({
       where: {
         id: asignacionId,
-        usuario: { rol: rolDelEquipoCampo(u.rolDescripcion) },
+        usuario: { rol: rolDelEquipoCampo(u.equipoCampo) },
         activo: true,
         fechaDesde: { lte: fechaHasta },
         OR: [{ fechaHasta: null }, { fechaHasta: { gte: fechaDesde } }],
@@ -354,7 +376,7 @@ export class JornadaCampoService {
     )
       throw new NotFoundException('Asignación no disponible para esta fecha');
     const { skip, take, page, limit } = rangoPaginacion(query);
-    if (u.rolDescripcion?.toUpperCase() === 'REPOSITOR') {
+    if (exigirEquipoCampo(u.equipoCampo).tipo === 'REPOSITOR') {
       const abierta = await this.prisma.visitaCampo.findFirst({
         where: { usuarioId: u.id, asignacionId, salida: null },
         select: { id: true },
@@ -363,7 +385,8 @@ export class JornadaCampoService {
     }
     const where: Prisma.TareaCampoWhereInput = {
       empresaId: u.empresaId,
-      destinatario: destinatarioCampo(u.rolDescripcion),
+      equipoCampoId: exigirEquipoCampo(u.equipoCampo).id,
+      destinatario: destinatarioCampo(u.equipoCampo),
       activo: true,
       fechaDesde: { lte: fechaHasta },
       AND: [
@@ -450,7 +473,8 @@ export class JornadaCampoService {
         where: {
           id: tareaId,
           empresaId: u.empresaId,
-          destinatario: destinatarioCampo(u.rolDescripcion),
+          equipoCampoId: exigirEquipoCampo(u.equipoCampo).id,
+          destinatario: destinatarioCampo(u.equipoCampo),
           activo: true,
           fechaDesde: { lte: v.fecha },
           AND: [

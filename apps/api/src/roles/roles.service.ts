@@ -11,8 +11,16 @@ import {
   type RespuestaPaginada,
 } from '../common/utils/paginacion';
 import { PrismaService } from '../prisma/prisma.service';
-import { ActualizarRolDto, CrearRolDto, ListarRolesDto } from './dto/rol.dto';
+import {
+  ActualizarRolDto,
+  CrearRolDto,
+  ListarRolesDto,
+  ListarEquiposCampoDto,
+  PlanificacionRolDto,
+} from './dto/rol.dto';
 import type { RolAdminDto } from './interfaces/rol-admin.interface';
+import type { Prisma } from '../../generated/prisma/client';
+import { EQUIPO_CAMPO_SELECT } from '../campo/utils/equipo-campo';
 
 const SELECT_ROL_ADMIN = {
   id: true,
@@ -20,6 +28,7 @@ const SELECT_ROL_ADMIN = {
   descripcion: true,
   padre: { select: { id: true, descripcion: true } },
   _count: { select: { usuarios: true, hijos: true } },
+  equipoCampo: { select: EQUIPO_CAMPO_SELECT },
 } as const;
 
 import { aRolAdminDto } from './utils/rol-admin';
@@ -56,6 +65,75 @@ export class RolesService {
       }),
     ]);
     return respuestaPaginada(roles.map(aRolAdminDto), total, page, limit);
+  }
+
+  async equipos(usuarioId: number, query: ListarEquiposCampoDto) {
+    await this.autorizar(usuarioId);
+    const where = {
+      empresaId: query.empresaId,
+      activo: true,
+      ...(query.buscar?.trim()
+        ? {
+            nombre: {
+              contains: query.buscar.trim(),
+              mode: 'insensitive' as const,
+            },
+          }
+        : {}),
+    };
+    const { skip, take, page, limit } = rangoPaginacion(query);
+    const [total, items] = await Promise.all([
+      this.prisma.equipoCampo.count({ where }),
+      this.prisma.equipoCampo.findMany({
+        where,
+        select: EQUIPO_CAMPO_SELECT,
+        orderBy: [{ nombre: 'asc' }, { id: 'asc' }],
+        skip,
+        take,
+      }),
+    ]);
+    return respuestaPaginada(items, total, page, limit);
+  }
+
+  private async resolverEquipo(
+    tx: Prisma.TransactionClient,
+    empresaId: number,
+    dto: PlanificacionRolDto,
+    actual: number | null = null,
+  ) {
+    if (dto.nuevoEquipoNombre) {
+      if (dto.equipoCampoId || !dto.nuevoEquipoTipo)
+        throw new BadRequestException(
+          'Elegí un equipo existente o el nombre y tipo del nuevo equipo',
+        );
+      const nombre = dto.nuevoEquipoNombre.trim().replace(/\s+/g, ' ');
+      const repetido = await tx.equipoCampo.findFirst({
+        where: { empresaId, nombre: { equals: nombre, mode: 'insensitive' } },
+        select: { id: true },
+      });
+      if (repetido)
+        throw new ConflictException(
+          'El equipo ya existe; seleccioná el equipo existente',
+        );
+      const equipo = await tx.equipoCampo.create({
+        data: { empresaId, nombre, tipo: dto.nuevoEquipoTipo },
+        select: { id: true },
+      });
+      return equipo.id;
+    }
+    if (dto.nuevoEquipoTipo)
+      throw new BadRequestException('Ingresá el nombre del equipo nuevo');
+    if (dto.equipoCampoId === undefined) return actual;
+    if (dto.equipoCampoId === null) return null;
+    const equipo = await tx.equipoCampo.findFirst({
+      where: { id: dto.equipoCampoId, empresaId, activo: true },
+      select: { id: true },
+    });
+    if (!equipo)
+      throw new BadRequestException(
+        'Equipo operativo no disponible para esta empresa',
+      );
+    return equipo.id;
   }
 
   private async validarPadre(
@@ -97,13 +175,18 @@ export class RolesService {
     await this.validarPadre(dto.empresaId, dto.rolId);
     const descripcion = dto.descripcion.trim();
     try {
-      const rol = await this.prisma.rol.create({
-        data: {
-          descripcion,
-          empresaId: dto.empresaId,
-          rolId: dto.rolId ?? null,
-        },
-        select: SELECT_ROL_ADMIN,
+      const rol = await this.prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT id FROM empresas WHERE id = ${dto.empresaId} FOR UPDATE`;
+        const equipoCampoId = await this.resolverEquipo(tx, dto.empresaId, dto);
+        return tx.rol.create({
+          data: {
+            descripcion,
+            empresaId: dto.empresaId,
+            rolId: dto.rolId ?? null,
+            equipoCampoId,
+          },
+          select: SELECT_ROL_ADMIN,
+        });
       });
       return aRolAdminDto(rol);
     } catch (error: unknown) {
@@ -129,18 +212,37 @@ export class RolesService {
     await this.autorizar(usuarioId);
     const existente = await this.prisma.rol.findUnique({
       where: { id },
-      select: { id: true, empresaId: true },
+      select: { id: true, empresaId: true, equipoCampoId: true },
     });
     if (!existente) throw new NotFoundException('El rol no existe');
     await this.validarPadre(existente.empresaId, dto.rolId, id);
     try {
-      const rol = await this.prisma.rol.update({
-        where: { id },
-        data: {
-          descripcion: dto.descripcion?.trim(),
-          rolId: dto.rolId,
-        },
-        select: SELECT_ROL_ADMIN,
+      const rol = await this.prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT id FROM empresas WHERE id = ${existente.empresaId} FOR UPDATE`;
+        const equipoCampoId = await this.resolverEquipo(
+          tx,
+          existente.empresaId,
+          dto,
+          existente.equipoCampoId ?? null,
+        );
+        if (
+          equipoCampoId !== (existente.equipoCampoId ?? null) &&
+          (await tx.visitaCampo.count({
+            where: { salida: null, usuario: { rolId: id } },
+          }))
+        )
+          throw new BadRequestException(
+            'Cerrá las visitas abiertas antes de cambiar el equipo del rol',
+          );
+        return tx.rol.update({
+          where: { id },
+          data: {
+            descripcion: dto.descripcion?.trim(),
+            rolId: dto.rolId,
+            equipoCampoId,
+          },
+          select: SELECT_ROL_ADMIN,
+        });
       });
       return aRolAdminDto(rol);
     } catch (error: unknown) {

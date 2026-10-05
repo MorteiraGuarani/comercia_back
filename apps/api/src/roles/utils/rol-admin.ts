@@ -11,5 +11,13 @@ export function aRolAdminDto(rol: RolAdminFila): RolAdminDto {
     padre: rol.padre,
     usuariosCount: rol._count.usuarios,
     hijosCount: rol._count.hijos,
+    equipoCampo: rol.equipoCampo
+      ? {
+          id: rol.equipoCampo.id,
+          nombre: rol.equipoCampo.nombre,
+          tipo: rol.equipoCampo.tipo,
+          activo: rol.equipoCampo.activo,
+        }
+      : null,
   };
 }

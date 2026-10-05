@@ -1,18 +1,35 @@
+import { ForbiddenException } from '@nestjs/common';
 import {
   DestinatarioTareaCampo,
   Prisma,
 } from '../../../generated/prisma/client';
+import type { EquipoCampoDto } from '../../roles/interfaces/equipo-campo.interface';
 
-// El local es compartido. La planificación pertenece al equipo del rol.
-export function destinatarioCampo(rol?: string | null): DestinatarioTareaCampo {
-  const nombre = rol?.toLowerCase().replace(/[^a-z]/g, '');
-  return nombre === 'repositor' || nombre === 'supervisorrepositores'
-    ? DestinatarioTareaCampo.REPOSITOR
-    : DestinatarioTareaCampo.IMPULSADOR;
+export function exigirEquipoCampo(
+  equipo?: EquipoCampoDto | null,
+): EquipoCampoDto {
+  if (!equipo?.activo || equipo.tipo === DestinatarioTareaCampo.AMBOS)
+    throw new ForbiddenException(
+      'Tu rol no tiene un equipo operativo activo. Pedí a un administrador que lo configure en Roles.',
+    );
+  return equipo;
 }
 
-export function rolDelEquipoCampo(rol?: string | null): Prisma.RolWhereInput {
-  return destinatarioCampo(rol) === DestinatarioTareaCampo.REPOSITOR
-    ? { descripcion: 'REPOSITOR' }
-    : { descripcion: { notIn: ['REPOSITOR', 'SUPERVISOR_REPOSITORES'] } };
+export function destinatarioCampo(
+  equipo?: EquipoCampoDto | null,
+): DestinatarioTareaCampo {
+  return exigirEquipoCampo(equipo).tipo;
 }
+
+export function rolDelEquipoCampo(
+  equipo?: EquipoCampoDto | null,
+): Prisma.RolWhereInput {
+  return { equipoCampoId: exigirEquipoCampo(equipo).id };
+}
+
+export const EQUIPO_CAMPO_SELECT = {
+  id: true,
+  nombre: true,
+  tipo: true,
+  activo: true,
+} as const;

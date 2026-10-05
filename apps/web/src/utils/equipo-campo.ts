@@ -1,6 +1,7 @@
-export function destinatarioCampo(rol?: string | null): "IMPULSADOR" | "REPOSITOR" {
-  const nombre = rol?.toLowerCase().replace(/[^a-z]/g, "");
-  return nombre === "repositor" || nombre === "supervisorrepositores"
-    ? "REPOSITOR"
-    : "IMPULSADOR";
+import type { EquipoCampo } from "@/types/rol";
+
+export function destinatarioCampo(
+  equipo?: EquipoCampo | null,
+): "IMPULSADOR" | "REPOSITOR" | null {
+  return equipo?.activo ? equipo.tipo : null;
 }

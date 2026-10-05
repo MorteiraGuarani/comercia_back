@@ -13,6 +13,8 @@ import { MarcacionUcheckDto } from './dto/marcacion-ucheck.dto';
 import {
   destinatarioCampo,
   rolDelEquipoCampo,
+  exigirEquipoCampo,
+  EQUIPO_CAMPO_SELECT,
 } from '../campo/utils/equipo-campo';
 
 function correoNormalizado(correo: string) {
@@ -50,7 +52,12 @@ export class IntegracionesUcheckService {
         correo: true,
         nombre: true,
         apellido: true,
-        rol: { select: { descripcion: true } },
+        rol: {
+          select: {
+            descripcion: true,
+            equipoCampo: { select: EQUIPO_CAMPO_SELECT },
+          },
+        },
         empresa: { select: { id: true, nombre: true } },
       },
     });
@@ -126,7 +133,7 @@ export class IntegracionesUcheckService {
         where: {
           id: dto.asignacionId,
           localId: dto.localId,
-          usuario: { rol: rolDelEquipoCampo(usuario.rol?.descripcion) },
+          usuario: { rol: rolDelEquipoCampo(usuario.rol?.equipoCampo) },
           fechaDesde: { lte: fecha },
           OR: [{ fechaHasta: null }, { fechaHasta: { gte: fecha } }],
           local: { cliente: { empresaId: usuario.empresaId } },
@@ -147,7 +154,15 @@ export class IntegracionesUcheckService {
                 ...(esTeamleader
                   ? [
                       {
-                        usuario: { superiorId: usuario.id, isActive: true },
+                        usuario: {
+                          superiorId: usuario.id,
+                          isActive: true,
+                          rol: {
+                            equipoCampoId: exigirEquipoCampo(
+                              usuario.rol?.equipoCampo,
+                            ).id,
+                          },
+                        },
                         backups: {
                           none: {
                             activo: true,
@@ -162,7 +177,15 @@ export class IntegracionesUcheckService {
                             activo: true,
                             fechaDesde: { lte: fecha },
                             fechaHasta: { gte: fecha },
-                            usuario: { superiorId: usuario.id, isActive: true },
+                            usuario: {
+                              superiorId: usuario.id,
+                              isActive: true,
+                              rol: {
+                                equipoCampoId: exigirEquipoCampo(
+                                  usuario.rol?.equipoCampo,
+                                ).id,
+                              },
+                            },
                           },
                         },
                       },
@@ -186,7 +209,10 @@ export class IntegracionesUcheckService {
             localId: dto.localId,
             OR: [{ asignacionId: dto.asignacionId }, { asignacionId: null }],
             ...(dto.tipo === 'ENTRADA'
-              ? { destinatario: destinatarioCampo(usuario.rol?.descripcion) }
+              ? {
+                  equipoCampoId: exigirEquipoCampo(usuario.rol?.equipoCampo).id,
+                  destinatario: destinatarioCampo(usuario.rol?.equipoCampo),
+                }
               : {}),
           },
           select: { id: true },

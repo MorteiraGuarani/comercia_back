@@ -23,7 +23,12 @@ import {
   IconoGlobo,
   IconoPin,
 } from "./ui/iconos-campo";
-import type { FormTareaCampo, TareaCampo, LocalCampo, RespuestaCatalogoTareasCampo } from "@/types/campo";
+import type {
+  FormTareaCampo,
+  TareaCampo,
+  LocalCampo,
+  RespuestaCatalogoTareasCampo,
+} from "@/types/campo";
 
 const CATEGORIAS_PRESET = [
   "Góndola",
@@ -38,11 +43,13 @@ const CATEGORIAS_PRESET = [
 export function TareasPanel() {
   const op = useOperacionCampo();
   const { usuario } = usePanel();
-  const destinatario = destinatarioCampo(usuario.rol?.descripcion);
+  const destinatario = destinatarioCampo(usuario.rol?.equipoCampo);
 
   const [busqueda, setBusqueda] = useState("");
   const [categoriaFiltro, setCategoriaFiltro] = useState<string>("Todas");
-  const [filtroTipo, setFiltroTipo] = useState<"todas" | "obligatorias" | "con_fotos">("todas");
+  const [filtroTipo, setFiltroTipo] = useState<
+    "todas" | "obligatorias" | "con_fotos"
+  >("todas");
   const [buscar, setBuscar] = useState("");
   const parametros = new URLSearchParams({ buscar });
   if (categoriaFiltro !== "Todas") parametros.set("categoria", categoriaFiltro);
@@ -52,7 +59,10 @@ export function TareasPanel() {
   const { setPage } = lista;
 
   useEffect(() => {
-    const timer = setTimeout(() => { setBuscar(busqueda.trim()); setPage(1); }, 300);
+    const timer = setTimeout(() => {
+      setBuscar(busqueda.trim());
+      setPage(1);
+    }, 300);
     return () => clearTimeout(timer);
   }, [busqueda, setPage]);
 
@@ -61,7 +71,9 @@ export function TareasPanel() {
   const [categoriaPersonalizada, setCategoriaPersonalizada] = useState(false);
 
   // Lista de locales para selector
-  const [localesDisponibles, setLocalesDisponibles] = useState<LocalCampo[]>([]);
+  const [localesDisponibles, setLocalesDisponibles] = useState<LocalCampo[]>(
+    [],
+  );
   const [busquedaLocal, setBusquedaLocal] = useState("");
 
   useEffect(() => {
@@ -71,6 +83,7 @@ export function TareasPanel() {
   }, []);
 
   function abrir(t?: TareaCampo) {
+    if (!destinatario) return;
     setId(t?.id ?? 0);
     op.limpiarError();
 
@@ -120,6 +133,7 @@ export function TareasPanel() {
           <button
             type="button"
             onClick={() => abrir()}
+            disabled={!destinatario}
             aria-label="Crear tarea"
             title="Crear tarea"
             className="grid h-11 w-11 place-items-center rounded-lg text-white transition-colors hover:brightness-110"
@@ -130,7 +144,10 @@ export function TareasPanel() {
         }
       />
 
-      <main data-inicio-listado className="max-w-7xl min-w-0 mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-3 sm:space-y-5 scroll-mt-20">
+      <main
+        data-inicio-listado
+        className="max-w-7xl min-w-0 mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-3 sm:space-y-5 scroll-mt-20"
+      >
         {/* Filtros por Categoría */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
           {["Todas", ...CATEGORIAS_PRESET].map((cat) => {
@@ -139,7 +156,10 @@ export function TareasPanel() {
               <button
                 key={cat}
                 type="button"
-                onClick={() => { setCategoriaFiltro(cat); lista.setPage(1); }}
+                onClick={() => {
+                  setCategoriaFiltro(cat);
+                  lista.setPage(1);
+                }}
                 aria-pressed={activo}
                 className={`min-h-11 px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all cursor-pointer ${
                   activo
@@ -156,9 +176,21 @@ export function TareasPanel() {
 
         {/* KPI Chips: una tira compacta en móvil */}
         <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 sm:grid sm:grid-cols-3 sm:overflow-visible">
-          <StatChip label="Total tareas" value={resumen?.total ?? "—"} color="ink" />
-          <StatChip label="Obligatorias" value={resumen?.obligatorias ?? "—"} color="carne" />
-          <StatChip label="Con fotos" value={resumen?.conFotos ?? "—"} color="fresco" />
+          <StatChip
+            label="Total tareas"
+            value={resumen?.total ?? "—"}
+            color="ink"
+          />
+          <StatChip
+            label="Obligatorias"
+            value={resumen?.obligatorias ?? "—"}
+            color="carne"
+          />
+          <StatChip
+            label="Con fotos"
+            value={resumen?.conFotos ?? "—"}
+            color="fresco"
+          />
         </div>
 
         {/* Buscador y Filtro Secundario */}
@@ -189,7 +221,10 @@ export function TareasPanel() {
             )}
           </div>
 
-          <div className="flex items-center gap-2 p-1.5 rounded-xl border bg-surface-soft" style={{ borderColor: TOKENS.line }}>
+          <div
+            className="flex items-center gap-2 p-1.5 rounded-xl border bg-surface-soft"
+            style={{ borderColor: TOKENS.line }}
+          >
             {(
               [
                 { id: "todas", label: "Todas" },
@@ -202,7 +237,10 @@ export function TareasPanel() {
                 <button
                   key={f.id}
                   type="button"
-                  onClick={() => { setFiltroTipo(f.id); lista.setPage(1); }}
+                  onClick={() => {
+                    setFiltroTipo(f.id);
+                    lista.setPage(1);
+                  }}
                   aria-pressed={activo}
                   className={`min-w-0 flex-1 min-h-11 px-2 rounded-md text-xs sm:text-sm font-semibold transition-colors ${
                     activo
@@ -217,56 +255,191 @@ export function TareasPanel() {
           </div>
         </div>
 
-        {lista.error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-200">{lista.error}</p>}
-        {op.error && !form && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-200">{op.error}</p>}
+        {lista.error && (
+          <p
+            role="alert"
+            className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-200"
+          >
+            {lista.error}
+          </p>
+        )}
+        {op.error && !form && (
+          <p
+            role="alert"
+            className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-200"
+          >
+            {op.error}
+          </p>
+        )}
         {lista.cargando ? (
-          <p role="status" className="py-8 text-center text-sm text-muted">Cargando tareas…</p>
+          <p role="status" className="py-8 text-center text-sm text-muted">
+            Cargando tareas…
+          </p>
         ) : lista.items.length === 0 ? (
-          <p className="rounded-lg border border-line bg-surface-raised p-6 text-sm text-muted">No hay tareas que coincidan con los filtros.</p>
+          <p className="rounded-lg border border-line bg-surface-raised p-6 text-sm text-muted">
+            No hay tareas que coincidan con los filtros.
+          </p>
         ) : (
           <>
-            <ul aria-label="Catálogo de tareas" className="divide-y divide-line rounded-lg border border-line bg-surface-raised md:hidden">
+            <ul
+              aria-label="Catálogo de tareas"
+              className="divide-y divide-line rounded-lg border border-line bg-surface-raised md:hidden"
+            >
               {lista.items.map((tarea) => (
                 <li key={tarea.id} className="p-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-xs text-muted">{tarea.categoria || "Góndola"} · {tarea.destinatario === "AMBOS" ? "Ambos" : tarea.destinatario === "REPOSITOR" ? "Repositor" : "Impulsador"}</p>
-                      <h3 className="mt-1 text-sm font-semibold text-foreground">{tarea.nombre}</h3>
+                      <p className="text-xs text-muted">
+                        {tarea.categoria || "Góndola"} ·{" "}
+                        {tarea.destinatario === "AMBOS"
+                          ? "Ambos"
+                          : tarea.destinatario === "REPOSITOR"
+                            ? "Repositor"
+                            : "Impulsador"}
+                      </p>
+                      <h3 className="mt-1 text-sm font-semibold text-foreground">
+                        {tarea.nombre}
+                      </h3>
                     </div>
                     <div className="flex shrink-0 gap-1">
-                      <BotonEditar onClick={() => abrir(tarea)} etiqueta={`Editar tarea ${tarea.nombre}`} modo="texto" />
-                      <button type="button" onClick={() => void eliminar(tarea)} disabled={!!op.mensaje} aria-label={"Eliminar " + tarea.nombre} className="grid h-11 w-11 place-items-center rounded-md border border-red-200 text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950"><IconoEliminar className="h-4 w-4" /></button>
+                      <BotonEditar
+                        onClick={() => abrir(tarea)}
+                        etiqueta={`Editar tarea ${tarea.nombre}`}
+                        modo="texto"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => void eliminar(tarea)}
+                        disabled={!!op.mensaje}
+                        aria-label={"Eliminar " + tarea.nombre}
+                        className="grid h-11 w-11 place-items-center rounded-md border border-red-200 text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950"
+                      >
+                        <IconoEliminar className="h-4 w-4" />
+                      </button>
                     </div>
                   </div>
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted">
-                    <StatusStamp tone={!tarea.activo ? "sub" : tarea.esObligatoria ? "carne" : "fresco"}>{!tarea.activo ? "Inactiva" : tarea.esObligatoria ? "Obligatoria" : "Activa"}</StatusStamp>
-                    <span>{tarea.requiereFotos ? (tarea.fotosObligatorias ? "Fotos obligatorias" : "Fotos opcionales") : "Sin fotos"}</span>
+                    <StatusStamp
+                      tone={
+                        !tarea.activo
+                          ? "sub"
+                          : tarea.esObligatoria
+                            ? "carne"
+                            : "fresco"
+                      }
+                    >
+                      {!tarea.activo
+                        ? "Inactiva"
+                        : tarea.esObligatoria
+                          ? "Obligatoria"
+                          : "Activa"}
+                    </StatusStamp>
+                    <span>
+                      {tarea.requiereFotos
+                        ? tarea.fotosObligatorias
+                          ? "Fotos obligatorias"
+                          : "Fotos opcionales"
+                        : "Sin fotos"}
+                    </span>
                   </div>
                   <details className="mt-1 text-sm text-muted">
-                    <summary className="flex min-h-11 cursor-pointer items-center rounded-md text-xs hover:text-foreground">Ver instrucciones y alcance</summary>
-                    <p className="whitespace-pre-wrap">{tarea.descripcion || "Sin instrucciones adicionales."}</p>
-                    <p className="mt-2">{tarea.todosLocales ? "Todos los locales" : (tarea.locales?.length ?? 0) + " locales seleccionados"}</p>
-                    <p className="mt-1 text-xs">{tarea.fechaDesde.slice(0, 10)} · {tarea.fechaHasta?.slice(0, 10) ?? "Sin fecha de fin"}</p>
+                    <summary className="flex min-h-11 cursor-pointer items-center rounded-md text-xs hover:text-foreground">
+                      Ver instrucciones y alcance
+                    </summary>
+                    <p className="whitespace-pre-wrap">
+                      {tarea.descripcion || "Sin instrucciones adicionales."}
+                    </p>
+                    <p className="mt-2">
+                      {tarea.todosLocales
+                        ? "Todos los locales"
+                        : (tarea.locales?.length ?? 0) +
+                          " locales seleccionados"}
+                    </p>
+                    <p className="mt-1 text-xs">
+                      {tarea.fechaDesde.slice(0, 10)} ·{" "}
+                      {tarea.fechaHasta?.slice(0, 10) ?? "Sin fecha de fin"}
+                    </p>
                   </details>
                 </li>
               ))}
             </ul>
             <div className="hidden overflow-x-auto rounded-lg border border-line bg-surface-raised md:block">
               <table className="w-full text-left text-sm">
-                <thead className="border-b border-line bg-surface-soft text-xs text-muted"><tr><th className="p-4">Tarea</th><th className="p-4">Estado</th><th className="p-4">Fotos</th><th className="p-4">Alcance</th><th className="p-4"><span className="sr-only">Acciones</span></th></tr></thead>
+                <thead className="border-b border-line bg-surface-soft text-xs text-muted">
+                  <tr>
+                    <th className="p-4">Tarea</th>
+                    <th className="p-4">Estado</th>
+                    <th className="p-4">Fotos</th>
+                    <th className="p-4">Alcance</th>
+                    <th className="p-4">
+                      <span className="sr-only">Acciones</span>
+                    </th>
+                  </tr>
+                </thead>
                 <tbody className="divide-y divide-line">
                   {lista.items.map((tarea) => (
                     <tr key={tarea.id} className="hover:bg-surface-soft">
-                      <td className="max-w-md p-4"><p className="text-xs text-muted">{tarea.categoria || "Góndola"} · {tarea.destinatario === "AMBOS" ? "Ambos" : tarea.destinatario === "REPOSITOR" ? "Repositor" : "Impulsador"}</p><p className="font-semibold text-foreground">{tarea.nombre}</p><p className="mt-1 line-clamp-2 text-sm text-muted">{tarea.descripcion}</p></td>
-                      <td className="p-4"><StatusStamp tone={!tarea.activo ? "sub" : tarea.esObligatoria ? "carne" : "fresco"}>{!tarea.activo ? "Inactiva" : tarea.esObligatoria ? "Obligatoria" : "Activa"}</StatusStamp></td>
-                      <td className="p-4 text-muted">{tarea.requiereFotos ? (tarea.fotosObligatorias ? "Antes y después · obligatorias" : "Antes y después · opcionales") : "Sin fotos"}</td>
-                      <td className="p-4 text-muted">{tarea.todosLocales ? "Todos los locales" : (tarea.locales?.length ?? 0) + " locales"}</td>
-                  <td className="p-4">
-                    <div className="flex flex-wrap gap-2">
-                      <BotonEditar onClick={() => abrir(tarea)} etiqueta={`Editar tarea ${tarea.nombre}`} />
-                      <button type="button" onClick={() => void eliminar(tarea)} disabled={!!op.mensaje} className="min-h-11 rounded-md border border-red-200 px-3 text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950">Eliminar</button>
-                    </div>
-                  </td>
+                      <td className="max-w-md p-4">
+                        <p className="text-xs text-muted">
+                          {tarea.categoria || "Góndola"} ·{" "}
+                          {tarea.destinatario === "AMBOS"
+                            ? "Ambos"
+                            : tarea.destinatario === "REPOSITOR"
+                              ? "Repositor"
+                              : "Impulsador"}
+                        </p>
+                        <p className="font-semibold text-foreground">
+                          {tarea.nombre}
+                        </p>
+                        <p className="mt-1 line-clamp-2 text-sm text-muted">
+                          {tarea.descripcion}
+                        </p>
+                      </td>
+                      <td className="p-4">
+                        <StatusStamp
+                          tone={
+                            !tarea.activo
+                              ? "sub"
+                              : tarea.esObligatoria
+                                ? "carne"
+                                : "fresco"
+                          }
+                        >
+                          {!tarea.activo
+                            ? "Inactiva"
+                            : tarea.esObligatoria
+                              ? "Obligatoria"
+                              : "Activa"}
+                        </StatusStamp>
+                      </td>
+                      <td className="p-4 text-muted">
+                        {tarea.requiereFotos
+                          ? tarea.fotosObligatorias
+                            ? "Antes y después · obligatorias"
+                            : "Antes y después · opcionales"
+                          : "Sin fotos"}
+                      </td>
+                      <td className="p-4 text-muted">
+                        {tarea.todosLocales
+                          ? "Todos los locales"
+                          : (tarea.locales?.length ?? 0) + " locales"}
+                      </td>
+                      <td className="p-4">
+                        <div className="flex flex-wrap gap-2">
+                          <BotonEditar
+                            onClick={() => abrir(tarea)}
+                            etiqueta={`Editar tarea ${tarea.nombre}`}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => void eliminar(tarea)}
+                            disabled={!!op.mensaje}
+                            className="min-h-11 rounded-md border border-red-200 px-3 text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950"
+                          >
+                            Eliminar
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -274,8 +447,14 @@ export function TareasPanel() {
             </div>
           </>
         )}
-        <Paginacion page={lista.page} limit={lista.limit} total={lista.datos?.total ?? 0} totalPages={lista.datos?.totalPages ?? 1} onPageChange={lista.setPage} onLimitChange={lista.setLimit} />
-
+        <Paginacion
+          page={lista.page}
+          limit={lista.limit}
+          total={lista.datos?.total ?? 0}
+          totalPages={lista.datos?.totalPages ?? 1}
+          onPageChange={lista.setPage}
+          onLimitChange={lista.setLimit}
+        />
       </main>
 
       {/* Modal de Creación / Edición */}
@@ -292,15 +471,18 @@ export function TareasPanel() {
             onSubmit={async (e) => {
               e.preventDefault();
               if (
-                await op.ejecutar(id ? "Actualizando tarea" : "Creando tarea", () =>
-                  apiFetch(`/campo/tareas${id ? `/${id}` : ""}`, {
-                    method: id ? "PUT" : "POST",
-                    body: JSON.stringify({
-                      ...form,
-                      fechaDesde: fechaCalendario(form.fechaDesde) ?? form.fechaDesde,
-                      fechaHasta: fechaCalendario(form.fechaHasta),
+                await op.ejecutar(
+                  id ? "Actualizando tarea" : "Creando tarea",
+                  () =>
+                    apiFetch(`/campo/tareas${id ? `/${id}` : ""}`, {
+                      method: id ? "PUT" : "POST",
+                      body: JSON.stringify({
+                        ...form,
+                        fechaDesde:
+                          fechaCalendario(form.fechaDesde) ?? form.fechaDesde,
+                        fechaHasta: fechaCalendario(form.fechaHasta),
+                      }),
                     }),
-                  }),
                 )
               ) {
                 setForm(null);
@@ -332,7 +514,10 @@ export function TareasPanel() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label htmlFor="destinatario-tarea" className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">
+                <label
+                  htmlFor="destinatario-tarea"
+                  className="block text-xs font-bold uppercase tracking-wider text-muted mb-1"
+                >
                   Destinatario
                 </label>
                 <select
@@ -341,9 +526,13 @@ export function TareasPanel() {
                   disabled
                   className="min-h-11 w-full rounded-lg border border-line bg-surface-raised p-2.5 text-sm text-foreground focus-visible:ring-2 focus-visible:ring-focus"
                 >
-                  <option value={destinatario}>{destinatario === "REPOSITOR" ? "Repositores" : "Impulsadores"}</option>
+                  <option value={form.destinatario}>
+                    {usuario.rol?.equipoCampo?.nombre ?? "Sin equipo"}
+                  </option>
                 </select>
-                <p className="mt-1 text-xs text-muted">Se asigna automáticamente según tu equipo.</p>
+                <p className="mt-1 text-xs text-muted">
+                  Se asigna automáticamente según tu equipo.
+                </p>
               </div>
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">
@@ -369,7 +558,9 @@ export function TareasPanel() {
                           {c}
                         </option>
                       ))}
-                      <option value="__OTRA__">+ Otra categoría personalizada</option>
+                      <option value="__OTRA__">
+                        + Otra categoría personalizada
+                      </option>
                     </select>
                   </div>
                 ) : (
@@ -378,7 +569,9 @@ export function TareasPanel() {
                       type="text"
                       required
                       value={form.categoria}
-                      onChange={(e) => setForm({ ...form, categoria: e.target.value })}
+                      onChange={(e) =>
+                        setForm({ ...form, categoria: e.target.value })
+                      }
                       placeholder="Ej: Auditoría, Degustación..."
                       className="w-full p-2.5 rounded-lg border bg-surface-raised text-sm font-sans"
                       style={{ borderColor: TOKENS.line }}
@@ -401,11 +594,16 @@ export function TareasPanel() {
                 <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">
                   Nivel de Obligatoriedad
                 </label>
-                <label className="flex items-center gap-2 p-2.5 rounded-lg border bg-surface-raised cursor-pointer" style={{ borderColor: TOKENS.line }}>
+                <label
+                  className="flex items-center gap-2 p-2.5 rounded-lg border bg-surface-raised cursor-pointer"
+                  style={{ borderColor: TOKENS.line }}
+                >
                   <input
                     type="checkbox"
                     checked={form.esObligatoria}
-                    onChange={(e) => setForm({ ...form, esObligatoria: e.target.checked })}
+                    onChange={(e) =>
+                      setForm({ ...form, esObligatoria: e.target.checked })
+                    }
                     className="w-4 h-4 rounded border-[#DAD5C9] text-[#8B2635] focus:ring-[#8B2635]"
                   />
                   <span className="text-xs font-bold text-foreground">
@@ -422,7 +620,9 @@ export function TareasPanel() {
               <textarea
                 rows={2}
                 value={form.descripcion}
-                onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, descripcion: e.target.value })
+                }
                 placeholder="Instrucciones claras sobre qué revisar, cómo acomodar los productos y criterios de aceptación..."
                 className="w-full p-2.5 rounded-lg border bg-surface-raised text-sm"
                 style={{ borderColor: TOKENS.line }}
@@ -430,7 +630,10 @@ export function TareasPanel() {
             </div>
 
             {/* Configuración Fotográfica */}
-            <div className="p-3.5 rounded-xl border bg-[#ECE9E2]/50 space-y-2" style={{ borderColor: TOKENS.line }}>
+            <div
+              className="p-3.5 rounded-xl border bg-[#ECE9E2]/50 space-y-2"
+              style={{ borderColor: TOKENS.line }}
+            >
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
@@ -439,7 +642,9 @@ export function TareasPanel() {
                     setForm({
                       ...form,
                       requiereFotos: e.target.checked,
-                      fotosObligatorias: e.target.checked ? form.fotosObligatorias : false,
+                      fotosObligatorias: e.target.checked
+                        ? form.fotosObligatorias
+                        : false,
                     })
                   }
                   className="w-4 h-4 rounded border-[#DAD5C9] text-foreground"
@@ -456,11 +661,17 @@ export function TareasPanel() {
                     <input
                       type="checkbox"
                       checked={form.fotosObligatorias}
-                      onChange={(e) => setForm({ ...form, fotosObligatorias: e.target.checked })}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          fotosObligatorias: e.target.checked,
+                        })
+                      }
                       className="w-4 h-4 rounded border-[#DAD5C9] text-[#8B2635]"
                     />
                     <span className="text-xs font-semibold text-[#8B2635]">
-                      Fotos Obligatorias (No se puede marcar completada sin foto antes y después)
+                      Fotos Obligatorias (No se puede marcar completada sin foto
+                      antes y después)
                     </span>
                   </label>
                 </div>
@@ -475,7 +686,9 @@ export function TareasPanel() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <button
                   type="button"
-                  onClick={() => setForm({ ...form, todosLocales: true, localIds: [] })}
+                  onClick={() =>
+                    setForm({ ...form, todosLocales: true, localIds: [] })
+                  }
                   className={`p-3 rounded-lg border text-left text-xs font-bold transition-all inline-flex items-center gap-1.5 ${
                     form.todosLocales
                       ? "bg-surface-raised border-[#1E2320] ring-1 ring-[#1E2320]"
@@ -501,7 +714,10 @@ export function TareasPanel() {
 
               {/* Selector de locales específicos si no es global */}
               {!form.todosLocales && (
-                <div className="p-3 rounded-xl border bg-surface-raised space-y-2" style={{ borderColor: TOKENS.line }}>
+                <div
+                  className="p-3 rounded-xl border bg-surface-raised space-y-2"
+                  style={{ borderColor: TOKENS.line }}
+                >
                   <input
                     type="text"
                     value={busquedaLocal}
@@ -513,9 +729,12 @@ export function TareasPanel() {
 
                   <div className="max-h-40 overflow-y-auto space-y-1 pr-1">
                     {localesDisponibles
-                      .filter((l) =>
-                        !busquedaLocal.trim() ||
-                        l.nombre.toLowerCase().includes(busquedaLocal.toLowerCase()),
+                      .filter(
+                        (l) =>
+                          !busquedaLocal.trim() ||
+                          l.nombre
+                            .toLowerCase()
+                            .includes(busquedaLocal.toLowerCase()),
                       )
                       .map((loc) => {
                         const seleccionado = form.localIds.includes(loc.id);
@@ -523,7 +742,9 @@ export function TareasPanel() {
                           <label
                             key={loc.id}
                             className={`flex items-center gap-2 p-2 rounded text-xs cursor-pointer ${
-                              seleccionado ? "bg-[#EAF0F6] font-semibold" : "hover:bg-gray-50"
+                              seleccionado
+                                ? "bg-[#EAF0F6] font-semibold"
+                                : "hover:bg-gray-50"
                             }`}
                           >
                             <input
@@ -534,7 +755,9 @@ export function TareasPanel() {
                                   ...form,
                                   localIds: e.target.checked
                                     ? [...form.localIds, loc.id]
-                                    : form.localIds.filter((id) => id !== loc.id),
+                                    : form.localIds.filter(
+                                        (id) => id !== loc.id,
+                                      ),
                                 });
                               }}
                               className="w-3.5 h-3.5 rounded"
@@ -565,7 +788,9 @@ export function TareasPanel() {
                   type="date"
                   required
                   value={form.fechaDesde}
-                  onChange={(e) => setForm({ ...form, fechaDesde: e.target.value })}
+                  onChange={(e) =>
+                    setForm({ ...form, fechaDesde: e.target.value })
+                  }
                   className="w-full p-2.5 rounded-lg border bg-surface-raised text-sm font-mono"
                   style={{ borderColor: TOKENS.line }}
                 />
@@ -579,7 +804,9 @@ export function TareasPanel() {
                   type="date"
                   min={form.fechaDesde}
                   value={form.fechaHasta}
-                  onChange={(e) => setForm({ ...form, fechaHasta: e.target.value })}
+                  onChange={(e) =>
+                    setForm({ ...form, fechaHasta: e.target.value })
+                  }
                   className="w-full p-2.5 rounded-lg border bg-surface-raised text-sm font-mono"
                   style={{ borderColor: TOKENS.line }}
                 />
@@ -591,14 +818,19 @@ export function TareasPanel() {
                 <input
                   type="checkbox"
                   checked={form.activo}
-                  onChange={(e) => setForm({ ...form, activo: e.target.checked })}
+                  onChange={(e) =>
+                    setForm({ ...form, activo: e.target.checked })
+                  }
                   className="w-4 h-4 rounded border-[#DAD5C9] text-foreground"
                 />
                 <span>Tarea Activa en Plataforma</span>
               </label>
             </div>
 
-            <div className="flex flex-col-reverse gap-3 pt-4 border-t sm:flex-row sm:items-center sm:justify-end" style={{ borderColor: TOKENS.line }}>
+            <div
+              className="flex flex-col-reverse gap-3 pt-4 border-t sm:flex-row sm:items-center sm:justify-end"
+              style={{ borderColor: TOKENS.line }}
+            >
               <button
                 type="button"
                 onClick={() => setForm(null)}
@@ -613,7 +845,11 @@ export function TareasPanel() {
                 className="px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider text-white shadow-sm transition-all hover:brightness-110 disabled:opacity-50"
                 style={{ backgroundColor: TOKENS.ink }}
               >
-                {op.mensaje ? "Guardando..." : id ? "Actualizar Tarea" : "Crear Tarea"}
+                {op.mensaje
+                  ? "Guardando..."
+                  : id
+                    ? "Actualizar Tarea"
+                    : "Crear Tarea"}
               </button>
             </div>
           </form>

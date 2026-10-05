@@ -20,6 +20,7 @@ model Empresa {
   hijas               Empresa[]                 @relation("EmpresaJerarquia")
   usuarios            Usuario[]
   roles               Rol[]
+  equiposCampo        EquipoCampo[]
   clientesCampo       ClienteCampo[]
   tareasCampo         TareaCampo[]
   eventosUcheck       IntegracionUcheckEvento[]
@@ -153,10 +154,28 @@ model Rol {
   padre       Rol?      @relation("RolJerarquia", fields: [rolId, empresaId], references: [id, empresaId], onDelete: NoAction, onUpdate: NoAction)
   hijos       Rol[]     @relation("RolJerarquia")
   usuarios    Usuario[]
+  equipoCampoId Int? @map("equipo_campo_id")
+  equipoCampo EquipoCampo? @relation(fields: [equipoCampoId, empresaId], references: [id, empresaId], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([empresaId, descripcion])
   @@unique([id, empresaId])
   @@map("roles")
+}
+
+model EquipoCampo {
+  id Int @id @default(autoincrement())
+  empresaId Int @map("empresa_id")
+  empresa Empresa @relation(fields: [empresaId], references: [id])
+  nombre String @db.VarChar(120)
+  tipo DestinatarioTareaCampo
+  activo Boolean @default(true)
+  roles Rol[]
+  tareas TareaCampo[]
+  horarios HorarioCampo[]
+
+  @@unique([empresaId, nombre])
+  @@unique([id, empresaId])
+  @@map("campo_equipos_operativos")
 }
 
 model Usuario {
@@ -269,6 +288,8 @@ model HorarioCampo {
   asignacionId  Int?                      @map("asignacion_id")
   asignacion    AsignacionCampo?          @relation(fields: [asignacionId], references: [id])
   destinatario  DestinatarioTareaCampo    @default(IMPULSADOR)
+  equipoCampoId Int @map("equipo_campo_id")
+  equipoCampo EquipoCampo @relation(fields: [equipoCampoId], references: [id], onDelete: Restrict)
   frecuencia    FrecuenciaCampo           @default(SEMANAL)
   intervalo     Int                       @default(1)
   diasSemana    Int[]                     @default([]) @map("dias_semana")
@@ -284,6 +305,7 @@ model HorarioCampo {
   @@index([localId, activo])
   @@index([asignacionId, activo])
   @@index([localId, destinatario, activo])
+  @@index([localId, equipoCampoId, activo])
   @@map("campo_horarios")
 }
 
@@ -326,6 +348,8 @@ model TareaCampo {
   id                Int                 @id @default(autoincrement())
   empresaId         Int                 @map("empresa_id")
   empresa           Empresa             @relation(fields: [empresaId], references: [id])
+  equipoCampoId Int @map("equipo_campo_id")
+  equipoCampo EquipoCampo @relation(fields: [equipoCampoId, empresaId], references: [id, empresaId], onDelete: NoAction, onUpdate: NoAction)
   nombre            String              @db.VarChar(120)
   destinatario      DestinatarioTareaCampo @default(IMPULSADOR)
   descripcion       String              @default("") @db.VarChar(1000)
@@ -344,6 +368,7 @@ model TareaCampo {
 
   @@index([empresaId, activo, fechaDesde])
   @@index([empresaId, destinatario, activo])
+  @@index([empresaId, equipoCampoId, activo])
   @@map("campo_tareas")
 }
 

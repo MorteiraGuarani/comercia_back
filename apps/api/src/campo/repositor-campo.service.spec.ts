@@ -22,9 +22,16 @@ describe('RepositorCampoService', () => {
       usuario: { findUnique: jest.fn() },
     };
     const acceso = {
-      ejecutar: jest
-        .fn()
-        .mockResolvedValue({ empresaId: 1, rolDescripcion: 'REPOSITOR' }),
+      ejecutar: jest.fn().mockResolvedValue({
+        empresaId: 1,
+        rolDescripcion: 'REPOSITOR',
+        equipoCampo: {
+          id: 2,
+          nombre: 'Repositores',
+          tipo: 'REPOSITOR',
+          activo: true,
+        },
+      }),
     };
     const config = { get: jest.fn() };
     const servicio = new RepositorCampoService(

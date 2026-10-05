@@ -13,7 +13,11 @@ import {
 import { ParadaRuta } from '../interfaces/parada-ruta.interface';
 import { fechaCampo, rangoConsulta, relojCampo } from '../utils/calendario';
 import { obtenerEquipoCompleto } from '../utils/autorizacion';
-import { destinatarioCampo } from '../utils/equipo-campo';
+import {
+  destinatarioCampo,
+  exigirEquipoCampo,
+  EQUIPO_CAMPO_SELECT,
+} from '../utils/equipo-campo';
 
 @Injectable()
 export class SupervisionService {
@@ -26,15 +30,18 @@ export class SupervisionService {
     id: number;
     empresaId: number;
     rolDescripcion: string | null;
+    equipoCampo:
+      | import('../../roles/interfaces/equipo-campo.interface').EquipoCampoDto
+      | null;
   }) {
-    if (u.rolDescripcion !== 'SUPERVISOR_REPOSITORES')
+    if (exigirEquipoCampo(u.equipoCampo).tipo !== 'REPOSITOR')
       return obtenerEquipoCompleto(this.prisma, u.id);
     const repositores = await this.prisma.usuario.findMany({
       where: {
         empresaId: u.empresaId,
         superiorId: u.id,
         isActive: true,
-        rol: { descripcion: 'REPOSITOR' },
+        rol: { equipoCampoId: exigirEquipoCampo(u.equipoCampo).id },
       },
       select: { id: true },
       take: 10000,
@@ -79,7 +86,7 @@ export class SupervisionService {
     const idsConsultar =
       subordinadosIds.length > 0
         ? subordinadosIds
-        : u.rolDescripcion === 'SUPERVISOR_REPOSITORES'
+        : exigirEquipoCampo(u.equipoCampo).tipo === 'REPOSITOR'
           ? []
           : [u.id];
 
@@ -95,7 +102,12 @@ export class SupervisionService {
         apellido: true,
         celular: true,
         superiorId: true,
-        rol: { select: { descripcion: true } },
+        rol: {
+          select: {
+            descripcion: true,
+            equipoCampo: { select: EQUIPO_CAMPO_SELECT },
+          },
+        },
       },
       orderBy: [{ nombre: 'asc' }, { id: 'asc' }],
     });
@@ -243,7 +255,8 @@ export class SupervisionService {
             where: {
               empresaId: u.empresaId,
               activo: true,
-              destinatario: destinatarioCampo(rol),
+              equipoCampoId: exigirEquipoCampo(user.rol?.equipoCampo).id,
+              destinatario: destinatarioCampo(user.rol?.equipoCampo),
               fechaDesde: { lte: fechaHasta },
               OR: [{ fechaHasta: null }, { fechaHasta: { gte: fechaDesde } }],
               AND: [
@@ -376,7 +389,8 @@ export class SupervisionService {
     const equipoIds = await this.idsEquipo(u);
     if (
       !equipoIds.includes(colaboradorId) &&
-      (colaboradorId !== u.id || u.rolDescripcion === 'SUPERVISOR_REPOSITORES')
+      (colaboradorId !== u.id ||
+        exigirEquipoCampo(u.equipoCampo).tipo === 'REPOSITOR')
     ) {
       throw new ForbiddenException('No tienes acceso a este colaborador');
     }
@@ -389,7 +403,12 @@ export class SupervisionService {
         apellido: true,
         celular: true,
         correo: true,
-        rol: { select: { descripcion: true } },
+        rol: {
+          select: {
+            descripcion: true,
+            equipoCampo: { select: EQUIPO_CAMPO_SELECT },
+          },
+        },
       },
     });
 
@@ -428,7 +447,8 @@ export class SupervisionService {
         horarios: {
           where: {
             activo: true,
-            destinatario: destinatarioCampo(user.rol?.descripcion),
+            equipoCampoId: exigirEquipoCampo(user.rol?.equipoCampo).id,
+            destinatario: destinatarioCampo(user.rol?.equipoCampo),
           },
           select: { entrada: true, salida: true, id: true },
           orderBy: { entrada: 'asc' },
@@ -441,7 +461,8 @@ export class SupervisionService {
               where: {
                 activo: true,
                 asignacionId: null,
-                destinatario: destinatarioCampo(user.rol?.descripcion),
+                equipoCampoId: exigirEquipoCampo(user.rol?.equipoCampo).id,
+                destinatario: destinatarioCampo(user.rol?.equipoCampo),
               },
               select: { entrada: true, salida: true, id: true },
               orderBy: { entrada: 'asc' },
@@ -465,7 +486,8 @@ export class SupervisionService {
               where: {
                 activo: true,
                 asignacionId: null,
-                destinatario: destinatarioCampo(user.rol?.descripcion),
+                equipoCampoId: exigirEquipoCampo(user.rol?.equipoCampo).id,
+                destinatario: destinatarioCampo(user.rol?.equipoCampo),
               },
               select: { entrada: true, salida: true, id: true },
               orderBy: { entrada: 'asc' },
@@ -561,7 +583,8 @@ export class SupervisionService {
       where: {
         empresaId: u.empresaId,
         activo: true,
-        destinatario: destinatarioCampo(user.rol?.descripcion),
+        equipoCampoId: exigirEquipoCampo(user.rol?.equipoCampo).id,
+        destinatario: destinatarioCampo(user.rol?.equipoCampo),
         fechaDesde: { lte: fechaHasta },
         OR: [{ fechaHasta: null }, { fechaHasta: { gte: fechaDesde } }],
         AND: [

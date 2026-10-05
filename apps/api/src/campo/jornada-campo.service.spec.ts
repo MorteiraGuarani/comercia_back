@@ -36,7 +36,16 @@ function contexto() {
     },
   };
   const acceso = {
-    ejecutar: jest.fn().mockResolvedValue({ id: 1, empresaId: 10 }),
+    ejecutar: jest.fn().mockResolvedValue({
+      id: 1,
+      empresaId: 10,
+      equipoCampo: {
+        id: 1,
+        nombre: 'Impulsadores',
+        tipo: 'IMPULSADOR',
+        activo: true,
+      },
+    }),
   };
   const servicio = new JornadaCampoService(
     prisma as unknown as PrismaService,

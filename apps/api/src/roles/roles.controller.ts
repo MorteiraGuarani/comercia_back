@@ -15,7 +15,12 @@ import { ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { SuperadminGuard } from '../auth/superadmin.guard';
 import type { RequestConUsuario } from '../auth/interfaces/request-con-usuario.interface';
-import { ActualizarRolDto, CrearRolDto, ListarRolesDto } from './dto/rol.dto';
+import {
+  ActualizarRolDto,
+  CrearRolDto,
+  ListarRolesDto,
+  ListarEquiposCampoDto,
+} from './dto/rol.dto';
 import { RolesService } from './roles.service';
 
 @ApiTags('administración')
@@ -32,6 +37,14 @@ export class RolesController {
   @Post()
   crear(@Req() req: RequestConUsuario, @Body() dto: CrearRolDto) {
     return this.roles.crear(req.usuarioId, dto);
+  }
+
+  @Get('equipos')
+  equipos(
+    @Req() req: RequestConUsuario,
+    @Query() query: ListarEquiposCampoDto,
+  ) {
+    return this.roles.equipos(req.usuarioId, query);
   }
 
   @Patch(':id')
