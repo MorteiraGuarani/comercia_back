@@ -28,7 +28,18 @@ Se confirmó desde las URLs públicas:
 - Repositor: catálogo y mapa de supervisión HTTP 403.
 - Health de API y login de web: HTTP 200. El HTML de web contiene el identificador de despliegue completo `79659cf1d4d738568c71fd8f20885e9b67f28897`.
 
-Estas consultas utilizan las columnas, permisos, tablas y datos de ambas migraciones nuevas (`20261006090000_confiabilidad_tareas` y `20261006092000_seguimiento_operativo`) y confirman que están efectivas en producción. El conteo directo de `_prisma_migrations` por SSH no pudo repetirse después de perder la conexión interna.
+Estas consultas utilizan las columnas, permisos, tablas y datos de ambas migraciones nuevas (`20261006090000_confiabilidad_tareas` y `20261006092000_seguimiento_operativo`) y confirman que están efectivas en producción.
+
+### Confirmación directa del 2026-10-06
+
+Se recuperó el acceso SSH y se consultó `_prisma_migrations` directamente en ambas bases de producción:
+
+- Comercia: **48 migraciones terminadas**, incluyendo las dos nuevas; **0 fallidas pendientes**.
+- Ucheck: **21 migraciones terminadas**, incluyendo `20261006091000_seguimiento_campo`; **0 fallidas pendientes**.
+- Los contenedores de API y web de Comercia y API de Ucheck están saludables.
+- Las tres URLs públicas de health/login respondieron HTTP 200.
+
+Esta verificación completa el conteo directo que había quedado pendiente por la interrupción de red. No quedó código funcional sin guardar; solo permanece estado local regenerable de Graphify.
 
 ### Incidencia resuelta por el despliegue automático
 
@@ -36,7 +47,7 @@ Las imágenes del primer workflow no se publicaron: GitHub canceló los trabajos
 
 La construcción directa de las imágenes en el servidor encontró primero un timeout de npm. Un reintento con la red del host llegó a la construcción de la web, pero se perdió la conexión SSH antes de confirmar el resultado.
 
-Desde la computadora de trabajo no se alcanza `172.19.0.140` por SSH ni por sus puertos privados de API. Se solicitó recuperar la red interna o confirmar la IP. La publicación con el runner fijado y el despliegue automático del servidor permitieron terminar la actualización; la verificación funcional final se hizo por HTTPS público. No se modificó la VPN ni la configuración de red de la computadora.
+Durante esa incidencia, desde la computadora de trabajo no se alcanzaba `172.19.0.140` por SSH ni por sus puertos privados de API. Se solicitó recuperar la red interna o confirmar la IP. La publicación con el runner fijado y el despliegue automático del servidor permitieron terminar la actualización; la verificación funcional se hizo por HTTPS público. El acceso SSH se recuperó para la confirmación directa del 2026-10-06. No se modificó la VPN ni la configuración de red de la computadora.
 
 Respaldo previo de Comercia: `/opt/comercia/backups/comercia-20261006-033413.{sql.gz,uploads.tar.gz,sha256}`. Ucheck: `/opt/ucheck/backups/ucheck-20261006-033323.{sql.gz,sha256}`. Los nombres usan el reloj del servidor.
 
