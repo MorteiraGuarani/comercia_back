@@ -1,6 +1,7 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { usePanel } from "@/components/panel/contexto";
+import { PantallaCarga } from "@/components/pantalla-carga";
 import {
   descartarPendiente,
   listarPendientes,
@@ -19,6 +20,7 @@ export function PendientesTareas({
   const [pendientes, setPendientes] = useState<AccionTareaPendiente[]>([]);
   const [error, setError] = useState("");
   const [enviando, setEnviando] = useState(false);
+  const sincronizacionManual = useRef(false);
   const cargar = useCallback(() => {
     void listarPendientes(usuario.id)
       .then(setPendientes)
@@ -56,12 +58,16 @@ export function PendientesTareas({
       window.removeEventListener("online", enviar);
     };
   }, [usuario.id, onSincronizar]);
-  if (!pendientes.length && !error) return null;
+  if (!pendientes.length && !error && !enviando) return null;
   return (
     <aside
       className="space-y-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100"
       aria-live="polite"
     >
+      <PantallaCarga
+        visible={enviando}
+        mensaje="Sincronizando tareas pendientes"
+      />
       <p className="font-semibold">
         {pendientes.length} acciones guardadas en este dispositivo
       </p>
@@ -75,6 +81,8 @@ export function PendientesTareas({
         disabled={enviando}
         className="min-h-11 rounded-lg border border-current px-3 hover:bg-amber-100 disabled:opacity-50 dark:hover:bg-amber-900"
         onClick={async () => {
+          if (sincronizacionManual.current) return;
+          sincronizacionManual.current = true;
           setEnviando(true);
           try {
             await reintentarPendientes(usuario.id);
@@ -83,6 +91,7 @@ export function PendientesTareas({
           } catch (e) {
             setError(e instanceof Error ? e.message : "No se pudo sincronizar");
           } finally {
+            sincronizacionManual.current = false;
             setEnviando(false);
           }
         }}

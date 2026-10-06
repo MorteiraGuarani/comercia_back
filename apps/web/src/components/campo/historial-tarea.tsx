@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { Modal } from "@/components/modal";
 import { Paginacion } from "@/components/paginacion";
+import { PantallaCarga } from "@/components/pantalla-carga";
 import type { RespuestaPaginada } from "@/types/paginacion";
 import type { VersionTarea } from "@/types/historial-tarea";
 
@@ -21,10 +22,14 @@ export function HistorialTarea({
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(7);
   const [error, setError] = useState("");
+  const [cargando, setCargando] = useState(true);
   useEffect(() => {
     let vigente = true;
+    const controlador = new AbortController();
+    const limite = setTimeout(() => controlador.abort(), 15000);
     void apiFetch<RespuestaPaginada<VersionTarea>>(
       `/campo/tareas/${tareaId}/versiones?page=${page}&limit=${limit}`,
+      { signal: controlador.signal },
     )
       .then((r) => {
         if (vigente) {
@@ -37,9 +42,15 @@ export function HistorialTarea({
           setError(
             e instanceof Error ? e.message : "No se pudo cargar el historial",
           );
+      })
+      .finally(() => {
+        clearTimeout(limite);
+        if (vigente) setCargando(false);
       });
     return () => {
       vigente = false;
+      clearTimeout(limite);
+      controlador.abort();
     };
   }, [tareaId, page, limit]);
   return (
@@ -49,6 +60,10 @@ export function HistorialTarea({
       onCerrar={cerrar}
       ancho="lg"
     >
+      <PantallaCarga
+        visible={cargando}
+        mensaje="Cargando historial de la tarea"
+      />
       <p className="mb-3 text-sm text-muted">
         Las versiones y las evidencias se conservan aunque la tarea se archive.
       </p>
@@ -102,8 +117,17 @@ export function HistorialTarea({
         limit={limit}
         total={datos?.total ?? 0}
         totalPages={datos?.totalPages ?? 1}
-        onPageChange={setPage}
-        onLimitChange={setLimit}
+        onPageChange={(nueva) => {
+          if (nueva === page || cargando) return;
+          setCargando(true);
+          setPage(nueva);
+        }}
+        onLimitChange={(nuevo) => {
+          if (nuevo === limit || cargando) return;
+          setCargando(true);
+          setLimit(nuevo);
+          setPage(1);
+        }}
       />
     </Modal>
   );

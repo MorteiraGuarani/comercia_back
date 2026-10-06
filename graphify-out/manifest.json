@@ -215,7 +215,7 @@
     "semantic_hash": ""
   },
   "apps/api/src/auth/jwt-auth.guard.spec.ts": {
-    "mtime": 1790360081.6254568,
+    "mtime": 1791230638.715942,
     "ast_hash": "ac9bfd060e335a9d756ff2cbdebd6fca",
     "semantic_hash": ""
   },
@@ -1600,8 +1600,8 @@
     "semantic_hash": ""
   },
   ".github/workflows/deploy.yml": {
-    "mtime": 1791228987.6929917,
-    "ast_hash": "a3566d25164cffa7f818bf102f936f65",
+    "mtime": 1791238877.8491697,
+    "ast_hash": "87f7dac425509d7221523f02a2b6936a",
     "semantic_hash": ""
   },
   "AGENTS.md": {
@@ -2120,8 +2120,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/panel-comentarios.tsx": {
-    "mtime": 1791228397.1342282,
-    "ast_hash": "9ca2929bdc9de80e93271683836bce06",
+    "mtime": 1791288103.0432427,
+    "ast_hash": "4bee072d522f44c18a18a3db3e5d03d7",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/subidor-fotos.tsx": {
@@ -2220,7 +2220,7 @@
     "semantic_hash": ""
   },
   "apps/api/src/campo/utils/locales-novedad.ts": {
-    "mtime": 1790360081.630986,
+    "mtime": 1791230638.7169478,
     "ast_hash": "0f08db005d4a9ab6ad0d6fcaf44d44ff",
     "semantic_hash": ""
   },
@@ -2740,13 +2740,13 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/estado-telefono.tsx": {
-    "mtime": 1791227963.725491,
-    "ast_hash": "9ac1b57f817a7bef7d08430be58e289d",
+    "mtime": 1791288225.3320217,
+    "ast_hash": "506ca65205cd59c58dd900d49a4127cd",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/historial-tarea.tsx": {
-    "mtime": 1791227963.7408469,
-    "ast_hash": "a7b10dae72c11a59a5d0bc29af8005f7",
+    "mtime": 1791288103.006645,
+    "ast_hash": "8c406d8cfa45cd2516279612a7d8dd83",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/mapa-seguimiento.tsx": {
@@ -2755,13 +2755,13 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/pendientes-tareas.tsx": {
-    "mtime": 1791227963.7719955,
-    "ast_hash": "d02272905559105187865b8bff892b1a",
+    "mtime": 1791288225.6801088,
+    "ast_hash": "664f863c7cbc8fce66557cdfec90a7bc",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/seguimiento-panel.tsx": {
-    "mtime": 1791227963.7920406,
-    "ast_hash": "2ea565eb0cc877302c83c1f211496a29",
+    "mtime": 1791288224.9946835,
+    "ast_hash": "94c35597fba5a3c48487d234f1b0ab2d",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/selector-locales-tarea.tsx": {
@@ -2805,18 +2805,23 @@
     "semantic_hash": ""
   },
   "docs/mejoras/2026-10-05-confiabilidad-y-seguimiento.md": {
-    "mtime": 1791229754.5382361,
-    "ast_hash": "90f178a6998aa5dd526794df996600ae",
+    "mtime": 1791288101.8717134,
+    "ast_hash": "603311a436d377211c6cce1f8b7dd9d9",
     "semantic_hash": ""
   },
   "docs/mejoras/README.md": {
-    "mtime": 1791221426.7153716,
-    "ast_hash": "4db39fb002d37e6031aa50cc815eb9f1",
+    "mtime": 1791238878.9995413,
+    "ast_hash": "769ae257a4b867f7bf69cc60084a6b47",
     "semantic_hash": ""
   },
   "apps/web/test/pendientes-tareas.integration.mjs": {
     "mtime": 1791228986.6150312,
     "ast_hash": "64cfa5582e82c6e804aedccb6380e242",
+    "semantic_hash": ""
+  },
+  "docs/mejoras/entrega-seguimiento-produccion.md": {
+    "mtime": 1791285685.696539,
+    "ast_hash": "e2c3e70515961ae7d8fe8dbef843543c",
     "semantic_hash": ""
   }
 }

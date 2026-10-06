@@ -1,8 +1,10 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { apiFetch } from "@/lib/api";
 import { Paginacion } from "@/components/paginacion";
+import { PantallaCarga } from "@/components/pantalla-carga";
+import { mostrarToast } from "@/components/toast/toast-controller";
 import type { RespuestaSeguimiento } from "@/types/seguimiento";
 import { estadoUbicacion, textoEstadoUbicacion } from "@/utils/seguimiento";
 
@@ -28,9 +30,31 @@ export function SeguimientoPanel() {
   const [seleccionada, setSeleccionada] = useState<number | null>(null);
   const [revision, setRevision] = useState(0);
   const [cargando, setCargando] = useState(true);
+  const [actualizando, setActualizando] = useState(false);
+  const operacionManual = useRef(false);
+  const confirmarActualizacion = useRef(false);
+  const consultaAplicada = useRef("");
+
+  function mostrarCarga() {
+    operacionManual.current = true;
+    setActualizando(true);
+  }
+
+  function actualizar() {
+    if (operacionManual.current) return;
+    confirmarActualizacion.current = true;
+    mostrarCarga();
+    setRevision((n) => n + 1);
+  }
+
   useEffect(() => {
     const t = setTimeout(() => {
-      setConsulta(buscar.trim());
+      const nueva = buscar.trim();
+      if (nueva === consultaAplicada.current) return;
+      consultaAplicada.current = nueva;
+      operacionManual.current = true;
+      setActualizando(true);
+      setConsulta(nueva);
       setPage(1);
     }, 300);
     return () => clearTimeout(t);
@@ -38,29 +62,57 @@ export function SeguimientoPanel() {
   useEffect(() => {
     let vigente = true;
     let pendiente = false;
-    const abortador = new AbortController();
+    let abortador: AbortController | null = null;
     async function cargar() {
-      if (pendiente || document.hidden || !navigator.onLine) return;
+      if (pendiente || (document.hidden && !operacionManual.current)) return;
+      if (!navigator.onLine) {
+        setError("No hay conexión. Revisá la red y volvé a actualizar");
+        operacionManual.current = false;
+        confirmarActualizacion.current = false;
+        setActualizando(false);
+        setCargando(false);
+        return;
+      }
       pendiente = true;
+      const esManual = operacionManual.current;
+      const solicitud = new AbortController();
+      abortador = solicitud;
+      let vencida = false;
+      const limite = setTimeout(() => {
+        vencida = true;
+        solicitud.abort();
+      }, 15000);
       try {
         const r = await apiFetch<RespuestaSeguimiento>(
           `/campo/seguimiento?page=${page}&limit=${limit}&buscar=${encodeURIComponent(consulta)}`,
-          { signal: abortador.signal },
+          { signal: solicitud.signal },
         );
         if (vigente) {
           setDatos(r);
           setError("");
+          if (esManual && confirmarActualizacion.current)
+            mostrarToast("exito", "Seguimiento actualizado");
         }
       } catch (e) {
         if (vigente)
           setError(
-            e instanceof Error
-              ? e.message
-              : "No se pudo actualizar el seguimiento",
+            vencida
+              ? "La consulta tardó demasiado. Volvé a actualizar"
+              : e instanceof Error
+                ? e.message
+                : "No se pudo actualizar el seguimiento",
           );
       } finally {
+        clearTimeout(limite);
         pendiente = false;
-        if (vigente) setCargando(false);
+        if (vigente) {
+          if (esManual) {
+            operacionManual.current = false;
+            confirmarActualizacion.current = false;
+            setActualizando(false);
+          }
+          setCargando(false);
+        }
       }
     }
     void cargar();
@@ -70,7 +122,7 @@ export function SeguimientoPanel() {
     window.addEventListener("online", retomar);
     return () => {
       vigente = false;
-      abortador.abort();
+      abortador?.abort();
       clearInterval(t);
       document.removeEventListener("visibilitychange", retomar);
       window.removeEventListener("online", retomar);
@@ -78,6 +130,11 @@ export function SeguimientoPanel() {
   }, [page, limit, consulta, revision]);
   return (
     <section className="w-full min-w-0 space-y-4 px-4 py-5 sm:px-6 lg:px-8">
+      <PantallaCarga
+        visible={actualizando || (cargando && !datos)}
+        mensaje="Actualizando seguimiento"
+        detalle="Obteniendo ubicaciones y actividad del equipo."
+      />
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-foreground">
@@ -90,8 +147,9 @@ export function SeguimientoPanel() {
         </div>
         <button
           type="button"
-          className="min-h-11 rounded-lg border border-line px-4 text-foreground hover:bg-surface-soft focus-visible:ring-2 focus-visible:ring-focus"
-          onClick={() => setRevision((n) => n + 1)}
+          disabled={actualizando || cargando}
+          className="min-h-11 rounded-lg border border-line px-4 text-foreground hover:bg-surface-soft focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50"
+          onClick={actualizar}
         >
           Actualizar
         </button>
@@ -276,8 +334,17 @@ export function SeguimientoPanel() {
         limit={limit}
         total={datos?.total ?? 0}
         totalPages={datos?.totalPages ?? 1}
-        onPageChange={setPage}
-        onLimitChange={setLimit}
+        onPageChange={(nueva) => {
+          if (nueva === page || operacionManual.current) return;
+          mostrarCarga();
+          setPage(nueva);
+        }}
+        onLimitChange={(nuevo) => {
+          if (nuevo === limit || operacionManual.current) return;
+          mostrarCarga();
+          setLimit(nuevo);
+          setPage(1);
+        }}
       />
     </section>
   );

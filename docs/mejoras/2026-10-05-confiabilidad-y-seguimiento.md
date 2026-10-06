@@ -34,6 +34,10 @@ Fecha: 2026-10-05. Implementación terminada y publicada en producción. Las ver
 5. Se muestra antigüedad, precisión, seguimiento finalizado/desactualizado, visita abierta, local, progreso y última actividad registrada de tarea. Verde significa reporte reciente; gris, último punto vencido. El umbral es 60 segundos. Los contadores incluyen visitas abiertas y marcaciones pendientes.
 6. Al terminar su jornada, el colaborador finaliza el seguimiento en Ucheck. Esto detiene GPS y retira las coordenadas del estado compartido. No cierra automáticamente una visita.
 
+Las consultas iniciadas por el usuario (Actualizar, búsqueda y paginación) muestran el backdrop global **Actualizando seguimiento** hasta terminar. Actualizar bloquea clics repetidos y confirma el éxito con un aviso. Ante falta de conexión, error o una espera de 15 segundos, la pantalla de carga se cierra y se muestra el error. Las consultas periódicas del mapa mantienen el seguimiento en segundo plano.
+
+El mismo backdrop se aplica a Comprobar Ucheck, consultar el historial y sus páginas, sincronizar pendientes, cargar/enviar comentarios y marcarlos como leídos. Cada procedimiento indica su acción y libera la pantalla de carga al terminar o fallar. Los reintentos automáticos de ubicaciones y pendientes siguen en segundo plano.
+
 La frecuencia efectiva depende del GPS, conexión y restricciones de Android. Usar ubicación precisa durante una jornada consume batería. La app muestra una notificación de servicio; el usuario puede finalizar el seguimiento. Una app forzada a detenerse no garantiza nuevas ubicaciones. Si pierde red, se muestra el último reporte como desactualizado. Esta entrega conserva el último punto operativo, sin un historial de recorridos ni predicción de rutas.
 
 ## Permisos y equipos nuevos

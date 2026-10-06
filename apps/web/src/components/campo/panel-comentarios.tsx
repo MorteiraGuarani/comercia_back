@@ -11,6 +11,7 @@ import {
 import { useRef } from "react";
 import type { ComentarioTarea } from "@/types/campo";
 import { mostrarToast } from "@/components/toast/toast-controller";
+import { PantallaCarga } from "@/components/pantalla-carga";
 
 interface PanelComentariosProps {
   visitaId: number;
@@ -29,6 +30,8 @@ export function PanelComentarios({
   const [comentarios, setComentarios] = useState<ComentarioTarea[]>([]);
   const [cargando, setCargando] = useState(true);
   const [enviando, setEnviando] = useState(false);
+  const [marcandoLeido, setMarcandoLeido] = useState(false);
+  const operacionEnCurso = useRef(false);
   const [texto, setTexto] = useState("");
   useEffect(() => {
     let vigente = true;
@@ -68,8 +71,9 @@ export function PanelComentarios({
 
   const handleEnviar = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!texto.trim()) return;
+    if (!texto.trim() || operacionEnCurso.current) return;
 
+    operacionEnCurso.current = true;
     setEnviando(true);
     try {
       const resultado = await enviarAccionTarea<ComentarioTarea>(
@@ -93,30 +97,41 @@ export function PanelComentarios({
     } catch {
       mostrarToast("error", "Error al enviar comentario");
     } finally {
+      operacionEnCurso.current = false;
       setEnviando(false);
     }
   };
 
   const handleMarcarLeido = async (comentarioId: number) => {
+    if (operacionEnCurso.current) return;
+    operacionEnCurso.current = true;
+    setMarcandoLeido(true);
     try {
       await marcarComentarioLeido(comentarioId);
       const data = await listarComentarios(visitaId, tareaId);
       setComentarios(data);
     } catch {
       mostrarToast("error", "Error al marcar como leído");
+    } finally {
+      operacionEnCurso.current = false;
+      setMarcandoLeido(false);
     }
   };
 
   if (cargando) {
-    return (
-      <div className="p-4 text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-      </div>
-    );
+    return <PantallaCarga visible mensaje="Cargando comentarios de la tarea" />;
   }
 
   return (
     <div className="space-y-4">
+      <PantallaCarga
+        visible={enviando || marcandoLeido}
+        mensaje={
+          marcandoLeido
+            ? "Marcando comentario como leído"
+            : "Enviando comentario"
+        }
+      />
       {/* Lista de comentarios */}
       {comentarios.length === 0 ? (
         <p className="text-center text-gray-500 dark:text-gray-400 py-8">
@@ -145,6 +160,7 @@ export function PanelComentarios({
                 {esLider && !c.leidoPorLider && (
                   <button
                     type="button"
+                    disabled={enviando || marcandoLeido}
                     onClick={() => handleMarcarLeido(c.id)}
                     className="text-xs text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap"
                   >
