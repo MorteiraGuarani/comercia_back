@@ -33,4 +33,13 @@ El formulario de usuarios llenaba Superior con los usuarios de la página del li
 
 ## Producción
 
-El despliegue y sus comprobaciones se registran al finalizar la publicación.
+Commit funcional publicado: `01d68b1ab39b85a02e2c4195d7314dcdaf1078b3`. El workflow [37510728539](https://github.com/MorteiraGuarani/comercia_back/actions/runs/37510728539) pasó lint, la suite completa de API, pendientes sin navegador, agendas/migraciones en PostgreSQL aislado y las compilaciones/publicación de ambas imágenes. Se activó mediante `workflow_dispatch`, porque este push no inició una ejecución automática.
+
+- API y web saludables. Los digests en ejecución coinciden con las imágenes publicadas para el commit: API `sha256:23550d94c48b9902e19060628aba856bca7a9ed1f36d4b0a26811f8a6ffa0ddb`, web `sha256:9a07903400a2b91c02418489a481a6b40ba1cb5a4911110f05bf379ec7304f93`.
+- El proceso habitual descargó las imágenes nuevas. Se comprobó su aplicación con Docker Compose, que finalizó con ambas aplicaciones saludables y el servicio de migración terminado. El HTML del login contiene el identificador completo del despliegue.
+- Consultas HTTP autenticadas sobre los datos reales de Frigorífico Guaraní: Impulsador ofrece un TeamLeader; TeamLeader ofrece un Supervisor; Repositor ofrece un Supervisor de repositores. Los dos roles Supervisor raíz no ofrecen candidatos.
+- Los IDs y totales del selector coinciden con las consultas de empresa/rol padre. Búsqueda por nombre y apellido, exclusión del candidato y DTO mínimo comprobados en producción. No se modificaron usuarios ni asignaciones durante las pruebas.
+- Sin sesión: HTTP 401. Impulsador intentando administrar candidatos: 403 en ambos endpoints. Rol de otra empresa: 404. Falta de rol y tamaño de página mayor a 50: 400.
+- Base de Comercia: **48 migraciones terminadas y ninguna pendiente**. Esta entrega no agrega migraciones ni modifica Ucheck.
+- Respaldo de base y archivos verificado con gzip, tar y checksum: `/opt/comercia/backups/comercia-20261007-022942.{sql.gz,uploads.tar.gz,sha256}`. El nombre utiliza el reloj del servidor.
+- Login público y health público devolvieron HTTP 200 desde el servidor. La consulta con Python desde esta PC recibió 403 del acceso público; las verificaciones autenticadas se realizaron contra la API dentro del servidor. No se usó navegador.

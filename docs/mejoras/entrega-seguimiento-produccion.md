@@ -2,6 +2,12 @@
 
 Fecha de trabajo: 2026-10-05.
 
+## Superiores según el organigrama — 2026-10-06
+
+Se publicó el commit funcional `01d68b1ab39b85a02e2c4195d7314dcdaf1078b3`. El formulario de Usuarios consulta superiores con búsqueda paginada por empresa y rol padre; ya no utiliza los usuarios de la página abierta. Impulsador → TeamLeader → Supervisor, y Repositor → Supervisor de repositores. Los roles nuevos siguen la jerarquía configurada en la base. Al cambiar de rol se limpia la selección anterior; la API valida nuevamente cada asignación.
+
+Pasaron 27 pruebas puntuales, ambas compilaciones y el workflow completo [37510728539](https://github.com/MorteiraGuarani/comercia_back/actions/runs/37510728539). API/web saludables con imágenes de ese commit; candidatos y permisos comprobados por HTTP con datos reales, sin editar usuarios. No hay SQL nuevo; las 48 migraciones están aplicadas y no hay pendientes. Véase [detalle de la mejora y producción](2026-10-06-superiores-organigrama.md).
+
 ## Corrección de superposición de mapas del 2026-10-06
 
 Se publicó el commit `8ee76da2d8ec35bd47841146f39c978b62fa8fa4`. Los cuatro mapas de campo contienen las capas de Leaflet y sus controles flotantes dentro de un contexto propio, debajo del perfil, los demás modales, los menús y los backdrops. El desplegable del filtro de clientes también respeta ese orden.
