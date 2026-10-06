@@ -2,6 +2,12 @@
 
 Fecha de trabajo: 2026-10-05.
 
+## Corrección de superposición de mapas del 2026-10-06
+
+Se publicó el commit `8ee76da2d8ec35bd47841146f39c978b62fa8fa4`. Los cuatro mapas de campo contienen las capas de Leaflet y sus controles flotantes dentro de un contexto propio, debajo del perfil, los demás modales, los menús y los backdrops. El desplegable del filtro de clientes también respeta ese orden.
+
+Pasaron lint de los componentes sin errores (con advertencias anteriores), compilación de web y el workflow completo [37462684796](https://github.com/MorteiraGuarani/comercia_back/actions/runs/37462684796). API y web están saludables y sus IDs coinciden con las imágenes del commit publicado. API health, web y CSS público respondieron HTTP 200; el HTML contiene el identificador del despliegue y el CSS incluye `.campo-map{isolation:isolate;z-index:0;position:relative}`. La verificación se hizo sin abrir un navegador. Esta corrección no agrega migraciones ni cambia el APK.
+
 ## Corrección de backdrops del 2026-10-06
 
 Se publicó el commit `937297e430e20c1960fdbfa5b71d3d1032c48e64` con backdrop para Actualizar, búsqueda y paginación de Seguimiento en vivo, Comprobar Ucheck, historial de tareas, sincronización manual de pendientes y comentarios. Actualizar bloquea clics repetidos y muestra confirmación; las consultas de seguimiento, teléfono e historial tienen un límite de espera de 15 segundos. Los refrescos periódicos permanecen en segundo plano.
