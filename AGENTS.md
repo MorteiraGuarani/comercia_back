@@ -65,6 +65,23 @@
 
 ## Frontend Rules
 
+- Para construir, mejorar o rediseñar UI en Comercia, leer y aplicar
+  `.agents/skills/frontend-design-editorial/SKILL.md` como guía principal de
+  diseño; es la skill proporcionada por el usuario. No requiere que mencione
+  explícitamente diseño ni el nombre de la skill.
+- Complementar con `.agents/skills/hallmark/SKILL.md` para evitar patrones de
+  AI slop y revisar jerarquía, composición, copy y responsive. Hacer un solo
+  brief y una sola revisión acordes al alcance del cambio, sin duplicar los
+  procedimientos de ambas skills.
+- Respetar el sistema visual, los tokens, los componentes y las reglas de
+  `apps/web/AGENTS.md`. Las recetas de paleta, tipografía o catálogo de una
+  skill no autorizan cambiar la identidad ni rehacer pantallas existentes.
+- La preferencia del usuario de no abrir navegadores prevalece sobre cualquier
+  verificación visual indicada por las skills. Revisar código, estados,
+  accesibilidad, reglas responsive y compilación cuando sea necesario; dejar
+  explícita cualquier revisión visual pendiente. No instalar ni iniciar
+  herramientas de navegador para estas comprobaciones.
+
 - Read `apps/web/AGENTS.md` before changing Next.js code.
 - Use `.agents/skills/vercel-react-best-practices` for React/Next performance guidance.
 - Prefer Server Components unless interactivity requires `"use client"`.
