@@ -1,17 +1,17 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { mensajeError } from "@/utils/error";
 import { fechaEnZonaIso, queryFechasCampo } from "@/utils/fechas";
 import { TOKENS } from "./tokens";
 import { StatusStamp } from "./ui/status-stamp";
-import { StatChip } from "./ui/stat-chip";
 import { BigProgress } from "./ui/big-progress";
 import { SegTabs } from "./ui/seg-tabs";
 import { TopBar } from "./ui/top-bar";
 import { BottomNav } from "./ui/bottom-nav";
-import { CollaboratorRow } from "./ui/collaborator-row";
+import { AvancePresentismo, EquipoPresentismo, ResumenPresentismo } from "./presentismo-equipo";
+import styles from "./presentismo.module.css";
 import {
   SelectorFechaFiltro,
   type PeriodoFiltro,
@@ -118,30 +118,6 @@ const AlertOctagonIcon = ({
   </svg>
 );
 
-const StoreIcon = ({
-  size = 16,
-  color = "currentColor",
-}: {
-  size?: number;
-  color?: string;
-}) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke={color}
-    strokeWidth="1.8"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M4 10 5 4h14l1 6" />
-    <rect x="4" y="10" width="16" height="10" rx="1" />
-    <line x1="9" y1="20" x2="9" y2="14" />
-    <line x1="15" y1="14" x2="15" y2="20" />
-  </svg>
-);
-
 type TabType = "resumen" | "rutas" | "tareas";
 
 interface SupervisionPanelProps {
@@ -167,6 +143,11 @@ export function SupervisionPanel({
   initialTab = "resumen",
 }: SupervisionPanelProps) {
   const [tab, setTab] = useState<TabType>(initialTab);
+  const [filtroEquipo, setFiltroEquipo] = useState("todos");
+  const [actualizado, setActualizado] = useState<string | null>(null);
+  const equipoRef = useRef<HTMLDivElement>(null);
+  const peticionDetalle = useRef(0);
+  const peticionResumen = useRef(0);
 
   // Selector de período con fechas predefinidas y calendario
   const hoyStr = fechaEnZonaIso(new Date());
@@ -191,7 +172,8 @@ export function SupervisionPanel({
   >("ruta");
 
   // Cargar resumen de supervisión según el período seleccionado
-  const cargarResumen = async () => {
+  const cargarResumen = useCallback(async () => {
+    const peticion = ++peticionResumen.current;
     try {
       setCargando(true);
       setError(null);
@@ -199,23 +181,27 @@ export function SupervisionPanel({
       const data = await apiFetch<SupervisionResumenData>(
         `/campo/supervision/resumen${query ? `?${query}` : ""}`,
       );
+      if (peticion !== peticionResumen.current) return;
       setResumen(data);
+      setActualizado(new Intl.DateTimeFormat("es-PY", { timeZone: "America/Asuncion", hour: "2-digit", minute: "2-digit" }).format(new Date()));
     } catch (e) {
-      setError(mensajeError(e, "Error al cargar datos de supervisión"));
+      if (peticion === peticionResumen.current) setError(mensajeError(e, "Error al cargar datos de supervisión"));
     } finally {
-      setCargando(false);
+      if (peticion === peticionResumen.current) setCargando(false);
     }
-  };
+  }, [periodo]);
 
   useEffect(() => {
     void Promise.resolve().then(cargarResumen);
-  }, [periodo]);
+  }, [cargarResumen]);
 
   // Cargar detalle de colaborador
   const abrirColaborador = async (
     id: number,
     sub: "ruta" | "tareas" | "novedades" = "ruta",
   ) => {
+    const peticion = ++peticionDetalle.current;
+    setDetalleColab(null);
     setColaboradorId(id);
     setSubTabColab(sub);
     try {
@@ -223,23 +209,25 @@ export function SupervisionPanel({
       const data = await apiFetch<ColaboradorDetalleData>(
         `/campo/supervision/colaboradores/${id}?${queryFecha}`,
       );
-      setDetalleColab(data);
+      if (peticion === peticionDetalle.current) setDetalleColab(data);
     } catch (e) {
-      alert("Error al cargar detalle del colaborador: " + mensajeError(e, "Error inesperado"));
-      setColaboradorId(null);
+      if (peticion === peticionDetalle.current) {
+        setError(mensajeError(e, "No se pudo cargar la ficha del colaborador"));
+        setColaboradorId(null);
+      }
     }
   };
 
   const navItems = [
-    { key: "resumen" as TabType, label: "Resumen Operativo", icon: UsersIcon },
+    { key: "resumen" as TabType, label: "Equipo", icon: UsersIcon },
     {
       key: "rutas" as TabType,
-      label: "Rutas de Locales",
+      label: "Locales",
       icon: NavigationIcon,
     },
     {
       key: "tareas" as TabType,
-      label: "Cumplimiento de Tareas",
+      label: "Tareas",
       icon: ListChecksIcon,
     },
   ];
@@ -251,22 +239,25 @@ export function SupervisionPanel({
           title={detalleColab?.colaborador.nombre ?? "Colaborador"}
           subtitle="Ruta, tareas, comentarios y fotos del período seleccionado"
           onBack={() => {
+            peticionDetalle.current++;
             setColaboradorId(null);
             setDetalleColab(null);
           }}
         />
         <main className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
           {!detalleColab ? (
-            <p className="py-10 text-center text-sm text-muted">Cargando detalle del colaborador…</p>
+            <PantallaCarga visible mensaje="Cargando ficha del colaborador…" />
           ) : (
           <div className="space-y-4">
             {/* Header del colaborador */}
             <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
               <div className="min-w-0">
                 <p className="ft-body text-xs sm:text-sm text-muted font-medium">
-                  {detalleColab.colaborador.zona} · Tel:{" "}
-                  {detalleColab.colaborador.telefono}
+                  {detalleColab.colaborador.zona}
                 </p>
+                {detalleColab.colaborador.telefono && <a href={`tel:${detalleColab.colaborador.telefono.replace(/[^+\d]/g, "")}`}
+                  className="mt-1 inline-flex min-h-11 items-center whitespace-nowrap text-sm text-accent-ink hover:underline"
+                  aria-label={`Llamar a ${detalleColab.colaborador.nombre}`}>Llamar · {detalleColab.colaborador.telefono}</a>}
               </div>
               <StatusStamp
                 tone={
@@ -454,21 +445,19 @@ export function SupervisionPanel({
     );
   }
   return (
-    <div
-      className="campo-screen flex min-h-[calc(100vh-5rem)] w-full flex-col overflow-hidden font-sans"
-      style={{
-        background: TOKENS.bone,
-        color: TOKENS.ink,
-      }}
-    >
-      <TopBar
-        title="Presentismo"
-        subtitle="Presencias del equipo: rutas y tareas de los impulsadores"
-        right={<SelectorFechaFiltro valorActual={periodo} onChange={setPeriodo} />}
-      />
+    <div className={`campo-screen ${styles.screen}`}>
+      <header className={styles.header}>
+        <div><h1>Presentismo</h1><p>Equipo comercial · {resumen?.fecha ?? periodo.etiqueta}{actualizado ? ` · Actualizado ${actualizado}` : ""}</p></div>
+        <div className={styles.toolbar}>
+          <SelectorFechaFiltro valorActual={periodo} onChange={valor => { setPeriodo(valor); setFiltroEquipo("todos"); }} />
+          <button type="button" className={styles.refresh} onClick={cargarResumen} disabled={cargando} aria-busy={cargando} aria-label="Actualizar presentismo" title="Actualizar presentismo">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5" /><path d="M6 7a7 7 0 0 1 12-1l2 6M4 12l2 6a7 7 0 0 0 12-1" /></svg>
+          </button>
+        </div>
+      </header>
 
       {/* Selector de pestañas superiores (Desktop & Tablet) */}
-      <div className="hidden gap-1 overflow-x-auto border-b border-line bg-surface-raised px-4 py-1 sm:flex sm:px-8">
+      <div className={`${styles.desktopTabs} hidden gap-1 overflow-x-auto border-b border-line bg-surface-raised px-4 py-1 sm:flex sm:px-8`}>
         {navItems.map((it) => {
           const isActive = tab === it.key;
           const Icon = it.icon;
@@ -492,7 +481,7 @@ export function SupervisionPanel({
 
       {/* Contenedor Principal Amplio (sin marco móvil, full-width responsive) */}
       <div
-        className="flex-1 flex flex-col overflow-hidden w-full"
+        className="flex min-w-0 w-full flex-col"
         style={{ background: TOKENS.bone }}
       >
         {cargando && !resumen ? (
@@ -503,14 +492,14 @@ export function SupervisionPanel({
             />
           </div>
         ) : error ? (
-          <div className="p-6 m-6 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-sm max-w-2xl mx-auto w-full">
+          <div className="mx-auto my-4 w-[calc(100%-2rem)] max-w-2xl rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200" role="alert">
             <p className="font-bold text-base">
               No se pudieron cargar los datos de supervisión
             </p>
             <p className="mt-1 text-xs sm:text-sm">{error}</p>
             <button
               onClick={cargarResumen}
-              className="mt-4 px-4 py-2 rounded-xl bg-red-600 text-white text-xs sm:text-sm font-semibold hover:bg-red-700 transition cursor-pointer"
+              className="mt-4 min-h-11 rounded-md bg-red-700 px-4 py-2 text-sm font-semibold text-white hover:bg-red-800 dark:bg-red-800 dark:hover:bg-red-700"
             >
               Reintentar
             </button>
@@ -519,164 +508,16 @@ export function SupervisionPanel({
           <div className="flex-1 overflow-y-auto flex flex-col">
             {/* ==================== TAB 1: RESUMEN OPERATIVO ==================== */}
             {tab === "resumen" && resumen && (
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 flex-1 w-full">
-                {/* Tarjetas de Métricas de Presentismo */}
-                <div>
-                  <p
-                    className="ft-display text-2xl sm:text-3xl tracking-wide font-black mb-4"
-                    style={{ color: TOKENS.ink }}
-                  >
-                    Presentismo
-                  </p>
-                  <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 mb-6 sm:grid sm:grid-cols-4 sm:overflow-visible">
-                    <div className="min-w-[8.25rem] flex-1"><StatChip
-                      label="En ruta activa"
-                      value={resumen.presentismo.enRuta}
-                      tone="frio"
-                      sub="Con Check-In"
-                    /></div>
-                    <div className="min-w-[8.25rem] flex-1"><StatChip
-                      label="Jornada finalizada"
-                      value={resumen.presentismo.finalizados}
-                      tone="fresco"
-                      sub="Check-Out cerrado"
-                    /></div>
-                    <div className="min-w-[8.25rem] flex-1"><StatChip
-                      label="Sin iniciar aún"
-                      value={resumen.presentismo.sinIniciar}
-                      tone="alerta"
-                      sub="Pendientes de ingreso"
-                    /></div>
-                    <div className="min-w-[8.25rem] flex-1"><StatChip
-                      label="Total Colaboradores"
-                      value={resumen.presentismo.totalEquipo}
-                      tone="ink"
-                      sub="Plantel asignado"
-                    /></div>
-                  </div>
-
-                  {/* Barras de avance globales de Rutas y Tareas */}
-                  <div className="grid grid-cols-2 gap-2 sm:gap-5 mb-8">
-                    <div
-                      className="rounded-2xl p-3 sm:p-6 transition-all shadow-sm bg-surface-raised"
-                      style={{ border: `1px solid ${TOKENS.line}` }}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="ft-body text-xs sm:text-base font-bold text-foreground">
-                          Rutas
-                        </p>
-                        <span className="ft-mono text-xs sm:text-sm font-extrabold px-3 py-1 rounded-lg bg-blue-50 text-blue-800 border border-blue-200">
-                          {resumen.rutas.completadas} / {resumen.rutas.total}{" "}
-                          paradas
-                        </span>
-                      </div>
-                      <div className="flex items-baseline justify-between mb-3">
-                        <p
-                          className="ft-display text-4xl font-black"
-                          style={{ color: TOKENS.frio }}
-                        >
-                          {resumen.rutas.pct}%
-                        </p>
-                        <span className="ft-body text-xs sm:text-sm font-medium text-muted">
-                          {resumen.rutas.enCurso} paradas en curso
-                        </span>
-                      </div>
-                      <BigProgress
-                        pct={resumen.rutas.pct}
-                        color={TOKENS.frio}
-                      />
-                    </div>
-
-                    <div
-                      className="rounded-2xl p-4 sm:p-5 transition-all shadow-sm"
-                      style={{
-                        background: TOKENS.canvas,
-                        border: `1px solid ${TOKENS.line}`,
-                      }}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <p
-                          className="ft-body text-xs sm:text-sm font-semibold"
-                          style={{ color: TOKENS.sub }}
-                        >
-                          Tareas
-                        </p>
-                        <span className="ft-mono text-xs font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
-                          {resumen.tareas.completadas} / {resumen.tareas.total}{" "}
-                          tareas
-                        </span>
-                      </div>
-                      <div className="flex items-baseline justify-between mb-2">
-                        <p
-                          className="ft-display text-3xl font-bold"
-                          style={{ color: TOKENS.fresco }}
-                        >
-                          {resumen.tareas.pct}%
-                        </p>
-                        {resumen.tareas.obligatoriasPendientes > 0 && (
-                          <span className="ft-body text-xs font-bold text-red-600 flex items-center gap-1">
-                            <AlertOctagonIcon
-                              size={13}
-                              color={TOKENS.critico}
-                            />
-                            {resumen.tareas.obligatoriasPendientes} obligatorias
-                            pendientes
-                          </span>
-                        )}
-                      </div>
-                      <BigProgress
-                        pct={resumen.tareas.pct}
-                        color={TOKENS.fresco}
-                      />
-                    </div>
-                  </div>
+              <div className={styles.body}>
+                <ResumenPresentismo resumen={resumen} onPendientes={() => {
+                  setFiltroEquipo("sin_iniciar");
+                  equipoRef.current?.scrollIntoView({ block: "start", behavior: "instant" });
+                }} />
+                <div ref={equipoRef} className={`${styles.teamColumn} min-w-0 scroll-mt-24`}>
+                  <EquipoPresentismo key={resumen.fecha} colaboradores={resumen.colaboradores} filtro={filtroEquipo} onFiltro={setFiltroEquipo}
+                    onOpen={id => void abrirColaborador(id, "ruta")} />
                 </div>
-
-                {resumen.liderazgo?.totalTeamLeaders > 0 && (
-                  <section aria-label="Seguimiento de TeamLeaders" className="space-y-3">
-                    <h2 className="ft-display text-xl sm:text-2xl font-bold text-foreground">TeamLeaders</h2>
-                    <p className="text-sm text-muted">Visitas propias de supervisión y estado de los TeamLeaders bajo tu responsabilidad.</p>
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                      <StatChip label="TeamLeaders" value={resumen.liderazgo.totalTeamLeaders} tone="ink" sub="A tu cargo" />
-                      <StatChip label="En ruta" value={resumen.liderazgo.enRuta} tone="frio" sub="Con visita abierta" />
-                      <StatChip label="Finalizaron" value={resumen.liderazgo.finalizados} tone="fresco" sub="Con salida registrada" />
-                      <StatChip label="Sin iniciar" value={resumen.liderazgo.sinIniciar} tone="alerta" sub="Sin marcaciones" />
-                    </div>
-                    <div className="rounded-xl border border-line bg-surface-raised p-4">
-                      <div className="flex items-center justify-between gap-3 text-sm">
-                        <span>Visitas de supervisión completadas</span>
-                        <strong>{resumen.liderazgo.visitasCompletadas}/{resumen.liderazgo.visitasTotales} · {resumen.liderazgo.pctVisitas}%</strong>
-                      </div>
-                      <BigProgress pct={resumen.liderazgo.pctVisitas} color={TOKENS.frio} />
-                    </div>
-                  </section>
-                )}
-
-                {/* Lista de Colaboradores */}
-                <div>
-                  {resumen.colaboradores.length === 0 ? (
-                    <div
-                      className="rounded-2xl p-12 text-center bg-surface-raised"
-                      style={{ border: `1px solid ${TOKENS.line}` }}
-                    >
-                      <p className="ft-body text-base text-muted font-medium">
-                        No hay colaboradores asignados a tu equipo en el período
-                        seleccionado.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                      {resumen.colaboradores.map((colab) => (
-                        <CollaboratorRow
-                          key={colab.id}
-                          colaborador={colab}
-                          metric="presentismo"
-                          onOpen={() => abrirColaborador(colab.id, "ruta")}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <AvancePresentismo resumen={resumen} />
               </div>
             )}
 
@@ -746,16 +587,8 @@ export function SupervisionPanel({
                   >
                     Rutas por colaborador
                   </p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
-                    {resumen.colaboradores.map((colab) => (
-                      <CollaboratorRow
-                        key={colab.id}
-                        colaborador={colab}
-                        metric="ruta"
-                        onOpen={() => abrirColaborador(colab.id, "ruta")}
-                      />
-                    ))}
-                  </div>
+                  <EquipoPresentismo key={resumen.fecha} colaboradores={resumen.colaboradores} metric="ruta"
+                    filtro={filtroEquipo} onFiltro={setFiltroEquipo} onOpen={id => void abrirColaborador(id, "ruta")} />
                 </div>
               </div>
             )}
@@ -803,16 +636,8 @@ export function SupervisionPanel({
                   >
                     Tareas por colaborador
                   </p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
-                    {resumen.colaboradores.map((colab) => (
-                      <CollaboratorRow
-                        key={colab.id}
-                        colaborador={colab}
-                        metric="tareas"
-                        onOpen={() => abrirColaborador(colab.id, "tareas")}
-                      />
-                    ))}
-                  </div>
+                  <EquipoPresentismo key={resumen.fecha} colaboradores={resumen.colaboradores} metric="tareas"
+                    filtro={filtroEquipo} onFiltro={setFiltroEquipo} onOpen={id => void abrirColaborador(id, "tareas")} />
                 </div>
               </div>
             )}
@@ -824,11 +649,10 @@ export function SupervisionPanel({
           items={navItems}
           active={tab}
           onChange={setTab}
-          className="sm:hidden mt-auto"
+          className="fixed inset-x-0 bottom-0 z-20 sm:hidden"
         />
       </div>
-
-
+      <PantallaCarga visible={cargando && !!resumen} mensaje="Actualizando presentismo…" />
     </div>
   );
 }

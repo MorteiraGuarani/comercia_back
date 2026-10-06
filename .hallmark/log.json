@@ -1,5 +1,22 @@
 [
   {
+    "date": "2026-10-06",
+    "scope": "presentismo",
+    "macrostructure": "Workbench",
+    "theme": "Comercia existing green/copper, studied structure",
+    "studied": true,
+    "source": "../presentismo-equipo-comercial.html",
+    "enrichment": "none",
+    "nav": "existing app rail + mobile operational bar",
+    "brief": "Presentismo móvil primero con resumen compacto, filas y tabla de escritorio; backend de producción",
+    "validation": "build and focused checks; no browser",
+    "desktop_revision": {
+      "date": "2026-10-06",
+      "brief": "Resumen horizontal y tabla amplia para monitores, con móvil aprobado preservado",
+      "validation": "builds + 4 focused tests; identical mobile CSS and list markup; no browser"
+    }
+  },
+  {
     "date": "2026-08-12",
     "macrostructure": "Stat-Led",
     "theme": "modern-minimal custom teal",

@@ -12,5 +12,18 @@
     "bottom navigation clear of Android system controls",
     "workbench de jornada con acciones de entrada y salida",
     "Manrope local for display headings"
-  ]
+  ],
+  "presentismo_web": {
+    "date": "2026-10-06",
+    "framework": "Next.js 16.3.5 / React 19 / Tailwind 4",
+    "fonts": [
+      "Barlow Condensed",
+      "IBM Plex Sans",
+      "IBM Plex Mono"
+    ],
+    "palette_source": "apps/web/src/app/globals.css",
+    "spacing": "4pt, existing scale",
+    "motion": "minimal CSS, reduced-motion",
+    "report": "../PRESENTISMO-HALLMARK.md"
+  }
 }

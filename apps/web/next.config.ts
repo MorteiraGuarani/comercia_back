@@ -11,6 +11,18 @@ if (apiLocal) {
   }
 }
 
+// Proxy opcional de desarrollo para revisar el frontend local con la API
+// desplegada. El navegador sigue usando /api/v1 y la sesión en el mismo origen.
+const apiRemota = process.env.COMERCIA_DEV_API_PROXY_TARGET;
+if (apiRemota) {
+  const destino = new URL(apiRemota);
+  if (process.env.NODE_ENV !== "development" || !["http:", "https:"].includes(destino.protocol) || destino.username || destino.password || destino.pathname !== "/" || destino.search || destino.hash) {
+    throw new Error("COMERCIA_DEV_API_PROXY_TARGET solo admite un origen HTTP(S) sin credenciales durante desarrollo.");
+  }
+  if (apiLocal) throw new Error("Configurá un solo destino de API para desarrollo.");
+}
+const apiDesarrollo = apiRemota ?? apiLocal;
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   // typedRoutes desactivado: las rutas de módulos/páginas se configuran en la
@@ -21,7 +33,7 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(currentDirectory, "../../"),
   // prod:web usa el mismo origen para mantener la sesión aunque cambie el puerto de Next.js.
   async rewrites() {
-    return apiLocal ? [{ source: "/api/v1/:path*", destination: `${apiLocal}/api/v1/:path*` }] : [];
+    return apiDesarrollo ? [{ source: "/api/v1/:path*", destination: `${apiDesarrollo.replace(/\/$/, "")}/api/v1/:path*` }] : [];
   },
 };
 
