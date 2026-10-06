@@ -505,8 +505,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/usuarios/admin-usuarios.controller.ts": {
-    "mtime": 1789582727.1929233,
-    "ast_hash": "e8888a23054d04964ac06f9bc25f02ef",
+    "mtime": 1791310540.0000997,
+    "ast_hash": "d3b38653814f43d22516b2d21e4341a9",
     "semantic_hash": ""
   },
   "apps/api/src/usuarios/dto/usuario.dto.ts": {
@@ -520,8 +520,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/usuarios/usuarios.controller.ts": {
-    "mtime": 1789582726.3788538,
-    "ast_hash": "a5dfd4f0c13d99b91d7524748d48ceba",
+    "mtime": 1791310540.0010993,
+    "ast_hash": "47995d0caf2a234073310e4b17382318",
     "semantic_hash": ""
   },
   "apps/api/src/usuarios/usuarios.module.ts": {
@@ -530,8 +530,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/usuarios/usuarios.service.ts": {
-    "mtime": 1790782759.0844946,
-    "ast_hash": "11c627f2a03f16cc97dbc5147995acc1",
+    "mtime": 1791310540.0000997,
+    "ast_hash": "2e375eee0d2db5010625f93f77bf4ae4",
     "semantic_hash": ""
   },
   "apps/api/test/app.e2e-spec.ts": {
@@ -700,8 +700,8 @@
     "semantic_hash": "692f7f4acb1607e8575b72c625e03c79"
   },
   "apps/web/src/components/usuarios/usuarios-panel.tsx": {
-    "mtime": 1791227963.6912084,
-    "ast_hash": "161da64678ff0896bdd8246c346ea8f8",
+    "mtime": 1791310469.804817,
+    "ast_hash": "3df422c821380e824de66016da8c429b",
     "semantic_hash": ""
   },
   "apps/web/src/lib/api.ts": {
@@ -2820,8 +2820,23 @@
     "semantic_hash": ""
   },
   "docs/mejoras/entrega-seguimiento-produccion.md": {
-    "mtime": 1791288959.3893163,
-    "ast_hash": "cee9fa462659438d4bdab5a3fa473b43",
+    "mtime": 1791289529.7902527,
+    "ast_hash": "d16c5e87c08e56725d9a5d346914a32d",
+    "semantic_hash": ""
+  },
+  "apps/api/src/usuarios/dto/listar-superiores.dto.ts": {
+    "mtime": 1791310467.935822,
+    "ast_hash": "d7929effebcf1f2d3dad2d1a2ca2b625",
+    "semantic_hash": ""
+  },
+  "apps/api/src/usuarios/usuarios-superiores.controller.spec.ts": {
+    "mtime": 1791310648.857567,
+    "ast_hash": "d95698c6b1587b381c8a55ee47dcf380",
+    "semantic_hash": ""
+  },
+  "apps/api/src/usuarios/usuarios-superiores.spec.ts": {
+    "mtime": 1791310540.0010993,
+    "ast_hash": "739dfe15ada9b4902e1ab300483b9107",
     "semantic_hash": ""
   }
 }

@@ -295,9 +295,6 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
   }
 
   const usuarios = datos?.items ?? [];
-  const superiores = usuarios.filter(
-    (u) => editando === "nuevo" || u.id !== editando?.id,
-  );
 
   return (
     <div data-inicio-listado className="w-full min-w-0 scroll-mt-20">
@@ -565,30 +562,27 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
               seleccionActual={
                 editando !== "nuevo" ? editando.rol?.descripcion : undefined
               }
-              onChange={(rolId) => setForm((actual) => ({ ...actual, rolId }))}
+              onChange={(rolId) => setForm((actual) => actual.rolId === rolId
+                ? actual : { ...actual, rolId, superiorId: "" })}
             />
           ) : null}
-          <label className={labelBase}>
-            Superior
-            <select
-              value={form.superiorId}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  superiorId:
-                    e.target.value === "" ? "" : Number(e.target.value),
-                }))
-              }
-              className={inputBase}
-            >
-              <option value="">Sin superior</option>
-              {superiores.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.nombre} {u.apellido}
-                </option>
-              ))}
-            </select>
-          </label>
+          {editando && empresaId !== "" && form.rolId !== "" ? (
+            <div className="min-w-0 space-y-2">
+              <SelectorPaginado
+                key={`superior-${empresaId}-${form.rolId}-${editando === "nuevo" ? "nuevo" : editando.id}`}
+                url={`${base}/superiores?empresaId=${empresaId}&rolId=${form.rolId}${editando === "nuevo" ? "" : `&excluirUsuarioId=${editando.id}`}`}
+                etiqueta="Superior inmediato"
+                buscable
+                value={form.superiorId}
+                seleccionActual={editando !== "nuevo" && form.rolId === editando.rol?.id
+                  && form.superiorId === editando.superior?.id ? editando.superior.nombre : undefined}
+                onChange={(superiorId) => setForm((actual) => ({ ...actual, superiorId }))}
+              />
+              <p className="text-xs text-muted">Solo personas activas de esta empresa con el rol superior inmediato. Si el rol no tiene superior en el organigrama, dejá este campo vacío.</p>
+              {form.superiorId !== "" ? <button type="button" className={`${btnGhost} min-h-11 whitespace-nowrap`}
+                onClick={() => setForm((actual) => ({ ...actual, superiorId: "" }))}>Quitar superior</button> : null}
+            </div>
+          ) : <p className="text-sm text-muted">Seleccioná un rol para elegir su superior inmediato.</p>}
           {editando === "nuevo" && meta?.esSuperadmin ? (
             <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-lg border border-line bg-surface-soft px-3 py-2.5 text-sm">
               <input

@@ -2,6 +2,8 @@
 
 Documentación de cambios funcionales, criterios de verificación y operación.
 
+- [Asignación de superiores según el organigrama](2026-10-06-superiores-organigrama.md)
+
 - [Confiabilidad y seguimiento operativo](2026-10-05-confiabilidad-y-seguimiento.md)
 - [Registro de entrega y producción](entrega-seguimiento-produccion.md)
 - [Planificación por equipo](../planificacion-por-equipo.md)

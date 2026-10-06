@@ -21,12 +21,21 @@ import {
   ListarUsuariosDto,
 } from './dto/usuario.dto';
 import { UsuariosService } from './usuarios.service';
+import { ListarSuperioresDto } from './dto/listar-superiores.dto';
 
 @ApiTags('usuarios')
 @Controller('usuarios')
 @UseGuards(JwtAuthGuard)
 export class UsuariosController {
   constructor(private readonly usuarios: UsuariosService) {}
+
+  @Get('superiores')
+  listarSuperiores(
+    @Req() req: RequestConUsuario,
+    @Query() query: ListarSuperioresDto,
+  ) {
+    return this.usuarios.listarSuperiores(req.usuarioId, query);
+  }
 
   @Get('roles')
   listarRoles(

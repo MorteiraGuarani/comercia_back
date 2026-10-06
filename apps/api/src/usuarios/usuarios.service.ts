@@ -14,6 +14,8 @@ import {
   type RespuestaPaginada,
 } from '../common/utils/paginacion';
 import { puedeAdministrarUsuarios } from '../common/utils/permisos-usuario';
+import { filtrosBusquedaUsuario } from '../common/utils/busqueda-usuario';
+import type { Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   ActualizarUsuarioDto,
@@ -26,6 +28,7 @@ import type {
   UsuarioLocalAsignacionDto,
   UsuarioAdminDto,
 } from './interfaces/usuario-admin.interface';
+import { ListarSuperioresDto } from './dto/listar-superiores.dto';
 
 const SELECT_USUARIO_ADMIN = {
   id: true,
@@ -190,6 +193,50 @@ export class UsuariosService {
       }),
     ]);
     return respuestaPaginada(items, total, page, limit);
+  }
+
+  async listarSuperiores(usuarioId: number, query: ListarSuperioresDto) {
+    const actual = await this.contexto(usuarioId);
+    const empresaId = this.empresaObjetivo(actual, query.empresaId);
+    const rol = await this.prisma.rol.findUnique({
+      where: { id: query.rolId },
+      select: { empresaId: true, rolId: true },
+    });
+    if (!rol || rol.empresaId !== empresaId)
+      throw new NotFoundException(
+        'El rol no está disponible para esta empresa',
+      );
+    const { skip, take, page, limit } = rangoPaginacion(query);
+    if (rol.rolId === null) return respuestaPaginada([], 0, page, limit);
+    const where: Prisma.UsuarioWhereInput = {
+      empresaId,
+      rolId: rol.rolId,
+      isActive: true,
+      esSuperadmin: false,
+      ...(query.excluirUsuarioId
+        ? { id: { not: query.excluirUsuarioId } }
+        : {}),
+      AND: filtrosBusquedaUsuario(query.buscar),
+    };
+    const [total, superiores] = await Promise.all([
+      this.prisma.usuario.count({ where }),
+      this.prisma.usuario.findMany({
+        where,
+        select: { id: true, nombre: true, apellido: true },
+        orderBy: [{ nombre: 'asc' }, { apellido: 'asc' }, { id: 'asc' }],
+        skip,
+        take,
+      }),
+    ]);
+    return respuestaPaginada(
+      superiores.map((u) => ({
+        id: u.id,
+        nombre: `${u.nombre} ${u.apellido}`.trim(),
+      })),
+      total,
+      page,
+      limit,
+    );
   }
 
   async listarLocales(usuarioId: number, query: ListarUsuariosDto) {
@@ -378,6 +425,7 @@ export class UsuariosService {
               id: true,
               empresaId: true,
               isActive: true,
+              esSuperadmin: true,
               rolId: true,
               superiorId: true,
             },
@@ -393,12 +441,17 @@ export class UsuariosService {
       superiorId &&
       (!superior ||
         !superior.isActive ||
+        superior.esSuperadmin ||
         superior.empresaId !== empresaId ||
         superior.id === usuarioEditadoId)
     ) {
       throw new NotFoundException('El superior no existe');
     }
-    if (superior && rol?.rolId && superior.rolId !== rol.rolId)
+    if (superior && rol.rolId === null)
+      throw new BadRequestException(
+        'Este rol no tiene un superior definido en el organigrama',
+      );
+    if (superior && superior.rolId !== rol.rolId)
       throw new BadRequestException(
         'El superior debe tener el rol padre del usuario',
       );
