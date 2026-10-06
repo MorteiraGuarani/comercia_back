@@ -2,6 +2,14 @@
 
 Fecha de trabajo: 2026-10-05.
 
+## Corrección de backdrops del 2026-10-06
+
+Se publicó el commit `937297e430e20c1960fdbfa5b71d3d1032c48e64` con backdrop para Actualizar, búsqueda y paginación de Seguimiento en vivo, Comprobar Ucheck, historial de tareas, sincronización manual de pendientes y comentarios. Actualizar bloquea clics repetidos y muestra confirmación; las consultas de seguimiento, teléfono e historial tienen un límite de espera de 15 segundos. Los refrescos periódicos permanecen en segundo plano.
+
+Pasaron lint de los componentes, compilación de web y el workflow completo [37461020282](https://github.com/MorteiraGuarani/comercia_back/actions/runs/37461020282). Los contenedores de API y web están saludables y sus IDs coinciden con las imágenes del commit publicado. API health y web respondieron HTTP 200; el HTML público contiene el identificador de despliegue `937297e430e20c1960fdbfa5b71d3d1032c48e64`. Esta corrección no agrega migraciones ni cambia el APK.
+
+Las verificaciones siguientes corresponden a la entrega original de seguimiento.
+
 ## Código y verificaciones
 
 La implementación de Comercia se publicó en el commit `6abe7feb4fdfff2cc2ac62eea106a1ac3f2266fc`. Pasaron 184 pruebas de API, lint, pruebas de pendientes con IndexedDB y la integración de migraciones en PostgreSQL aislado. También compilaron API y web. El workflow [37366077315](https://github.com/MorteiraGuarani/comercia_back/actions/runs/37366077315) confirmó la compuerta de calidad.
