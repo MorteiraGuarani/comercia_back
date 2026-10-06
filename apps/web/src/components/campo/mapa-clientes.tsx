@@ -450,7 +450,7 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
           {/* Menú Flotante Dropdown de Coincidencias */}
           {dropdownAbierto && (
             <div
-              className="absolute left-0 right-0 mt-1.5 max-h-72 overflow-y-auto rounded-xl border shadow-xl z-[2000] bg-white p-1.5 divide-y divide-zinc-100"
+              className="absolute left-0 right-0 mt-1.5 max-h-72 overflow-y-auto rounded-xl border shadow-xl z-20 bg-white p-1.5 divide-y divide-zinc-100"
               style={{ borderColor: TOKENS.line }}
             >
               {/* Opción Todos los Clientes */}
@@ -600,7 +600,7 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
       )}
 
       {/* Contenedor del Mapa Interactivo Amplio */}
-      <div className="relative rounded-2xl border border-[#DAD5C9] overflow-hidden shadow-md bg-zinc-100">
+      <div className="campo-map relative rounded-2xl border border-[#DAD5C9] overflow-hidden shadow-md bg-zinc-100">
         <div
           ref={contenedorRef}
           className="h-[720px] w-full z-0"

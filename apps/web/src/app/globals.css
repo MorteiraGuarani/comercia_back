@@ -437,6 +437,14 @@ body {
   color-scheme: dark;
 }
 
+/* Keep Leaflet panes and floating controls inside the map's stacking context,
+   below application menus, modal backdrops and dialogs. */
+.campo-map {
+  position: relative;
+  isolation: isolate;
+  z-index: 0;
+}
+
 /* Leaflet chrome follows the application theme instead of its white default. */
 .dark .campo-screen .leaflet-container {
   background: var(--surface-soft);

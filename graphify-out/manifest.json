@@ -2025,8 +2025,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/selector-ubicacion.tsx": {
-    "mtime": 1789869204.9454684,
-    "ast_hash": "c61be65fcf3b6ccf0ba325fe54abb1e7",
+    "mtime": 1791289225.6230521,
+    "ast_hash": "b7decb056a58b80d64b12fb499b5d76f",
     "semantic_hash": ""
   },
   "apps/api/prisma/migrations/20260911153000_integracion_ucheck/migration.sql": {
@@ -2240,8 +2240,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/mapa-clientes.tsx": {
-    "mtime": 1790186502.1024327,
-    "ast_hash": "a0385b6aa76dc31d22b80e2c57b8b08d",
+    "mtime": 1791289225.1559865,
+    "ast_hash": "d900a9dbf9f85680e296dcab4446def1",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/novedades-panel.tsx": {
@@ -2805,8 +2805,8 @@
     "semantic_hash": ""
   },
   "docs/mejoras/2026-10-05-confiabilidad-y-seguimiento.md": {
-    "mtime": 1791288101.8717134,
-    "ast_hash": "603311a436d377211c6cce1f8b7dd9d9",
+    "mtime": 1791289226.0348816,
+    "ast_hash": "f3d8b9f0c63079342841118c21c66773",
     "semantic_hash": ""
   },
   "docs/mejoras/README.md": {
@@ -2820,8 +2820,8 @@
     "semantic_hash": ""
   },
   "docs/mejoras/entrega-seguimiento-produccion.md": {
-    "mtime": 1791285685.696539,
-    "ast_hash": "e2c3e70515961ae7d8fe8dbef843543c",
+    "mtime": 1791288959.3893163,
+    "ast_hash": "cee9fa462659438d4bdab5a3fa473b43",
     "semantic_hash": ""
   }
 }

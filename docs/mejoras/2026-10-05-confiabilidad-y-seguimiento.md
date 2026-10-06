@@ -38,6 +38,8 @@ Las consultas iniciadas por el usuario (Actualizar, búsqueda y paginación) mue
 
 El mismo backdrop se aplica a Comprobar Ucheck, consultar el historial y sus páginas, sincronizar pendientes, cargar/enviar comentarios y marcarlos como leídos. Cada procedimiento indica su acción y libera la pantalla de carga al terminar o fallar. Los reintentos automáticos de ubicaciones y pendientes siguen en segundo plano.
 
+Los mapas contienen sus capas, marcadores y controles flotantes en un contexto propio. Al abrir el perfil u otro modal, el mapa queda detrás del fondo oscurecido y no intercepta sus clics. La misma regla se aplica a Seguimiento en vivo, cobertura de clientes, mapa de un local y selección de ubicación. El desplegable de clientes también queda debajo de los modales.
+
 La frecuencia efectiva depende del GPS, conexión y restricciones de Android. Usar ubicación precisa durante una jornada consume batería. La app muestra una notificación de servicio; el usuario puede finalizar el seguimiento. Una app forzada a detenerse no garantiza nuevas ubicaciones. Si pierde red, se muestra el último reporte como desactualizado. Esta entrega conserva el último punto operativo, sin un historial de recorridos ni predicción de rutas.
 
 ## Permisos y equipos nuevos

@@ -209,7 +209,7 @@ export default function SelectorUbicacion({
       </div>
 
       {/* Contenedor del mapa con controles superpuestos */}
-      <div className="relative rounded-xl border border-[#DAD5C9] overflow-hidden shadow-inner bg-zinc-100">
+      <div className="campo-map relative rounded-xl border border-[#DAD5C9] overflow-hidden shadow-inner bg-zinc-100">
         <div
           ref={contenedor}
           className="h-80 sm:h-96 w-full z-0 cursor-crosshair"
