@@ -41,6 +41,8 @@ Se recuperó el acceso SSH y se consultó `_prisma_migrations` directamente en a
 
 Esta verificación completa el conteo directo que había quedado pendiente por la interrupción de red. No quedó código funcional sin guardar; solo permanece estado local regenerable de Graphify.
 
+En la comprobación final del 2026-10-06 se ejecutó nuevamente `prisma migrate deploy` en los contenedores de ambas APIs: Comercia encontró 48 migraciones y Ucheck 21; ambos terminaron con **No pending migrations to apply**. Se compararon los archivos funcionales de las ramas `main` con las revisiones desplegadas y son idénticos. Las ramas se sincronizaron con GitHub; los cambios posteriores son documentación de la entrega.
+
 ### Incidencia resuelta por el despliegue automático
 
 Las imágenes del primer workflow no se publicaron: GitHub canceló los trabajos al no conseguir un runner hospedado después de varios intentos. Se fija `ubuntu-24.04` para reintentar la publicación con una imagen de runner explícita.
