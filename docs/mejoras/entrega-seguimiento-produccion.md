@@ -1,5 +1,14 @@
 # Registro de entrega y producción
 
+## Escritorio amplio y APK con Estado — 2026-10-09
+
+Comercia publicado desde `dd2bbbc31acff31045f972f2c3531782e43688ce`, con más
+ancho para el contenido y los detalles técnicos de marcaciones de la entrega
+anterior. Workflow completo aprobado, API/web saludables y datos reales
+verificados por HTTP. Se retiró la fijación temporal y el cron conserva las
+imágenes oficiales nuevas. Uweb amplía ancho/compacta acciones y el APK 1.2.16
+incorpora Estado y leyenda debajo. [Detalle, imágenes y APK](2026-10-09-ancho-tablas-estado-apk.md).
+
 ## Datos técnicos de entrada/salida — 2026-10-09
 
 Uweb y Comercia publicados con comparación de 35 campos de cada marcación y

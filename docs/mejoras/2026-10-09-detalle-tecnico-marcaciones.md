@@ -110,3 +110,7 @@ para recuperación; no copiar ni publicar su respaldo de .env. La comprobación
 final sin credenciales se guarda en `final-verification.json`. Las etiquetas
 `before-marcaciones-20261009T120634Z` (APIs y Comercia web) y
 `before-uweb-20261009T120928Z` (Uweb web) conservan las imágenes anteriores.
+
+## Actualización posterior de la entrega
+
+El cambio fue incluido en los commits y publicaciones del [escritorio amplio y APK 1.2.16](2026-10-09-ancho-tablas-estado-apk.md). La fijación manual de Comercia descrita arriba ya fue retirada tras verificar las imágenes oficiales; sus actualizaciones automáticas están reanudadas.
