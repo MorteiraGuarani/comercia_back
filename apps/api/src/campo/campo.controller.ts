@@ -4,6 +4,7 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   NotFoundException,
   Param,
   ParseIntPipe,
@@ -558,6 +559,16 @@ export class CampoController {
     @Query() q: ConsultaSupervisionDto,
   ) {
     return this.supervisionService.detalleColaborador(r.usuarioId, id, q);
+  }
+
+  @Get('supervision/colaboradores/:id/marcaciones')
+  @Header('Cache-Control', 'private, no-store')
+  marcacionesColaborador(
+    @Req() r: RequestConUsuario,
+    @Param('id', ParseIntPipe) id: number,
+    @Query() q: ConsultaSupervisionDto,
+  ) {
+    return this.supervisionService.marcacionesColaborador(r.usuarioId, id, q);
   }
 
   // ========== NOVEDADES ==========

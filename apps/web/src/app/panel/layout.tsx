@@ -296,7 +296,7 @@ export default function PanelLayout({
           </AnimatePresence>
 
           {/* Contenido */}
-          <main className="min-w-0 w-full flex-1 p-0 pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-0">
+          <main className="panel-contenido min-w-0 w-full flex-1 p-0 pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-0">
             {children}
           </main>
         </div>

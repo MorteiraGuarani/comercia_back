@@ -1,5 +1,16 @@
 # Registro de entrega y producción
 
+## Datos técnicos de entrada/salida — 2026-10-09
+
+Uweb y Comercia publicados con comparación de 35 campos de cada marcación y
+ayudas «i» para explicar columnas y señales. Uweb: Datos técnicos desde diario o
+celda de la matriz. Comercia: Ver ficha → Marcaciones → Ver datos. Consultas bajo
+demanda, empresa/equipo autorizados y distinción entre No, cero, No informado y
+salida pendiente. Pasaron 30 pruebas puntuales, compilaciones/lint y consultas
+HTTP autenticadas con datos reales; cuatro servicios saludables. Sin navegador,
+commit, push ni migración nueva. Comercia quedó fijado con autorización expresa
+para que el cron no restaure latest anterior. Vea [detalle, imágenes y recuperación](2026-10-09-detalle-tecnico-marcaciones.md).
+
 Fecha de trabajo: 2026-10-05.
 
 ## Superiores según el organigrama — 2026-10-06

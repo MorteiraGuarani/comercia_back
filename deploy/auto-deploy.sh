@@ -15,6 +15,15 @@ flock -n 9 || exit 0
 
 cd "$APP_DIR"
 
+# Una publicación manual fija API_TAG/WEB_TAG. Respetar esas versiones y evitar
+# sustituirlas por latest, que puede ser anterior al código instalado.
+configured_images="$($COMPOSE config --images)"
+for image in $IMAGES; do
+  if ! grep -Fxq "$image" <<< "$configured_images"; then
+    exit 0
+  fi
+done
+
 digests() {
   docker image inspect --format '{{index .RepoDigests 0}}' $IMAGES 2>/dev/null | sort || true
 }

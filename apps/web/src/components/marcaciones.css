@@ -1,0 +1,23 @@
+:root { --font-marcacion: "IBM Plex Sans", sans-serif; --text-marcacion-sm: .75rem; --text-marcacion-base: .875rem; --space-marcacion-xs: .25rem; --space-marcacion-sm: .5rem; --space-marcacion-md: .75rem; }
+/* Hallmark · component: inspector de marcaciones · Comercia ? tokens claro/oscuro · P5 H5 E4 S5 R5 V4
+ * Responsive revisado en código; revisión visual pendiente por preferencia. */
+.senales-marcacion { min-inline-size: 0; }
+.senales-nota { font-size: var(--text-marcacion-sm); color: var(--muted); margin-block: var(--space-marcacion-sm); overflow-wrap: anywhere; }
+.senales-columnas, .senales-fila { display: grid; grid-template-columns: minmax(0, 1.35fr) repeat(2, minmax(0, 1fr)); column-gap: var(--space-marcacion-xs); align-items: center; }
+.senales-columnas { font-size: var(--text-marcacion-sm); color: var(--foreground); padding-block: var(--space-marcacion-sm); border-block-end: 1px solid var(--border); }
+.senales-columnas > b { text-align: start; }
+.senales-marcacion h3 { font-family: var(--font-marcacion); font-size: var(--text-marcacion-base); margin: var(--space-marcacion-md) 0 var(--space-marcacion-xs); }
+.senales-marcacion dl { margin: 0; }
+.senales-fila { min-block-size: 44px; border-block-end: 1px solid var(--border); font-size: var(--text-marcacion-sm); }
+.senales-fila dt { display: flex; align-items: center; justify-content: space-between; min-inline-size: 0; }
+.senales-fila dt > span { min-inline-size: 0; overflow-wrap: anywhere; }
+.senales-fila dd { margin: 0; min-inline-size: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; padding-block: var(--space-marcacion-xs); }
+.senales-fila > .senales-ayuda { grid-column: 1 / -1; color: var(--foreground); background: var(--surface-soft); padding: var(--space-marcacion-sm); }
+.senales-fila > .senales-ayuda[hidden] { display: none; }
+button.senales-info { display: inline-grid; place-items: center; flex: none; min-inline-size: 44px; min-block-size: 44px; padding: 0; margin: 0; border: none; background: transparent; color: var(--accent-ink); vertical-align: middle; cursor: pointer; }
+button.senales-info > span { display: grid; place-items: center; inline-size: 1rem; block-size: 1rem; border: 1px solid currentColor; border-radius: 50%; font-size: 0.7rem; font-family: var(--font-marcacion); font-weight: 700; text-transform: none; }
+button.senales-info:hover:not(:disabled), button.senales-info[aria-expanded="true"] { background: var(--accent-soft); color: var(--accent-ink); }
+button.senales-info:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
+.senales-explicacion { font-size: var(--text-marcacion-base); font-weight: 400; text-transform: none; letter-spacing: normal; overflow-wrap: anywhere; }
+.senales-acceso { min-inline-size: 0; }
+.senales-acceso > button { margin: var(--space-marcacion-sm) 0; font-size: var(--text-marcacion-sm); }

@@ -600,8 +600,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/app/panel/layout.tsx": {
-    "mtime": 1790184029.9585464,
-    "ast_hash": "4770c5d3edb7969b633fed0d853f657e",
+    "mtime": 1791549749.9145093,
+    "ast_hash": "a49dfe32261ce613075190f8b3680065",
     "semantic_hash": ""
   },
   "apps/web/src/app/panel/page.tsx": {
@@ -800,8 +800,8 @@
     "semantic_hash": "ee17fd1c97c735e9f3564e3f5251f125"
   },
   "deploy/auto-deploy.sh": {
-    "mtime": 1790188838.4139292,
-    "ast_hash": "5dee63d17419b15a4247230a01e78218",
+    "mtime": 1791548953.0978637,
+    "ast_hash": "cefd15c947e83d5a5df7bcde1fae3f98",
     "semantic_hash": ""
   },
   "deploy/backup.sh": {
@@ -1915,8 +1915,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/campo/campo.controller.ts": {
-    "mtime": 1791227789.2603686,
-    "ast_hash": "896a2e170965dbf6f7de838ebcda394e",
+    "mtime": 1791546431.0280936,
+    "ast_hash": "3410edc86154770eb76a1fc74c295813",
     "semantic_hash": ""
   },
   "apps/api/src/campo/campo.module.ts": {
@@ -2210,8 +2210,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/campo/services/supervision.service.ts": {
-    "mtime": 1791209689.6668298,
-    "ast_hash": "62c51f2a09388230bf03526664081e14",
+    "mtime": 1791546430.9626522,
+    "ast_hash": "7844984b12895b815c6599b645cd1072",
     "semantic_hash": ""
   },
   "apps/api/src/campo/utils/evidencia-tarea.ts": {
@@ -2260,8 +2260,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/supervision-panel.tsx": {
-    "mtime": 1791313523.1241992,
-    "ast_hash": "dd0ca88ba3ec8bf6423d7c1da1f2e4e3",
+    "mtime": 1791546601.98771,
+    "ast_hash": "b491f73996c97d4ef63ae3ea37dc711c",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/tareas-impulsador-panel.tsx": {
@@ -2820,8 +2820,8 @@
     "semantic_hash": ""
   },
   "docs/mejoras/entrega-seguimiento-produccion.md": {
-    "mtime": 1791311546.1076827,
-    "ast_hash": "e0dfbb929670a1b1e0619c99ba7144ec",
+    "mtime": 1791549384.1204371,
+    "ast_hash": "a7b52a45bdb4a329c7a819b10acafa95",
     "semantic_hash": ""
   },
   "apps/api/src/usuarios/dto/listar-superiores.dto.ts": {
@@ -2840,8 +2840,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/presentismo-equipo.tsx": {
-    "mtime": 1791313522.5949686,
-    "ast_hash": "354f77cda9987e74fe4748af6c7c75b2",
+    "mtime": 1791546854.0162597,
+    "ast_hash": "162ef30dd9286f7dbe8a7f101f1c7b72",
     "semantic_hash": ""
   },
   ".agents/skills/frontend-design-editorial/SKILL.md": {
@@ -3387,6 +3387,61 @@
   "docs/mejoras/2026-10-06-superiores-organigrama.md": {
     "mtime": 1791311545.7434847,
     "ast_hash": "4107414fa3425e14c417a756c1e4db8b",
+    "semantic_hash": ""
+  },
+  "apps/api/src/campo/services/marcaciones-supervision.spec.ts": {
+    "mtime": 1791546859.9112856,
+    "ast_hash": "b603793c38c695ce19a38a616ae27c37",
+    "semantic_hash": ""
+  },
+  "apps/api/src/campo/utils/detalle-marcacion.ts": {
+    "mtime": 1791546430.8627887,
+    "ast_hash": "0c876ff00f4c6602ebef8a38082dc810",
+    "semantic_hash": ""
+  },
+  "apps/api/src/common/interfaces/detalle-marcacion.interface.ts": {
+    "mtime": 1791545958.1957853,
+    "ast_hash": "66ac09b59c127465aedaf31ed9d7d2bf",
+    "semantic_hash": ""
+  },
+  "apps/api/src/common/utils/contexto-tecnico.ts": {
+    "mtime": 1791546430.8409832,
+    "ast_hash": "57d30f49f082d810d8ac30a2a98e53d2",
+    "semantic_hash": ""
+  },
+  "apps/web/src/components/ComparacionMarcaciones.tsx": {
+    "mtime": 1791546854.015262,
+    "ast_hash": "b66c9be9e98da30e4dadfb2bd9eb35f2",
+    "semantic_hash": ""
+  },
+  "apps/web/src/components/InfoColumna.tsx": {
+    "mtime": 1791546379.0383866,
+    "ast_hash": "0da5efe9597e03cc1c9a80bda29af49f",
+    "semantic_hash": ""
+  },
+  "apps/web/src/components/campo/marcaciones-colaborador.tsx": {
+    "mtime": 1791546379.039386,
+    "ast_hash": "8f13f58bc45ff4fac07f5c93ca255e43",
+    "semantic_hash": ""
+  },
+  "apps/web/src/types/marcacion.ts": {
+    "mtime": 1791546376.954953,
+    "ast_hash": "adb9029cbd4f9ffbea6f5951c5fcaaca",
+    "semantic_hash": ""
+  },
+  "apps/web/src/utils/marcacion.ts": {
+    "mtime": 1791546376.9559536,
+    "ast_hash": "3da04d7247e2600e0a6ccc2228b91285",
+    "semantic_hash": ""
+  },
+  "docs/mejoras/2026-10-09-detalle-tecnico-marcaciones.md": {
+    "mtime": 1791549384.1204371,
+    "ast_hash": "a781241361e562491d1efd1a74f75879",
+    "semantic_hash": ""
+  },
+  "docs/mejoras/2026-10-09-ancho-tablas-estado-apk.md": {
+    "mtime": 1791550043.9137223,
+    "ast_hash": "0a7cd8fdb3a7743f845157654edbbf28",
     "semantic_hash": ""
   }
 }

@@ -16,6 +16,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
+  --panel-content-max: 104rem;
   color-scheme: light;
   --background: #e8dfd3;
   --foreground: #211c18;
@@ -377,6 +378,10 @@ body {
   --campo-line: #dad5c9;
   --campo-sub: #726c60;
 }
+.panel-contenido :where(.max-w-7xl, .max-w-6xl) {
+  max-width: var(--panel-content-max);
+}
+
 .campo-screen {
   --campo-ink: var(--foreground);
   --campo-bone: var(--background);

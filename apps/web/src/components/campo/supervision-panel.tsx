@@ -12,6 +12,7 @@ import { TopBar } from "./ui/top-bar";
 import { BottomNav } from "./ui/bottom-nav";
 import { AvancePresentismo, EquipoPresentismo, ResumenPresentismo } from "./presentismo-equipo";
 import styles from "./presentismo.module.css";
+import MarcacionesColaborador from './marcaciones-colaborador';
 import {
   SelectorFechaFiltro,
   type PeriodoFiltro,
@@ -168,7 +169,7 @@ export function SupervisionPanel({
   const [detalleColab, setDetalleColab] =
     useState<ColaboradorDetalleData | null>(null);
   const [subTabColab, setSubTabColab] = useState<
-    "ruta" | "tareas" | "novedades"
+    "ruta" | "tareas" | "novedades" | "marcaciones"
   >("ruta");
 
   // Cargar resumen de supervisión según el período seleccionado
@@ -198,7 +199,7 @@ export function SupervisionPanel({
   // Cargar detalle de colaborador
   const abrirColaborador = async (
     id: number,
-    sub: "ruta" | "tareas" | "novedades" = "ruta",
+    sub: "ruta" | "tareas" | "novedades" | "marcaciones" = "ruta",
   ) => {
     const peticion = ++peticionDetalle.current;
     setDetalleColab(null);
@@ -308,16 +309,17 @@ export function SupervisionPanel({
               tabs={[
                 {
                   key: "ruta",
-                  label: `Ruta (${detalleColab.ruta.filter((r) => r.estado === "completado").length}/${detalleColab.ruta.length})`,
-                  icon: NavigationIcon,
+                  label: 'Locales',
                 },
                 {
                   key: "tareas",
-                  label: `Tareas (${detalleColab.tareasCategorias.reduce((a, c) => a + c.completadas, 0)}/${detalleColab.tareasCategorias.reduce((a, c) => a + c.total, 0)})`,
-                  icon: ListChecksIcon,
+                  label: 'Tareas',
                 },
+                { key: 'marcaciones', label: 'Marcaciones' },
               ]}
             />
+
+            {subTabColab === 'marcaciones' ? <MarcacionesColaborador key={`${colaboradorId}:${queryFechasCampo(periodo)}`} colaboradorId={colaboradorId} periodo={periodo} /> : null}
 
             {/* Contenido sub-tab: Ruta del Colaborador */}
             {subTabColab === "ruta" && (

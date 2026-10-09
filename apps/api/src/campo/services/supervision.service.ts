@@ -18,6 +18,11 @@ import {
   exigirEquipoCampo,
   EQUIPO_CAMPO_SELECT,
 } from '../utils/equipo-campo';
+import {
+  rangoPaginacion,
+  respuestaPaginada,
+} from '../../common/utils/paginacion';
+import { detalleVisita, selectorMarcaciones } from '../utils/detalle-marcacion';
 
 @Injectable()
 export class SupervisionService {
@@ -25,6 +30,40 @@ export class SupervisionService {
     private readonly prisma: PrismaService,
     private readonly acceso: CampoAccesoService,
   ) {}
+
+  async marcacionesColaborador(
+    usuarioId: number,
+    colaboradorId: number,
+    query: ConsultaSupervisionDto,
+  ) {
+    const u = await this.acceso.gestionar(usuarioId, 'visitas');
+    const equipoIds = await this.idsEquipo(u);
+    if (
+      !equipoIds.includes(colaboradorId) &&
+      (colaboradorId !== u.id ||
+        exigirEquipoCampo(u.equipoCampo).tipo === 'REPOSITOR')
+    )
+      throw new ForbiddenException('No tienes acceso a este colaborador');
+    const { desde, hasta } = rangoConsulta(query);
+    const { skip, take, page, limit } = rangoPaginacion(query);
+    const where = {
+      usuarioId: colaboradorId,
+      usuario: { empresaId: u.empresaId },
+      local: { cliente: { empresaId: u.empresaId } },
+      fecha: { gte: fechaCampo(desde), lte: fechaCampo(hasta) },
+    };
+    const [total, filas] = await Promise.all([
+      this.prisma.visitaCampo.count({ where }),
+      this.prisma.visitaCampo.findMany({
+        where,
+        select: selectorMarcaciones(u.empresaId, colaboradorId),
+        skip,
+        take,
+        orderBy: [{ entrada: 'desc' }, { id: 'desc' }],
+      }),
+    ]);
+    return respuestaPaginada(filas.map(detalleVisita), total, page, limit);
+  }
 
   private async idsEquipo(u: {
     id: number;

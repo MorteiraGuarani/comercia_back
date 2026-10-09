@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Paginacion } from "@/components/paginacion";
 import type { ColaboradorResumenItem, SupervisionResumenData } from "@/types/campo";
 import styles from "./presentismo.module.css";
+import InfoColumna from '../InfoColumna';
 
 const ESTADOS = {
   sin_iniciar: { etiqueta: "Sin iniciar", orden: 0 },
@@ -100,7 +101,14 @@ export function EquipoPresentismo({ colaboradores, metric = "presentismo", filtr
         </button>
       </li>)}</ul>
       <div className={styles.table}><table><caption className="sr-only">Estado y avance de los colaboradores</caption>
-        <thead><tr><th>Persona / zona</th><th>Estado</th><th>Entrada</th><th>Salida</th><th>Visitas</th><th>Tareas</th><th><span className="sr-only">Acciones</span></th></tr></thead>
+        <thead><tr>{[
+          ['Persona / zona', 'Persona del equipo y su zona asignada. Ver ficha permite consultar sus marcaciones y datos del dispositivo.'],
+          ['Estado', 'En ruta: tiene una visita abierta. Finalizados: tiene visitas registradas sin una abierta. Sin iniciar no confirma una ausencia.'],
+          ['Entrada', 'Primera entrada registrada en el período. La pestaña Marcaciones de la ficha muestra cada visita y sus señales técnicas.'],
+          ['Salida', 'Salida del último registro del período cuando las visitas están finalizadas. Consultá Marcaciones en la ficha para ver cada visita.'],
+          ['Visitas', 'Visitas completadas sobre el total del período y cantidad de visitas en curso.'],
+          ['Tareas', 'Tareas completadas sobre el total y cantidad de tareas obligatorias pendientes.'],
+        ].map(([titulo, texto]) => <th key={titulo}>{titulo}<InfoColumna titulo={titulo} texto={texto} /></th>)}<th><span className="sr-only">Acciones</span></th></tr></thead>
         <tbody>{items.map(c => <tr key={c.id}><td><div className={styles.tablePerson}>
           <span className={styles.avatar} data-tone={c.asistencia} aria-hidden="true">{c.iniciales}</span>
           <div><strong>{c.nombre}</strong><small>{c.zona || "Sin zona"}</small></div></div></td>
