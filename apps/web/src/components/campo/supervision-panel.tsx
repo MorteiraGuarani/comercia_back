@@ -10,6 +10,7 @@ import { BigProgress } from "./ui/big-progress";
 import { SegTabs } from "./ui/seg-tabs";
 import { TopBar } from "./ui/top-bar";
 import { BottomNav } from "./ui/bottom-nav";
+import { IconoRefrescar } from "./ui/iconos-campo";
 import { AvancePresentismo, EquipoPresentismo, ResumenPresentismo } from "./presentismo-equipo";
 import styles from "./presentismo.module.css";
 import MarcacionesColaborador from './marcaciones-colaborador';
@@ -453,7 +454,7 @@ export function SupervisionPanel({
         <div className={styles.toolbar}>
           <SelectorFechaFiltro valorActual={periodo} onChange={valor => { setPeriodo(valor); setFiltroEquipo("todos"); }} />
           <button type="button" className={styles.refresh} onClick={cargarResumen} disabled={cargando} aria-busy={cargando} aria-label="Actualizar presentismo" title="Actualizar presentismo">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5" /><path d="M6 7a7 7 0 0 1 12-1l2 6M4 12l2 6a7 7 0 0 0 12-1" /></svg>
+            <IconoRefrescar />
           </button>
         </div>
       </header>

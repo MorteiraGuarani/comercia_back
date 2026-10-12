@@ -108,6 +108,7 @@
   --color-commercial-ink: var(--commercial-ink);
   --color-accent: var(--accent);
   --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
   --color-accent-on-ink: var(--accent-on-ink);
   --color-focus: var(--focus-ring);
   --color-zinc-400: var(--muted);

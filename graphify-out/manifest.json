@@ -605,8 +605,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/app/panel/page.tsx": {
-    "mtime": 1790102041.8851411,
-    "ast_hash": "eacf4ffd99b94df4a50677afe85919f4",
+    "mtime": 1791837365.4655187,
+    "ast_hash": "1f3b97e6877e8383df13755abdb4640a",
     "semantic_hash": ""
   },
   "apps/web/src/app/panel/usuarios/page.tsx": {
@@ -1915,8 +1915,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/campo/campo.controller.ts": {
-    "mtime": 1791546431.0280936,
-    "ast_hash": "3410edc86154770eb76a1fc74c295813",
+    "mtime": 1791830583.8651173,
+    "ast_hash": "186513a487e39d9c9e92355730d6aae7",
     "semantic_hash": ""
   },
   "apps/api/src/campo/campo.module.ts": {
@@ -1940,13 +1940,13 @@
     "semantic_hash": ""
   },
   "apps/api/src/campo/jornada-campo.service.ts": {
-    "mtime": 1791227789.2603686,
-    "ast_hash": "647304da5d624de74d9fd5d7ce7f4add",
+    "mtime": 1791830071.5384953,
+    "ast_hash": "a76d64b0c3107a03ace1517dfee74215",
     "semantic_hash": ""
   },
   "apps/api/src/campo/planificacion-campo.service.ts": {
-    "mtime": 1791209689.5661726,
-    "ast_hash": "84e1ebe9eac4e2b4e0468cfe9f1be81e",
+    "mtime": 1791830483.8045106,
+    "ast_hash": "e191c731b1512e6e5e5d295cf2fddc7d",
     "semantic_hash": ""
   },
   "apps/api/src/campo/utils/agenda-sql.ts": {
@@ -1965,8 +1965,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/campo/utils/selectores.ts": {
-    "mtime": 1791227789.2603686,
-    "ast_hash": "4450ed7e60e4accbe97c72fbe832ca70",
+    "mtime": 1791830734.0990896,
+    "ast_hash": "a85973e705d6bffe053f2308fa99522d",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/catalogo-panel.tsx": {
@@ -1990,8 +1990,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/plan-local.tsx": {
-    "mtime": 1791209689.9184473,
-    "ast_hash": "5c4d453888cf939238d610ad0d9ec50e",
+    "mtime": 1791830146.57084,
+    "ast_hash": "b267476b956479640687283e4af7b17f",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/tabla-campo.tsx": {
@@ -2010,8 +2010,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/types/campo.ts": {
-    "mtime": 1791227963.7194066,
-    "ast_hash": "301f54577445e14c6fa75ae9ef6d9f63",
+    "mtime": 1791831211.3434446,
+    "ast_hash": "16f1ec17a0795cdee68d7d3aaf5746c5",
     "semantic_hash": ""
   },
   "docs/operaciones-campo.md": {
@@ -2260,8 +2260,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/supervision-panel.tsx": {
-    "mtime": 1791546601.98771,
-    "ast_hash": "b491f73996c97d4ef63ae3ea37dc711c",
+    "mtime": 1791837310.9625497,
+    "ast_hash": "f457440a22158064f14b762c0ebfba8d",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/tareas-impulsador-panel.tsx": {
@@ -2290,8 +2290,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/ui/iconos-campo.tsx": {
-    "mtime": 1790181897.7726274,
-    "ast_hash": "803f5d9ed7839aae644f2cf409f11a84",
+    "mtime": 1791837310.4873483,
+    "ast_hash": "0b34bcad01b9686a938877e66c23b978",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/ui/seg-tabs.tsx": {
@@ -2760,8 +2760,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/seguimiento-panel.tsx": {
-    "mtime": 1791288224.9946835,
-    "ast_hash": "94c35597fba5a3c48487d234f1b0ab2d",
+    "mtime": 1791837365.8823435,
+    "ast_hash": "26e6085579f019d3b7297c2c080f132e",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/selector-locales-tarea.tsx": {
@@ -2820,8 +2820,8 @@
     "semantic_hash": ""
   },
   "docs/mejoras/entrega-seguimiento-produccion.md": {
-    "mtime": 1791549384.1204371,
-    "ast_hash": "a7b52a45bdb4a329c7a819b10acafa95",
+    "mtime": 1791551017.6980104,
+    "ast_hash": "c0614868b9c85fb659818852214a193b",
     "semantic_hash": ""
   },
   "apps/api/src/usuarios/dto/listar-superiores.dto.ts": {
@@ -3435,13 +3435,33 @@
     "semantic_hash": ""
   },
   "docs/mejoras/2026-10-09-detalle-tecnico-marcaciones.md": {
-    "mtime": 1791549384.1204371,
-    "ast_hash": "a781241361e562491d1efd1a74f75879",
+    "mtime": 1791551017.6980104,
+    "ast_hash": "39c98fd238b35fab3b17b5bf07931a9e",
     "semantic_hash": ""
   },
   "docs/mejoras/2026-10-09-ancho-tablas-estado-apk.md": {
-    "mtime": 1791550043.9137223,
-    "ast_hash": "0a7cd8fdb3a7743f845157654edbbf28",
+    "mtime": 1791551017.6964915,
+    "ast_hash": "b5754acd0aa3fa5f560411fe59968d0a",
+    "semantic_hash": ""
+  },
+  "apps/api/prisma/migrations/20261012190000_local_principal/migration.sql": {
+    "mtime": 1791830071.5342271,
+    "ast_hash": "43e32c067f095d3630574507ef0cb8b6",
+    "semantic_hash": ""
+  },
+  "apps/api/src/campo/dto/local-principal.dto.ts": {
+    "mtime": 1791830071.5352361,
+    "ast_hash": "6592aec0456eeeeddbd167e7a824513f",
+    "semantic_hash": ""
+  },
+  "apps/api/src/campo/local-principal.spec.ts": {
+    "mtime": 1791830799.0269644,
+    "ast_hash": "ef7eb2b7cbdfe878b8a62b03cc5c6bf0",
+    "semantic_hash": ""
+  },
+  "docs/LOCAL_PRINCIPAL.md": {
+    "mtime": 1791833405.4998121,
+    "ast_hash": "fda2ee69f5a2d49c857175ce2c60bf01",
     "semantic_hash": ""
   }
 }

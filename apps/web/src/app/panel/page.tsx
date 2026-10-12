@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePanel } from "@/components/panel/contexto";
-import { IconoFlechaDer } from "@/components/campo/ui/iconos-campo";
+import { IconoFlechaDer, IconoRefrescar } from "@/components/campo/ui/iconos-campo";
 import { apiFetch } from "@/lib/api";
 import { fechaEnZonaIso } from "@/utils/fechas";
 import { etiquetaPaginaMenu } from "@/utils/nombres-menu";
@@ -144,7 +144,7 @@ function InicioResumen({ modulo }: { modulo: import("@/types/plataforma").Modulo
           <p className="text-xs font-medium text-accent-ink">Hoy · {fechaEnZonaIso(new Date())}</p>
           <h2 className="ft-display text-2xl font-semibold">{equipo ? "Tu equipo hoy" : "Tu jornada hoy"}</h2>
         </div>
-        <button type="button" disabled={cargando} onClick={() => setRevision((n) => n + 1)} className="min-h-11 rounded-lg border border-line px-3 text-xs hover:bg-surface-soft focus-visible:ring-2 focus-visible:ring-focus disabled:opacity-50">Actualizar</button>
+        <button type="button" disabled={cargando} aria-busy={cargando || undefined} onClick={() => setRevision((n) => n + 1)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-line bg-surface-raised px-3 text-xs text-accent-ink hover:border-accent-ink hover:bg-accent-soft focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50"><IconoRefrescar />Actualizar</button>
       </div>
       {cargando ? <p role="status" className="py-4 text-sm text-muted">Cargando resumen…</p> : (
         <>

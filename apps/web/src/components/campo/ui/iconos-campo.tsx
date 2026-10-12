@@ -312,13 +312,18 @@ export function IconoOjo({ className }: Props) {
 
 export function IconoRefrescar({ className }: Props) {
   return (
-    <Base className={className}>
-      <path
-        fillRule="evenodd"
-        d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.31V15a.75.75 0 01-1.5 0v-3.75A.75.75 0 015 10.5h3.75a.75.75 0 010 1.5H6.866l.316.315a4 4 0 101.442-5.71.75.75 0 11-.75-1.3 5.5 5.5 0 017.438 6.119z"
-        clipRule="evenodd"
-      />
-    </Base>
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className ?? "h-5 w-5 shrink-0"}
+      aria-hidden="true"
+    >
+      <path d="M20 12a8 8 0 1 1-2.34-5.66L20 8.68 M20 4v4.68h-4.68" />
+    </svg>
   );
 }
 

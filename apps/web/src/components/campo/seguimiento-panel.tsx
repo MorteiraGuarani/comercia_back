@@ -7,6 +7,7 @@ import { PantallaCarga } from "@/components/pantalla-carga";
 import { mostrarToast } from "@/components/toast/toast-controller";
 import type { RespuestaSeguimiento } from "@/types/seguimiento";
 import { estadoUbicacion, textoEstadoUbicacion } from "@/utils/seguimiento";
+import { IconoRefrescar } from "./ui/iconos-campo";
 
 const MapaSeguimiento = dynamic(
   () => import("./mapa-seguimiento").then((m) => m.MapaSeguimiento),
@@ -148,9 +149,11 @@ export function SeguimientoPanel() {
         <button
           type="button"
           disabled={actualizando || cargando}
-          className="min-h-11 rounded-lg border border-line px-4 text-foreground hover:bg-surface-soft focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50"
+          aria-busy={actualizando || cargando || undefined}
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-line bg-surface-raised px-3 text-accent-ink hover:border-accent-ink hover:bg-accent-soft focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50"
           onClick={actualizar}
         >
+          <IconoRefrescar />
           Actualizar
         </button>
       </header>
