@@ -76,7 +76,7 @@ export interface AsignacionCampo {
   id: number;
   localId: number;
   usuarioId: number;
-  usuario: PersonaCampo;
+  usuario: PersonaCampo & { localPrincipalId?: number | null };
   fechaDesde: string;
   fechaHasta: string | null;
   activo: boolean;

@@ -315,14 +315,33 @@ export class PlanificacionCampoService {
     if (!a) throw new NotFoundException('Asignación no disponible');
     return { u, a };
   }
+  async localPrincipal(usuarioId: number, id: number, principal: boolean) {
+    const { u, a } = await this.asignacionDelEquipo(usuarioId, id);
+    return this.prisma.$transaction(async (tx) => {
+      // Validación y escritura en el mismo snapshot que la asignación.
+      const actual = await tx.asignacionCampo.findFirst({ where: {
+        id, activo: true, usuarioId: a.usuarioId, localId: a.localId,
+        local: { activo: true, cliente: { activo: true, empresaId: u.empresaId } },
+        usuario: { empresaId: u.empresaId, superiorId: u.id, isActive: true, rol: rolDelEquipoCampo(u.equipoCampo) },
+        OR: [{ fechaHasta: null }, { fechaHasta: { gte: new Date(new Date().toISOString().slice(0, 10)) } }],
+      }, select: { id: true } });
+      if (!actual) throw new NotFoundException('Asignación no disponible');
+      if (principal) {
+        await tx.usuario.update({ where: { id: a.usuarioId }, data: { localPrincipalId: a.localId }, select: { id: true } });
+      } else {
+        await tx.usuario.updateMany({ where: { id: a.usuarioId, empresaId: u.empresaId, localPrincipalId: a.localId }, data: { localPrincipalId: null } });
+      }
+      return { ok: true };
+    }, { isolationLevel: 'Serializable' });
+  }
   async quitarAsignacion(usuarioId: number, id: number) {
-    await this.asignacionDelEquipo(usuarioId, id);
-    await this.prisma.asignacionCampo.update({
-      where: { id },
-      data: { activo: false },
-      select: { id: true },
-    });
-    return { ok: true };
+    const { u, a } = await this.asignacionDelEquipo(usuarioId, id);
+    return this.prisma.$transaction(async (tx) => {
+      await tx.asignacionCampo.update({ where: { id }, data: { activo: false } });
+      const conservaLocal = await tx.asignacionCampo.count({ where: { usuarioId: a.usuarioId, localId: a.localId, activo: true } });
+      if (!conservaLocal) await tx.usuario.updateMany({ where: { id: a.usuarioId, empresaId: u.empresaId, localPrincipalId: a.localId }, data: { localPrincipalId: null } });
+      return { ok: true };
+    }, { isolationLevel: 'Serializable' });
   }
   async backups(
     usuarioId: number,

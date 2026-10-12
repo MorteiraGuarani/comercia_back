@@ -24,6 +24,7 @@ import { join, extname } from 'path';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import type { RequestConUsuario } from '../auth/interfaces/request-con-usuario.interface';
 import { CatalogoCampoService } from './catalogo-campo.service';
+import { LocalPrincipalCampoDto } from './dto/local-principal.dto';
 import { PlanificacionCampoService } from './planificacion-campo.service';
 import { JornadaCampoService } from './jornada-campo.service';
 import { RepositorCampoService } from './repositor-campo.service';
@@ -298,6 +299,10 @@ export class CampoController {
     @Body() d: AsignacionCampoDto,
   ) {
     return this.plan.asignar(r.usuarioId, id, d);
+  }
+  @Put('asignaciones/:id/principal')
+  localPrincipal(@Req() r: RequestConUsuario, @Param('id', ParseIntPipe) id: number, @Body() d: LocalPrincipalCampoDto) {
+    return this.plan.localPrincipal(r.usuarioId, id, d.principal);
   }
   @Delete('asignaciones/:id') quitarAsignacion(
     @Req() r: RequestConUsuario,

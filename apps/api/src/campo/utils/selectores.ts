@@ -45,7 +45,7 @@ export const ASIGNACION_CAMPO_SELECT = {
   fechaDesde: true,
   fechaHasta: true,
   activo: true,
-  usuario: { select: { id: true, nombre: true, apellido: true } },
+  usuario: { select: { id: true, nombre: true, apellido: true, localPrincipalId: true } },
 } as const;
 export const BACKUP_CAMPO_SELECT = {
   id: true,

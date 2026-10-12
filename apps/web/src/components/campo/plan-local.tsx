@@ -600,6 +600,15 @@ function AsignacionesLocal({ localId }: { localId: number }) {
                 className="grid min-w-0 grid-cols-2 gap-2 border-t pt-3 mt-3"
                 style={{ borderColor: TOKENS.line }}
               >
+                <button type="button" aria-pressed={a.usuario.localPrincipalId === localId}
+                  title="Mostrar este local primero en Ucheck"
+                  className="min-h-11 min-w-0 rounded-lg border border-line bg-surface-raised px-2 text-xs font-semibold text-foreground hover:bg-surface-soft focus-visible:ring-2 focus-visible:ring-focus"
+                  onClick={() => void op.ejecutar("Guardando local principal", async () => {
+                    await apiFetch(`/campo/asignaciones/${a.id}/principal`, { method: "PUT", body: JSON.stringify({ principal: a.usuario.localPrincipalId !== localId }) });
+                    lista.refrescar();
+                  })}>
+                  {a.usuario.localPrincipalId === localId ? "★ Principal" : "☆ Principal"}
+                </button>
                 <button
                   type="button"
                   onClick={() => setHorariosDe(a)}

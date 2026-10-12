@@ -128,6 +128,7 @@ export class JornadaCampoService {
       hasta,
       exigirEquipoCampo(u.equipoCampo).id,
     );
+    const preferencia = await this.prisma.usuario.findFirst({ where: { id: u.id, empresaId: u.empresaId }, select: { localPrincipalId: true } });
     const base = Prisma.sql`FROM campo_asignaciones a JOIN campo_locales l ON l.id = a.local_id JOIN campo_clientes c ON c.id = l.cliente_id WHERE ${condicion}`;
     const [conteo, ids] = await Promise.all([
       this.prisma.$queryRaw<TotalAgenda[]>(
@@ -135,10 +136,10 @@ export class JornadaCampoService {
       ),
       this.prisma.$queryRaw<FilaAgendaId[]>(
         Prisma.sql`SELECT elegida.id FROM (
-          SELECT DISTINCT ON (l.id) a.id, l.nombre
+          SELECT DISTINCT ON (l.id) a.id, l.id AS local_id, l.nombre
           ${base}
           ORDER BY l.id, CASE WHEN a.usuario_id = ${u.id} THEN 0 ELSE 1 END, a.id
-        ) elegida ORDER BY elegida.nombre, elegida.id LIMIT ${take} OFFSET ${skip}`,
+        ) elegida ORDER BY CASE WHEN elegida.local_id = ${preferencia?.localPrincipalId ?? null} THEN 0 ELSE 1 END, elegida.nombre, elegida.id LIMIT ${take} OFFSET ${skip}`,
       ),
     ]);
     const filas = await this.prisma.asignacionCampo.findMany({
@@ -191,6 +192,7 @@ export class JornadaCampoService {
         ? [
             {
               id: a.id,
+              esPrincipal: a.local.id === preferencia?.localPrincipalId,
               esBackup: a.usuarioId !== u.id && !esTeamleader,
               heredada: a.usuarioId !== u.id && esTeamleader,
               titular: `${a.usuario.nombre} ${a.usuario.apellido}`,
