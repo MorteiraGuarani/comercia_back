@@ -12,7 +12,7 @@ y coloca su leyenda debajo: estados derivados de las marcaciones y horario real,
 sin inventar ausencias. Conserva fila accionable, detalle, filtros y paginación.
 
 Archivos previstos: Uweb tokens.css, styles.css, ui.tsx, Roles.tsx,
-Departamentos.tsx, design.md; Comercia globals.css y panel/layout.tsx; mobile
+Departamentos.tsx; Comercia globals.css y panel/layout.tsx; mobile
 estado-marcacion.ts, historial-locales.tsx, prueba existente y app.json.
 Documentación en ambos repositorios. Sin eliminaciones ni migraciones. Compilar,
 probar lógica de estados/horarios y firma del APK; revisión visual pendiente,
@@ -21,7 +21,7 @@ incluyendo los detalles técnicos ya terminados en ambos árboles de trabajo.
 
 ## Cambios y verificación local
 
-Hallmark · pre-emit critique: P5 H5 E4 S5 R5 V4. Se preservan identidad,
+Se preservan identidad,
 jerarquía, tablas paginadas, foco, estados deshabilitados y alcance. Contenido
 Uweb máximo 106.6rem; Comercia 104rem en los contenedores amplios del panel.
 El límite se adapta al espacio disponible: no se fuerza un 130% del viewport.

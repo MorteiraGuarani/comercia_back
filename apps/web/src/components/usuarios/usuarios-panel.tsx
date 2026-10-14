@@ -2,7 +2,7 @@
 
 import { calcularDvRucPy } from "@/utils/ruc";
 
-/* Hallmark · administración de usuarios en tarjetas táctiles para móvil. */
+
 
 import { useCallback, useEffect, useState } from "react";
 import type { CountryCode } from "libphonenumber-js";

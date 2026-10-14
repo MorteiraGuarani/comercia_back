@@ -4,10 +4,8 @@ Monorepo fullstack con Next.js, NestJS y PostgreSQL.
 
 ## Estructura
 
-- `apps/web`: frontend Next.js con App Router, TypeScript, Tailwind y reglas de Vercel React Best Practices.
+- `apps/web`: frontend Next.js con App Router, TypeScript y Tailwind.
 - `apps/api`: backend NestJS con Prisma, PostgreSQL, validacion de entorno, Helmet, CORS controlado, rate limiting, Swagger y healthchecks.
-- `.agents/skills/vercel-react-best-practices`: skill instalado desde Vercel Labs.
-- `.claude/skills` y `.codex/skills`: guias locales para agentes.
 
 ## Primer arranque
 

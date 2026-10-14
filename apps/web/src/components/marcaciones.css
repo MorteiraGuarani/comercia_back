@@ -1,6 +1,5 @@
 :root { --font-marcacion: "IBM Plex Sans", sans-serif; --text-marcacion-sm: .75rem; --text-marcacion-base: .875rem; --space-marcacion-xs: .25rem; --space-marcacion-sm: .5rem; --space-marcacion-md: .75rem; }
-/* Hallmark · component: inspector de marcaciones · Comercia ? tokens claro/oscuro · P5 H5 E4 S5 R5 V4
- * Responsive revisado en código; revisión visual pendiente por preferencia. */
+
 .senales-marcacion { min-inline-size: 0; }
 .senales-nota { font-size: var(--text-marcacion-sm); color: var(--muted); margin-block: var(--space-marcacion-sm); overflow-wrap: anywhere; }
 .senales-columnas, .senales-fila { display: grid; grid-template-columns: minmax(0, 1.35fr) repeat(2, minmax(0, 1fr)); column-gap: var(--space-marcacion-xs); align-items: center; }

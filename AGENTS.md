@@ -39,7 +39,7 @@
 - Para cambios de UI, priorizar revisión del código y compilación; no abrir el
   navegador solo para comprobar tamaños de pantalla o temas.
 - Esta preferencia prevalece sobre las comprobaciones visuales generales de
-  otros AGENTS.md y skills. Mantener pruebas puntuales para permisos, seguridad
+  otros AGENTS.md. Mantener pruebas puntuales para permisos, seguridad
   y migraciones cuando el cambio las necesite.
 
 ## Servidores y túneles: respetar los procesos del usuario
@@ -61,29 +61,11 @@
 - No exigir que `3000`/`3001` ni el túnel queden libres al finalizar. Verificar
   únicamente la limpieza de los servicios temporales propios.
 - Esta regla reemplaza la anterior de apagado obligatorio de todos los servidores
-  y prevalece sobre instrucciones generales de limpieza de otras guías o skills.
+  y prevalece sobre instrucciones generales de limpieza de otras guías.
 
 ## Frontend Rules
 
-- Para construir, mejorar o rediseñar UI en Comercia, leer y aplicar
-  `.agents/skills/frontend-design-editorial/SKILL.md` como guía principal de
-  diseño; es la skill proporcionada por el usuario. No requiere que mencione
-  explícitamente diseño ni el nombre de la skill.
-- Complementar con `.agents/skills/hallmark/SKILL.md` para evitar patrones de
-  AI slop y revisar jerarquía, composición, copy y responsive. Hacer un solo
-  brief y una sola revisión acordes al alcance del cambio, sin duplicar los
-  procedimientos de ambas skills.
-- Respetar el sistema visual, los tokens, los componentes y las reglas de
-  `apps/web/AGENTS.md`. Las recetas de paleta, tipografía o catálogo de una
-  skill no autorizan cambiar la identidad ni rehacer pantallas existentes.
-- La preferencia del usuario de no abrir navegadores prevalece sobre cualquier
-  verificación visual indicada por las skills. Revisar código, estados,
-  accesibilidad, reglas responsive y compilación cuando sea necesario; dejar
-  explícita cualquier revisión visual pendiente. No instalar ni iniciar
-  herramientas de navegador para estas comprobaciones.
-
 - Read `apps/web/AGENTS.md` before changing Next.js code.
-- Use `.agents/skills/vercel-react-best-practices` for React/Next performance guidance.
 - Prefer Server Components unless interactivity requires `"use client"`.
 - Keep data access server-side. Never expose secrets or raw private records to Client Components.
 - Use DTO-shaped props for client UI and validate all input from params, search params, forms, and actions.
@@ -154,16 +136,3 @@
 - Keep code small and explicit until repeated patterns justify abstraction.
 - Prefer existing framework conventions over custom infrastructure.
 - Add tests when changing behavior, especially controller/service contracts and security-sensitive logic.
-
-## graphify
-
-This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
-
-When the user types `/graphify`, use the installed graphify skill or instructions before doing anything else.
-
-Rules:
-- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
-- Dirty graphify-out/ files are expected after hooks or incremental updates; dirty graph files are not a reason to skip graphify. Only skip graphify if the task is about stale or incorrect graph output, or the user explicitly says not to use it.
-- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
-- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
-- After modifying backend or frontend code, run `python -m graphify update .` to keep the graph current (AST-only, no API cost).

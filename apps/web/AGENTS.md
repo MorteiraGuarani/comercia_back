@@ -37,7 +37,6 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Reservar selects sin buscador para conjuntos pequeños y acotados, como
   estados o días de la semana. No activar búsqueda en endpoints que no la soporten.
 
-- Use `.agents/skills/vercel-react-best-practices` when writing or reviewing React/Next.js code.
 - Prefer Server Components and direct imports.
 - Keep client components small and avoid passing private server data into them.
 - Put environment variables exposed to the browser behind `NEXT_PUBLIC_` only when they are truly public.
