@@ -660,13 +660,13 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/modal.tsx": {
-    "mtime": 1791203685.5867558,
-    "ast_hash": "95f2f4224334f2a5809b1fb44acf5edb",
+    "mtime": 1791984499.6466682,
+    "ast_hash": "39b5184f9604264856d838c7dc861c44",
     "semantic_hash": ""
   },
   "apps/web/src/components/paginacion.tsx": {
-    "mtime": 1791204246.43793,
-    "ast_hash": "237b794afeb6cf03c9442f480549c9d3",
+    "mtime": 1791984500.0684938,
+    "ast_hash": "7f00d30c56b9173f6e29d4c479983460",
     "semantic_hash": ""
   },
   "apps/web/src/components/panel/contexto.tsx": {
@@ -1980,8 +1980,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/jornada-panel.tsx": {
-    "mtime": 1791981349.2481365,
-    "ast_hash": "34bab1c7cbb6f78a7290b2a7940a2e56",
+    "mtime": 1791983672.1181242,
+    "ast_hash": "fd612f1d53ef2538e777a1eda20ead63",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/mapa-local.tsx": {
@@ -2115,8 +2115,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/badge-notificaciones.tsx": {
-    "mtime": 1790183932.8332162,
-    "ast_hash": "c881e752c02492a4f3a86d7fb41f80d3",
+    "mtime": 1791984337.8915772,
+    "ast_hash": "2eb5a2c11e4781c71fda1977d2adba68",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/panel-comentarios.tsx": {
@@ -2740,8 +2740,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/estado-telefono.tsx": {
-    "mtime": 1791981348.8197682,
-    "ast_hash": "63e6639c3ea411abb7e1e00152c68f54",
+    "mtime": 1791983671.7249992,
+    "ast_hash": "636e876127679573f493bdc7fd796466",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/historial-tarea.tsx": {

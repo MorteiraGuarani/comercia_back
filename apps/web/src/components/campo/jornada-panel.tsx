@@ -57,11 +57,6 @@ export function JornadaPanel({
         </div>
         <SelectorFechaFiltro valorActual={periodo} onChange={setPeriodo} />
       </header>
-      {esRepositor ? (
-        <div className="mb-2 sm:mb-3">
-          <EstadoTelefono />
-        </div>
-      ) : null}
       <AgendaDelDia key={qsFecha} qsFecha={qsFecha} esRepositor={esRepositor} />
     </div>
   );
@@ -185,8 +180,8 @@ function AgendaDelDia({
       ) : null}
 
       {/* Buscador de locales de la agenda */}
-      <div className="mb-2 flex min-w-0 flex-wrap items-center gap-2 sm:mb-3 sm:justify-between">
-        <div className="relative min-w-0 flex-1 sm:max-w-sm">
+      <div className={`mb-2 flex min-w-0 w-full items-center gap-2 sm:mb-3 ${esRepositor ? "" : "flex-wrap sm:justify-between"}`}>
+        <div className={`relative min-w-0 flex-1 ${esRepositor ? "" : "sm:max-w-sm"}`}>
           <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted">
             <svg
               className="h-4 w-4"
@@ -207,8 +202,8 @@ function AgendaDelDia({
             aria-label="Buscar local en esta página de la agenda"
             name="buscar-local"
             autoComplete="off"
-            placeholder="Buscar en esta página…"
-            className="h-11 min-h-11 w-full rounded-lg border border-line bg-surface-raised py-2 pl-9 pr-11 text-base text-foreground outline-none transition-colors placeholder:text-muted focus-visible:border-brand-600 focus-visible:ring-2 focus-visible:ring-brand-600/30 sm:text-sm dark:border-line dark:bg-surface-raised dark:text-foreground"
+            placeholder={esRepositor ? "Buscar local…" : "Buscar en esta página…"}
+            className={`h-11 min-h-11 w-full rounded-lg border border-line bg-surface-raised py-2 pl-9 ${busqueda ? "pr-11" : "pr-3"} text-base text-foreground outline-none transition-colors placeholder:text-muted focus-visible:border-brand-600 focus-visible:ring-2 focus-visible:ring-brand-600/30 sm:text-sm dark:border-line dark:bg-surface-raised dark:text-foreground`}
           />
           {busqueda && (
             <button
@@ -232,9 +227,13 @@ function AgendaDelDia({
             </button>
           )}
         </div>
-        <div className="hidden text-xs text-muted sm:block">
-          <span>{itemsFiltrados.length} locales visibles en esta página</span>
-        </div>
+        {esRepositor ? (
+          <EstadoTelefono variante="boton" />
+        ) : (
+          <div className="hidden text-xs text-muted sm:block">
+            <span>{itemsFiltrados.length} locales visibles en esta página</span>
+          </div>
+        )}
       </div>
 
       <TablaCampo

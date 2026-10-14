@@ -10,6 +10,7 @@ import {
 import type { Notificacion, TipoNotificacion } from "@/types/campo";
 import { mostrarToast } from "@/components/toast/toast-controller";
 import { Modal } from "@/components/modal";
+import { Paginacion } from "@/components/paginacion";
 import { HiloNovedad } from "./hilo-novedad";
 import { DetalleAviso } from "./detalle-aviso";
 
@@ -378,19 +379,38 @@ function PanelNotificaciones({
   }, [notificaciones]);
 
   return (
-    <Modal titulo="Avisos y Notificaciones" abierto onCerrar={onCerrar} ancho="lg">
+    <Modal
+      titulo="Avisos y Notificaciones"
+      abierto
+      onCerrar={onCerrar}
+      ancho="lg"
+      pie={!referenciaSeleccionada && totalItems > 0 ? (
+        <Paginacion
+          page={page}
+          totalPages={totalPages}
+          total={totalItems}
+          limit={limit}
+          onPageChange={setPage}
+          onLimitChange={(cantidad) => {
+            setLimit(cantidad);
+            setPage(1);
+          }}
+          desplazarAlInicio={false}
+        />
+      ) : undefined}
+    >
       {referenciaSeleccionada ? (
         <div className="min-w-0 space-y-4">
-          <button type="button" onClick={() => setReferenciaSeleccionada(null)} className="min-h-11 rounded-lg border border-line px-3 text-sm font-semibold text-foreground">← Volver a notificaciones</button>
+          <button type="button" onClick={() => setReferenciaSeleccionada(null)} className="min-h-11 cursor-pointer whitespace-nowrap rounded-lg border border-line px-3 text-sm font-semibold text-foreground transition-colors hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:border-line dark:text-foreground dark:hover:bg-surface-soft">← Volver a notificaciones</button>
           {referenciaSeleccionada.tipo === "novedad"
             ? <HiloNovedad id={referenciaSeleccionada.id} onActualizado={() => void cargarNotificaciones()} />
             : <DetalleAviso id={referenciaSeleccionada.id} />}
         </div>
       ) : (
-      <div className="flex flex-col space-y-4">
+      <div className="flex min-w-0 flex-col space-y-4">
         {/* Barra superior de filtros y acción "Marcar leídas" */}
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line pb-3">
-          <div className="flex items-center gap-1.5 rounded-lg bg-surface-soft p-1">
+        <div className="flex min-w-0 flex-col items-stretch gap-2 border-b border-line pb-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between dark:border-line">
+          <div className="flex min-w-0 items-center gap-1.5 rounded-lg bg-surface-soft p-1 dark:bg-surface-soft">
             <button
               type="button"
               onClick={() => {
@@ -398,10 +418,10 @@ function PanelNotificaciones({
                 setPage(1);
               }}
               aria-pressed={filtro === "todas"}
-              className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+              className={`min-h-11 flex-1 cursor-pointer whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 sm:flex-none ${
                 filtro === "todas"
-                  ? "bg-surface-raised text-foreground shadow-sm"
-                  : "text-muted hover:text-foreground"
+                  ? "bg-surface-raised text-foreground shadow-sm dark:bg-surface-raised dark:text-foreground"
+                  : "text-muted hover:bg-surface-raised hover:text-foreground dark:text-muted dark:hover:bg-surface-raised dark:hover:text-foreground"
               }`}
             >
               Todas {filtro === "todas" && totalItems > 0 ? `(${totalItems})` : ""}
@@ -413,10 +433,10 @@ function PanelNotificaciones({
                 setPage(1);
               }}
               aria-pressed={filtro === "no_leidas"}
-              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+              className={`flex min-h-11 flex-1 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 sm:flex-none ${
                 filtro === "no_leidas"
-                  ? "bg-surface-raised text-foreground shadow-sm"
-                  : "text-muted hover:text-foreground"
+                  ? "bg-surface-raised text-foreground shadow-sm dark:bg-surface-raised dark:text-foreground"
+                  : "text-muted hover:bg-surface-raised hover:text-foreground dark:text-muted dark:hover:bg-surface-raised dark:hover:text-foreground"
               }`}
             >
               <span>No leídas</span>
@@ -432,14 +452,14 @@ function PanelNotificaciones({
             type="button"
             onClick={handleMarcarTodasLeidas}
             disabled={marcandoTodas || noLeidas === 0}
-            className="text-xs font-semibold text-brand-700 hover:text-brand-800 disabled:opacity-40 dark:text-brand-400 dark:hover:text-brand-300 transition-colors"
+            className="min-h-11 cursor-pointer whitespace-nowrap rounded-lg px-2 text-xs font-semibold text-brand-700 transition-colors hover:bg-surface-soft hover:text-brand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 disabled:cursor-not-allowed disabled:opacity-50 dark:text-brand-400 dark:hover:bg-surface-soft dark:hover:text-brand-300"
           >
             {marcandoTodas ? "Marcando..." : "Marcar todas como leídas"}
           </button>
         </div>
 
         {/* Lista de Notificaciones */}
-        <div className="max-h-[60vh] overflow-y-auto pr-1">
+        <div className="min-w-0">
           {cargando ? (
             <div className="py-12 text-center">
               <div className="mx-auto h-7 w-7 animate-spin rounded-full border-2 border-brand-600 border-t-transparent dark:border-brand-400"></div>
@@ -544,8 +564,8 @@ function PanelNotificaciones({
                               {n.mensaje}
                             </p>
 
-                            <div className="mt-2 flex items-center justify-between gap-2 border-t border-line/40 pt-1.5 text-[11px] text-muted">
-                              <span className="flex items-center gap-1 truncate">
+                            <div className="mt-2 flex min-w-0 flex-col items-start gap-1 border-t border-line/40 pt-1.5 text-[11px] text-muted sm:flex-row sm:items-center sm:justify-between sm:gap-2">
+                              <span className="flex min-w-0 max-w-full items-center gap-1 truncate">
                                 <svg
                                   className="h-3 w-3 shrink-0"
                                   fill="none"
@@ -560,7 +580,7 @@ function PanelNotificaciones({
                                 {n.usuarioEmisor.nombre} {n.usuarioEmisor.apellido}
                               </span>
 
-                              <span className="font-mono text-[10px] text-muted shrink-0">
+                              <span className="shrink-0 whitespace-nowrap font-mono text-[10px] text-muted">
                                 {formatearHoraOFecha(n.creadoAt)}
                               </span>
                             </div>
@@ -575,48 +595,6 @@ function PanelNotificaciones({
           )}
         </div>
 
-        {/* Paginación */}
-        {totalItems > 0 && (
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3 text-xs">
-            <label className="flex items-center gap-1.5 text-muted">
-              Por pagina
-              <select
-                aria-label="Registros por pagina"
-                value={limit}
-                onChange={(e) => {
-                  setLimit(Number(e.target.value));
-                  setPage(1);
-                }}
-                className="min-h-9 rounded-lg border border-line bg-surface-raised px-2 text-xs text-foreground"
-              >
-                {[7, 15, 30].map((opcion) => (
-                  <option key={opcion} value={opcion}>
-                    {opcion}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button
-              type="button"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="rounded-lg border border-line px-3 py-1.5 font-medium transition-colors hover:bg-surface-soft disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              Anterior
-            </button>
-            <span className="text-muted">
-              Página {page} de {totalPages}
-            </span>
-            <button
-              type="button"
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-              className="rounded-lg border border-line px-3 py-1.5 font-medium transition-colors hover:bg-surface-soft disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              Siguiente
-            </button>
-          </div>
-        )}
       </div>
       )}
     </Modal>

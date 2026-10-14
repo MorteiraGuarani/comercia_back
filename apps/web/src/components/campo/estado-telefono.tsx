@@ -1,11 +1,16 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
 import { apiFetch } from "@/lib/api";
+import { Modal } from "@/components/modal";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import type { EstadoTelefonoRepositor } from "@/types/seguimiento";
 import { TOKENS } from "./tokens";
 
-export function EstadoTelefono() {
+export function EstadoTelefono({
+  variante = "panel",
+}: {
+  variante?: "panel" | "boton";
+}) {
   const [estado, setEstado] = useState<EstadoTelefonoRepositor | null>(null);
   const [revision, setRevision] = useState(0);
   const [actualizando, setActualizando] = useState(false);
@@ -62,6 +67,95 @@ export function EstadoTelefono() {
         SEGUIMIENTO_DETENIDO: "Activar seguimiento",
       }[estado.estado]
     : "Comprobando teléfono…";
+  function comprobar() {
+    if (manualEnCurso.current) return;
+    manualEnCurso.current = true;
+    setActualizando(true);
+    setRevision((r) => r + 1);
+  }
+  const indicador = (
+    <span
+      aria-hidden="true"
+      className="h-2 w-2 shrink-0 rounded-full"
+      style={{
+        background:
+          estado?.estado === "LISTO"
+            ? TOKENS.fresco
+            : estado
+              ? TOKENS.alerta
+              : TOKENS.sub,
+      }}
+    />
+  );
+  const informacion = (
+    <>
+      <p>{estado?.mensaje ?? "Consultando el estado del teléfono…"}</p>
+      {estado?.capturadaEn ? (
+        <p>
+          Última ubicación:{" "}
+          {new Date(estado.capturadaEn).toLocaleTimeString("es-PY")}
+          {estado.precisionMetros != null
+            ? ` · precisión ±${Math.round(estado.precisionMetros)} m`
+            : ""}
+        </p>
+      ) : null}
+      <p>Mantené el seguimiento de UCheck activo durante la visita.</p>
+    </>
+  );
+  if (variante === "boton") {
+    return (
+      <aside aria-label="Estado de UCheck" className="campo-screen shrink-0">
+        <PantallaCarga
+          visible={actualizando}
+          mensaje="Comprobando UCheck"
+          detalle="Consultando el estado y la última ubicación del teléfono."
+        />
+        <button
+          type="button"
+          onClick={() => setDetalles(true)}
+          aria-haspopup="dialog"
+          aria-expanded={detalles}
+          aria-label={`Seguimiento de UCheck: ${etiqueta}`}
+          title={`UCheck · ${etiqueta}`}
+          className="flex h-11 min-h-11 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-line bg-surface-soft px-2 text-xs font-semibold text-foreground transition-colors hover:bg-surface-raised active:bg-surface-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:px-3 sm:text-sm dark:border-line dark:bg-surface-soft dark:text-foreground dark:hover:bg-surface-raised dark:active:bg-surface-raised"
+        >
+          {indicador}
+          UCheck seguimiento
+        </button>
+        <span className="sr-only" role="status">{etiqueta}</span>
+        <Modal
+          titulo="Seguimiento de UCheck"
+          abierto={detalles}
+          onCerrar={() => setDetalles(false)}
+        >
+          <p aria-live="polite" className="flex items-center gap-2 text-sm font-semibold text-foreground dark:text-foreground">
+            {indicador}
+            {etiqueta}
+          </p>
+          <div className="mt-3 space-y-2 text-sm leading-relaxed text-muted dark:text-muted">
+            {informacion}
+          </div>
+          <div className="mt-4 flex flex-wrap justify-end gap-2">
+            <button
+              type="button"
+              disabled={actualizando}
+              onClick={comprobar}
+              className="min-h-11 cursor-pointer whitespace-nowrap rounded-lg border border-line bg-surface-soft px-3 text-sm font-semibold text-foreground transition-colors hover:bg-surface-raised active:bg-surface-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50 dark:border-line dark:bg-surface-soft dark:text-foreground dark:hover:bg-surface-raised dark:active:bg-surface-raised"
+            >
+              Comprobar UCheck
+            </button>
+            <button
+              type="button"
+              onClick={() => setDetalles(false)}
+              className="min-h-11 cursor-pointer whitespace-nowrap rounded-lg px-3 text-sm text-muted transition-colors hover:bg-surface-soft active:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:text-muted dark:hover:bg-surface-soft dark:active:bg-surface-soft"
+            >
+              Cerrar
+            </button>
+          </div>
+        </Modal>
+      </aside>
+    );
+  }
   return (
     <aside
       aria-label="Estado de UCheck"
@@ -82,18 +176,7 @@ export function EstadoTelefono() {
           title={`UCheck · ${etiqueta}`}
           className="flex min-h-11 min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-l-lg px-3 text-left text-xs transition hover:bg-surface-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:hover:bg-surface-raised"
         >
-          <span
-            aria-hidden="true"
-            className="h-2 w-2 shrink-0 rounded-full"
-            style={{
-              background:
-                estado?.estado === "LISTO"
-                  ? TOKENS.fresco
-                  : estado
-                    ? TOKENS.alerta
-                    : TOKENS.sub,
-            }}
-          />
+          {indicador}
           <span aria-live="polite" className="min-w-0 flex-1 truncate">
             <strong>UCheck</strong> · {etiqueta}
           </span>
@@ -114,12 +197,7 @@ export function EstadoTelefono() {
           aria-label="Comprobar UCheck"
           title="Comprobar UCheck"
           className="grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-r-lg border-l border-line text-muted transition hover:bg-surface-raised hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50 dark:border-line dark:hover:bg-surface-raised dark:hover:text-foreground"
-          onClick={() => {
-            if (manualEnCurso.current) return;
-            manualEnCurso.current = true;
-            setActualizando(true);
-            setRevision((r) => r + 1);
-          }}
+          onClick={comprobar}
         >
           <svg
             aria-hidden="true"
@@ -139,17 +217,7 @@ export function EstadoTelefono() {
         hidden={!detalles}
         className="space-y-1 border-t border-line px-3 py-2 text-xs leading-relaxed text-muted dark:border-line dark:text-muted"
       >
-        <p>{estado?.mensaje ?? "Consultando el estado del teléfono…"}</p>
-        {estado?.capturadaEn ? (
-          <p>
-            Última ubicación:{" "}
-            {new Date(estado.capturadaEn).toLocaleTimeString("es-PY")}
-            {estado.precisionMetros != null
-              ? ` · precisión ±${Math.round(estado.precisionMetros)} m`
-              : ""}
-          </p>
-        ) : null}
-        <p>Mantené el seguimiento de UCheck activo durante la visita.</p>
+        {informacion}
       </div>
     </aside>
   );
