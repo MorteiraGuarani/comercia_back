@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Paginacion } from "@/components/paginacion";
 import type { ColaboradorResumenItem, SupervisionResumenData } from "@/types/campo";
 import styles from "./presentismo.module.css";
@@ -9,10 +9,13 @@ import { PRESENTISMO } from "@/utils/estado-jornada";
 import type { EstadoPresentismo } from "@/types/estado-jornada";
 
 const ESTADOS = Object.keys(PRESENTISMO) as EstadoPresentismo[];
+const FILTROS = [["todos", "Todos"], ...ESTADOS.map(e => [e, PRESENTISMO[e].etiqueta]), ["sin_iniciar", "Sin entrada"]] as const;
 
-export function ResumenPresentismo({ resumen, onPendientes }: {
+// Cada estado del resumen filtra la lista del equipo: en celular el resumen y
+// la lista quedan lejos, así que tocar un número lleva directo a esas personas.
+export function ResumenPresentismo({ resumen, onFiltrar }: {
   resumen: SupervisionResumenData;
-  onPendientes: () => void;
+  onFiltrar: (filtro: string) => void;
 }) {
   const { presentismo: p } = resumen;
   const marcaciones = resumen.colaboradores.filter(c => c.inicioJornada !== null).length;
@@ -20,20 +23,27 @@ export function ResumenPresentismo({ resumen, onPendientes }: {
   const porcentaje = p.totalEquipo ? Math.round(marcaciones / p.totalEquipo * 100) : null;
   return <aside className={styles.balance} aria-label="Balance del equipo">
     <section className={styles.summary}>
-      <div className={styles.sectionHead}><h2>Tu equipo</h2><span>{p.totalEquipo} personas</span></div>
-      <div className={styles.headline}><strong>{porcentaje === null ? "—" : porcentaje}<small>{porcentaje !== null ? "%" : ""}</small></strong>
+      <div className={styles.sectionHead}><h2>Tu equipo</h2><span>{p.totalEquipo} {p.totalEquipo === 1 ? "persona" : "personas"}</span></div>
+      <div className={styles.headline}><strong>{porcentaje ?? "—"}{porcentaje !== null && <small>%</small>}</strong>
         <div><b>Con marcación</b><span>{marcaciones} de {p.totalEquipo} en el período</span></div></div>
-      <div className={styles.counts}>
-        {ESTADOS.map(e => <div key={e} data-tone={e}><b>{p.estados[e]}</b><span>{PRESENTISMO[e].etiqueta}</span></div>)}
-      </div>
       <div className={styles.distribution} role="img" aria-label={ESTADOS.map(e => `${p.estados[e]} ${PRESENTISMO[e].etiqueta}`).join(", ")}>
         {ESTADOS.filter(e => p.estados[e] > 0).map(e => <i key={e} data-tone={e} style={{ flexGrow: p.estados[e] }} />)}
       </div>
-      {sinEntrada > 0 ? <button type="button" className={styles.notice} onClick={onPendientes}>
+      <ul className={styles.counts} aria-label="Personas por estado">
+        {ESTADOS.map(e => <li key={e} data-tone={e} data-vacio={p.estados[e] === 0 || undefined}>
+          <button type="button" onClick={() => onFiltrar(e)} aria-label={`${PRESENTISMO[e].etiqueta}: ${p.estados[e]}. Ver en la lista`}>
+            <b>{p.estados[e]}</b><span>{PRESENTISMO[e].etiqueta}</span>
+          </button>
+        </li>)}
+      </ul>
+      {sinEntrada > 0 ? <button type="button" className={styles.notice} onClick={() => onFiltrar("sin_iniciar")}>
         <span><b>{sinEntrada} sin entrada registrada</b><small>Revisá a quién contactar</small></span><span aria-hidden="true">→</span>
       </button> : <p className={styles.calm}>{p.totalEquipo ? "Todo el equipo tiene una marcación." : "Sin equipo asignado en este período."}</p>}
     </section>
-    <p className={styles.helper}>Al vencer el turno: sin marcas es Ausente; una entrada sin salida es Incompleto. Sin horario no se deduce ausencia ni tardanza. En períodos de varios días se priorizan las incidencias.</p>
+    <details className={styles.howto}>
+      <summary>¿Cómo se calcula cada estado?</summary>
+      <p>Al vencer el turno: sin marcas es Ausente; una entrada sin salida es Incompleto. Sin horario no se deduce ausencia ni tardanza. En períodos de varios días se priorizan las incidencias.</p>
+    </details>
   </aside>;
 }
 
@@ -68,6 +78,21 @@ export function EquipoPresentismo({ colaboradores, metric = "presentismo", filtr
   const [buscar, setBuscar] = useState("");
   const [paginado, setPaginado] = useState({ clave: "", page: 1 });
   const [limit, setLimit] = useState(7);
+  const filtrosRef = useRef<HTMLDivElement>(null);
+  // En celular los filtros son una fila con desplazamiento horizontal: si el
+  // filtro activo llega desde el resumen, se centra para que quede a la vista.
+  useEffect(() => {
+    const grupo = filtrosRef.current;
+    const activo = grupo?.querySelector<HTMLElement>("[aria-pressed='true']");
+    if (!grupo || !activo || grupo.scrollWidth <= grupo.clientWidth) return;
+    const quieto = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    grupo.scrollTo({ left: activo.offsetLeft - (grupo.clientWidth - activo.offsetWidth) / 2, behavior: quieto ? "instant" : "smooth" });
+  }, [filtro]);
+  const conteos: Record<string, number> = { todos: colaboradores.length, sin_iniciar: 0 };
+  for (const c of colaboradores) {
+    conteos[c.estadoPresentismo] = (conteos[c.estadoPresentismo] ?? 0) + 1;
+    if (c.inicioJornada === null) conteos.sin_iniciar++;
+  }
   const clave = `${filtro}:${buscar}:${limit}:${metric}`;
   const texto = buscar.trim().toLocaleLowerCase("es");
   // El endpoint existente devuelve una instantánea completa del equipo. Filtrar
@@ -84,17 +109,26 @@ export function EquipoPresentismo({ colaboradores, metric = "presentismo", filtr
   return <section className={styles.team} aria-label="Colaboradores del equipo">
     <div className={styles.sectionHead}><h2>{metric === "ruta" ? "Locales por persona" : metric === "tareas" ? "Tareas por persona" : "Personas del equipo"}</h2>
       <span>{filtrados.length} {filtrados.length === 1 ? "persona" : "personas"}</span></div>
-    <div className={styles.filters} role="group" aria-label="Filtrar equipo por estado">
-      {[["todos", "Todos"], ...ESTADOS.map(e => [e, PRESENTISMO[e].etiqueta]), ["sin_iniciar", "Sin entrada"]].map(([valor, etiqueta]) =>
-        <button key={valor} type="button" aria-pressed={filtro === valor} onClick={() => onFiltro(valor)}>{etiqueta}</button>)}
+    <div className={styles.teamTools}>
+      <label className={styles.search}>
+        <span className="sr-only">Buscar en el equipo</span>
+        <svg aria-hidden="true" viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="8.5" cy="8.5" r="5.5" /><path d="m13 13 4 4" /></svg>
+        <input type="search" value={buscar} onChange={e => setBuscar(e.target.value)} placeholder="Buscar por nombre o zona" />
+      </label>
+      <div ref={filtrosRef} className={styles.filters} role="group" aria-label="Filtrar equipo por estado">
+        {FILTROS.map(([valor, etiqueta]) =>
+          <button key={valor} type="button" aria-pressed={filtro === valor} data-tone={valor === "todos" ? undefined : valor} onClick={() => onFiltro(valor)}>
+            {etiqueta}<span className={styles.chipCount}>{conteos[valor] ?? 0}</span>
+          </button>)}
+      </div>
     </div>
-    <label className={styles.search}><span>Buscar en el equipo</span><input type="search" value={buscar} onChange={e => setBuscar(e.target.value)} placeholder="Nombre o zona" /></label>
     {items.length ? <>
       <ul className={styles.people} aria-label="Equipo en vista móvil">{items.map(c => <li key={c.id}>
         <button className={styles.person} type="button" onClick={() => onOpen(c.id)} aria-label={`Ver detalle de ${c.nombre}`}>
           <span className={styles.avatar} data-tone={c.estadoPresentismo} aria-hidden="true">{c.iniciales}</span>
           <span className={styles.identity}><strong>{c.nombre}</strong><span>{c.zona || "Sin zona"}</span><small>{detalle(c)}</small></span>
           <span className={styles.status} data-tone={c.estadoPresentismo}>{PRESENTISMO[c.estadoPresentismo].etiqueta}</span>
+          <span className={styles.chevron} aria-hidden="true">›</span>
         </button>
       </li>)}</ul>
       <div className={styles.table}><table><caption className="sr-only">Estado y avance de los colaboradores</caption>
@@ -105,7 +139,7 @@ export function EquipoPresentismo({ colaboradores, metric = "presentismo", filtr
           ['Salida', 'Salida del último registro del período cuando las visitas están finalizadas. Consultá Marcaciones en la ficha para ver cada visita.'],
           ['Visitas', 'Visitas completadas sobre el total del período y cantidad de visitas en curso.'],
           ['Tareas', 'Tareas completadas sobre el total y cantidad de tareas obligatorias pendientes.'],
-        ].map(([titulo, texto]) => <th key={titulo}>{titulo}<InfoColumna titulo={titulo} texto={texto} /></th>)}<th><span className="sr-only">Acciones</span></th></tr></thead>
+        ].map(([titulo, texto]) => <th key={titulo}><span className={styles.th}>{titulo}<InfoColumna titulo={titulo} texto={texto} /></span></th>)}<th><span className="sr-only">Acciones</span></th></tr></thead>
         <tbody>{items.map(c => <tr key={c.id}><td><div className={styles.tablePerson}>
           <span className={styles.avatar} data-tone={c.estadoPresentismo} aria-hidden="true">{c.iniciales}</span>
           <div><strong>{c.nombre}</strong><small>{c.zona || "Sin zona"}</small></div></div></td>

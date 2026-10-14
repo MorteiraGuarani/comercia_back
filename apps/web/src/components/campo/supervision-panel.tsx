@@ -500,8 +500,8 @@ export function SupervisionPanel({
             {/* ==================== TAB 1: RESUMEN OPERATIVO ==================== */}
             {tab === "resumen" && resumen && (
               <div className={styles.body}>
-                <ResumenPresentismo resumen={resumen} onPendientes={() => {
-                  setFiltroEquipo("sin_iniciar");
+                <ResumenPresentismo resumen={resumen} onFiltrar={valor => {
+                  setFiltroEquipo(valor);
                   equipoRef.current?.scrollIntoView({ block: "start", behavior: "instant" });
                 }} />
                 <div ref={equipoRef} className={`${styles.teamColumn} min-w-0 scroll-mt-24`}>
@@ -571,16 +571,8 @@ export function SupervisionPanel({
                 </div>
 
                 {/* Desglose por Colaborador */}
-                <div>
-                  <p
-                    className="ft-display text-xl tracking-wide font-bold mb-3"
-                    style={{ color: TOKENS.ink }}
-                  >
-                    Rutas por colaborador
-                  </p>
-                  <EquipoPresentismo key={resumen.fecha} colaboradores={resumen.colaboradores} metric="ruta"
-                    filtro={filtroEquipo} onFiltro={setFiltroEquipo} onOpen={id => void abrirColaborador(id, "ruta")} />
-                </div>
+                <EquipoPresentismo key={resumen.fecha} colaboradores={resumen.colaboradores} metric="ruta"
+                  filtro={filtroEquipo} onFiltro={setFiltroEquipo} onOpen={id => void abrirColaborador(id, "ruta")} />
               </div>
             )}
 
@@ -620,16 +612,8 @@ export function SupervisionPanel({
                 </div>
 
                 {/* Desglose por Colaborador */}
-                <div>
-                  <p
-                    className="ft-display text-xl tracking-wide font-bold mb-3"
-                    style={{ color: TOKENS.ink }}
-                  >
-                    Tareas por colaborador
-                  </p>
-                  <EquipoPresentismo key={resumen.fecha} colaboradores={resumen.colaboradores} metric="tareas"
-                    filtro={filtroEquipo} onFiltro={setFiltroEquipo} onOpen={id => void abrirColaborador(id, "tareas")} />
-                </div>
+                <EquipoPresentismo key={resumen.fecha} colaboradores={resumen.colaboradores} metric="tareas"
+                  filtro={filtroEquipo} onFiltro={setFiltroEquipo} onOpen={id => void abrirColaborador(id, "tareas")} />
               </div>
             )}
           </div>
