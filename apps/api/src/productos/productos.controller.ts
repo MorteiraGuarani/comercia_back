@@ -11,6 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { ApiBearerAuth, ApiCookieAuth, ApiTags } from '@nestjs/swagger';
 import { SuperadminGuard } from '../auth/superadmin.guard';
 import type { RequestConUsuario } from '../auth/interfaces/request-con-usuario.interface';
 import { ProductosService } from './productos.service';
@@ -25,6 +26,9 @@ import {
 } from './dto/catalogo.dto';
 
 @Controller('admin/catalogo')
+@ApiTags('Productos y precios')
+@ApiBearerAuth()
+@ApiCookieAuth()
 @UseGuards(JwtAuthGuard, SuperadminGuard)
 export class ProductosController {
   constructor(private readonly servicio: ProductosService) {}

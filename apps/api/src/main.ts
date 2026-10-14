@@ -1,12 +1,12 @@
 import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import { json, urlencoded } from 'express';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
+import { configurarSwagger } from './common/utils/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -48,21 +48,7 @@ async function bootstrap() {
     }),
   );
 
-  if (configService.get<boolean>('app.swaggerEnabled')) {
-    const documentConfig = new DocumentBuilder()
-      .setTitle('Comercia API')
-      .setDescription('NestJS API for Comercia')
-      .setVersion('1.0.0')
-      .addBearerAuth()
-      .build();
-
-    const document = SwaggerModule.createDocument(app, documentConfig);
-    SwaggerModule.setup('api/docs', app, document, {
-      swaggerOptions: {
-        persistAuthorization: true,
-      },
-    });
-  }
+  configurarSwagger(app);
 
   await app.listen(configService.getOrThrow<number>('app.port'));
 }

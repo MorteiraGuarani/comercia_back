@@ -48,6 +48,8 @@ jobs:
         run: npm run test:productos --workspace=api
       - name: Validar identificadores y precios del catálogo sin navegador
         run: npm run test:productos --workspace=web
+      - name: Validar Swagger compilado y permisos de produccion sin navegador
+        run: npm run test:swagger --workspace=api
 
   changes:
     runs-on: ubuntu-24.04

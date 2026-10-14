@@ -87,7 +87,9 @@
   al front por defecto — se agrega al DTO solo si el front lo necesita.
 - Los mensajes de error no revelan existencia de datos (ej. el login dice
   "Usuario o contraseña incorrectos", nunca "ese usuario no existe").
-- Swagger solo en desarrollo (`SWAGGER_ENABLED=false` en producción).
+- Swagger puede estar habilitado en producción (`SWAGGER_ENABLED=true`) por
+  petición del usuario. `/api/docs`, sus archivos y las especificaciones
+  JSON/YAML requieren una sesión de superadmin; no quitar esa protección.
 - Nota de realidad: los endpoints y SUS PROPIOS datos siempre serán visibles
   para el usuario logueado en su navegador (DevTools) — eso es inevitable y
   correcto. La seguridad es autenticación + autorización + DTO mínimo, nunca
