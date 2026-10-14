@@ -23,6 +23,8 @@ model Empresa {
   equiposCampo        EquipoCampo[]
   clientesCampo       ClienteCampo[]
   localesCampo        LocalCampo[]
+  productos           Producto[]
+  precios             Precio[]
   tareasCampo         TareaCampo[]
   eventosUcheck       IntegracionUcheckEvento[]
   modulos             EmpresaModulo[]
@@ -36,6 +38,37 @@ model Empresa {
   updatedAt           DateTime                  @default(now()) @updatedAt @map("updated_at")
 
   @@map("empresas")
+}
+
+model Producto {
+  empresaId Int @map("empresa_id")
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  cardCode String @map("cardcode") @db.VarChar(50)
+  descripcion String @db.VarChar(200)
+  iva Int
+  grupo Int
+  nombreGrupo String @map("nombre_grupo") @db.VarChar(200)
+  inventario Boolean
+  tipo String @db.VarChar(100)
+  precios Precio[]
+
+  @@id([empresaId, cardCode])
+  @@index([empresaId, descripcion])
+  @@map("productos")
+}
+
+model Precio {
+  id Int @id @default(autoincrement())
+  empresaId Int @map("empresa_id")
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  cardCode String @map("cardcode") @db.VarChar(50)
+  producto Producto @relation(fields: [empresaId, cardCode], references: [empresaId, cardCode], onDelete: Cascade, onUpdate: Cascade)
+  nroListaPrecio Int @map("nro_lista_precio")
+  listaPrecio String @map("lista_precio") @db.VarChar(200)
+  precio Decimal @db.Decimal(21, 6)
+
+  @@index([empresaId, cardCode, nroListaPrecio])
+  @@map("precios")
 }
 
 model Conexion {

@@ -44,6 +44,10 @@ jobs:
         run: npm run test:ucheck --workspace=web
       - name: Validar migración y agendas de campo en PostgreSQL aislado
         run: npm run test:planificacion --workspace=api
+      - name: Validar catálogo y retiro de seguimiento en PostgreSQL aislado
+        run: npm run test:productos --workspace=api
+      - name: Validar identificadores y precios del catálogo sin navegador
+        run: npm run test:productos --workspace=web
 
   changes:
     runs-on: ubuntu-24.04

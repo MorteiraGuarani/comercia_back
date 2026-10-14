@@ -8,8 +8,9 @@ import { EmpresasPanel } from "@/components/admin/empresas-panel";
 import { EmpresasAbmPanel } from "@/components/admin/empresas-abm-panel";
 import { RolesPanel } from "@/components/admin/roles-panel";
 import { UsuariosPanel } from "@/components/usuarios/usuarios-panel";
+import { ProductosPanel } from "@/components/admin/productos-panel";
 
-type Tab = "usuarios" | "roles" | "empresas" | "modulos" | "accesos";
+type Tab = "usuarios" | "roles" | "empresas" | "modulos" | "accesos" | "productos";
 
 export default function AdminPage() {
   const router = useRouter();
@@ -78,6 +79,7 @@ export default function AdminPage() {
         >
           Acceso por empresa
         </button>
+        <button type="button" onClick={() => setTab("productos")} className={`${tabClase("productos")} whitespace-nowrap`}>Productos y precios</button>
       </div>
 
       <div className="mt-6">
@@ -86,6 +88,7 @@ export default function AdminPage() {
         {tab === "empresas" && <EmpresasAbmPanel />}
         {tab === "modulos" && <ModulosPanel />}
         {tab === "accesos" && <EmpresasPanel />}
+        {tab === "productos" && <ProductosPanel />}
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
-export interface OpcionSelector {
-  id: number;
+export interface OpcionSelector<TId extends number | string = number> {
+  id: TId;
   nombre?: string;
   descripcion?: string;
 }

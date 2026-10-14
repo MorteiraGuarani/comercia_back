@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test:pendientes": "node test/pendientes-tareas.integration.mjs",
-    "test:ucheck": "node test/ucheck-seguimiento.integration.mjs"
+    "test:ucheck": "node test/ucheck-seguimiento.integration.mjs",
+    "test:productos": "node test/productos.integration.mjs"
   },
   "dependencies": {
     "flag-icons": "^7.5.0",

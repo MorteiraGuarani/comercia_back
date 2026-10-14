@@ -36,7 +36,6 @@ import { NovedadService } from './services/novedad.service';
 import { AvisoService } from './services/aviso.service';
 import { SupervisionService } from './services/supervision.service';
 import { AdjuntoCampoService } from './services/adjunto-campo.service';
-import { SeguimientoService } from './services/seguimiento.service';
 import {
   AsignacionCampoDto,
   BackupCampoDto,
@@ -86,15 +85,7 @@ export class CampoController {
     private readonly avisoService: AvisoService,
     private readonly supervisionService: SupervisionService,
     private readonly adjuntoCampoService: AdjuntoCampoService,
-    private readonly seguimientoService: SeguimientoService,
   ) {}
-
-  @Get('seguimiento') seguimiento(
-    @Req() r: RequestConUsuario,
-    @Query() q: ConsultaCampoDto,
-  ) {
-    return this.seguimientoService.equipo(r.usuarioId, q);
-  }
 
   @Get('clientes') clientes(
     @Req() r: RequestConUsuario,

@@ -9,7 +9,7 @@ import { PantallaCarga } from "@/components/pantalla-carga";
 import { btnGhost, errorBox, inputBase, labelBase } from "@/components/ui";
 
 // Montar con key={url} cuando cambie el alcance para reiniciar la paginación.
-export function SelectorPaginado({
+export function SelectorPaginado<TId extends number | string = number>({
   url,
   etiqueta,
   value,
@@ -23,24 +23,24 @@ export function SelectorPaginado({
 }: {
   url: string;
   etiqueta: string;
-  value: number | "";
-  onChange: (id: number | "") => void;
-  onSeleccionar?: (opcion: OpcionSelector) => void;
+  value: NoInfer<TId> | "";
+  onChange: (id: NoInfer<TId> | "") => void;
+  onSeleccionar?: (opcion: OpcionSelector<NoInfer<TId>>) => void;
   seleccionActual?: string;
   vacio?: string;
   required?: boolean;
-  excluirId?: number;
+  excluirId?: NoInfer<TId>;
   buscable?: boolean;
 }) {
-  const [datos, setDatos] = useState<RespuestaPaginada<OpcionSelector> | null>(
-    null,
-  );
+  const [datos, setDatos] = useState<RespuestaPaginada<
+    OpcionSelector<TId>
+  > | null>(null);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(7);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [intento, setIntento] = useState(0);
-  const [elegida, setElegida] = useState<OpcionSelector | null>(null);
+  const [elegida, setElegida] = useState<OpcionSelector<TId> | null>(null);
   const [buscar, setBuscar] = useState("");
   const [abierto, setAbierto] = useState(false);
   const [editando, setEditando] = useState(false);
@@ -66,7 +66,7 @@ export function SelectorPaginado({
     const controller = new AbortController();
     const timer = setTimeout(
       () => {
-        apiFetch<RespuestaPaginada<OpcionSelector>>(
+        apiFetch<RespuestaPaginada<OpcionSelector<TId>>>(
           `${url}${url.includes("?") ? "&" : "?"}page=${page}&limit=${limit}${buscable ? `&buscar=${encodeURIComponent(buscar.trim())}` : ""}`,
           { signal: controller.signal },
         )
@@ -120,7 +120,7 @@ export function SelectorPaginado({
     setActiva(-1);
     setAbierto(true);
   }
-  function elegir(item: OpcionSelector) {
+  function elegir(item: OpcionSelector<TId>) {
     setElegida(item);
     onChange(item.id);
     onSeleccionar?.(item);
@@ -211,9 +211,13 @@ export function SelectorPaginado({
             required={required}
             disabled={cargando || !!error}
             onChange={(evento) => {
+              const opcion =
+                opciones.find(
+                  (item) => String(item.id) === evento.target.value,
+                ) ?? null;
               const id =
-                evento.target.value === "" ? "" : Number(evento.target.value);
-              const opcion = opciones.find((item) => item.id === id) ?? null;
+                opcion?.id ??
+                (evento.target.value === String(value) ? value : "");
               setElegida(opcion);
               onChange(id);
               if (opcion) onSeleccionar?.(opcion);

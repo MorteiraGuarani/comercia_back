@@ -178,7 +178,7 @@ export function RolesPanel() {
             descripcion: form.descripcion.trim(),
             rolId: form.rolId === "" ? null : form.rolId,
             permisosTareas: form.permisosTareas,
-            puedeVerSeguimiento: form.puedeVerSeguimiento,
+            puedeVerSeguimiento: false,
             ...(form.modoEquipo === "nuevo"
               ? {
                   nuevoEquipoNombre: form.nuevoEquipoNombre.trim(),
@@ -583,19 +583,6 @@ export function RolesPanel() {
                 </label>
               ),
             )}
-            <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg px-2 hover:bg-surface-soft focus-within:ring-2 focus-within:ring-focus">
-              <input
-                type="checkbox"
-                checked={form.puedeVerSeguimiento}
-                onChange={(e) =>
-                  setForm((actual) => ({
-                    ...actual,
-                    puedeVerSeguimiento: e.target.checked,
-                  }))
-                }
-              />
-              Ver seguimiento en vivo de sus colaboradores
-            </label>
           </fieldset>
           {error ? <p className={errorBox}>{error}</p> : null}
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
