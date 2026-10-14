@@ -11,7 +11,8 @@ export function EstadoTelefono({
 }: {
   variante?: "panel" | "boton";
 }) {
-  const { estado, actualizando, comprobadoEn, comprobar } = useEstadoTelefonoRepositor();
+  const { estado, actualizando, comprobadoEn, comprobar } =
+    useEstadoTelefonoRepositor();
   const [detalles, setDetalles] = useState(false);
   const detalleId = useId();
   const etiqueta = estado
@@ -40,24 +41,37 @@ export function EstadoTelefono({
   );
   const informacion = (
     <>
-      <p>{actualizando ? "Consultando el seguimiento y la ubicación del teléfono…" : estado?.mensaje ?? "Consultando el estado del teléfono…"}</p>
+      <p>
+        {actualizando
+          ? "Consultando el seguimiento y la ubicación del teléfono…"
+          : (estado?.mensaje ?? "Consultando el estado del teléfono…")}
+      </p>
       {estado?.capturadaEn ? (
         <p>
-          Última ubicación:{" "}
-          {formatoFechaHora(estado.capturadaEn)}
+          Última ubicación: {formatoFechaHora(estado.capturadaEn)}
           {estado.precisionMetros != null
             ? ` · precisión ±${Math.round(estado.precisionMetros)} m`
             : ""}
         </p>
       ) : null}
       {!actualizando && comprobadoEn ? (
-        <p className="font-mono text-xs">Última comprobación: {formatoFechaHora(comprobadoEn)}</p>
+        <p className="font-mono text-xs">
+          Última comprobación: {formatoFechaHora(comprobadoEn)}
+        </p>
       ) : null}
-      <p>Este botón consulta el teléfono. El seguimiento laboral se inicia desde la app UCheck.</p>
+      <p>
+        Este botón consulta el teléfono. El seguimiento laboral se inicia desde
+        la app UCheck.
+      </p>
       {estado?.estado === "LISTO" ? (
         <p>Mantené el seguimiento de UCheck activo durante la visita.</p>
-      ) : estado && estado.estado !== "SIN_CONEXION" && estado.estado !== "NO_HABILITADO" ? (
-        <p>Después de activar o actualizar el seguimiento en tu teléfono, volvé a comprobar.</p>
+      ) : estado &&
+        estado.estado !== "SIN_CONEXION" &&
+        estado.estado !== "NO_HABILITADO" ? (
+        <p>
+          Después de activar o actualizar el seguimiento en tu teléfono, volvé a
+          comprobar.
+        </p>
       ) : null}
     </>
   );
@@ -83,15 +97,20 @@ export function EstadoTelefono({
           className="flex h-11 min-h-11 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-line bg-surface-soft px-2 text-xs font-semibold text-foreground transition-colors hover:bg-surface-raised active:bg-surface-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50 sm:px-3 sm:text-sm dark:border-line dark:bg-surface-soft dark:text-foreground dark:hover:bg-surface-raised dark:active:bg-surface-raised"
         >
           {indicador}
-          UCheck seguimiento
+          UCheck
         </button>
-        <span className="sr-only" role="status">{etiqueta}</span>
+        <span className="sr-only" role="status">
+          {etiqueta}
+        </span>
         <Modal
           titulo="Seguimiento de UCheck"
           abierto={detalles}
           onCerrar={() => setDetalles(false)}
         >
-          <p aria-live="polite" className="flex items-center gap-2 text-sm font-semibold text-foreground dark:text-foreground">
+          <p
+            aria-live="polite"
+            className="flex items-center gap-2 text-sm font-semibold text-foreground dark:text-foreground"
+          >
             {indicador}
             {actualizando ? "Comprobando UCheck…" : etiqueta}
           </p>
