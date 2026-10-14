@@ -36,3 +36,8 @@ export interface FormPrecio {
   listaPrecio: string;
   precio: string;
 }
+export type VistaCatalogo = "productos" | "precios";
+export interface FiltroProductoCatalogo {
+  cardCode: string;
+  nombre: string;
+}

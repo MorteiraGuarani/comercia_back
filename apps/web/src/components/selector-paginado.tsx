@@ -20,6 +20,7 @@ export function SelectorPaginado<TId extends number | string = number>({
   required = false,
   excluirId,
   buscable = false,
+  placeholder = "Seleccioná o escribí para buscar",
 }: {
   url: string;
   etiqueta: string;
@@ -31,6 +32,7 @@ export function SelectorPaginado<TId extends number | string = number>({
   required?: boolean;
   excluirId?: NoInfer<TId>;
   buscable?: boolean;
+  placeholder?: string;
 }) {
   const [datos, setDatos] = useState<RespuestaPaginada<
     OpcionSelector<TId>
@@ -162,7 +164,7 @@ export function SelectorPaginado<TId extends number | string = number>({
             className={inputBase}
             value={abierto && editando ? buscar : nombreSeleccionado}
             maxLength={120}
-            placeholder="Seleccioná o escribí para buscar"
+            placeholder={placeholder}
             onFocus={abrir}
             onClick={abrir}
             onKeyDown={(e) => {
