@@ -58,7 +58,7 @@ describe('Señales de marcación del equipo', () => {
       where: {
         usuarioId: 2,
         usuario: { empresaId: 4 },
-        local: { cliente: { empresaId: 4 } },
+        local: { empresaId: 4 },
       },
       select: {
         eventosUcheck: { take: 2, where: { empresaId: 4, usuarioId: 2 } },

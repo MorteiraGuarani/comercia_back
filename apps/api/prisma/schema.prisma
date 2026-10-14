@@ -22,6 +22,7 @@ model Empresa {
   roles               Rol[]
   equiposCampo        EquipoCampo[]
   clientesCampo       ClienteCampo[]
+  localesCampo        LocalCampo[]
   tareasCampo         TareaCampo[]
   eventosUcheck       IntegracionUcheckEvento[]
   modulos             EmpresaModulo[]
@@ -284,16 +285,20 @@ model ClienteCampo {
   telefono  String       @default("") @db.VarChar(40)
   logoUrl   String?      @map("logo_url") @db.VarChar(500)
   activo    Boolean      @default(true)
+  eliminadoEn DateTime?  @map("eliminado_en")
   locales   LocalCampo[]
 
+  @@unique([id, empresaId])
   @@index([empresaId, activo, nombre])
   @@map("campo_clientes")
 }
 
 model LocalCampo {
   id            Int                       @id @default(autoincrement())
-  clienteId     Int                       @map("cliente_id")
-  cliente       ClienteCampo              @relation(fields: [clienteId], references: [id])
+  empresaId     Int                       @map("empresa_id")
+  empresa       Empresa                   @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  clienteId     Int?                      @map("cliente_id")
+  cliente       ClienteCampo?             @relation(fields: [clienteId, empresaId], references: [id, empresaId], onDelete: NoAction, onUpdate: NoAction)
   nombre        String                    @db.VarChar(120)
   direccion     String                    @default("") @db.VarChar(250)
   contacto      String                    @default("") @db.VarChar(120)
@@ -304,6 +309,7 @@ model LocalCampo {
   zonaHoraria   String                    @default("America/Asuncion") @map("zona_horaria") @db.VarChar(80)
   notas         String                    @default("") @db.VarChar(1000)
   activo        Boolean                   @default(true)
+  eliminadoEn   DateTime?                 @map("eliminado_en")
   usuariosPrincipal Usuario[] @relation("LocalPrincipalCampo")
   horarios      HorarioCampo[]
   asignaciones  AsignacionCampo[]
@@ -313,6 +319,7 @@ model LocalCampo {
   eventosUcheck IntegracionUcheckEvento[]
 
   @@index([clienteId, activo])
+  @@index([empresaId, eliminadoEn, nombre])
   @@map("campo_locales")
 }
 

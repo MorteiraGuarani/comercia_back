@@ -16,7 +16,21 @@ function preparar() {
       update: jest.fn(),
       count: jest.fn().mockResolvedValue(0),
     },
-    usuario: { update: jest.fn(), updateMany: jest.fn() },
+    usuario: {
+      update: jest.fn(),
+      updateMany: jest.fn(),
+      // Líder 2 con el titular 4 a cargo.
+      findUnique: jest.fn().mockResolvedValue({
+        id: 2,
+        empresaId: 10,
+        isActive: true,
+        rol: { equipoCampoId: 1 },
+      }),
+      findMany: jest.fn(
+        ({ where }: { where: { superiorId: { in: number[] } } }) =>
+          Promise.resolve(where.superiorId.in.includes(2) ? [{ id: 4 }] : []),
+      ),
+    },
   };
   const prisma = {
     ...tx,
@@ -50,12 +64,24 @@ it('solo permite elegir el local del titular del equipo y la empresa del actor',
         localId: 3,
         usuarioId: 4,
         usuario: {
+          id: { in: [4] },
           empresaId: 10,
-          superiorId: 2,
           isActive: true,
           rol: { equipoCampoId: 1 },
         },
-        local: { activo: true, cliente: { activo: true, empresaId: 10 } },
+        local: {
+          activo: true,
+          empresaId: 10,
+          eliminadoEn: null,
+          AND: [
+            {
+              OR: [
+                { clienteId: null },
+                { cliente: { activo: true, eliminadoEn: null } },
+              ],
+            },
+          ],
+        },
       }) as unknown,
     }),
   );

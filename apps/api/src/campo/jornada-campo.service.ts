@@ -1,3 +1,4 @@
+import { localesOperativos } from './utils/locales-operativos';
 import {
   BadRequestException,
   ConflictException,
@@ -28,6 +29,7 @@ import {
   relojCampo,
 } from './utils/calendario';
 import { condicionAgenda } from './utils/agenda-sql';
+import { obtenerColaboradoresGestionados } from './utils/autorizacion';
 import { comprobarMarcaEnLocal } from './utils/marcacion';
 import {
   conEstadoVisita,
@@ -69,7 +71,7 @@ export class JornadaCampoService {
         activo: true,
         fechaDesde: { lte: fecha },
         OR: [{ fechaHasta: null }, { fechaHasta: { gte: fecha } }],
-        local: { activo: true, cliente: { empresaId, activo: true } },
+        local: { activo: true, ...localesOperativos(empresaId) },
       },
       select: {
         id: true,
@@ -137,7 +139,7 @@ export class JornadaCampoService {
       where: { id: u.id, empresaId: u.empresaId },
       select: { localPrincipalId: true },
     });
-    const base = Prisma.sql`FROM campo_asignaciones a JOIN campo_locales l ON l.id = a.local_id JOIN campo_clientes c ON c.id = l.cliente_id WHERE ${condicion}`;
+    const base = Prisma.sql`FROM campo_asignaciones a JOIN campo_locales l ON l.id = a.local_id LEFT JOIN campo_clientes c ON c.id = l.cliente_id WHERE ${condicion}`;
     const [conteo, ids] = await Promise.all([
       this.prisma.$queryRaw<TotalAgenda[]>(
         Prisma.sql`SELECT COUNT(DISTINCT l.id) AS total ${base}`,
@@ -338,7 +340,7 @@ export class JornadaCampoService {
         usuarioId: u.id,
         fecha: fechaCampo(relojCampo().fecha),
         salida: null,
-        local: { cliente: { empresaId: u.empresaId } },
+        local: { empresaId: u.empresaId },
       },
       select: VISITA_CAMPO_SELECT,
     });
@@ -354,7 +356,7 @@ export class JornadaCampoService {
         usuarioId: u.id,
         fecha,
         salida: null,
-        local: { cliente: { empresaId: u.empresaId } },
+        local: { empresaId: u.empresaId },
       },
       select: {
         local: { select: { latitud: true, longitud: true, radioMetros: true } },
@@ -368,7 +370,7 @@ export class JornadaCampoService {
         usuarioId: u.id,
         fecha,
         salida: null,
-        local: { cliente: { empresaId: u.empresaId } },
+        local: { empresaId: u.empresaId },
       },
       data: {
         salida: ahora,
@@ -401,7 +403,7 @@ export class JornadaCampoService {
         OR: [{ fechaHasta: null }, { fechaHasta: { gte: fechaDesde } }],
         local: {
           activo: true,
-          cliente: { empresaId: u.empresaId, activo: true },
+          ...localesOperativos(u.empresaId),
         },
       },
       select: {
@@ -581,7 +583,7 @@ export class JornadaCampoService {
         where: {
           id: visitaId,
           usuarioId: u.id,
-          local: { cliente: { empresaId: u.empresaId } },
+          local: { empresaId: u.empresaId },
         },
         select: { id: true, localId: true, fecha: true, salida: true },
       });
@@ -696,11 +698,18 @@ export class JornadaCampoService {
     const where: Prisma.VisitaCampoWhereInput = {
       fecha: { gte: fechaCampo(desde), lte: fechaCampo(hasta) },
       localId: query.localId,
-      local: { cliente: { empresaId: u.empresaId } },
+      local: { empresaId: u.empresaId },
       ...(equipo
         ? {
-            usuario: { empresaId: u.empresaId, superiorId: u.id },
-            usuarioId: query.usuarioId,
+            usuario: { empresaId: u.empresaId },
+            AND: [
+              {
+                usuarioId: {
+                  in: await obtenerColaboradoresGestionados(this.prisma, u),
+                },
+              },
+              { usuarioId: query.usuarioId },
+            ],
           }
         : { usuarioId: u.id }),
     };

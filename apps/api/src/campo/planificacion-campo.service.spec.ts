@@ -43,18 +43,35 @@ describe('PlanificacionCampoService', () => {
     );
   });
 
-  it('busca solo dentro de los colaboradores activos asignados al lider', async () => {
+  it('incluye a los impulsadores de sus TeamLeaders y busca solo en ese equipo', async () => {
+    // Supervisor 3 → TeamLeader 5 → impulsador 8.
+    const jerarquia: Record<number, number[]> = { 3: [5], 5: [8] };
     const prisma = {
       usuario: {
         count: jest.fn().mockResolvedValue(1),
-        findMany: jest.fn().mockResolvedValue([
-          {
-            id: 8,
-            nombre: 'Maria',
-            apellido: 'Lopez',
-            rol: { descripcion: 'REPOSITOR' },
-          },
-        ]),
+        findUnique: jest.fn().mockResolvedValue({
+          id: 3,
+          empresaId: 10,
+          isActive: true,
+          rol: { equipoCampoId: 1 },
+        }),
+        findMany: jest.fn(
+          ({ where }: { where: { superiorId?: { in: number[] } } }) =>
+            Promise.resolve(
+              where.superiorId
+                ? where.superiorId.in
+                    .flatMap((id) => jerarquia[id] ?? [])
+                    .map((id) => ({ id }))
+                : [
+                    {
+                      id: 8,
+                      nombre: 'Maria',
+                      apellido: 'Lopez',
+                      rol: { descripcion: 'Impulsador' },
+                    },
+                  ],
+            ),
+        ),
       },
     };
     const acceso = {
@@ -81,9 +98,9 @@ describe('PlanificacionCampoService', () => {
     });
 
     const where = {
+      id: { in: [5, 8] },
       rol: { equipoCampoId: 1 },
       empresaId: 10,
-      superiorId: 3,
       isActive: true,
       esSuperadmin: false,
       OR: [

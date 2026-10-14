@@ -1,3 +1,4 @@
+import { localesOperativos } from './utils/locales-operativos';
 import {
   BadRequestException,
   ForbiddenException,
@@ -343,7 +344,7 @@ export class RepositorCampoService {
         ],
         local: {
           activo: true,
-          cliente: { empresaId: u.empresaId, activo: true },
+          ...localesOperativos(u.empresaId),
         },
       },
       select: { id: true },
@@ -390,7 +391,7 @@ export class RepositorCampoService {
         fecha: fechaCampo(relojCampo().fecha),
         salida: null,
         origen: 'UCHECK',
-        local: { cliente: { empresaId: u.empresaId } },
+        local: { empresaId: u.empresaId },
       },
       select: {
         id: true,

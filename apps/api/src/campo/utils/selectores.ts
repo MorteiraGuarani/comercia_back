@@ -6,7 +6,7 @@ export const CLIENTE_CAMPO_SELECT = {
   telefono: true,
   logoUrl: true,
   activo: true,
-  _count: { select: { locales: true } },
+  _count: { select: { locales: { where: { eliminadoEn: null } } } },
 } as const;
 export const LOCAL_CAMPO_SELECT = {
   id: true,

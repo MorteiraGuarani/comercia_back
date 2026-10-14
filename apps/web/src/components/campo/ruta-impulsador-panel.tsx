@@ -96,7 +96,7 @@ export function RutaImpulsadorPanel() {
       ? lista.items.filter(
           (a) =>
             a.local.nombre.toLowerCase().includes(q) ||
-            a.local.cliente.nombre.toLowerCase().includes(q) ||
+            (a.local.cliente?.nombre ?? "Sin cliente").toLowerCase().includes(q) ||
             a.local.direccion.toLowerCase().includes(q),
         )
       : lista.items;
@@ -411,7 +411,7 @@ export function RutaImpulsadorPanel() {
                             {a.local.nombre}
                           </p>
                           <span className="ft-body text-[11px] text-muted truncate">
-                            · {a.local.cliente.nombre}
+                            · {a.local.cliente?.nombre ?? "Sin cliente"}
                           </span>
                         </div>
                         <p className="ft-body text-xs text-muted truncate mt-0.5">

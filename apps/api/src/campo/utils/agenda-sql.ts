@@ -64,7 +64,8 @@ export function condicionAgenda(
   if (fecha === fechaFin) {
     const dia = Prisma.sql`${fecha}::date`;
     return Prisma.sql`
-      c.empresa_id = ${empresaId} AND c.activo AND l.activo AND a.activo
+      l.empresa_id = ${empresaId} AND l.eliminado_en IS NULL AND l.activo AND a.activo
+      AND (l.cliente_id IS NULL OR (c.activo AND c.eliminado_en IS NULL))
       AND ${tipoAsignacion}
       AND a.fecha_desde <= ${dia} AND (a.fecha_hasta IS NULL OR a.fecha_hasta >= ${dia})
       AND (
@@ -80,7 +81,8 @@ export function condicionAgenda(
 
   const dia = Prisma.sql`(d.dia::date)`;
   return Prisma.sql`
-    c.empresa_id = ${empresaId} AND c.activo AND l.activo AND a.activo
+    l.empresa_id = ${empresaId} AND l.eliminado_en IS NULL AND l.activo AND a.activo
+    AND (l.cliente_id IS NULL OR (c.activo AND c.eliminado_en IS NULL))
     AND ${tipoAsignacion}
     AND a.fecha_desde <= ${fechaFin}::date AND (a.fecha_hasta IS NULL OR a.fecha_hasta >= ${fecha}::date)
     AND (

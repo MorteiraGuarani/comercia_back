@@ -19,7 +19,7 @@ try {
       superior_id INT, is_active BOOLEAN DEFAULT true);
     CREATE TABLE campo_clientes (id INT PRIMARY KEY, empresa_id INT, activo BOOLEAN DEFAULT true);
     CREATE TABLE campo_locales (id INT PRIMARY KEY, cliente_id INT REFERENCES campo_clientes,
-      activo BOOLEAN DEFAULT true);
+      activo BOOLEAN DEFAULT true, nombre TEXT NOT NULL DEFAULT '');
     CREATE TABLE campo_asignaciones (id INT PRIMARY KEY, local_id INT REFERENCES campo_locales,
       usuario_id INT REFERENCES usuarios, activo BOOLEAN DEFAULT true,
       fecha_desde DATE DEFAULT '2026-01-01', fecha_hasta DATE);
@@ -208,6 +208,8 @@ try {
         [tipo],
       )
     ).rows[0].id;
+  await db.exec(await readFile(new URL('../prisma/migrations/20261014193000_borrado_catalogo_locales_sin_cliente/migration.sql', import.meta.url), 'utf8'));
+  assert.deepEqual(await rows('SELECT DISTINCT empresa_id FROM campo_locales ORDER BY empresa_id'), [{ empresa_id: 10 }, { empresa_id: 20 }]);
   const agenda = async (usuarioId, destinatario, hasta = '2026-10-05') => {
     const sql = condicionAgenda(
       10,
@@ -220,7 +222,7 @@ try {
     );
     const result = await db.query(
       `SELECT DISTINCT l.id FROM campo_asignaciones a
-      JOIN campo_locales l ON l.id=a.local_id JOIN campo_clientes c ON c.id=l.cliente_id
+      JOIN campo_locales l ON l.id=a.local_id LEFT JOIN campo_clientes c ON c.id=l.cliente_id
       WHERE ${sql.text} ORDER BY l.id`,
       sql.values,
     );
@@ -230,6 +232,18 @@ try {
   assert.deepEqual(await agenda(2, 'REPOSITOR'), [3]);
   assert.deepEqual(await agenda(2, 'REPOSITOR', '2026-10-06'), [1, 3]);
   assert.deepEqual(await agenda(3, 'REPOSITOR', '2026-10-06'), []);
+  // Conservar un local no cambia su empresa ni su agenda. La FK compuesta
+  // impide asociarlo a un cliente ajeno y admite un solo cliente a la vez.
+  await db.exec('UPDATE campo_locales SET cliente_id=NULL WHERE id=1');
+  assert.deepEqual(await agenda(1, 'IMPULSADOR'), [1, 4]);
+  assert.deepEqual(await agenda(2, 'REPOSITOR', '2026-10-06'), [1, 3]);
+  await assert.rejects(db.exec('UPDATE campo_locales SET cliente_id=2 WHERE id=1'), /campo_locales_cliente_id_empresa_id_fkey/);
+  await db.exec('UPDATE campo_locales SET cliente_id=1 WHERE id=1');
+  await db.exec('UPDATE campo_locales SET eliminado_en=now() WHERE id=1');
+  assert.deepEqual(await agenda(1, 'IMPULSADOR'), [4]);
+  assert.equal((await rows('SELECT COUNT(*)::int AS n FROM campo_visitas WHERE local_id=1'))[0].n, 3);
+  assert.equal((await rows('SELECT COUNT(*)::int AS n FROM campo_tarea_fotos'))[0].n, 2);
+  await db.exec('UPDATE campo_locales SET eliminado_en=NULL WHERE id=1');
   // Dos roles nuevos, mismo perfil de impulsador y mismo local, distintos equipos.
   const equipoA = (
     await db.query(

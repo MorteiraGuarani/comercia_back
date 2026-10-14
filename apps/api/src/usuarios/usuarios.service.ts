@@ -243,12 +243,8 @@ export class UsuariosService {
     const actual = await this.contexto(usuarioId);
     const empresaId = this.empresaObjetivo(actual, query.empresaId);
     const where = {
-      cliente: {
-        empresaId,
-        ...(query.buscar
-          ? { nombre: { contains: query.buscar, mode: 'insensitive' as const } }
-          : {}),
-      },
+      empresaId,
+      eliminadoEn: null,
       ...(query.buscar
         ? { nombre: { contains: query.buscar, mode: 'insensitive' as const } }
         : {}),
@@ -268,7 +264,7 @@ export class UsuariosService {
     return respuestaPaginada(
       locales.map((local) => ({
         id: local.id,
-        nombre: `${local.nombre} · ${local.cliente.nombre}`,
+        nombre: `${local.nombre} · ${local.cliente?.nombre ?? 'Sin cliente'}`,
       })),
       total,
       page,
@@ -321,7 +317,7 @@ export class UsuariosService {
         id: asignacion.id,
         localId: asignacion.localId,
         nombreLocal: asignacion.local.nombre,
-        nombreCliente: asignacion.local.cliente.nombre,
+        nombreCliente: asignacion.local.cliente?.nombre ?? 'Sin cliente',
         fechaDesde: asignacion.fechaDesde.toISOString(),
         fechaHasta: asignacion.fechaHasta?.toISOString() ?? null,
       })),
@@ -338,7 +334,11 @@ export class UsuariosService {
   ): Promise<UsuarioLocalAsignacionDto> {
     const { objetivo } = await this.objetivoAsignable(usuarioId, objetivoId);
     const local = await this.prisma.localCampo.findFirst({
-      where: { id: dto.localId, cliente: { empresaId: objetivo.empresaId } },
+      where: {
+        id: dto.localId,
+        empresaId: objetivo.empresaId,
+        eliminadoEn: null,
+      },
       select: { id: true },
     });
     if (!local) throw new NotFoundException('El local no existe');
@@ -386,7 +386,7 @@ export class UsuariosService {
       id: asignacion.id,
       localId: asignacion.localId,
       nombreLocal: asignacion.local.nombre,
-      nombreCliente: asignacion.local.cliente.nombre,
+      nombreCliente: asignacion.local.cliente?.nombre ?? 'Sin cliente',
       fechaDesde: asignacion.fechaDesde.toISOString(),
       fechaHasta: asignacion.fechaHasta?.toISOString() ?? null,
     };

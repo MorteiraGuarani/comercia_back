@@ -3,10 +3,12 @@
 import React, { useMemo, useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { apiFetch } from "@/lib/api";
-import { volverAlInicioDelListado } from "@/utils/scroll-listado";
+import { Paginacion } from "@/components/paginacion";
 import { useListaCampo, useOperacionCampo } from "@/hooks/use-lista-campo";
 import { Modal } from "@/components/modal";
 import { BotonEditar } from "@/components/boton-editar";
+import { BotonEliminarCampo } from "./boton-eliminar-campo";
+import { ConfirmarEliminacionCampo } from "./confirmar-eliminacion-campo";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { TOKENS } from "./tokens";
 import { StatusStamp } from "./ui/status-stamp";
@@ -21,8 +23,6 @@ import {
   IconoBuscar,
   IconoCruz,
   IconoMas,
-  IconoFlechaIzq,
-  IconoFlechaDer,
 } from "./ui/iconos-campo";
 import type { ClienteCampo, DatosLocalCampo, LocalCampo } from "@/types/campo";
 
@@ -39,6 +39,8 @@ export function LocalesPanel() {
   const [mostrarMapaCobertura, setMostrarMapaCobertura] = useState(false);
   const [busqueda, setBusqueda] = useState("");
   const [clienteFiltro, setClienteFiltro] = useState<number | "">("");
+  const [clienteSeleccionadoFiltro, setClienteSeleccionadoFiltro] = useState<ClienteCampo | null>(null);
+  const [sinCliente, setSinCliente] = useState(false);
   const [filtroEstado, setFiltroEstado] = useState<"todos" | "activos" | "inactivos">("todos");
 
   const [clientes, setClientes] = useState<ClienteCampo[]>([]);
@@ -65,24 +67,38 @@ export function LocalesPanel() {
     const params = new URLSearchParams();
     if (busqueda.trim()) params.set("buscar", busqueda.trim());
     if (clienteFiltro) params.set("clienteId", String(clienteFiltro));
+    if (sinCliente) params.set("sinCliente", "true");
+    params.set("estado", filtroEstado);
     const qs = params.toString();
     return `/campo/locales${qs ? `?${qs}` : ""}`;
-  }, [busqueda, clienteFiltro]);
+  }, [busqueda, clienteFiltro, sinCliente, filtroEstado]);
 
-  const lista = useListaCampo<LocalCampo>(endpoint, 0, 25);
+  const lista = useListaCampo<LocalCampo>(endpoint, 0, 7);
   const op = useOperacionCampo();
 
   const [form, setForm] = useState<LocalCampo | null>(null);
   const [plan, setPlan] = useState<LocalCampo | null>(null);
+  const [eliminando, setEliminando] = useState<LocalCampo | null>(null);
+  const [revisionMapa, setRevisionMapa] = useState(0);
 
-  // Filtrado local por estado activo / inactivo
-  const itemsFiltrados = useMemo(() => {
-    return lista.items.filter((l) => {
-      if (filtroEstado === "activos") return l.activo;
-      if (filtroEstado === "inactivos") return !l.activo;
-      return true;
-    });
-  }, [lista.items, filtroEstado]);
+  function abrirEliminar(local: LocalCampo) {
+    op.limpiarError();
+    setEliminando(local);
+  }
+
+  async function eliminar() {
+    if (!eliminando) return;
+    const ok = await op.ejecutar("Eliminando local", () =>
+      apiFetch(`/campo/locales/${eliminando.id}`, { method: "DELETE" }),
+    );
+    if (ok) {
+      setEliminando(null);
+      setRevisionMapa((valor) => valor + 1);
+      lista.refrescar();
+    }
+  }
+
+  const itemsFiltrados = lista.items;
 
   const totalActivos = useMemo(() => lista.items.filter((l) => l.activo).length, [lista.items]);
   const totalInactivos = useMemo(() => lista.items.filter((l) => !l.activo).length, [lista.items]);
@@ -95,8 +111,8 @@ export function LocalesPanel() {
 
     setForm({
       id: 0,
-      clienteId: clienteDefault?.id ?? 0,
-      cliente: { id: clienteDefault?.id ?? 0, nombre: clienteDefault?.nombre ?? "" },
+      clienteId: clienteDefault?.id ?? null,
+      cliente: clienteDefault ? { id: clienteDefault.id, nombre: clienteDefault.nombre } : null,
       nombre: "",
       direccion: "",
       contacto: "",
@@ -111,8 +127,6 @@ export function LocalesPanel() {
   };
 
   const totalRegistros = lista.datos?.total ?? lista.items.length;
-  const desde = totalRegistros > 0 ? (lista.page - 1) * lista.limit + 1 : 0;
-  const hasta = Math.min(lista.page * lista.limit, totalRegistros);
 
   return (
     <div
@@ -142,7 +156,7 @@ export function LocalesPanel() {
       />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
-        {mostrarMapaCobertura && <MapaClientes clientes={clientes} clienteSeleccionadoId={typeof clienteFiltro === "number" ? clienteFiltro : null} />}
+        {mostrarMapaCobertura && <MapaClientes key={revisionMapa} clientes={clientes} clienteSeleccionadoId={typeof clienteFiltro === "number" ? clienteFiltro : null} />}
         {/* KPI: compacto y cerrado por defecto en móvil */}
         <details className="rounded-xl border border-line bg-surface-raised sm:hidden">
           <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-foreground [&::-webkit-details-marker]:hidden">
@@ -210,22 +224,27 @@ export function LocalesPanel() {
 
           {/* Filtro por Cliente */}
           <div className="min-w-0 md:w-64">
-            <select
-              value={clienteFiltro}
-              onChange={(e) => {
-                setClienteFiltro(e.target.value ? Number(e.target.value) : "");
+            <SelectorClienteCombobox
+              valorId={clienteFiltro || null}
+              clienteSeleccionado={clienteSeleccionadoFiltro ?? clientes.find((cliente) => cliente.id === clienteFiltro)}
+              placeholder="Todos los clientes"
+              alSeleccionar={(cliente) => {
+                setClienteFiltro(cliente.id);
+                setClienteSeleccionadoFiltro(cliente);
+                setSinCliente(false);
                 lista.setPage(1);
               }}
-              className="w-full py-2 px-3 text-xs sm:text-sm font-medium rounded-lg border bg-white text-[#1E2320] focus:outline-none focus:ring-2 focus:ring-[#1E2320] cursor-pointer"
-              style={{ borderColor: TOKENS.line }}
-            >
-              <option value="">Todos los Clientes</option>
-              {clientes.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nombre}
-                </option>
-              ))}
-            </select>
+              alLimpiar={() => { setClienteFiltro(""); setClienteSeleccionadoFiltro(null); lista.setPage(1); }}
+            />
+            <label className="mt-1 flex min-h-11 cursor-pointer items-center gap-2 rounded-lg px-1 text-xs text-foreground hover:bg-surface-soft focus-within:ring-2 focus-within:ring-brand-600 dark:text-foreground dark:hover:bg-surface-soft">
+              <input type="checkbox" checked={sinCliente} onChange={(evento) => {
+                setSinCliente(evento.target.checked);
+                setClienteFiltro("");
+                setClienteSeleccionadoFiltro(null);
+                lista.setPage(1);
+              }} className="h-4 w-4 accent-[var(--campo-carne)]" />
+              Solo locales sin cliente
+            </label>
           </div>
 
           {/* Segmented Filter */}
@@ -239,7 +258,7 @@ export function LocalesPanel() {
                 <button
                   key={filtro}
                   type="button"
-                  onClick={() => setFiltroEstado(filtro)}
+                  onClick={() => { setFiltroEstado(filtro); lista.setPage(1); }}
                   className={`px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
                     activo ? "bg-[#1E2320] text-white shadow-xs" : "text-[#726C60] hover:text-[#1E2320]"
                   }`}
@@ -292,14 +311,16 @@ export function LocalesPanel() {
                   <div className="flex min-w-0 items-start justify-between gap-2">
                     <div className="min-w-0">
                       <h3 className="break-words font-semibold text-foreground">{local.nombre}</h3>
+                      <p className="mt-1 break-words text-xs text-muted dark:text-muted">{local.cliente?.nombre ?? "Sin cliente"}</p>
                       <p className="mt-1 break-words text-xs text-muted">{local.direccion || "Sin dirección"}</p>
                     </div>
                     <StatusStamp tone={local.activo ? "fresco" : "sub"} size="sm">{local.activo ? "ACTIVO" : "INACTIVO"}</StatusStamp>
                   </div>
                   <p className="mt-2 break-words text-xs text-foreground">Asignado: {local.asignaciones?.length ? local.asignaciones.map((asignacion) => `${asignacion.usuario.rol?.descripcion ?? "Impulsador"} ${asignacion.usuario.nombre} ${asignacion.usuario.apellido}`).join(", ") : "Sin asignar"}</p>
-                  <div className="mt-3 grid grid-cols-2 gap-2">
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
                     <BotonEditar onClick={() => setForm(local)} etiqueta={`Editar local ${local.nombre}`} modo="texto" />
-                    <button type="button" onClick={() => setPlan(local)} className="min-h-11 cursor-pointer rounded-lg border border-line text-xs font-semibold text-foreground hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600">Ruta</button>
+                    <button type="button" onClick={() => setPlan(local)} className="min-h-11 min-w-11 cursor-pointer rounded-lg border border-line px-3 text-xs font-semibold text-foreground hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600">Ruta</button>
+                    <BotonEliminarCampo onClick={() => abrirEliminar(local)} etiqueta={`Eliminar local ${local.nombre}`} modo="texto" disabled={!!op.mensaje} />
                   </div>
                 </li>
               ))}
@@ -328,10 +349,12 @@ export function LocalesPanel() {
                             <IconoPlanificacion className="h-3.5 w-3.5" />
                             Ruta
                           </button>
+                          <BotonEliminarCampo onClick={() => abrirEliminar(local)} etiqueta={`Eliminar local ${local.nombre}`} disabled={!!op.mensaje} />
                         </div>
                       </td>
                       <td className="min-w-[180px] px-3.5 py-2.5">
                         <p className="font-semibold text-foreground">{local.nombre}</p>
+                        <p className="mt-1 break-words text-[11px] text-muted dark:text-muted">{local.cliente?.nombre ?? "Sin cliente"}</p>
                         <p className="mt-1 break-words text-[11px] text-muted">{local.direccion || "Sin dirección"}</p>
                       </td>
                       <td className="max-w-[220px] break-words px-3.5 py-2.5 text-foreground">
@@ -352,73 +375,7 @@ export function LocalesPanel() {
             </>
           )}
 
-          {/* Footer con Paginación Compacta */}
-          {totalRegistros > 0 && (
-            <div
-              className="px-4 py-3 border-t bg-zinc-50/60 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs"
-              style={{ borderColor: TOKENS.line }}
-            >
-              <div className="flex items-center gap-3 text-zinc-500">
-                <span>
-                  Mostrando <strong className="text-zinc-800">{desde}</strong> -{" "}
-                  <strong className="text-zinc-800">{hasta}</strong> de{" "}
-                  <strong className="text-zinc-800">{totalRegistros}</strong> locales
-                </span>
-
-                <div className="flex items-center gap-1.5 ml-2">
-                  <span className="text-[11px] uppercase tracking-wider">Filas:</span>
-                  <select
-                    value={lista.limit}
-                    onChange={(e) => {
-                      volverAlInicioDelListado(e.currentTarget);
-                      lista.setLimit(Number(e.target.value));
-                    }}
-                    className="py-1 px-2 rounded-md border bg-white text-zinc-800 font-semibold text-xs cursor-pointer"
-                    style={{ borderColor: TOKENS.line }}
-                  >
-                    <option value={10}>10</option>
-                    <option value={25}>25</option>
-                    <option value={50}>50</option>
-                    <option value={100}>100</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  disabled={lista.page <= 1}
-                  onClick={(e) => {
-                    volverAlInicioDelListado(e.currentTarget);
-                    lista.setPage(lista.page - 1);
-                  }}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border text-xs font-bold uppercase tracking-wider bg-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-zinc-50 cursor-pointer shadow-xs transition"
-                  style={{ borderColor: TOKENS.line }}
-                >
-                  <IconoFlechaIzq className="w-3.5 h-3.5" />
-                  <span>Anterior</span>
-                </button>
-
-                <span className="px-2 font-mono font-semibold text-zinc-600">
-                  {lista.page} / {lista.datos?.totalPages || 1}
-                </span>
-
-                <button
-                  type="button"
-                  disabled={lista.page >= (lista.datos?.totalPages || 1)}
-                  onClick={(e) => {
-                    volverAlInicioDelListado(e.currentTarget);
-                    lista.setPage(lista.page + 1);
-                  }}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border text-xs font-bold uppercase tracking-wider bg-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-zinc-50 cursor-pointer shadow-xs transition"
-                  style={{ borderColor: TOKENS.line }}
-                >
-                  <span>Siguiente</span>
-                  <IconoFlechaDer className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-          )}
+          <Paginacion page={lista.page} totalPages={lista.datos?.totalPages ?? 1} total={totalRegistros} limit={lista.limit} onPageChange={lista.setPage} onLimitChange={lista.setLimit} />
         </div>
       </main>
 
@@ -438,10 +395,6 @@ export function LocalesPanel() {
           <form
             onSubmit={async (e) => {
               e.preventDefault();
-              if (!form.clienteId) {
-                alert("Debes seleccionar un cliente o cadena comercial.");
-                return;
-              }
               const data: DatosLocalCampo = {
                 clienteId: form.clienteId,
                 nombre: form.nombre,
@@ -465,6 +418,7 @@ export function LocalesPanel() {
                 )
               ) {
                 setForm(null);
+                setRevisionMapa((valor) => valor + 1);
                 lista.refrescar();
               }
             }}
@@ -480,7 +434,7 @@ export function LocalesPanel() {
               {/* Selector de Cliente con Input de búsqueda y Dropdown Div */}
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-600 mb-1">
-                  Cliente o Cadena Comercial *
+                  Cliente o Cadena Comercial
                 </label>
                 <SelectorClienteCombobox
                   valorId={form.clienteId}
@@ -500,12 +454,13 @@ export function LocalesPanel() {
                   alLimpiar={() => {
                     setForm({
                       ...form,
-                      clienteId: 0,
-                      cliente: { id: 0, nombre: "" },
+                      clienteId: null,
+                      cliente: null,
                     });
                   }}
-                  requerido
+                  placeholder="Sin cliente"
                 />
+                <p className="mt-1 text-xs text-muted dark:text-muted">Opcional. El local puede quedar sin cliente o asociado a un solo cliente.</p>
               </div>
 
               <div>
@@ -657,10 +612,11 @@ export function LocalesPanel() {
         )}
       </Modal>
 
+      {eliminando && <ConfirmarEliminacionCampo tipo="local" nombre={eliminando.nombre} procesando={!!op.mensaje} error={op.error} onCerrar={() => setEliminando(null)} onConfirmar={() => void eliminar()} />}
       <PantallaCarga
         visible={!!op.mensaje}
         mensaje={op.mensaje ?? "Procesando"}
-        detalle="Guardando cambios en el servidor..."
+        detalle="Actualizando el catálogo..."
       />
     </div>
   );

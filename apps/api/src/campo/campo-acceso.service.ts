@@ -5,11 +5,8 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AccesoPlataformaService } from '../plataforma/acceso-plataforma.service';
-import {
-  rolDelEquipoCampo,
-  exigirEquipoCampo,
-  EQUIPO_CAMPO_SELECT,
-} from './utils/equipo-campo';
+import { exigirEquipoCampo, EQUIPO_CAMPO_SELECT } from './utils/equipo-campo';
+import { obtenerColaboradoresGestionados } from './utils/autorizacion';
 
 @Injectable()
 export class CampoAccesoService {
@@ -46,7 +43,7 @@ export class CampoAccesoService {
   }
   async local(empresaId: number, id: number) {
     const local = await this.prisma.localCampo.findFirst({
-      where: { id, cliente: { empresaId } },
+      where: { id, empresaId, eliminadoEn: null },
       select: { id: true, activo: true, cliente: { select: { activo: true } } },
     });
     if (!local) throw new NotFoundException('Local no disponible');
@@ -61,20 +58,15 @@ export class CampoAccesoService {
     });
     if (!superior)
       throw new NotFoundException('Usuario no disponible en tu equipo');
-    const usuario = await this.prisma.usuario.findFirst({
-      where: {
-        id: usuarioId,
-        empresaId,
-        superiorId,
-        isActive: true,
-        esSuperadmin: false,
-        rol: rolDelEquipoCampo(superior.rol?.equipoCampo),
-      },
-      select: { id: true },
+    // Un supervisor también asigna a los impulsadores de sus TeamLeaders.
+    const colaboradores = await obtenerColaboradoresGestionados(this.prisma, {
+      id: superiorId,
+      empresaId,
+      equipoCampo: superior.rol?.equipoCampo,
     });
-    if (!usuario)
+    if (!colaboradores.includes(usuarioId))
       throw new NotFoundException('Usuario no disponible en tu equipo');
-    await this.ejecutar(usuario.id);
-    return usuario;
+    await this.ejecutar(usuarioId);
+    return { id: usuarioId };
   }
 }

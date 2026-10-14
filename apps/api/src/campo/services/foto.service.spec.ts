@@ -185,7 +185,7 @@ describe('Evidencias antes de completar una tarea', () => {
           usuarioId: 1,
           fecha: new Date('2026-09-17T00:00:00Z'),
           salida: null,
-          local: { cliente: { empresaId: 10 } },
+          local: { empresaId: 10 },
         },
       }),
     );

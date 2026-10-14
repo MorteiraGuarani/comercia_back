@@ -23,7 +23,7 @@ export interface ClienteCampo {
 }
 export interface LocalCampo {
   id: number;
-  clienteId: number;
+  clienteId: number | null;
   nombre: string;
   direccion: string;
   contacto: string;
@@ -34,7 +34,7 @@ export interface LocalCampo {
   zonaHoraria: string;
   notas: string;
   activo: boolean;
-  cliente: { id: number; nombre: string; logoUrl?: string | null };
+  cliente: { id: number; nombre: string; logoUrl?: string | null } | null;
   asignaciones?: Array<{
     id: number;
     usuario: PersonaCampo & { rol?: { descripcion: string } | null };
@@ -297,7 +297,7 @@ export interface NovedadCampoItem {
     direccion: string;
     cliente?: {
       nombre: string;
-    };
+    } | null;
   };
   tarea?: {
     id: number;

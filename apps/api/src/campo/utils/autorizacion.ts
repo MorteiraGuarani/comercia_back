@@ -1,10 +1,40 @@
 import { ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import type { Prisma } from '../../../generated/prisma/client';
+import type { EquipoCampoDto } from '../../roles/interfaces/equipo-campo.interface';
 import {
   destinatarioCampo,
   exigirEquipoCampo,
   EQUIPO_CAMPO_SELECT,
 } from './equipo-campo';
+
+/** Cliente de Prisma o transacción: solo se necesita consultar usuarios. */
+type ConsultaUsuarios = Pick<Prisma.TransactionClient, 'usuario'>;
+
+/**
+ * Baja por la cadena de superiores nivel por nivel (supervisor → TeamLeader →
+ * impulsador) sin repetir usuarios aunque haya un ciclo en los datos.
+ */
+async function subordinadosEnCadena(
+  db: ConsultaUsuarios,
+  liderId: number,
+  filtro: Prisma.UsuarioWhereInput,
+): Promise<number[]> {
+  const visitados = new Set([liderId]);
+  const ids: number[] = [];
+  let frontera = [liderId];
+  while (frontera.length) {
+    const siguientes = await db.usuario.findMany({
+      where: { ...filtro, superiorId: { in: frontera } },
+      select: { id: true },
+      take: 10000,
+    });
+    frontera = siguientes.map((u) => u.id).filter((id) => !visitados.has(id));
+    for (const id of frontera) visitados.add(id);
+    ids.push(...frontera);
+  }
+  return ids;
+}
 
 /** Comprueba la cadena real de superiores, dentro de una misma empresa. */
 export async function esLiderDe(
@@ -22,15 +52,9 @@ export async function esLiderDe(
  * Incluye al líder y sus subordinados activos, directos e indirectos.
  */
 export async function obtenerEquipoCompleto(
-  prisma: PrismaService,
+  prisma: ConsultaUsuarios,
   liderUserId: number,
-  visitados = new Set<number>(),
 ): Promise<number[]> {
-  if (visitados.has(liderUserId)) {
-    return [];
-  }
-  visitados.add(liderUserId);
-
   const lider = await prisma.usuario.findUnique({
     where: { id: liderUserId },
     select: {
@@ -41,27 +65,59 @@ export async function obtenerEquipoCompleto(
     },
   });
   if (!lider?.isActive || !lider.rol?.equipoCampoId) return [];
-  const ids = [lider.id];
   // La consulta incluye empresa y estado en cada nivel; un rol compartido nunca
   // concede acceso a los subordinados de otro líder.
-  let frontera = [lider.id];
-  while (frontera.length) {
-    const siguientes = await prisma.usuario.findMany({
-      where: {
-        superiorId: { in: frontera },
-        empresaId: lider.empresaId,
-        isActive: true,
-        esSuperadmin: false,
-        rol: { equipoCampoId: lider.rol.equipoCampoId },
-      },
-      select: { id: true },
-      take: 10000,
-    });
-    frontera = siguientes.map((u) => u.id).filter((id) => !visitados.has(id));
-    for (const id of frontera) visitados.add(id);
-    ids.push(...frontera);
-  }
-  return ids;
+  const subordinados = await subordinadosEnCadena(prisma, lider.id, {
+    empresaId: lider.empresaId,
+    isActive: true,
+    esSuperadmin: false,
+    rol: { equipoCampoId: lider.rol.equipoCampoId },
+  });
+  return [lider.id, ...subordinados];
+}
+
+/**
+ * Colaboradores que gestiona el usuario, sin incluirlo. En equipos de
+ * impulsadores abarca toda la cadena (supervisor → TeamLeaders → sus
+ * impulsadores); en repositores, solo los reportes directos.
+ */
+export async function obtenerColaboradoresGestionados(
+  prisma: ConsultaUsuarios,
+  lider: { id: number; empresaId: number; equipoCampo?: EquipoCampoDto | null },
+): Promise<number[]> {
+  const equipo = exigirEquipoCampo(lider.equipoCampo);
+  if (equipo.tipo !== 'REPOSITOR')
+    return (await obtenerEquipoCompleto(prisma, lider.id)).filter(
+      (id) => id !== lider.id,
+    );
+  const directos = await prisma.usuario.findMany({
+    where: {
+      empresaId: lider.empresaId,
+      superiorId: lider.id,
+      isActive: true,
+      esSuperadmin: false,
+      rol: { equipoCampoId: equipo.id },
+    },
+    select: { id: true },
+    take: 10000,
+  });
+  return directos.map((u) => u.id);
+}
+
+/**
+ * Subordinados activos, directos e indirectos, sin exigir equipo operativo:
+ * los avisos los puede enviar cualquier líder a toda su cadena.
+ */
+export function obtenerSubordinadosActivos(
+  db: ConsultaUsuarios,
+  liderId: number,
+  empresaId: number,
+): Promise<number[]> {
+  return subordinadosEnCadena(db, liderId, {
+    empresaId,
+    isActive: true,
+    esSuperadmin: false,
+  });
 }
 
 /**
@@ -171,7 +227,7 @@ export async function verificarAccesoCumplimiento(
         },
         localId: true,
         fecha: true,
-        local: { select: { cliente: { select: { empresaId: true } } } },
+        local: { select: { empresaId: true } },
       },
     });
     if (
@@ -184,7 +240,7 @@ export async function verificarAccesoCumplimiento(
     const tarea = await prisma.tareaCampo.findFirst({
       where: {
         id: tareaId,
-        empresaId: visita.local.cliente.empresaId,
+        empresaId: visita.local.empresaId,
         destinatario: destinatarioCampo(visita.usuario.rol?.equipoCampo),
         equipoCampoId: exigirEquipoCampo(visita.usuario.rol?.equipoCampo).id,
         fechaDesde: { lte: visita.fecha },

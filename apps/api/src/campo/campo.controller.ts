@@ -24,6 +24,7 @@ import { join, extname } from 'path';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import type { RequestConUsuario } from '../auth/interfaces/request-con-usuario.interface';
 import { CatalogoCampoService } from './catalogo-campo.service';
+import { EliminarClienteCampoDto } from './dto/eliminar-cliente.dto';
 import { LocalPrincipalCampoDto } from './dto/local-principal.dto';
 import { PlanificacionCampoService } from './planificacion-campo.service';
 import { JornadaCampoService } from './jornada-campo.service';
@@ -117,8 +118,9 @@ export class CampoController {
   @Delete('clientes/:id') eliminarCliente(
     @Req() r: RequestConUsuario,
     @Param('id', ParseIntPipe) id: number,
+    @Body() d: EliminarClienteCampoDto,
   ) {
-    return this.catalogo.eliminarCliente(r.usuarioId, id);
+    return this.catalogo.eliminarCliente(r.usuarioId, id, d);
   }
 
   @Post('clientes/subir-logo')

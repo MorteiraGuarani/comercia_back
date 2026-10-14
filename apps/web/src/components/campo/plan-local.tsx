@@ -54,7 +54,7 @@ export function PlanLocal({
               Cuenta Comercial
             </span>
             <p className="text-sm font-bold text-[#1E2320]">
-              {local.cliente.nombre} —{" "}
+              {local.cliente?.nombre ?? "Sin cliente"} —{" "}
               {local.direccion || "Sin dirección fijada"}
             </p>
           </div>

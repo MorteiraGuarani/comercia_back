@@ -9,6 +9,7 @@ describe('Catálogo de tareas', () => {
   it('impide crear otra ficha para el mismo local de la empresa', async () => {
     const tx = {
       $queryRaw: jest.fn(),
+      clienteCampo: { findFirst: jest.fn().mockResolvedValue({ id: 4 }) },
       localCampo: {
         findFirst: jest.fn().mockResolvedValue({ id: 12 }),
         create: jest.fn(),

@@ -21,6 +21,7 @@ import {
 } from '../../../generated/prisma/client';
 import { AdjuntoCampoService } from './adjunto-campo.service';
 import { siguienteAviso } from '../utils/programacion-aviso';
+import { obtenerSubordinadosActivos } from '../utils/autorizacion';
 import { validarArchivoImagen } from '../utils/multer-config';
 
 const adjuntosSelect = {
@@ -58,7 +59,16 @@ export class AvisoService implements OnModuleInit, OnModuleDestroy {
     if (this.temporizador) clearInterval(this.temporizador);
   }
 
-  private async colaboradoresActivos(
+  /** Toda la cadena a cargo: un supervisor llega también a los impulsadores. */
+  private colaboradoresActivos(
+    liderId: number,
+    empresaId: number,
+  ): Promise<number[]> {
+    return obtenerSubordinadosActivos(this.prisma, liderId, empresaId);
+  }
+
+  /** Alcance con el que se enviaban los avisos antiguos sin destinatarios fijados. */
+  private async colaboradoresDirectos(
     liderId: number,
     empresaId: number,
   ): Promise<number[]> {
@@ -331,18 +341,17 @@ export class AvisoService implements OnModuleInit, OnModuleDestroy {
               });
               return;
             }
-            const destinatarios = await tx.usuario.findMany({
-              where: {
-                empresaId: programacion.empresaId,
-                superiorId: programacion.emisorId,
-                isActive: true,
-                esSuperadmin: false,
-                ...(programacion.tipo === 'EQUIPO'
-                  ? {}
-                  : { id: { in: programacion.destinatariosIds } }),
-              },
-              select: { id: true },
-            });
+            const equipo = await obtenerSubordinadosActivos(
+              tx,
+              programacion.emisorId,
+              programacion.empresaId,
+            );
+            const destinatarios =
+              programacion.tipo === 'EQUIPO'
+                ? equipo
+                : programacion.destinatariosIds.filter((id) =>
+                    equipo.includes(id),
+                  );
             if (!destinatarios.length) return;
             await this.publicar(
               tx,
@@ -350,7 +359,7 @@ export class AvisoService implements OnModuleInit, OnModuleDestroy {
               programacion.emisorId,
               programacion.tipo,
               programacion.mensaje,
-              destinatarios.map((item) => item.id),
+              destinatarios,
               programacion.id,
               programacion.proximoEnvioAt,
               programacion.adjuntos,
@@ -380,8 +389,8 @@ export class AvisoService implements OnModuleInit, OnModuleDestroy {
   ) {
     const { skip, take, page, limit } = rangoPaginacion(query);
     const where: Prisma.UsuarioWhereInput = {
+      id: { in: await this.colaboradoresActivos(usuarioId, empresaId) },
       empresaId,
-      superiorId: usuarioId,
       isActive: true,
       esSuperadmin: false,
       ...(query.buscar?.trim()
@@ -406,17 +415,28 @@ export class AvisoService implements OnModuleInit, OnModuleDestroy {
     const [items, total] = await Promise.all([
       this.prisma.usuario.findMany({
         where,
-        select: { id: true, nombre: true, apellido: true },
+        select: {
+          id: true,
+          nombre: true,
+          apellido: true,
+          rol: { select: { descripcion: true } },
+        },
         orderBy: [{ nombre: 'asc' }, { id: 'asc' }],
         skip,
         take,
       }),
       this.prisma.usuario.count({ where }),
     ]);
+    // Con TeamLeaders e impulsadores mezclados, el rol evita elegir mal.
     return respuestaPaginada(
       items.map((item) => ({
         id: item.id,
-        nombre: `${item.nombre} ${item.apellido}`.trim(),
+        nombre: [
+          `${item.nombre} ${item.apellido}`.trim(),
+          item.rol?.descripcion,
+        ]
+          .filter(Boolean)
+          .join(' · '),
       })),
       total,
       page,
@@ -500,7 +520,7 @@ export class AvisoService implements OnModuleInit, OnModuleDestroy {
   ) {
     const { skip, take, page, limit } = rangoPaginacion(query);
     const where = { empresaId, emisorId: usuarioId };
-    const subordinados = await this.colaboradoresActivos(usuarioId, empresaId);
+    const subordinados = await this.colaboradoresDirectos(usuarioId, empresaId);
     const [items, total] = await Promise.all([
       this.prisma.avisoCampo.findMany({
         where,

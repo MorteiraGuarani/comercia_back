@@ -7,6 +7,7 @@ import {
   IsDateString,
   IsEnum,
   IsInt,
+  IsIn,
   IsNumber,
   IsOptional,
   IsString,
@@ -39,6 +40,15 @@ export class ConsultaCampoDto extends PaginacionDto {
   @Min(1)
   @Max(MAX_INT4)
   clienteId?: number;
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    value === 'true' ? true : value === 'false' ? false : value,
+  )
+  @IsBoolean()
+  sinCliente?: boolean;
+  @IsOptional()
+  @IsIn(['todos', 'activos', 'inactivos'])
+  estado?: 'todos' | 'activos' | 'inactivos';
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -86,7 +96,12 @@ export class ClienteCampoDto {
 
 export class LocalCampoDto {
   // Datos compartidos con UCHECK.
-  @Type(() => Number) @IsInt() @Min(1) @Max(MAX_INT4) clienteId!: number;
+  @ValidateIf((_, value) => value !== null)
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(MAX_INT4)
+  clienteId: number | null = null;
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.trim() : value,
   )

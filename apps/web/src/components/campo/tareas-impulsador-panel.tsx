@@ -391,7 +391,7 @@ export function TareasImpulsadorPanel({
                       {ag.local.nombre}
                     </h3>
                     <p className="ft-body text-xs text-muted">
-                      {ag.local.cliente.nombre}
+                      {ag.local.cliente?.nombre ?? "Sin cliente"}
                     </p>
                   </div>
                   {estaEnVisita ? (

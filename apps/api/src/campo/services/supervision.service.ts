@@ -1,3 +1,4 @@
+import { localesOperativos } from '../utils/locales-operativos';
 import {
   ForbiddenException,
   Injectable,
@@ -12,7 +13,7 @@ import {
 } from '../dto/supervision.dto';
 import { ParadaRuta } from '../interfaces/parada-ruta.interface';
 import { fechaCampo, rangoConsulta, relojCampo } from '../utils/calendario';
-import { obtenerEquipoCompleto } from '../utils/autorizacion';
+import { obtenerColaboradoresGestionados } from '../utils/autorizacion';
 import {
   destinatarioCampo,
   exigirEquipoCampo,
@@ -57,7 +58,7 @@ export class SupervisionService {
     const where = {
       usuarioId: colaboradorId,
       usuario: { empresaId: u.empresaId },
-      local: { cliente: { empresaId: u.empresaId } },
+      local: { empresaId: u.empresaId },
       fecha: { gte: fechaCampo(desde), lte: fechaCampo(hasta) },
     };
     const [total, filas] = await Promise.all([
@@ -73,27 +74,15 @@ export class SupervisionService {
     return respuestaPaginada(filas.map(detalleVisita), total, page, limit);
   }
 
-  private async idsEquipo(u: {
+  // El propio líder no se incluye: quien llama decide si puede verse a sí mismo.
+  private idsEquipo(u: {
     id: number;
     empresaId: number;
-    rolDescripcion: string | null;
     equipoCampo:
       | import('../../roles/interfaces/equipo-campo.interface').EquipoCampoDto
       | null;
   }) {
-    if (exigirEquipoCampo(u.equipoCampo).tipo !== 'REPOSITOR')
-      return obtenerEquipoCompleto(this.prisma, u.id);
-    const repositores = await this.prisma.usuario.findMany({
-      where: {
-        empresaId: u.empresaId,
-        superiorId: u.id,
-        isActive: true,
-        rol: { equipoCampoId: exigirEquipoCampo(u.equipoCampo).id },
-      },
-      select: { id: true },
-      take: 10000,
-    });
-    return repositores.map((r) => r.id);
+    return obtenerColaboradoresGestionados(this.prisma, u);
   }
 
   private formatoHora(date: Date | string | null): string | null {
@@ -208,7 +197,7 @@ export class SupervisionService {
           fechaDesde: { lte: fechaHasta },
           local: {
             activo: true,
-            cliente: { empresaId: u.empresaId, activo: true },
+            ...localesOperativos(u.empresaId),
           },
           AND: [
             { OR: [{ fechaHasta: null }, { fechaHasta: { gte: fechaDesde } }] },
@@ -572,7 +561,7 @@ export class SupervisionService {
         fechaDesde: { lte: fechaHasta },
         local: {
           activo: true,
-          cliente: { empresaId: u.empresaId, activo: true },
+          ...localesOperativos(u.empresaId),
         },
         AND: [
           { OR: [{ fechaHasta: null }, { fechaHasta: { gte: fechaDesde } }] },
@@ -686,7 +675,7 @@ export class SupervisionService {
       paradasMap.set(a.local.id, {
         id: `local-${a.local.id}`,
         localId: a.local.id,
-        cliente: a.local.cliente.nombre,
+        cliente: a.local.cliente?.nombre ?? 'Sin cliente',
         local: a.local.nombre,
         tipo: 'supermercado', // default semántico
         ventana,
@@ -723,7 +712,7 @@ export class SupervisionService {
       paradasMap.set(v.local.id, {
         id: `visita-${v.id}`,
         localId: v.local.id,
-        cliente: v.local.cliente.nombre,
+        cliente: v.local.cliente?.nombre ?? 'Sin cliente',
         local: v.local.nombre,
         tipo: 'supermercado',
         ventana: existing?.ventana ?? ventana,
@@ -785,7 +774,7 @@ export class SupervisionService {
       visita.cumplimientos.map((cumplimiento) => ({
         visitaId: visita.id,
         local: visita.local.nombre,
-        cliente: visita.local.cliente.nombre,
+        cliente: visita.local.cliente?.nombre ?? 'Sin cliente',
         fecha: visita.fecha,
         entrada: visita.entrada,
         salida: visita.salida,

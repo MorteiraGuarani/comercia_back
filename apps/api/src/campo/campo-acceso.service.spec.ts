@@ -4,45 +4,74 @@ import type { PrismaService } from '../prisma/prisma.service';
 import type { AccesoPlataformaService } from '../plataforma/acceso-plataforma.service';
 jest.mock('../prisma/prisma.service', () => ({ PrismaService: class {} }));
 describe('Alcance de campo', () => {
-  it('rechaza usuarios fuera del equipo y consulta empresa y superior', async () => {
+  const equipoCampo = {
+    id: 1,
+    nombre: 'Impulsadores',
+    tipo: 'IMPULSADOR',
+    activo: true,
+  };
+  // Supervisor 20 → TeamLeader 25 → impulsador 30. El 40 es de otro líder.
+  const jerarquia: Record<number, number[]> = { 20: [25], 25: [30], 50: [40] };
+  function preparar() {
     const prisma = {
       usuario: {
-        findFirst: jest
-          .fn()
-          .mockResolvedValueOnce({
-            rol: {
-              descripcion: 'TeamLeader',
-              equipoCampo: {
-                id: 1,
-                nombre: 'Impulsadores',
-                tipo: 'IMPULSADOR',
-                activo: true,
-              },
-            },
-          })
-          .mockResolvedValueOnce(null),
+        findFirst: jest.fn().mockResolvedValue({
+          rol: { descripcion: 'Supervisor', equipoCampo },
+        }),
+        findUnique: jest.fn().mockResolvedValue({
+          id: 20,
+          empresaId: 10,
+          isActive: true,
+          rol: { equipoCampoId: 1 },
+        }),
+        findMany: jest.fn(
+          ({ where }: { where: { superiorId: { in: number[] } } }) =>
+            Promise.resolve(
+              where.superiorId.in
+                .flatMap((id) => jerarquia[id] ?? [])
+                .map((id) => ({ id })),
+            ),
+        ),
       },
     };
-    const plataforma = { exigirAccesoAlgunaPagina: jest.fn() };
+    const plataforma = {
+      exigirAccesoAlgunaPagina: jest
+        .fn()
+        .mockResolvedValue({ id: 30, equipoCampo }),
+    };
     const service = new CampoAccesoService(
       prisma as unknown as PrismaService,
       plataforma as unknown as AccesoPlataformaService,
     );
-    await expect(service.subordinado(10, 20, 30)).rejects.toBeInstanceOf(
+    return { prisma, plataforma, service };
+  }
+  it('rechaza usuarios fuera de la cadena del líder', async () => {
+    const { prisma, plataforma, service } = preparar();
+    await expect(service.subordinado(10, 20, 40)).rejects.toBeInstanceOf(
       NotFoundException,
     );
-    expect(prisma.usuario.findFirst).toHaveBeenCalledWith({
-      where: {
-        id: 30,
-        empresaId: 10,
-        superiorId: 20,
-        isActive: true,
-        esSuperadmin: false,
-        rol: { equipoCampoId: 1 },
-      },
-      select: { id: true },
-    });
+    expect(prisma.usuario.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          superiorId: { in: [20] },
+          empresaId: 10,
+          isActive: true,
+          esSuperadmin: false,
+          rol: { equipoCampoId: 1 },
+        },
+      }),
+    );
     expect(plataforma.exigirAccesoAlgunaPagina).not.toHaveBeenCalled();
+  });
+  it('permite al supervisor asignar a los impulsadores de sus TeamLeaders', async () => {
+    const { plataforma, service } = preparar();
+    await expect(service.subordinado(10, 20, 30)).resolves.toEqual({ id: 30 });
+    await expect(service.subordinado(10, 20, 25)).resolves.toEqual({ id: 25 });
+    expect(plataforma.exigirAccesoAlgunaPagina).toHaveBeenCalledWith(
+      30,
+      'mi-jornada',
+      ['locales', 'tareas'],
+    );
   });
   it('usa permisos de módulos en lugar de nombres de roles', async () => {
     const plataforma = {

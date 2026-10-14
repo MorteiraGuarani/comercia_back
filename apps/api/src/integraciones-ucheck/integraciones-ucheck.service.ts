@@ -244,7 +244,7 @@ export class IntegracionesUcheckService {
           usuario: { rol: rolDelEquipoCampo(usuario.rol?.equipoCampo) },
           fechaDesde: { lte: fecha },
           OR: [{ fechaHasta: null }, { fechaHasta: { gte: fecha } }],
-          local: { cliente: { empresaId: usuario.empresaId } },
+          local: { empresaId: usuario.empresaId },
           AND: [
             {
               OR: [

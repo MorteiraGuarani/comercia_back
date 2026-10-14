@@ -27,7 +27,7 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
   const clientesDisponibles = useMemo(() => {
     const porId = new Map(clientes.map((cliente) => [cliente.id, cliente]));
     for (const local of locales) {
-      if (!porId.has(local.clienteId) && local.cliente) {
+      if (local.clienteId !== null && !porId.has(local.clienteId) && local.cliente) {
         porId.set(local.clienteId, {
           id: local.clienteId,
           nombre: local.cliente.nombre,
@@ -240,7 +240,7 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
 
       // Logo del cliente o iniciales
       const logoUrl = loc.cliente?.logoUrl;
-      const nombreCliente = loc.cliente?.nombre || "Cliente";
+      const nombreCliente = loc.cliente?.nombre || "Sin cliente";
       const nombreClienteSeguro = escaparHtml(nombreCliente);
       const logoUrlSeguro = logoUrl ? escaparHtml(logoUrl) : null;
       const iniciales = (nombreCliente || loc.nombre)

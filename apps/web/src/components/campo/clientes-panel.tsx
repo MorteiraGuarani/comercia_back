@@ -3,7 +3,7 @@
 import React, { useMemo, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
-import { volverAlInicioDelListado } from "@/utils/scroll-listado";
+import { Paginacion } from "@/components/paginacion";
 import { mensajeError } from "@/utils/error";
 import { prepararImagen } from "@/utils/preparar-imagen";
 import { CapturadorCamara } from "./capturador-camara";
@@ -11,6 +11,8 @@ import { IconoCamara, IconoGaleria } from "./ui/iconos-campo";
 import { useListaCampo, useOperacionCampo } from "@/hooks/use-lista-campo";
 import { Modal } from "@/components/modal";
 import { BotonEditar } from "@/components/boton-editar";
+import { BotonEliminarCampo } from "./boton-eliminar-campo";
+import { ConfirmarEliminacionCampo } from "./confirmar-eliminacion-campo";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { TOKENS } from "./tokens";
 import { StatusStamp } from "./ui/status-stamp";
@@ -23,8 +25,6 @@ import {
   IconoCruz,
   IconoMas,
   IconoTienda,
-  IconoFlechaIzq,
-  IconoFlechaDer,
 } from "./ui/iconos-campo";
 import type { ClienteCampo } from "@/types/campo";
 
@@ -37,26 +37,21 @@ export function ClientesPanel() {
   const endpoint = useMemo(() => {
     const params = new URLSearchParams();
     if (busqueda.trim()) params.set("buscar", busqueda.trim());
+    params.set("estado", filtroEstado);
     const qs = params.toString();
     return `/campo/clientes${qs ? `?${qs}` : ""}`;
-  }, [busqueda]);
+  }, [busqueda, filtroEstado]);
 
-  const lista = useListaCampo<ClienteCampo>(endpoint, 0, 25);
+  const lista = useListaCampo<ClienteCampo>(endpoint, 0, 7);
   const op = useOperacionCampo();
   const [form, setForm] = useState<ClienteCampo | null>(null);
+  const [eliminando, setEliminando] = useState<ClienteCampo | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [subiendoLogo, setSubiendoLogo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [camaraAbierta, setCamaraAbierta] = useState(false);
 
-  // Filtrado local por estado activo / inactivo
-  const itemsFiltrados = useMemo(() => {
-    return lista.items.filter((c) => {
-      if (filtroEstado === "activos") return c.activo;
-      if (filtroEstado === "inactivos") return !c.activo;
-      return true;
-    });
-  }, [lista.items, filtroEstado]);
+  const itemsFiltrados = lista.items;
 
   const totalActivos = useMemo(() => lista.items.filter((c) => c.activo).length, [lista.items]);
   const totalInactivos = useMemo(() => lista.items.filter((c) => !c.activo).length, [lista.items]);
@@ -76,6 +71,24 @@ export function ClientesPanel() {
   const verEnMapa = (clienteId: number) => {
     router.push(`/panel/gestion-campo/locales?mapa=1&clienteId=${clienteId}`);
   };
+
+  function abrirEliminar(cliente: ClienteCampo) {
+    op.limpiarError();
+    setEliminando(cliente);
+  }
+
+  async function eliminar(eliminarLocales: boolean) {
+    if (!eliminando) return;
+    const ok = await op.ejecutar("Eliminando cliente", () =>
+      apiFetch(`/campo/clientes/${eliminando.id}`, {
+        method: "DELETE", body: JSON.stringify({ eliminarLocales }),
+      }),
+    );
+    if (ok) {
+      setEliminando(null);
+      lista.refrescar();
+    }
+  }
 
   const iniciales = (nombre: string) => {
     return (
@@ -117,8 +130,6 @@ export function ClientesPanel() {
   };
 
   const totalRegistros = lista.datos?.total ?? lista.items.length;
-  const desde = totalRegistros > 0 ? (lista.page - 1) * lista.limit + 1 : 0;
-  const hasta = Math.min(lista.page * lista.limit, totalRegistros);
 
   return (
     <div
@@ -213,7 +224,7 @@ export function ClientesPanel() {
                     <button
                       key={filtro}
                       type="button"
-                      onClick={() => setFiltroEstado(filtro)}
+                      onClick={() => { setFiltroEstado(filtro); lista.setPage(1); }}
                         className={`whitespace-nowrap rounded-md px-2 py-1.5 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer sm:px-3 ${
                         activo ? "bg-[#1E2320] text-white shadow-xs" : "text-[#726C60] hover:text-[#1E2320]"
                       }`}
@@ -270,9 +281,10 @@ export function ClientesPanel() {
                         </div>
                         <StatusStamp tone={cliente.activo ? "fresco" : "sub"} size="sm">{cliente.activo ? "ACTIVO" : "INACTIVO"}</StatusStamp>
                       </div>
-                      <div className="mt-2 flex gap-2">
+                      <div className="mt-2 flex flex-wrap gap-2">
                         <BotonEditar onClick={() => setForm(cliente)} etiqueta={`Editar cliente ${cliente.nombre}`} modo="texto" className="flex-1" />
                         <button type="button" onClick={() => verEnMapa(cliente.id)} className="min-h-11 flex-1 rounded-lg border border-line px-3 text-xs font-semibold text-foreground">Ver mapa</button>
+                        <BotonEliminarCampo onClick={() => abrirEliminar(cliente)} etiqueta={`Eliminar cliente ${cliente.nombre}`} modo="texto" disabled={!!op.mensaje} />
                       </div>
                     </article>
                   ))}
@@ -309,6 +321,7 @@ export function ClientesPanel() {
                                   <IconoMapa className="w-3 h-3" />
                                   <span>Mapa</span>
                                 </button>
+                                <BotonEliminarCampo onClick={() => abrirEliminar(cliente)} etiqueta={`Eliminar cliente ${cliente.nombre}`} disabled={!!op.mensaje} />
                               </div>
                             </td>
 
@@ -369,73 +382,7 @@ export function ClientesPanel() {
                 </>
               )}
 
-              {/* Footer con Paginación Compacta */}
-              {totalRegistros > 0 && (
-                <div
-                  className="px-4 py-3 border-t bg-zinc-50/60 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs"
-                  style={{ borderColor: TOKENS.line }}
-                >
-                  <div className="flex items-center gap-3 text-zinc-500">
-                    <span>
-                      Mostrando <strong className="text-zinc-800">{desde}</strong> -{" "}
-                      <strong className="text-zinc-800">{hasta}</strong> de{" "}
-                      <strong className="text-zinc-800">{totalRegistros}</strong> clientes
-                    </span>
-
-                    <div className="flex items-center gap-1.5 ml-2">
-                      <span className="text-[11px] uppercase tracking-wider">Filas:</span>
-                      <select
-                        value={lista.limit}
-                        onChange={(e) => {
-                          volverAlInicioDelListado(e.currentTarget);
-                          lista.setLimit(Number(e.target.value));
-                        }}
-                        className="py-1 px-2 rounded-md border bg-white text-zinc-800 font-semibold text-xs cursor-pointer"
-                        style={{ borderColor: TOKENS.line }}
-                      >
-                        <option value={10}>10</option>
-                        <option value={25}>25</option>
-                        <option value={50}>50</option>
-                        <option value={100}>100</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      disabled={lista.page <= 1}
-                      onClick={(e) => {
-                        volverAlInicioDelListado(e.currentTarget);
-                        lista.setPage(lista.page - 1);
-                      }}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border text-xs font-bold uppercase tracking-wider bg-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-zinc-50 cursor-pointer shadow-xs transition"
-                      style={{ borderColor: TOKENS.line }}
-                    >
-                      <IconoFlechaIzq className="w-3.5 h-3.5" />
-                      <span>Anterior</span>
-                    </button>
-
-                    <span className="px-2 font-mono font-semibold text-zinc-600">
-                      {lista.page} / {lista.datos?.totalPages || 1}
-                    </span>
-
-                    <button
-                      type="button"
-                      disabled={lista.page >= (lista.datos?.totalPages || 1)}
-                      onClick={(e) => {
-                        volverAlInicioDelListado(e.currentTarget);
-                        lista.setPage(lista.page + 1);
-                      }}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border text-xs font-bold uppercase tracking-wider bg-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-zinc-50 cursor-pointer shadow-xs transition"
-                      style={{ borderColor: TOKENS.line }}
-                    >
-                      <span>Siguiente</span>
-                      <IconoFlechaDer className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              )}
+              <Paginacion page={lista.page} totalPages={lista.datos?.totalPages ?? 1} total={totalRegistros} limit={lista.limit} onPageChange={lista.setPage} onLimitChange={lista.setLimit} />
             </div>
       </main>
 
@@ -640,7 +587,8 @@ export function ClientesPanel() {
         )}
       </Modal>
 
-      <PantallaCarga visible={guardando || subiendoLogo} mensaje={subiendoLogo ? "Subiendo foto del cliente" : "Procesando operación comercial..."} />
+      {eliminando && <ConfirmarEliminacionCampo tipo="cliente" nombre={eliminando.nombre} cantidadLocales={eliminando._count?.locales ?? 0} procesando={!!op.mensaje} error={op.error} onCerrar={() => setEliminando(null)} onConfirmar={(borrarLocales) => void eliminar(borrarLocales)} />}
+      <PantallaCarga visible={guardando || subiendoLogo || !!op.mensaje} mensaje={subiendoLogo ? "Subiendo foto del cliente" : op.mensaje || "Procesando operación comercial..."} />
     </div>
   );
 }

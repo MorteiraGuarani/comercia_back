@@ -114,7 +114,7 @@ function AgendaDelDia({
     return lista.items.filter(
       (a) =>
         a.local.nombre.toLowerCase().includes(q) ||
-        a.local.cliente.nombre.toLowerCase().includes(q) ||
+        (a.local.cliente?.nombre ?? "Sin cliente").toLowerCase().includes(q) ||
         a.local.direccion.toLowerCase().includes(q),
     );
   }, [lista.items, busqueda]);
@@ -264,7 +264,7 @@ function AgendaDelDia({
                     {a.local.nombre}
                   </strong>
                   <p className="text-xs text-brand-700 dark:text-brand-400 font-medium">
-                    {a.local.cliente.nombre}
+                    {a.local.cliente?.nombre ?? "Sin cliente"}
                   </p>
                 </div>
               </div>
@@ -378,7 +378,7 @@ function AgendaDelDia({
                   </div>
 
                   <p className="mt-0.5 text-xs font-semibold text-brand-700 dark:text-brand-400 truncate">
-                    {a.local.cliente.nombre}
+                    {a.local.cliente?.nombre ?? "Sin cliente"}
                   </p>
 
                   <p className="mt-1 flex items-center gap-1 text-xs text-muted truncate">

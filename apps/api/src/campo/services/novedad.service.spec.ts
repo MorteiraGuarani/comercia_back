@@ -127,7 +127,17 @@ describe('NovedadService', () => {
         take: 7,
         select: { id: true, nombre: true },
         where: expect.objectContaining({
-          cliente: { empresaId: 10, activo: true },
+          empresaId: 10,
+          eliminadoEn: null,
+          activo: true,
+          AND: [
+            {
+              OR: [
+                { clienteId: null },
+                { cliente: { activo: true, eliminadoEn: null } },
+              ],
+            },
+          ],
           OR: expect.arrayContaining([{ visitas: { some: { usuarioId: 1 } } }]),
         }),
       }),
