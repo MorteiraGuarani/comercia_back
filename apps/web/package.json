@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:pendientes": "node test/pendientes-tareas.integration.mjs"
+    "test:pendientes": "node test/pendientes-tareas.integration.mjs",
+    "test:ucheck": "node test/ucheck-seguimiento.integration.mjs"
   },
   "dependencies": {
     "flag-icons": "^7.5.0",
@@ -27,6 +28,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.5",
     "fake-indexeddb": "6.2.5",
+    "linkedom": "0.18.13",
     "tailwindcss": "^4",
     "typescript": "^5"
   },

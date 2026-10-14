@@ -1,9 +1,9 @@
 "use client";
-import { useEffect, useId, useRef, useState } from "react";
-import { apiFetch } from "@/lib/api";
+import { useId, useState } from "react";
+import { useEstadoTelefonoRepositor } from "@/hooks/use-estado-telefono-repositor";
 import { Modal } from "@/components/modal";
 import { PantallaCarga } from "@/components/pantalla-carga";
-import type { EstadoTelefonoRepositor } from "@/types/seguimiento";
+import { formatoFechaHora } from "@/utils/fechas";
 import { TOKENS } from "./tokens";
 
 export function EstadoTelefono({
@@ -11,68 +11,19 @@ export function EstadoTelefono({
 }: {
   variante?: "panel" | "boton";
 }) {
-  const [estado, setEstado] = useState<EstadoTelefonoRepositor | null>(null);
-  const [revision, setRevision] = useState(0);
-  const [actualizando, setActualizando] = useState(false);
-  const manualEnCurso = useRef(false);
+  const { estado, actualizando, comprobadoEn, comprobar } = useEstadoTelefonoRepositor();
   const [detalles, setDetalles] = useState(false);
   const detalleId = useId();
-  useEffect(() => {
-    let vigente = true,
-      pendiente = false;
-    let controlador: AbortController | null = null;
-    async function cargar() {
-      if (pendiente || (document.hidden && !manualEnCurso.current)) return;
-      pendiente = true;
-      const esManual = manualEnCurso.current;
-      const solicitud = new AbortController();
-      controlador = solicitud;
-      const limite = setTimeout(() => solicitud.abort(), 15000);
-      try {
-        const r = await apiFetch<EstadoTelefonoRepositor>(
-          "/campo/jornada/repositor/telefono",
-          { signal: solicitud.signal },
-        );
-        if (vigente) setEstado(r);
-      } catch {
-        if (vigente)
-          setEstado({
-            estado: "SIN_CONEXION",
-            mensaje: "No se pudo consultar el teléfono. Revisá tu conexión.",
-          });
-      } finally {
-        clearTimeout(limite);
-        pendiente = false;
-        if (vigente && esManual) {
-          manualEnCurso.current = false;
-          setActualizando(false);
-        }
-      }
-    }
-    void cargar();
-    const timer = setInterval(() => void cargar(), 15000);
-    return () => {
-      vigente = false;
-      controlador?.abort();
-      clearInterval(timer);
-    };
-  }, [revision]);
   const etiqueta = estado
     ? {
         LISTO: "Listo para marcar",
         SIN_DATOS: "Sin ubicación",
         DESACTUALIZADO: "Actualizar ubicación",
         NO_HABILITADO: "Cuenta no habilitada",
-        SIN_CONEXION: "Sin conexión",
+        SIN_CONEXION: "No se pudo comprobar",
         SEGUIMIENTO_DETENIDO: "Activar seguimiento",
       }[estado.estado]
     : "Comprobando teléfono…";
-  function comprobar() {
-    if (manualEnCurso.current) return;
-    manualEnCurso.current = true;
-    setActualizando(true);
-    setRevision((r) => r + 1);
-  }
   const indicador = (
     <span
       aria-hidden="true"
@@ -89,17 +40,25 @@ export function EstadoTelefono({
   );
   const informacion = (
     <>
-      <p>{estado?.mensaje ?? "Consultando el estado del teléfono…"}</p>
+      <p>{actualizando ? "Consultando el seguimiento y la ubicación del teléfono…" : estado?.mensaje ?? "Consultando el estado del teléfono…"}</p>
       {estado?.capturadaEn ? (
         <p>
           Última ubicación:{" "}
-          {new Date(estado.capturadaEn).toLocaleTimeString("es-PY")}
+          {formatoFechaHora(estado.capturadaEn)}
           {estado.precisionMetros != null
             ? ` · precisión ±${Math.round(estado.precisionMetros)} m`
             : ""}
         </p>
       ) : null}
-      <p>Mantené el seguimiento de UCheck activo durante la visita.</p>
+      {!actualizando && comprobadoEn ? (
+        <p className="font-mono text-xs">Última comprobación: {formatoFechaHora(comprobadoEn)}</p>
+      ) : null}
+      <p>Este botón consulta el teléfono. El seguimiento laboral se inicia desde la app UCheck.</p>
+      {estado?.estado === "LISTO" ? (
+        <p>Mantené el seguimiento de UCheck activo durante la visita.</p>
+      ) : estado && estado.estado !== "SIN_CONEXION" && estado.estado !== "NO_HABILITADO" ? (
+        <p>Después de activar o actualizar el seguimiento en tu teléfono, volvé a comprobar.</p>
+      ) : null}
     </>
   );
   if (variante === "boton") {
@@ -112,12 +71,16 @@ export function EstadoTelefono({
         />
         <button
           type="button"
-          onClick={() => setDetalles(true)}
+          disabled={actualizando}
+          onClick={() => {
+            setDetalles(true);
+            comprobar();
+          }}
           aria-haspopup="dialog"
           aria-expanded={detalles}
           aria-label={`Seguimiento de UCheck: ${etiqueta}`}
           title={`UCheck · ${etiqueta}`}
-          className="flex h-11 min-h-11 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-line bg-surface-soft px-2 text-xs font-semibold text-foreground transition-colors hover:bg-surface-raised active:bg-surface-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:px-3 sm:text-sm dark:border-line dark:bg-surface-soft dark:text-foreground dark:hover:bg-surface-raised dark:active:bg-surface-raised"
+          className="flex h-11 min-h-11 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-line bg-surface-soft px-2 text-xs font-semibold text-foreground transition-colors hover:bg-surface-raised active:bg-surface-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50 sm:px-3 sm:text-sm dark:border-line dark:bg-surface-soft dark:text-foreground dark:hover:bg-surface-raised dark:active:bg-surface-raised"
         >
           {indicador}
           UCheck seguimiento
@@ -130,7 +93,7 @@ export function EstadoTelefono({
         >
           <p aria-live="polite" className="flex items-center gap-2 text-sm font-semibold text-foreground dark:text-foreground">
             {indicador}
-            {etiqueta}
+            {actualizando ? "Comprobando UCheck…" : etiqueta}
           </p>
           <div className="mt-3 space-y-2 text-sm leading-relaxed text-muted dark:text-muted">
             {informacion}
@@ -138,11 +101,12 @@ export function EstadoTelefono({
           <div className="mt-4 flex flex-wrap justify-end gap-2">
             <button
               type="button"
+              aria-label="Comprobar UCheck"
               disabled={actualizando}
               onClick={comprobar}
               className="min-h-11 cursor-pointer whitespace-nowrap rounded-lg border border-line bg-surface-soft px-3 text-sm font-semibold text-foreground transition-colors hover:bg-surface-raised active:bg-surface-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50 dark:border-line dark:bg-surface-soft dark:text-foreground dark:hover:bg-surface-raised dark:active:bg-surface-raised"
             >
-              Comprobar UCheck
+              {actualizando ? "Comprobando…" : "Volver a comprobar"}
             </button>
             <button
               type="button"
@@ -163,7 +127,7 @@ export function EstadoTelefono({
     >
       <PantallaCarga
         visible={actualizando}
-        mensaje="Comprobando Ucheck"
+        mensaje="Comprobando UCheck"
         detalle="Consultando el estado y la última ubicación del teléfono."
       />
       <div className="flex min-w-0 items-center">
@@ -197,7 +161,10 @@ export function EstadoTelefono({
           aria-label="Comprobar UCheck"
           title="Comprobar UCheck"
           className="grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-r-lg border-l border-line text-muted transition hover:bg-surface-raised hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50 dark:border-line dark:hover:bg-surface-raised dark:hover:text-foreground"
-          onClick={comprobar}
+          onClick={() => {
+            setDetalles(true);
+            comprobar();
+          }}
         >
           <svg
             aria-hidden="true"

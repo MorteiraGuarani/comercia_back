@@ -40,6 +40,8 @@ jobs:
       - run: npm run test
       - name: Validar pendientes de tareas sin navegador
         run: npm run test:pendientes --workspace=web
+      - name: Validar comprobación de UCheck y apertura del modal sin navegador
+        run: npm run test:ucheck --workspace=web
       - name: Validar migración y agendas de campo en PostgreSQL aislado
         run: npm run test:planificacion --workspace=api
 

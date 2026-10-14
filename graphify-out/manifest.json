@@ -565,8 +565,8 @@
     "semantic_hash": ""
   },
   "apps/web/package.json": {
-    "mtime": 1791228987.1310124,
-    "ast_hash": "5dcc0a6774a45f8825a5840b5fe2a711",
+    "mtime": 1791985764.9781094,
+    "ast_hash": "3e7b5c1ea888481c8408a32fe3968a7e",
     "semantic_hash": ""
   },
   "apps/web/postcss.config.mjs": {
@@ -660,8 +660,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/modal.tsx": {
-    "mtime": 1791984499.6466682,
-    "ast_hash": "39b5184f9604264856d838c7dc861c44",
+    "mtime": 1791986447.245799,
+    "ast_hash": "a68c7a3c338b0701e7903ccb4c0d6038",
     "semantic_hash": ""
   },
   "apps/web/src/components/paginacion.tsx": {
@@ -680,9 +680,9 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/pantalla-carga.tsx": {
-    "mtime": 1784236571.2404633,
-    "ast_hash": "d5e84cc57aa2d1ac5614a22b6584d8f0",
-    "semantic_hash": "d5e84cc57aa2d1ac5614a22b6584d8f0"
+    "mtime": 1791986242.5795915,
+    "ast_hash": "7df504a10735dd92fae10b2c1f45b985",
+    "semantic_hash": ""
   },
   "apps/web/src/components/selector-pais.tsx": {
     "mtime": 1784238198.7060401,
@@ -1600,8 +1600,8 @@
     "semantic_hash": ""
   },
   ".github/workflows/deploy.yml": {
-    "mtime": 1791238877.8491697,
-    "ast_hash": "87f7dac425509d7221523f02a2b6936a",
+    "mtime": 1791985765.39229,
+    "ast_hash": "ccb727eae74b9145c39ab8f496bd0338",
     "semantic_hash": ""
   },
   "AGENTS.md": {
@@ -2740,8 +2740,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/estado-telefono.tsx": {
-    "mtime": 1791983671.7249992,
-    "ast_hash": "636e876127679573f493bdc7fd796466",
+    "mtime": 1791985764.1518679,
+    "ast_hash": "07ec04f0bb8140d9b435417c5f1f4bbe",
     "semantic_hash": ""
   },
   "apps/web/src/components/campo/historial-tarea.tsx": {
@@ -3517,6 +3517,21 @@
   "docs/mejoras/2026-10-14-cabeceras-ruta-compactas.md": {
     "mtime": 1791981349.8383446,
     "ast_hash": "abe837c622ca55179ed999ffa3fe37c7",
+    "semantic_hash": ""
+  },
+  "apps/web/src/hooks/use-destino-portal.ts": {
+    "mtime": 1791986241.5628753,
+    "ast_hash": "27f499cd532801ccbd43cbcaba2d0f18",
+    "semantic_hash": ""
+  },
+  "apps/web/src/hooks/use-estado-telefono-repositor.ts": {
+    "mtime": 1791986068.4800134,
+    "ast_hash": "ebf066e31022b406203a07876bc645ee",
+    "semantic_hash": ""
+  },
+  "apps/web/test/ucheck-seguimiento.integration.mjs": {
+    "mtime": 1791986243.009796,
+    "ast_hash": "5fcca38b756ed4ec2ccda6802988c0d7",
     "semantic_hash": ""
   }
 }

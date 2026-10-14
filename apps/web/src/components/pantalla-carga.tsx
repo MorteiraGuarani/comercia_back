@@ -1,5 +1,8 @@
 "use client";
 
+import { createPortal } from "react-dom";
+import { useDestinoPortal } from "@/hooks/use-destino-portal";
+
 export function PantallaCarga({
   visible,
   mensaje,
@@ -9,9 +12,10 @@ export function PantallaCarga({
   mensaje: string;
   detalle?: string;
 }) {
-  if (!visible) return null;
+  const destinoPortal = useDestinoPortal();
+  if (!visible || !destinoPortal) return null;
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[5000] grid place-items-center bg-[#0d1f19]/85 p-4"
       role="status"
@@ -54,6 +58,7 @@ export function PantallaCarga({
           <div className="pantalla-carga-indeterminada h-full w-2/5 rounded-full bg-gradient-to-r from-brand-500 via-brand-700 to-accent" />
         </div>
       </div>
-    </div>
+    </div>,
+    destinoPortal,
   );
 }
