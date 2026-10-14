@@ -23,6 +23,14 @@ import {
   respuestaPaginada,
 } from '../../common/utils/paginacion';
 import { detalleVisita, selectorMarcaciones } from '../utils/detalle-marcacion';
+import {
+  asistenciaCampo,
+  conEstadoVisita,
+  estadoAgenda,
+  resumirPresentismo,
+} from '../utils/estado-jornada';
+import { HORARIO_CAMPO_SELECT } from '../utils/selectores';
+import type { EstadoPresentismo } from '../interfaces/estado-jornada.interface';
 
 @Injectable()
 export class SupervisionService {
@@ -95,6 +103,7 @@ export class SupervisionService {
       hour: '2-digit',
       minute: '2-digit',
       hour12: false,
+      timeZone: 'America/Asuncion',
     });
   }
 
@@ -106,6 +115,7 @@ export class SupervisionService {
     query: ConsultaSupervisionDto,
   ): Promise<SupervisionResumenDto> {
     const u = await this.acceso.gestionar(usuarioId, 'visitas');
+    const ahora = new Date();
     const esRango = Boolean(query.fechaInicio && query.fechaFin);
     const fechaTexto = esRango
       ? `${query.fechaInicio} al ${query.fechaFin}`
@@ -156,6 +166,8 @@ export class SupervisionService {
     let totalRutaAsignada = 0;
     let totalRutaCompletada = 0;
     let totalRutaEnCurso = 0;
+    let totalRutaIncompleta = 0;
+    let totalRutaAusente = 0;
 
     let totalTareasGlobal = 0;
     let totalTareasCompletadasGlobal = 0;
@@ -164,11 +176,22 @@ export class SupervisionService {
     let enRutaCount = 0;
     let finalizadosCount = 0;
     let sinIniciarCount = 0;
+    let incompletosCount = 0;
+    let ausentesCount = 0;
+    const estadosPresentismo: Record<EstadoPresentismo, number> = {
+      SIN_REGISTRO: 0,
+      PRESENTE: 0,
+      TARDE: 0,
+      INCOMPLETO: 0,
+      AUSENTE: 0,
+    };
     const liderazgo = {
       totalTeamLeaders: 0,
       enRuta: 0,
       finalizados: 0,
       sinIniciar: 0,
+      incompletos: 0,
+      ausentes: 0,
       visitasCompletadas: 0,
       visitasTotales: 0,
       pctVisitas: 0,
@@ -212,6 +235,32 @@ export class SupervisionService {
         select: {
           id: true,
           localId: true,
+          usuarioId: true,
+          fechaDesde: true,
+          fechaHasta: true,
+          horarios: {
+            where: {
+              activo: true,
+              equipoCampoId: exigirEquipoCampo(user.rol?.equipoCampo).id,
+              destinatario: destinatarioCampo(user.rol?.equipoCampo),
+            },
+            take: 50,
+            select: HORARIO_CAMPO_SELECT,
+          },
+          local: {
+            select: {
+              zonaHoraria: true,
+              horarios: {
+                where: {
+                  activo: true,
+                  asignacionId: null,
+                  equipoCampoId: exigirEquipoCampo(user.rol?.equipoCampo).id,
+                },
+                take: 50,
+                select: HORARIO_CAMPO_SELECT,
+              },
+            },
+          },
         },
       });
 
@@ -222,6 +271,13 @@ export class SupervisionService {
           fecha: esRango ? { gte: fechaDesde, lte: fechaHasta } : fechaDesde,
         },
         include: {
+          local: { select: { zonaHoraria: true } },
+          horario: { select: { entrada: true, salida: true } },
+          eventosUcheck: {
+            where: { tipo: 'ENTRADA' },
+            take: 1,
+            select: { horaDesde: true, horaHasta: true },
+          },
           cumplimientos: {
             where: { NOT: { completadaAt: null } },
             select: { tareaId: true },
@@ -231,19 +287,47 @@ export class SupervisionService {
       });
 
       // Calcular asistencias e In/Out
-      let asistencia: 'en_curso' | 'finalizado' | 'sin_iniciar' = 'sin_iniciar';
+      const paradasPorLocal = new Map(
+        asignaciones.map((a) => [
+          a.localId,
+          estadoAgenda(
+            visitasHoy.filter((v) => v.localId === a.localId),
+            esTeamleader && a.usuarioId !== user.id
+              ? []
+              : a.horarios.length
+                ? a.horarios
+                : a.local.horarios,
+            a.local.zonaHoraria,
+            fechaDesdeStr,
+            fechaHastaStr,
+            ahora,
+            a,
+          ),
+        ]),
+      );
+      for (const v of visitasHoy.filter(
+        (v) => !asignaciones.some((a) => a.localId === v.localId),
+      )) {
+        paradasPorLocal.set(
+          v.localId,
+          estadoAgenda(
+            visitasHoy.filter((x) => x.localId === v.localId),
+            [],
+            v.local.zonaHoraria,
+            fechaDesdeStr,
+            fechaHastaStr,
+            ahora,
+          ),
+        );
+      }
+      const paradas = Array.from(paradasPorLocal.values());
+      const asistencia = asistenciaCampo(paradas.map((p) => p.estado));
+      const estadoPresentismo = resumirPresentismo(
+        paradas.map((p) => p.estadoPresentismo),
+      );
+      estadosPresentismo[estadoPresentismo]++;
       let inicioJornada: string | null = null;
       let finJornada: string | null = null;
-
-      const visitaAbierta = visitasHoy.find((v) => v.salida === null);
-
-      if (visitaAbierta) {
-        asistencia = 'en_curso';
-      } else if (visitasHoy.length > 0) {
-        asistencia = 'finalizado';
-      } else {
-        asistencia = 'sin_iniciar';
-      }
 
       if (visitasHoy.length > 0) {
         inicioJornada = this.formatoHora(visitasHoy[0].entrada);
@@ -256,14 +340,24 @@ export class SupervisionService {
 
       if (asistencia === 'en_curso') enRutaCount++;
       else if (asistencia === 'finalizado') finalizadosCount++;
+      else if (asistencia === 'incompleto') incompletosCount++;
+      else if (asistencia === 'ausente') ausentesCount++;
       else sinIniciarCount++;
 
       // Métricas de ruta del colaborador
-      const totalVisitas = Math.max(asignaciones.length, visitasHoy.length);
-      const completadasVisitas = visitasHoy.filter(
-        (v) => v.salida !== null,
+      const totalVisitas = paradas.length;
+      const completadasVisitas = paradas.filter(
+        (p) => p.estado === 'completado',
       ).length;
-      const enCursoVisitas = visitaAbierta ? 1 : 0;
+      const incompletasVisitas = paradas.filter(
+        (p) => p.estado === 'incompleto',
+      ).length;
+      const ausentesVisitas = paradas.filter(
+        (p) => p.estado === 'ausente',
+      ).length;
+      const enCursoVisitas = paradas.filter(
+        (p) => p.estado === 'en_curso',
+      ).length;
       const pctRuta = totalVisitas
         ? Math.round((completadasVisitas / totalVisitas) * 100)
         : 0;
@@ -273,12 +367,16 @@ export class SupervisionService {
         liderazgo.visitasCompletadas += completadasVisitas;
         if (asistencia === 'en_curso') liderazgo.enRuta++;
         else if (asistencia === 'finalizado') liderazgo.finalizados++;
+        else if (asistencia === 'incompleto') liderazgo.incompletos++;
+        else if (asistencia === 'ausente') liderazgo.ausentes++;
         else liderazgo.sinIniciar++;
       }
 
       totalRutaAsignada += totalVisitas;
       totalRutaCompletada += completadasVisitas;
       totalRutaEnCurso += enCursoVisitas;
+      totalRutaIncompleta += incompletasVisitas;
+      totalRutaAusente += ausentesVisitas;
 
       // Métricas de tareas del colaborador
       const localIds = Array.from(
@@ -353,12 +451,15 @@ export class SupervisionService {
         zona: user.rol?.descripcion ?? 'Comercial',
         telefono: user.celular || '—',
         asistencia,
+        estadoPresentismo,
         inicioJornada,
         finJornada,
         ruta: {
           total: totalVisitas,
           completadas: completadasVisitas,
           enCurso: enCursoVisitas,
+          incompletas: incompletasVisitas,
+          ausentes: ausentesVisitas,
           pct: pctRuta,
         },
         tareas: {
@@ -390,15 +491,24 @@ export class SupervisionService {
         enRuta: enRutaCount,
         finalizados: finalizadosCount,
         sinIniciar: sinIniciarCount,
+        incompletos: incompletosCount,
+        ausentes: ausentesCount,
+        estados: estadosPresentismo,
         totalEquipo: usuarios.length,
       },
       rutas: {
         total: totalRutaAsignada,
         completadas: totalRutaCompletada,
         enCurso: totalRutaEnCurso,
+        incompletas: totalRutaIncompleta,
+        ausentes: totalRutaAusente,
         pendientes: Math.max(
           0,
-          totalRutaAsignada - totalRutaCompletada - totalRutaEnCurso,
+          totalRutaAsignada -
+            totalRutaCompletada -
+            totalRutaEnCurso -
+            totalRutaIncompleta -
+            totalRutaAusente,
         ),
         pct: totalRutaPct,
       },
@@ -424,6 +534,7 @@ export class SupervisionService {
     const { desde, hasta } = rangoConsulta(query);
     const fechaDesde = fechaCampo(desde);
     const fechaHasta = fechaCampo(hasta);
+    const ahora = new Date();
 
     const equipoIds = await this.idsEquipo(u);
     if (
@@ -489,7 +600,7 @@ export class SupervisionService {
             equipoCampoId: exigirEquipoCampo(user.rol?.equipoCampo).id,
             destinatario: destinatarioCampo(user.rol?.equipoCampo),
           },
-          select: { entrada: true, salida: true, id: true },
+          select: HORARIO_CAMPO_SELECT,
           orderBy: { entrada: 'asc' },
           take: 5,
         },
@@ -503,7 +614,7 @@ export class SupervisionService {
                 equipoCampoId: exigirEquipoCampo(user.rol?.equipoCampo).id,
                 destinatario: destinatarioCampo(user.rol?.equipoCampo),
               },
-              select: { entrada: true, salida: true, id: true },
+              select: HORARIO_CAMPO_SELECT,
               orderBy: { entrada: 'asc' },
               take: 5,
             },
@@ -518,6 +629,12 @@ export class SupervisionService {
         fecha: { gte: fechaDesde, lte: fechaHasta },
       },
       include: {
+        horario: { select: { entrada: true, salida: true } },
+        eventosUcheck: {
+          where: { tipo: 'ENTRADA' },
+          take: 1,
+          select: { horaDesde: true, horaHasta: true },
+        },
         local: {
           include: {
             cliente: { select: { id: true, nombre: true } },
@@ -528,7 +645,7 @@ export class SupervisionService {
                 equipoCampoId: exigirEquipoCampo(user.rol?.equipoCampo).id,
                 destinatario: destinatarioCampo(user.rol?.equipoCampo),
               },
-              select: { entrada: true, salida: true, id: true },
+              select: HORARIO_CAMPO_SELECT,
               orderBy: { entrada: 'asc' },
               take: 5,
             },
@@ -573,7 +690,15 @@ export class SupervisionService {
         local: a.local.nombre,
         tipo: 'supermercado', // default semántico
         ventana,
-        estado: 'pendiente',
+        ...estadoAgenda(
+          [],
+          a.horarios.length ? a.horarios : a.local.horarios,
+          a.local.zonaHoraria,
+          desde,
+          hasta,
+          ahora,
+          a,
+        ),
         checkin: null,
         checkout: null,
       });
@@ -584,7 +709,16 @@ export class SupervisionService {
       const existing = paradasMap.get(v.local.id);
       const h = v.local.horarios[0];
       const ventana = h ? `${h.entrada} – ${h.salida}` : '08:00 – 18:00';
-      const estado: ParadaRuta['estado'] = v.salida ? 'completado' : 'en_curso';
+      const a = asignaciones.find((a) => a.local.id === v.local.id);
+      const estado = estadoAgenda(
+        visitas.filter((x) => x.localId === v.localId),
+        a?.horarios.length ? a.horarios : (a?.local.horarios ?? []),
+        v.local.zonaHoraria,
+        desde,
+        hasta,
+        ahora,
+        a,
+      );
 
       paradasMap.set(v.local.id, {
         id: `visita-${v.id}`,
@@ -593,7 +727,7 @@ export class SupervisionService {
         local: v.local.nombre,
         tipo: 'supermercado',
         ventana: existing?.ventana ?? ventana,
-        estado,
+        ...estado,
         checkin: this.formatoHora(v.entrada),
         checkout: this.formatoHora(v.salida),
       });
@@ -602,12 +736,10 @@ export class SupervisionService {
     const ruta = Array.from(paradasMap.values());
 
     // Asistencia
-    const tieneEnCurso = visitas.some((v) => !v.salida);
-    const asistencia = tieneEnCurso
-      ? 'en_curso'
-      : visitas.length > 0
-        ? 'finalizado'
-        : 'sin_iniciar';
+    const asistencia = asistenciaCampo(ruta.map((p) => p.estado));
+    const estadoPresentismo = resumirPresentismo(
+      ruta.map((p) => p.estadoPresentismo),
+    );
 
     const inicioJornada =
       visitas.length > 0 ? this.formatoHora(visitas[0].entrada) : null;
@@ -657,6 +789,8 @@ export class SupervisionService {
         fecha: visita.fecha,
         entrada: visita.entrada,
         salida: visita.salida,
+        estado: conEstadoVisita(visita, ahora).estado,
+        estadoPresentismo: conEstadoVisita(visita, ahora).estadoPresentismo,
         tareaId: cumplimiento.tareaId,
         nombreTarea: cumplimiento.nombreTarea,
         completadaAt: cumplimiento.completadaAt,
@@ -748,6 +882,7 @@ export class SupervisionService {
         telefono: user.celular || '—',
         email: user.correo,
         asistencia,
+        estadoPresentismo,
         inicioJornada,
         finJornada,
       },

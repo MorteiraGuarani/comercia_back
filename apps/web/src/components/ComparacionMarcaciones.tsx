@@ -9,7 +9,7 @@ export default function ComparacionMarcaciones({ detalle }: { detalle: DetalleMa
   return <div className="senales-marcacion">
     <p className="senales-nota"><strong>{detalle.local?.nombre ?? 'Jornada general'}</strong> · {detalle.fecha}</p>
     <p className="senales-nota">Datos capturados al marcar · {detalle.zonaHoraria}</p>
-    {!detalle.salida ? <p role="status" className="senales-nota">Salida pendiente.</p> : null}
+    {!detalle.salida ? <p role="status" className="senales-nota">{detalle.estado === 'INCOMPLETA' ? 'Jornada incompleta. Sin salida registrada; la fecha ya venció.' : 'Salida pendiente.'}</p> : null}
     <div className="senales-columnas" aria-hidden="true"><span>Campo</span><b>Entrada</b><b>Salida</b></div>
     {GRUPOS_MARCACION.map(grupo => <section key={grupo.titulo} aria-label={grupo.titulo}><h3>{grupo.titulo}</h3><dl>
       {grupo.campos.map(campo => <div className="senales-fila" key={campo.clave}>

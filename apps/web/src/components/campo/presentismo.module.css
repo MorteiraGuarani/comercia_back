@@ -49,6 +49,10 @@
 .screen [data-tone='en_curso'] { --tone: var(--tone-active); }
 .screen [data-tone='finalizado'] { --tone: var(--tone-done); }
 .screen [data-tone='sin_iniciar'] { --tone: var(--tone-pending); }
+.screen [data-tone='SIN_REGISTRO'] { --tone: var(--muted); }
+.screen [data-tone='PRESENTE'] { --tone: var(--campo-fresco); }
+.screen [data-tone='TARDE'], .screen [data-tone='INCOMPLETO'] { --tone: var(--campo-alerta); }
+.screen [data-tone='AUSENTE'] { --tone: var(--campo-critico); }
 .distribution { display: flex; gap: 2px; height: .5rem; overflow: clip; border-radius: .25rem; background: var(--surface-soft); }
 .distribution i { flex-basis: 0; min-width: 0; background: var(--tone); }
 .notice { display: flex; justify-content: space-between; align-items: center; gap: var(--space-xs); padding: var(--space-sm); border-radius: .5rem; text-align: left; background: color-mix(in srgb, var(--tone-pending) 10%, var(--surface-raised)); color: var(--tone-pending); min-height: 2.75rem; }
@@ -120,7 +124,7 @@
   .team > .sectionHead { grid-column: 1 / -1; }
   .sectionHead h2 { font-size: 1.125rem; }
   .sectionHead > span { font-size: .8125rem; }
-  .filters { align-self: end; width: fit-content; grid-template-columns: repeat(4, auto); }
+  .filters { align-self: end; width: 100%; grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .filters button { padding-inline: var(--space-md); font-size: .875rem; }
   .search { grid-column: 2; font-size: .8125rem; }
   .team > .empty, .team > div:last-child { grid-column: 1 / -1; }

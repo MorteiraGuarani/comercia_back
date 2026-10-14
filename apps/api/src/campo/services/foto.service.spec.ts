@@ -28,6 +28,10 @@ import { ComentarioService } from './comentario.service';
 import { MomentoFotoDto } from '../dto/foto-tarea.dto';
 
 describe('Evidencias antes de completar una tarea', () => {
+  beforeEach(() =>
+    jest.useFakeTimers().setSystemTime(new Date('2026-09-17T10:30:00-03:00')),
+  );
+  afterEach(() => jest.useRealTimers());
   function contexto(obligatorias = true) {
     const fotos: { momento: string }[] = [];
     const prisma = {
@@ -179,6 +183,7 @@ describe('Evidencias antes de completar una tarea', () => {
         where: {
           id: 20,
           usuarioId: 1,
+          fecha: new Date('2026-09-17T00:00:00Z'),
           salida: null,
           local: { cliente: { empresaId: 10 } },
         },

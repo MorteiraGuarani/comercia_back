@@ -1,4 +1,5 @@
 "use client";
+import { RUTA } from "@/utils/estado-jornada";
 
 import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
@@ -8,7 +9,8 @@ import { usePanel } from "@/components/panel/contexto";
 import { PendientesTareas } from "./pendientes-tareas";
 import { mostrarToast } from "@/components/toast/toast-controller";
 import { useJornadaCompleta } from "@/hooks/use-jornada-completa";
-import { fechaEnZonaIso, queryFechasCampo } from "@/utils/fechas";
+import { useFechaCampo } from "@/hooks/use-fecha-campo";
+import { queryFechasCampo } from "@/utils/fechas";
 import { tareaCumplidaEnVisita } from "@/utils/tareas-campo";
 import { TOKENS } from "./tokens";
 import { StatusStamp } from "./ui/status-stamp";
@@ -40,7 +42,7 @@ export function TareasImpulsadorPanel({
   esRepositor?: boolean;
 }) {
   const { usuario } = usePanel();
-  const hoyStr = fechaEnZonaIso(new Date());
+  const hoyStr = useFechaCampo();
   const [periodo, setPeriodo] = useState<PeriodoFiltro>({
     clave: "hoy",
     etiqueta: "Hoy",
@@ -48,11 +50,12 @@ export function TareasImpulsadorPanel({
     fechaInicio: hoyStr,
     fechaFin: hoyStr,
   });
-  const qsFecha = queryFechasCampo(periodo) || `fecha=${hoyStr}`;
+  const qsFecha = periodo.clave === "hoy" ? `fecha=${hoyStr}` : queryFechasCampo(periodo) || `fecha=${hoyStr}`;
   const [revision, setRevision] = useState(0);
   const jornada = useJornadaCompleta<AgendaCampo>(qsFecha, revision);
   const agendas = jornada.items;
-  const [abierta, setAbierta] = useState<VisitaCampo | null>(null);
+  const [visitaAbierta, setAbierta] = useState<VisitaCampo | null>(null);
+  const abierta = visitaAbierta?.fecha.slice(0, 10) === hoyStr ? visitaAbierta : null;
   const [consultaTerminada, setConsultaTerminada] = useState("");
   const [paginasTareas, setPaginasTareas] = useState<Record<number, number>>(
     {},
@@ -395,9 +398,7 @@ export function TareasImpulsadorPanel({
                     <StatusStamp tone="frio">EN VISITA</StatusStamp>
                   ) : (
                     <span className="text-[11px] text-muted ft-body">
-                      {ag.visitas.some((v) => v.salida)
-                        ? "Visita finalizada"
-                        : "Pendiente de visita"}
+                      {RUTA[ag.estado].etiqueta}
                     </span>
                   )}
                 </div>

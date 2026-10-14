@@ -8,6 +8,10 @@ jest.mock('../../prisma/prisma.service', () => ({
 import { SupervisionService } from './supervision.service';
 
 describe('SupervisionService', () => {
+  beforeEach(() =>
+    jest.useFakeTimers().setSystemTime(new Date('2026-10-10T10:30:00-03:00')),
+  );
+  afterEach(() => jest.useRealTimers());
   it('entrega las fotos y comentarios de cada cumplimiento al líder sin contar borradores', async () => {
     const prisma = {
       usuario: {
@@ -45,6 +49,7 @@ describe('SupervisionService', () => {
         findMany: jest.fn().mockResolvedValue([
           {
             id: 50,
+            localId: 8,
             fecha: new Date('2026-09-17T00:00:00.000Z'),
             entrada: new Date('2026-09-17T08:00:00.000Z'),
             salida: null,
@@ -127,6 +132,11 @@ describe('SupervisionService', () => {
     expect(detalle.evidencias[0].fotos.map((foto) => foto.id)).toEqual([7, 8]);
     expect(detalle.evidencias[0].comentarios[0].comentario).toBe('Realizado');
     expect(detalle.evidencias[1].completadaAt).toBeNull();
+    expect(detalle.colaborador.asistencia).toBe('incompleto');
+    expect(detalle.colaborador.estadoPresentismo).toBe('INCOMPLETO');
+    expect(detalle.ruta[0].estado).toBe('incompleto');
+    expect(detalle.ruta[0].checkout).toBeNull();
+    expect(detalle.evidencias[0].estado).toBe('INCOMPLETA');
   });
 
   it('calcula métricas de presentismo y resumen de equipo', async () => {
@@ -178,13 +188,25 @@ describe('SupervisionService', () => {
           ),
       },
       asignacionCampo: {
-        findMany: jest.fn().mockResolvedValue([{ id: 10, localId: 100 }]),
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: 10,
+            localId: 100,
+            usuarioId: 2,
+            fechaDesde: new Date('2026-09-01'),
+            fechaHasta: null,
+            horarios: [],
+            local: { zonaHoraria: 'America/Asuncion', horarios: [] },
+          },
+        ]),
       },
       visitaCampo: {
         findMany: jest.fn().mockResolvedValue([
           {
             id: 50,
             localId: 100,
+            fecha: new Date('2026-09-17T00:00:00Z'),
+            local: { zonaHoraria: 'America/Asuncion' },
             entrada: new Date('2026-09-17T08:30:00.000Z'),
             salida: null,
             cumplimientos: [{ tareaId: 1 }],
@@ -221,10 +243,29 @@ describe('SupervisionService', () => {
 
     const resumen = await service.resumen(1, { fecha: '2026-09-17' });
 
-    expect(resumen.presentismo.enRuta).toBe(1);
+    expect(resumen.presentismo.enRuta).toBe(0);
+    expect(resumen.presentismo.incompletos).toBe(1);
+    expect(resumen.presentismo.estados.INCOMPLETO).toBe(1);
+    expect(resumen.rutas.incompletas).toBe(1);
+    expect(resumen.rutas.pendientes).toBe(0);
     expect(resumen.presentismo.totalEquipo).toBe(1);
-    expect(resumen.colaboradores[0].asistencia).toBe('en_curso');
+    expect(resumen.colaboradores[0].asistencia).toBe('incompleto');
     expect(resumen.colaboradores[0].novedadesCount).toBe(1);
     expect(resumen.colaboradores[0].tareas.obligPendientes).toBe(1);
+    prisma.visitaCampo.findMany.mockResolvedValue([
+      {
+        id: 51,
+        localId: 100,
+        fecha: new Date('2026-10-10'),
+        local: { zonaHoraria: 'America/Asuncion' },
+        entrada: new Date('2026-10-10T10:00:00-03:00'),
+        salida: null,
+        cumplimientos: [{ tareaId: 1 }],
+      },
+    ]);
+    const hoy = await service.resumen(1, { fecha: '2026-10-10' });
+    expect(hoy.presentismo.enRuta).toBe(1);
+    expect(hoy.presentismo.estados.PRESENTE).toBe(1);
+    expect(hoy.rutas.incompletas).toBe(0);
   });
 });

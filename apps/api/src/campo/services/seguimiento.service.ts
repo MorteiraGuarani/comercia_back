@@ -3,6 +3,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CampoAccesoService } from '../campo-acceso.service';
 import { ConsultaCampoDto } from '../dto/campo.dto';
 import { obtenerEquipoCompleto } from '../utils/autorizacion';
+import { fechaCampo, relojCampo } from '../utils/calendario';
 import {
   rangoPaginacion,
   respuestaPaginada,
@@ -49,6 +50,7 @@ export class SeguimientoService {
     };
     const { skip, take, page, limit } = rangoPaginacion(query);
     const reciente = new Date(Date.now() - 60000);
+    const fecha = fechaCampo(relojCampo().fecha);
     const [
       total,
       trabajadores,
@@ -79,7 +81,7 @@ export class SeguimientoService {
             },
           },
           visitasCampo: {
-            where: { salida: null },
+            where: { salida: null, fecha },
             take: 1,
             orderBy: { entrada: 'desc' },
             select: {
@@ -123,7 +125,7 @@ export class SeguimientoService {
         },
       }),
       this.prisma.visitaCampo.count({
-        where: { usuarioId: { in: ids }, salida: null },
+        where: { usuarioId: { in: ids }, salida: null, fecha },
       }),
       this.prisma.operacionCampo.count({
         where: { usuarioId: { in: ids }, estado: 'PENDIENTE' },

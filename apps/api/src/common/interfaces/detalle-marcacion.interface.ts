@@ -15,6 +15,8 @@ export interface DatosMarcacion {
   contexto: Record<string, ValorSenal>;
 }
 export interface DetalleMarcacion {
+  estado: import('../../campo/interfaces/estado-jornada.interface').EstadoVisita;
+  estadoPresentismo: import('../../campo/interfaces/estado-jornada.interface').EstadoPresentismo;
   id: number;
   usuario: { id: number; nombre: string };
   local: { id: number; nombre: string } | null;

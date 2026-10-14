@@ -8,6 +8,7 @@ import {
 import { TAREA_CAMPO_SELECT } from './selectores';
 import type { Prisma } from '../../../generated/prisma/client';
 import { datosTareaRegistrada } from './version-tarea';
+import { fechaCampo, relojCampo } from './calendario';
 
 // Valida la misma visita, empresa, vigencia y alcance que completar una tarea.
 export async function tareaParaEvidencia(
@@ -24,6 +25,7 @@ export async function tareaParaEvidencia(
     where: {
       id: visitaId,
       usuarioId,
+      fecha: fechaCampo(relojCampo().fecha),
       salida: null,
       local: { cliente: { empresaId } },
     },

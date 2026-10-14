@@ -3,7 +3,8 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { apiFetch } from "@/lib/api";
 import { useJornadaCompleta } from "@/hooks/use-jornada-completa";
-import { fechaEnZonaIso, queryFechasCampo } from "@/utils/fechas";
+import { useFechaCampo } from "@/hooks/use-fecha-campo";
+import { queryFechasCampo } from "@/utils/fechas";
 import { formatoDistancia, metrosEntre } from "@/utils/distancia";
 import {
   ordenarParadasPorRuta,
@@ -11,9 +12,11 @@ import {
   type CoordenadaCampo,
 } from "@/utils/ruta-recomendada";
 import { mensajeError } from "@/utils/error";
+import { RUTA, PRESENTISMO } from "@/utils/estado-jornada";
+import { formatoFechaHora } from "@/utils/fechas";
 import { TOKENS } from "./tokens";
 import { StatusStamp } from "./ui/status-stamp";
-import { StatChip } from "./ui/stat-chip";
+import { ResumenRuta } from "./ui/resumen-ruta";
 import { TopBar } from "./ui/top-bar";
 import {
   SelectorFechaFiltro,
@@ -34,7 +37,7 @@ import type {
 type LocalParaNovedad = Pick<LocalCampo, "id" | "nombre">;
 
 export function RutaImpulsadorPanel() {
-  const hoyStr = fechaEnZonaIso(new Date());
+  const hoyStr = useFechaCampo();
   const [periodo, setPeriodo] = useState<PeriodoFiltro>({
     clave: "hoy",
     etiqueta: "Hoy",
@@ -42,9 +45,10 @@ export function RutaImpulsadorPanel() {
     fechaInicio: hoyStr,
     fechaFin: hoyStr,
   });
-  const qsFecha = queryFechasCampo(periodo) || `fecha=${hoyStr}`;
+  const qsFecha = periodo.clave === "hoy" ? `fecha=${hoyStr}` : queryFechasCampo(periodo) || `fecha=${hoyStr}`;
   const lista = useJornadaCompleta<AgendaCampo>(qsFecha);
-  const [abierta, setAbierta] = useState<VisitaCampo | null>(null);
+  const [visitaAbierta, setAbierta] = useState<VisitaCampo | null>(null);
+  const abierta = visitaAbierta?.fecha.slice(0, 10) === hoyStr ? visitaAbierta : null;
   const [error, setError] = useState("");
   const [mapa, setMapa] = useState<LocalCampo | null>(null);
   const [busqueda, setBusqueda] = useState("");
@@ -84,7 +88,7 @@ export function RutaImpulsadorPanel() {
     return () => {
       vigente = false;
     };
-  }, []);
+  }, [hoyStr]);
 
   const itemsFiltrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
@@ -96,7 +100,7 @@ export function RutaImpulsadorPanel() {
             a.local.direccion.toLowerCase().includes(q),
         )
       : lista.items;
-    const visitado = (a: AgendaCampo) => a.visitas.some((v) => v.salida);
+    const visitado = (a: AgendaCampo) => a.estado === "completado";
     if (!ordenRuta?.length) {
       return [...base].sort(
         (a, b) => Number(visitado(a)) - Number(visitado(b)),
@@ -115,10 +119,12 @@ export function RutaImpulsadorPanel() {
 
   const totalParadas = lista.total || lista.items.length;
   const visitadas = lista.items.filter((a) =>
-    a.visitas.some((v) => v.salida),
+    a.estado === "completado",
   ).length;
-  const enCurso = abierta ? 1 : 0;
-  const pendientes = Math.max(0, totalParadas - visitadas - enCurso);
+  const enCurso = lista.items.filter(a => a.estado === "en_curso").length;
+  const incompletas = lista.items.filter(a => a.estado === "incompleto").length;
+  const ausentes = lista.items.filter(a => a.estado === "ausente").length;
+  const pendientes = Math.max(0, totalParadas - visitadas - enCurso - incompletas - ausentes);
 
   function ventanaDe(a: AgendaCampo) {
     const horarios = a.local.horarios;
@@ -130,7 +136,7 @@ export function RutaImpulsadorPanel() {
   function pendientesParaRuta(items: AgendaCampo[]) {
     return items.filter(
       (a) =>
-        !a.visitas.some((v) => v.salida) &&
+        a.estado === "pendiente" &&
         abierta?.local.id !== a.local.id &&
         Number.isFinite(a.local.latitud) &&
         Number.isFinite(a.local.longitud),
@@ -272,74 +278,61 @@ export function RutaImpulsadorPanel() {
         }
       />
 
-      <div className="min-w-0 p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto w-full space-y-6 flex-1">
-        {/* StatChips estilo editorial */}
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 sm:grid sm:grid-cols-4 sm:overflow-visible">
-          <div className="min-w-[8.25rem] flex-1">
-            <StatChip label="Total paradas" value={totalParadas} tone="ink" />
-          </div>
-          <div className="min-w-[8.25rem] flex-1">
-            <StatChip label="Visitadas" value={visitadas} tone="fresco" />
-          </div>
-          <div className="min-w-[8.25rem] flex-1">
-            <StatChip label="En curso" value={enCurso} tone="frio" />
-          </div>
-          <div className="min-w-[8.25rem] flex-1">
-            <StatChip label="Pendientes" value={pendientes} tone="sub" />
-          </div>
-        </div>
+      <div className="min-w-0 p-3 sm:p-5 lg:p-6 max-w-6xl mx-auto w-full space-y-3 flex-1">
+        <ResumenRuta total={totalParadas} visitadas={visitadas} enCurso={enCurso} pendientes={pendientes} incompletas={incompletas} ausentes={ausentes} />
 
-        {/* Visita en curso destacada */}
+        <section aria-label="Controles de la ruta" className="grid min-w-0 grid-cols-2 items-center gap-2 lg:flex">
         {abierta && (
           <div
-            className="rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm border-2"
+            className="col-span-2 flex min-w-0 items-center gap-2 rounded-lg border px-2 py-1 lg:w-72 lg:shrink-0"
             style={{
               background: TOKENS.canvas,
               borderColor: TOKENS.frio,
             }}
           >
-            <div className="flex items-center gap-3">
-              <span className="relative flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-600"></span>
-              </span>
-              <div>
+            <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full" style={{ background: TOKENS.frio }} />
+              <div className="min-w-0 flex-1">
                 <p
-                  className="ft-body font-bold text-sm"
+                  className="ft-body truncate text-xs font-semibold"
+                  title={`Visita en curso · ${abierta.local.nombre}`}
                   style={{ color: TOKENS.ink }}
                 >
-                  Visita en curso · {abierta.local.nombre}
+                  En curso · {abierta.local.nombre}
                 </p>
-                <p className="ft-mono text-xs text-muted">
-                  Entrada registrada:{" "}
-                  {new Date(abierta.entrada).toLocaleTimeString("es-AR", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                <p className="ft-mono truncate text-[10px] text-muted" title={`Entrada: ${formatoFechaHora(abierta.entrada)}`}>
+                  Entrada:{" "}
+                  {formatoFechaHora(abierta.entrada)}
                 </p>
               </div>
-            </div>
-
-            <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => setNovedadLocal(abierta.local)}
                 aria-label="Reportar novedad"
                 title="Reportar novedad"
-                className="grid h-11 w-11 cursor-pointer place-items-center rounded-lg border border-accent-ink bg-accent-soft text-xl font-semibold text-accent-ink transition hover:bg-surface-soft"
+                className="grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-lg text-xl font-semibold text-accent-ink transition hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:text-accent-ink dark:hover:bg-accent-soft"
               >
                 <span aria-hidden="true">+</span>
               </button>
-            </div>
           </div>
         )}
-
-        <div className="grid min-w-0 grid-cols-2 gap-2">
+          <label className="relative col-span-2 min-w-0 lg:flex-1">
+            <span className="sr-only">Buscar local o cliente en la ruta</span>
+            <input
+              type="search"
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              placeholder="Buscar local o cliente…"
+              className="h-11 min-h-11 w-full rounded-lg border border-line bg-surface-raised pl-9 pr-3 text-base text-foreground outline-none placeholder:text-muted focus-visible:ring-2 focus-visible:ring-focus sm:text-sm dark:border-line dark:bg-surface-raised dark:text-foreground"
+            />
+            <svg aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+              <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+            </svg>
+          </label>
           <button
             type="button"
             onClick={() => void calcularRuta()}
             disabled={calculandoRuta || lista.cargando}
-            className="h-11 min-h-11 flex-1 cursor-pointer rounded-lg border border-line bg-surface-raised px-3 text-xs font-bold text-foreground transition hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40 disabled:cursor-not-allowed dark:border-line"
+            className="h-11 min-h-11 cursor-pointer whitespace-nowrap rounded-lg border border-line bg-surface-raised px-3 text-xs font-semibold text-foreground transition hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50 lg:shrink-0 dark:border-line dark:bg-surface-raised dark:text-foreground dark:hover:bg-surface-soft"
           >
             Calcular ruta
           </button>
@@ -347,36 +340,16 @@ export function RutaImpulsadorPanel() {
             type="button"
             onClick={iniciarEnMaps}
             disabled={!paradasMaps.length}
-            className="h-11 min-h-11 flex-1 cursor-pointer rounded-lg bg-[#1E2320] px-3 text-xs font-bold text-white transition hover:bg-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40 disabled:cursor-not-allowed dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
+            className="h-11 min-h-11 cursor-pointer whitespace-nowrap rounded-lg bg-commercial-ink px-3 text-xs font-semibold text-accent-on-ink transition hover:bg-[var(--commercial-ink-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50 lg:shrink-0 dark:bg-commercial-ink dark:text-accent-on-ink dark:hover:bg-[var(--commercial-ink-soft)]"
           >
             Iniciar en Maps
           </button>
-        </div>
+        </section>
         {(rutaCalc?.qs === qsFecha ? rutaCalc.aviso : avisoRuta) ? (
           <p className="rounded-lg border border-line bg-surface-soft px-3 py-2 text-xs text-foreground dark:border-line">
             {rutaCalc?.qs === qsFecha ? rutaCalc.aviso : avisoRuta}
           </p>
         ) : null}
-
-        {/* Buscador de locales */}
-        <div className="relative">
-          <input
-            type="text"
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Buscar local o cliente en la ruta..."
-            className="w-full text-xs p-2.5 pl-8 rounded-lg outline-none bg-surface-raised border border-line"
-          />
-          <svg
-            className="w-4 h-4 text-muted absolute left-2.5 top-3"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-        </div>
 
         {/* Lista de paradas de la ruta */}
         <div className="space-y-2.5 pb-16">
@@ -398,28 +371,11 @@ export function RutaImpulsadorPanel() {
             </div>
           ) : (
             itemsFiltrados.map((a, i) => {
-              const estaEnCurso = abierta?.local.id === a.local.id;
-              const tieneVisitaCerrada = a.visitas.some((v) => v.salida);
+              const estaEnCurso = a.estado === "en_curso";
+              const tieneVisitaCerrada = a.estado === "completado";
               const ultimaVisita = a.visitas[a.visitas.length - 1];
 
-              const estado = estaEnCurso
-                ? "en_curso"
-                : tieneVisitaCerrada
-                  ? "completado"
-                  : "pendiente";
-
-              const tone =
-                estado === "completado"
-                  ? "fresco"
-                  : estado === "en_curso"
-                    ? "frio"
-                    : "ink";
-              const label =
-                estado === "completado"
-                  ? "VISITADO"
-                  : estado === "en_curso"
-                    ? "EN CURSO"
-                    : "PENDIENTE";
+              const { tone, etiqueta: label } = RUTA[a.estado];
 
               const horarios = a.local.horarios;
               const ventana = horarios.length
@@ -428,7 +384,7 @@ export function RutaImpulsadorPanel() {
               const ordenNumero = ordenRuta
                 ? ordenRuta.indexOf(a.id)
                 : itemsFiltrados
-                    .filter((x) => !x.visitas.some((v) => v.salida))
+                    .filter((x) => x.estado === "pendiente")
                     .findIndex((x) => x.id === a.id);
 
               return (
@@ -464,7 +420,8 @@ export function RutaImpulsadorPanel() {
                       </div>
                     </div>
 
-                    <StatusStamp tone={tone}>{label}</StatusStamp>
+                    <div className="flex flex-wrap gap-1"><StatusStamp tone={tone}>{label}</StatusStamp>
+                      <StatusStamp tone={PRESENTISMO[a.estadoPresentismo].tone}>{PRESENTISMO[a.estadoPresentismo].etiqueta}</StatusStamp></div>
                   </div>
 
                   <div

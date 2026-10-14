@@ -30,6 +30,11 @@ import {
 import { condicionAgenda } from './utils/agenda-sql';
 import { comprobarMarcaEnLocal } from './utils/marcacion';
 import {
+  conEstadoVisita,
+  estadoAgenda,
+  estadoVisita,
+} from './utils/estado-jornada';
+import {
   HORARIO_CAMPO_SELECT,
   LOCAL_CAMPO_SELECT,
   VISITA_CAMPO_SELECT,
@@ -128,7 +133,10 @@ export class JornadaCampoService {
       hasta,
       exigirEquipoCampo(u.equipoCampo).id,
     );
-    const preferencia = await this.prisma.usuario.findFirst({ where: { id: u.id, empresaId: u.empresaId }, select: { localPrincipalId: true } });
+    const preferencia = await this.prisma.usuario.findFirst({
+      where: { id: u.id, empresaId: u.empresaId },
+      select: { localPrincipalId: true },
+    });
     const base = Prisma.sql`FROM campo_asignaciones a JOIN campo_locales l ON l.id = a.local_id JOIN campo_clientes c ON c.id = l.cliente_id WHERE ${condicion}`;
     const [conteo, ids] = await Promise.all([
       this.prisma.$queryRaw<TotalAgenda[]>(
@@ -148,6 +156,8 @@ export class JornadaCampoService {
       select: {
         id: true,
         usuarioId: true,
+        fechaDesde: true,
+        fechaHasta: true,
         usuario: { select: { nombre: true, apellido: true } },
         horarios: {
           where: {
@@ -181,11 +191,25 @@ export class JornadaCampoService {
             fecha: { gte: fechaDesde, lte: fechaHasta },
           },
           take: 200,
-          select: { id: true, horarioId: true, entrada: true, salida: true },
+          select: {
+            id: true,
+            horarioId: true,
+            fecha: true,
+            entrada: true,
+            salida: true,
+            local: { select: { zonaHoraria: true } },
+            horario: { select: { entrada: true, salida: true } },
+            eventosUcheck: {
+              where: { tipo: 'ENTRADA' },
+              take: 1,
+              select: { horaDesde: true, horaHasta: true },
+            },
+          },
         },
       },
     });
     const porId = new Map(filas.map((f) => [f.id, f]));
+    const ahora = new Date();
     const items = ids.flatMap(({ id }) => {
       const a = porId.get(id);
       return a
@@ -205,7 +229,16 @@ export class JornadaCampoService {
                   ocurreHorarioEnRango(h, fechaDesde, fechaHasta),
                 ),
               },
-              visitas: a.visitas,
+              visitas: a.visitas.map((v) => conEstadoVisita(v, ahora)),
+              ...estadoAgenda(
+                a.visitas,
+                a.horarios.length ? a.horarios : a.local.horarios,
+                a.local.zonaHoraria,
+                desde,
+                hasta,
+                ahora,
+                a,
+              ),
             },
           ]
         : [];
@@ -234,7 +267,11 @@ export class JornadaCampoService {
           u.equipoCampo,
         );
         const distancia = comprobarMarcaEnLocal(dto, a.local, ahora);
-        if (await tx.visitaCampo.count({ where: { usuarioId, salida: null } }))
+        if (
+          await tx.visitaCampo.count({
+            where: { usuarioId, fecha, salida: null },
+          })
+        )
           throw new ConflictException(
             'Cerrá tu visita abierta antes de marcar otra entrada',
           );
@@ -265,7 +302,7 @@ export class JornadaCampoService {
             );
         } else if (dto.horarioId != null)
           throw new BadRequestException('Horario no disponible');
-        return tx.visitaCampo.create({
+        const visita = await tx.visitaCampo.create({
           data: {
             localId: a.localId,
             asignacionId: a.id,
@@ -282,6 +319,7 @@ export class JornadaCampoService {
           },
           select: VISITA_CAMPO_SELECT,
         });
+        return conEstadoVisita(visita, ahora);
       });
     } catch (error) {
       if (
@@ -294,22 +332,27 @@ export class JornadaCampoService {
   }
   async abierta(usuarioId: number) {
     const u = await this.acceso.ejecutar(usuarioId);
-    // Se puede cerrar aunque un responsable cambie la asignación o el horario.
-    return this.prisma.visitaCampo.findFirst({
+    // Una jornada anterior queda incompleta; nunca se inventa una salida.
+    const visita = await this.prisma.visitaCampo.findFirst({
       where: {
         usuarioId: u.id,
+        fecha: fechaCampo(relojCampo().fecha),
         salida: null,
         local: { cliente: { empresaId: u.empresaId } },
       },
       select: VISITA_CAMPO_SELECT,
     });
+    return visita ? conEstadoVisita(visita) : null;
   }
   async salida(usuarioId: number, id: number, dto: MarcaCampoDto) {
     const u = await this.acceso.ejecutar(usuarioId);
+    const ahora = new Date();
+    const fecha = fechaCampo(relojCampo(ahora).fecha);
     const visita = await this.prisma.visitaCampo.findFirst({
       where: {
         id,
         usuarioId: u.id,
+        fecha,
         salida: null,
         local: { cliente: { empresaId: u.empresaId } },
       },
@@ -318,16 +361,17 @@ export class JornadaCampoService {
       },
     });
     if (!visita) throw new NotFoundException('Visita abierta no disponible');
-    const distancia = comprobarMarcaEnLocal(dto, visita.local, new Date());
+    const distancia = comprobarMarcaEnLocal(dto, visita.local, ahora);
     const resultado = await this.prisma.visitaCampo.updateMany({
       where: {
         id,
         usuarioId: u.id,
+        fecha,
         salida: null,
         local: { cliente: { empresaId: u.empresaId } },
       },
       data: {
-        salida: new Date(),
+        salida: ahora,
         salidaLat: dto.latitud,
         salidaLng: dto.longitud,
         salidaPrecision: dto.precisionMetros,
@@ -382,7 +426,12 @@ export class JornadaCampoService {
     const { skip, take, page, limit } = rangoPaginacion(query);
     if (exigirEquipoCampo(u.equipoCampo).tipo === 'REPOSITOR') {
       const abierta = await this.prisma.visitaCampo.findFirst({
-        where: { usuarioId: u.id, asignacionId, salida: null },
+        where: {
+          usuarioId: u.id,
+          asignacionId,
+          fecha: fechaCampo(relojCampo().fecha),
+          salida: null,
+        },
         select: { id: true },
       });
       if (!abierta) return respuestaPaginada([], 0, page, limit);
@@ -452,7 +501,7 @@ export class JornadaCampoService {
               iniciadaAt: true,
               detalleTarea: true,
               versionTarea: true,
-              visita: { select: { salida: true } },
+              visita: { select: { fecha: true, entrada: true, salida: true } },
               fotos: { select: { momento: true }, take: 2 },
             },
           },
@@ -466,14 +515,21 @@ export class JornadaCampoService {
       items.map(({ cumplimientos, ...t }) => ({
         ...datosTareaRegistrada(
           t,
-          cumplimientos.find((c) => c.completadaAt === null && !c.visita.salida)
-            ?.detalleTarea,
-          cumplimientos.find((c) => c.completadaAt === null && !c.visita.salida)
-            ?.versionTarea,
+          cumplimientos.find(
+            (c) =>
+              c.completadaAt === null && estadoVisita(c.visita) === 'EN_CURSO',
+          )?.detalleTarea,
+          cumplimientos.find(
+            (c) =>
+              c.completadaAt === null && estadoVisita(c.visita) === 'EN_CURSO',
+          )?.versionTarea,
         ),
         iniciadaAt:
           cumplimientos.find(
-            (c) => c.iniciadaAt && c.completadaAt === null && !c.visita.salida,
+            (c) =>
+              c.iniciadaAt &&
+              c.completadaAt === null &&
+              estadoVisita(c.visita) === 'EN_CURSO',
           )?.iniciadaAt ?? null,
         visitasCompletadas: cumplimientos
           .filter((c) => c.completadaAt !== null)
@@ -535,7 +591,7 @@ export class JornadaCampoService {
         select: { completadaAt: true, detalleTarea: true, versionTarea: true },
       });
       if (previo?.completadaAt) return { ok: true };
-      if (v.salida)
+      if (estadoVisita(v) !== 'EN_CURSO')
         throw new BadRequestException(
           'La visita ya terminó; conservá la acción pendiente para su revisión',
         );
@@ -659,6 +715,11 @@ export class JornadaCampoService {
         take,
       }),
     ]);
-    return respuestaPaginada(items, total, page, limit);
+    return respuestaPaginada(
+      items.map((v) => conEstadoVisita(v)),
+      total,
+      page,
+      limit,
+    );
   }
 }

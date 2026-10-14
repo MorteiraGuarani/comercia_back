@@ -45,7 +45,9 @@ export const ASIGNACION_CAMPO_SELECT = {
   fechaDesde: true,
   fechaHasta: true,
   activo: true,
-  usuario: { select: { id: true, nombre: true, apellido: true, localPrincipalId: true } },
+  usuario: {
+    select: { id: true, nombre: true, apellido: true, localPrincipalId: true },
+  },
 } as const;
 export const BACKUP_CAMPO_SELECT = {
   id: true,
@@ -102,7 +104,15 @@ export const VISITA_CAMPO_SELECT = {
   salidaDistancia: true,
   salidaFueraHorario: true,
   salidaFueraAtencion: true,
-  local: { select: { id: true, nombre: true, radioMetros: true } },
+  local: {
+    select: { id: true, nombre: true, radioMetros: true, zonaHoraria: true },
+  },
+  horario: { select: { entrada: true, salida: true } },
+  eventosUcheck: {
+    where: { tipo: 'ENTRADA' },
+    take: 1,
+    select: { horaDesde: true, horaHasta: true },
+  },
   usuario: { select: { id: true, nombre: true, apellido: true } },
   asignacion: {
     select: { usuario: { select: { id: true, nombre: true, apellido: true } } },

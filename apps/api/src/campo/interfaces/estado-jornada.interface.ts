@@ -1,0 +1,26 @@
+export type EstadoPresentismo =
+  'SIN_REGISTRO' | 'PRESENTE' | 'TARDE' | 'INCOMPLETO' | 'AUSENTE';
+export type EstadoVisita = 'EN_CURSO' | 'CERRADA' | 'INCOMPLETA';
+export type EstadoRuta =
+  'pendiente' | 'en_curso' | 'completado' | 'incompleto' | 'ausente';
+export type AsistenciaCampo =
+  'sin_iniciar' | 'en_curso' | 'finalizado' | 'incompleto' | 'ausente';
+
+export interface RegistroPresentismoCampo {
+  fecha: Date | string;
+  zonaHoraria?: string;
+  horaDesde?: string | null;
+  horaHasta?: string | null;
+  entrada: Date | string | null;
+  salida: Date | string | null;
+}
+
+export interface VisitaParaEstado {
+  fecha: Date;
+  entrada: Date;
+  salida: Date | null;
+  horarioId?: number | null;
+  local?: { zonaHoraria?: string };
+  horario?: { entrada: string; salida: string } | null;
+  eventosUcheck?: { horaDesde: string | null; horaHasta: string | null }[];
+}

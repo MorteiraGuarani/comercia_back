@@ -10,6 +10,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CampoAccesoService } from './campo-acceso.service';
 import { fechaCampo, relojCampo } from './utils/calendario';
 import { VISITA_CAMPO_SELECT } from './utils/selectores';
+import { conEstadoVisita } from './utils/estado-jornada';
 import { DestinatarioTareaCampo } from '../../generated/prisma/client';
 import { exigirEquipoCampo, EQUIPO_CAMPO_SELECT } from './utils/equipo-campo';
 import type {
@@ -371,7 +372,7 @@ export class RepositorCampoService {
         data: { notaEntrada: dto.nota },
         select: { id: true },
       });
-    return visita;
+    return conEstadoVisita(visita);
   }
 
   async salida(
@@ -386,6 +387,7 @@ export class RepositorCampoService {
       where: {
         id: visitaId,
         usuarioId,
+        fecha: fechaCampo(relojCampo().fecha),
         salida: null,
         origen: 'UCHECK',
         local: { cliente: { empresaId: u.empresaId } },

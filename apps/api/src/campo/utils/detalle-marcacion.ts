@@ -1,6 +1,7 @@
 import type { Prisma } from '../../../generated/prisma/client';
 import type { DetalleMarcacion } from '../../common/interfaces/detalle-marcacion.interface';
 import { contextoTecnico } from '../../common/utils/contexto-tecnico';
+import { conEstadoVisita } from './estado-jornada';
 
 export function selectorMarcaciones(empresaId: number, usuarioId: number) {
   return {
@@ -22,12 +23,15 @@ export function selectorMarcaciones(empresaId: number, usuarioId: number) {
     salidaFueraAtencion: true,
     usuario: { select: { id: true, nombre: true, apellido: true } },
     local: { select: { id: true, nombre: true, zonaHoraria: true } },
+    horario: { select: { entrada: true, salida: true } },
     eventosUcheck: {
       where: { empresaId, usuarioId },
       take: 2,
       orderBy: { tipo: 'asc' },
       select: {
         tipo: true,
+        horaDesde: true,
+        horaHasta: true,
         registradaEn: true,
         capturadaEn: true,
         recibidaEn: true,
@@ -83,6 +87,8 @@ export function detalleVisita(
     };
   }
   return {
+    estado: conEstadoVisita(v).estado,
+    estadoPresentismo: conEstadoVisita(v).estadoPresentismo,
     id: v.id,
     usuario: {
       id: v.usuario.id,

@@ -1,9 +1,11 @@
 "use client";
+import { PRESENTISMO, RUTA } from "@/utils/estado-jornada";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { mensajeError } from "@/utils/error";
-import { fechaEnZonaIso, queryFechasCampo } from "@/utils/fechas";
+import { queryFechasCampo } from "@/utils/fechas";
+import { useFechaCampo } from "@/hooks/use-fecha-campo";
 import { TOKENS } from "./tokens";
 import { StatusStamp } from "./ui/status-stamp";
 import { BigProgress } from "./ui/big-progress";
@@ -152,7 +154,7 @@ export function SupervisionPanel({
   const peticionResumen = useRef(0);
 
   // Selector de período con fechas predefinidas y calendario
-  const hoyStr = fechaEnZonaIso(new Date());
+  const hoyStr = useFechaCampo();
   const [periodo, setPeriodo] = useState<PeriodoFiltro>({
     clave: "hoy",
     etiqueta: "Hoy",
@@ -160,6 +162,8 @@ export function SupervisionPanel({
     fechaInicio: hoyStr,
     fechaFin: hoyStr,
   });
+  const periodoVigente = periodo.clave === "hoy" ? { ...periodo, fecha: hoyStr, fechaInicio: hoyStr, fechaFin: hoyStr } : periodo;
+  const fechasPeriodo = queryFechasCampo(periodoVigente);
 
   const [resumen, setResumen] = useState<SupervisionResumenData | null>(null);
   const [cargando, setCargando] = useState(true);
@@ -179,7 +183,7 @@ export function SupervisionPanel({
     try {
       setCargando(true);
       setError(null);
-      const query = queryFechasCampo(periodo);
+      const query = fechasPeriodo;
       const data = await apiFetch<SupervisionResumenData>(
         `/campo/supervision/resumen${query ? `?${query}` : ""}`,
       );
@@ -191,7 +195,7 @@ export function SupervisionPanel({
     } finally {
       if (peticion === peticionResumen.current) setCargando(false);
     }
-  }, [periodo]);
+  }, [fechasPeriodo]);
 
   useEffect(() => {
     void Promise.resolve().then(cargarResumen);
@@ -207,7 +211,7 @@ export function SupervisionPanel({
     setColaboradorId(id);
     setSubTabColab(sub);
     try {
-      const queryFecha = queryFechasCampo(periodo) || `fecha=${hoyStr}`;
+      const queryFecha = fechasPeriodo || `fecha=${hoyStr}`;
       const data = await apiFetch<ColaboradorDetalleData>(
         `/campo/supervision/colaboradores/${id}?${queryFecha}`,
       );
@@ -262,19 +266,9 @@ export function SupervisionPanel({
                   aria-label={`Llamar a ${detalleColab.colaborador.nombre}`}>Llamar · {detalleColab.colaborador.telefono}</a>}
               </div>
               <StatusStamp
-                tone={
-                  detalleColab.colaborador.asistencia === "en_curso"
-                    ? "frio"
-                    : detalleColab.colaborador.asistencia === "finalizado"
-                      ? "fresco"
-                      : "critico"
-                }
+                tone={PRESENTISMO[detalleColab.colaborador.estadoPresentismo].tone}
               >
-                {detalleColab.colaborador.asistencia === "en_curso"
-                  ? "EN RUTA"
-                  : detalleColab.colaborador.asistencia === "finalizado"
-                    ? "FINALIZADO"
-                    : "SIN INICIAR"}
+                {PRESENTISMO[detalleColab.colaborador.estadoPresentismo].etiqueta}
               </StatusStamp>
             </div>
 
@@ -320,7 +314,7 @@ export function SupervisionPanel({
               ]}
             />
 
-            {subTabColab === 'marcaciones' ? <MarcacionesColaborador key={`${colaboradorId}:${queryFechasCampo(periodo)}`} colaboradorId={colaboradorId} periodo={periodo} /> : null}
+            {subTabColab === 'marcaciones' ? <MarcacionesColaborador key={`${colaboradorId}:${fechasPeriodo}`} colaboradorId={colaboradorId} periodo={periodoVigente} /> : null}
 
             {/* Contenido sub-tab: Ruta del Colaborador */}
             {subTabColab === "ruta" && (
@@ -353,15 +347,9 @@ export function SupervisionPanel({
                         </div>
                       </div>
                       <StatusStamp
-                        tone={
-                          p.estado === "completado"
-                            ? "fresco"
-                            : p.estado === "en_curso"
-                              ? "frio"
-                              : "sub"
-                        }
+                        tone={RUTA[p.estado].tone}
                       >
-                        {p.estado.toUpperCase()}
+                        {RUTA[p.estado].etiqueta} · {PRESENTISMO[p.estadoPresentismo].etiqueta}
                       </StatusStamp>
                     </div>
                   ))
@@ -417,7 +405,7 @@ export function SupervisionPanel({
                           </div>
                           <StatusStamp tone={evidencia.completadaAt ? "fresco" : "sub"} size="sm">{evidencia.completadaAt ? "COMPLETADA" : "EN CURSO"}</StatusStamp>
                         </div>
-                        <p className="text-xs text-muted">Visita: {new Date(evidencia.entrada).toLocaleString("es-PY")} · Salida: {evidencia.salida ? new Date(evidencia.salida).toLocaleTimeString("es-PY") : "en curso"}</p>
+                        <p className="text-xs text-muted">Visita: {new Date(evidencia.entrada).toLocaleString("es-PY")} · Salida: {evidencia.salida ? new Date(evidencia.salida).toLocaleTimeString("es-PY") : evidencia.estado === "EN_CURSO" ? "en curso" : "sin salida registrada"} · {PRESENTISMO[evidencia.estadoPresentismo].etiqueta}</p>
                         {evidencia.completadaAt && <p className="text-xs text-muted">Completada: {new Date(evidencia.completadaAt).toLocaleString("es-PY")}</p>}
                         {evidencia.fotos.length > 0 && (
                           <div className="grid grid-cols-2 gap-2">

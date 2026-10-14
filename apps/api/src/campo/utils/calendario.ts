@@ -2,9 +2,9 @@ import { BadRequestException } from '@nestjs/common';
 import type { ReglaHorario } from '../interfaces/calendario.interface';
 
 export const ZONA_CAMPO = 'America/Asuncion';
-export function relojCampo(ahora = new Date()) {
+export function relojCampo(ahora = new Date(), zonaHoraria = ZONA_CAMPO) {
   const partes = new Intl.DateTimeFormat('en-CA', {
-    timeZone: ZONA_CAMPO,
+    timeZone: zonaHoraria,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',

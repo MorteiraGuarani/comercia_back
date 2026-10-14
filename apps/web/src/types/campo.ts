@@ -110,6 +110,8 @@ export interface TareaCampo {
   locales: { local: { id: number; nombre: string } }[];
 }
 export interface VisitaCampo {
+  estado: import("./estado-jornada").EstadoVisita;
+  estadoPresentismo: import("./estado-jornada").EstadoPresentismo;
   id: number;
   asignacionId: number;
   horarioId: number | null;
@@ -129,6 +131,8 @@ export interface VisitaCampo {
   _count: { cumplimientos: number };
 }
 export interface AgendaCampo {
+  estado: import("./estado-jornada").EstadoRuta;
+  estadoPresentismo: import("./estado-jornada").EstadoPresentismo;
   id: number;
   esBackup: boolean;
   titular: string;
@@ -136,6 +140,9 @@ export interface AgendaCampo {
   visitas: {
     id: number;
     horarioId: number | null;
+    fecha: string;
+    estado: import("./estado-jornada").EstadoVisita;
+    estadoPresentismo: import("./estado-jornada").EstadoPresentismo;
     entrada: string;
     salida: string | null;
   }[];
@@ -432,13 +439,16 @@ export interface ColaboradorResumen {
   iniciales: string;
   zona: string;
   telefono: string;
-  asistencia: "en_curso" | "finalizado" | "sin_iniciar";
+  asistencia: import("./estado-jornada").AsistenciaCampo;
+  estadoPresentismo: import("./estado-jornada").EstadoPresentismo;
   inicioJornada: string | null;
   finJornada: string | null;
   ruta: {
     total: number;
     completadas: number;
     enCurso: number;
+    incompletas: number;
+    ausentes: number;
     pct: number;
   };
   tareas: {
@@ -459,6 +469,8 @@ export interface SupervisionResumenData {
     enRuta: number;
     finalizados: number;
     sinIniciar: number;
+    incompletos: number;
+    ausentes: number;
     visitasCompletadas: number;
     visitasTotales: number;
     pctVisitas: number;
@@ -467,12 +479,17 @@ export interface SupervisionResumenData {
     enRuta: number;
     finalizados: number;
     sinIniciar: number;
+    incompletos: number;
+    ausentes: number;
+    estados: Record<import("./estado-jornada").EstadoPresentismo, number>;
     totalEquipo: number;
   };
   rutas: {
     total: number;
     completadas: number;
     enCurso: number;
+    incompletas: number;
+    ausentes: number;
     pendientes: number;
     pct: number;
   };
@@ -492,7 +509,8 @@ export interface ParadaRutaColaborador {
   local: string;
   tipo: "carniceria" | "supermercado" | "restaurante" | "tienda";
   ventana: string;
-  estado: "completado" | "en_curso" | "pendiente";
+  estado: import("./estado-jornada").EstadoRuta;
+  estadoPresentismo: import("./estado-jornada").EstadoPresentismo;
   checkin: string | null;
   checkout: string | null;
 }
@@ -528,7 +546,8 @@ export interface ColaboradorDetalleData {
     zona: string;
     telefono: string;
     email?: string;
-    asistencia: "en_curso" | "finalizado" | "sin_iniciar";
+    asistencia: import("./estado-jornada").AsistenciaCampo;
+    estadoPresentismo: import("./estado-jornada").EstadoPresentismo;
     inicioJornada: string | null;
     finJornada: string | null;
   };
@@ -541,6 +560,8 @@ export interface ColaboradorDetalleData {
     fecha: string;
     entrada: string;
     salida: string | null;
+    estado: import("./estado-jornada").EstadoVisita;
+    estadoPresentismo: import("./estado-jornada").EstadoPresentismo;
     tareaId: number;
     nombreTarea: string;
     completadaAt: string | null;

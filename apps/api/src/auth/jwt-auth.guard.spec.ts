@@ -31,7 +31,10 @@ describe('JwtAuthGuard', () => {
     };
     jwt.verify.mockReturnValue({ sub: 42 });
     jwt.sign.mockReturnValue('token-renovado');
-    prisma.usuario.findUnique.mockResolvedValue({ isActive: true, empresaId: 7 });
+    prisma.usuario.findUnique.mockResolvedValue({
+      isActive: true,
+      empresaId: 7,
+    });
 
     await expect(guard.canActivate(context as never)).resolves.toBe(true);
     expect(request).toMatchObject({ usuarioId: 42, empresaId: 7 });
@@ -76,7 +79,10 @@ describe('JwtAuthGuard', () => {
       }),
     };
     jwt.verify.mockReturnValue({ sub: 42 });
-    prisma.usuario.findUnique.mockResolvedValue({ isActive: true, empresaId: 9 });
+    prisma.usuario.findUnique.mockResolvedValue({
+      isActive: true,
+      empresaId: 9,
+    });
 
     await expect(guard.canActivate(context as never)).resolves.toBe(true);
     expect(request).toMatchObject({ usuarioId: 42, empresaId: 9 });

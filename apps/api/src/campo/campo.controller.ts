@@ -301,7 +301,11 @@ export class CampoController {
     return this.plan.asignar(r.usuarioId, id, d);
   }
   @Put('asignaciones/:id/principal')
-  localPrincipal(@Req() r: RequestConUsuario, @Param('id', ParseIntPipe) id: number, @Body() d: LocalPrincipalCampoDto) {
+  localPrincipal(
+    @Req() r: RequestConUsuario,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() d: LocalPrincipalCampoDto,
+  ) {
     return this.plan.localPrincipal(r.usuarioId, id, d.principal);
   }
   @Delete('asignaciones/:id') quitarAsignacion(

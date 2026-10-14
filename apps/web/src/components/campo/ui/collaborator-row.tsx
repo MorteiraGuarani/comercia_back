@@ -3,6 +3,7 @@ import { TOKENS } from "../tokens";
 import { StatusStamp } from "./status-stamp";
 import { BigProgress } from "./big-progress";
 import type { ColaboradorResumen } from "@/types/campo";
+import { PRESENTISMO } from "@/utils/estado-jornada";
 
 interface CollaboratorRowProps {
   colaborador: ColaboradorResumen;
@@ -17,13 +18,8 @@ export function CollaboratorRow({
   onOpen,
   className = "",
 }: CollaboratorRowProps) {
-  const asistenciaMeta = {
-    en_curso: { tone: "frio" as const, label: "EN RUTA" },
-    finalizado: { tone: "fresco" as const, label: "FINALIZADO" },
-    sin_iniciar: { tone: "critico" as const, label: "SIN INICIAR" },
-  };
-
-  const am = asistenciaMeta[v.asistencia] ?? asistenciaMeta.sin_iniciar;
+  const meta = PRESENTISMO[v.estadoPresentismo];
+  const am = { tone: meta.tone, label: meta.etiqueta };
 
   return (
     <button

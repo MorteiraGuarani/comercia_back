@@ -1,5 +1,9 @@
 import { IsDateString, IsOptional, Matches } from 'class-validator';
 import { PaginacionDto } from '../../common/utils/paginacion';
+import type {
+  AsistenciaCampo,
+  EstadoPresentismo,
+} from '../interfaces/estado-jornada.interface';
 
 export class ConsultaSupervisionDto extends PaginacionDto {
   @IsOptional()
@@ -24,13 +28,16 @@ export interface ColaboradorResumenItem {
   iniciales: string;
   zona: string;
   telefono: string;
-  asistencia: 'en_curso' | 'finalizado' | 'sin_iniciar';
+  asistencia: AsistenciaCampo;
+  estadoPresentismo: EstadoPresentismo;
   inicioJornada: string | null;
   finJornada: string | null;
   ruta: {
     total: number;
     completadas: number;
     enCurso: number;
+    incompletas: number;
+    ausentes: number;
     pct: number;
   };
   tareas: {
@@ -49,6 +56,8 @@ export interface SupervisionResumenDto {
     enRuta: number;
     finalizados: number;
     sinIniciar: number;
+    incompletos: number;
+    ausentes: number;
     visitasCompletadas: number;
     visitasTotales: number;
     pctVisitas: number;
@@ -57,12 +66,17 @@ export interface SupervisionResumenDto {
     enRuta: number;
     finalizados: number;
     sinIniciar: number;
+    incompletos: number;
+    ausentes: number;
+    estados: Record<EstadoPresentismo, number>;
     totalEquipo: number;
   };
   rutas: {
     total: number;
     completadas: number;
     enCurso: number;
+    incompletas: number;
+    ausentes: number;
     pendientes: number;
     pct: number;
   };

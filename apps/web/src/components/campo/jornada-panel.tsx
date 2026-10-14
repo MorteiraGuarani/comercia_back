@@ -1,10 +1,14 @@
 "use client";
 import { EstadoTelefono } from "./estado-telefono";
+import { PRESENTISMO, RUTA } from "@/utils/estado-jornada";
+import { StatusStamp } from "./ui/status-stamp";
+import { ResumenRuta } from "./ui/resumen-ruta";
 import type { MarcacionPendiente } from "@/types/seguimiento";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import { useListaCampo, useOperacionCampo } from "@/hooks/use-lista-campo";
+import { useFechaCampo } from "@/hooks/use-fecha-campo";
 import {
   fechaEnZonaIso,
   formatoFechaHora,
@@ -18,7 +22,7 @@ import { Modal } from "@/components/modal";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { btnGhost, btnPrimary, errorBox } from "@/components/ui";
 import { TablaCampo } from "./tabla-campo";
-import { BotonesFormulario, CabeceraCampo, CampoTexto } from "./form-campo";
+import { BotonesFormulario, CampoTexto } from "./form-campo";
 import { MapaLocal } from "./mapa-local";
 import type {
   AgendaCampo,
@@ -35,7 +39,7 @@ export function JornadaPanel({
   tareas?: boolean;
   esRepositor?: boolean;
 }) {
-  const hoyStr = fechaEnZonaIso(new Date());
+  const hoyStr = useFechaCampo();
   const [periodo, setPeriodo] = useState<PeriodoFiltro>({
     clave: "hoy",
     etiqueta: "Hoy",
@@ -43,25 +47,21 @@ export function JornadaPanel({
     fechaInicio: hoyStr,
     fechaFin: hoyStr,
   });
-  const qsFecha = queryFechasCampo(periodo) || `fecha=${hoyStr}`;
+  const qsFecha = periodo.clave === "hoy" ? `fecha=${hoyStr}` : queryFechasCampo(periodo) || `fecha=${hoyStr}`;
   return (
-    <div className="min-w-0 w-full px-4 py-5 sm:px-6 lg:px-8">
-      <CabeceraCampo
-        titulo={tareas ? "Mis tareas del día" : "Mis locales"}
-        detalle={
-          esRepositor
-            ? "Marcá entrada desde Comercia con Ucheck activo en tu teléfono. Completá las tareas antes de salir."
-            : "Tu agenda y reemplazos. Podés registrar presencia aunque el local no tenga tareas."
-        }
-      />
+    <div className="min-w-0 w-full px-4 py-3 sm:px-6 sm:py-5 lg:px-8">
+      <header className="mb-2 flex min-w-0 flex-wrap items-center justify-between gap-2 sm:mb-3">
+        <div className="min-w-0">
+          <h1 className="text-xl font-bold">{tareas ? "Mis tareas del día" : "Mis locales"}</h1>
+          <p className="mt-1 hidden text-xs text-muted sm:block">{esRepositor ? "Marcá entrada con UCheck activo y completá las tareas antes de salir." : "Tu agenda y reemplazos."}</p>
+        </div>
+        <SelectorFechaFiltro valorActual={periodo} onChange={setPeriodo} />
+      </header>
       {esRepositor ? (
-        <div className="mb-4">
+        <div className="mb-2 sm:mb-3">
           <EstadoTelefono />
         </div>
       ) : null}
-      <div className="mb-4">
-        <SelectorFechaFiltro valorActual={periodo} onChange={setPeriodo} />
-      </div>
       <AgendaDelDia key={qsFecha} qsFecha={qsFecha} esRepositor={esRepositor} />
     </div>
   );
@@ -74,8 +74,10 @@ function AgendaDelDia({
   esRepositor: boolean;
 }) {
   const router = useRouter();
+  const hoyStr = useFechaCampo();
   const lista = useListaCampo<AgendaCampo>(`/campo/jornada?${qsFecha}`);
-  const [abierta, setAbierta] = useState<VisitaCampo | null>(null);
+  const [visitaAbierta, setAbierta] = useState<VisitaCampo | null>(null);
+  const abierta = visitaAbierta?.fecha.slice(0, 10) === hoyStr ? visitaAbierta : null;
   const [revision, setRevision] = useState(0);
   const [error, setError] = useState("");
   const [mapa, setMapa] = useState<LocalCampo | null>(null);
@@ -101,15 +103,14 @@ function AgendaDelDia({
     return () => {
       vigente = false;
     };
-  }, [revision]);
+  }, [revision, hoyStr]);
 
   function actualizar() {
     lista.refrescar();
     setRevision((n) => n + 1);
   }
 
-  const hoyStr = fechaEnZonaIso(new Date());
-  const hoy = qsFecha.includes(hoyStr);
+  const hoy = new URLSearchParams(qsFecha).get("fecha") === hoyStr;
 
   // Filtrado de items por búsqueda
   const itemsFiltrados = useMemo(() => {
@@ -124,84 +125,39 @@ function AgendaDelDia({
   }, [lista.items, busqueda]);
 
   // Métricas del día (StatChips estilo HTML)
-  const totalParadas = lista.items.length;
   const visitadas = lista.items.filter((a) =>
-    a.visitas.some((v) => v.salida),
+    a.estado === "completado",
   ).length;
-  const enCurso = abierta ? 1 : 0;
-  const pendientes = Math.max(
-    0,
-    totalParadas -
-      visitadas -
-      (abierta &&
-      lista.items.some(
-        (a) =>
-          a.local.id === abierta.local.id && !a.visitas.some((v) => v.salida),
-      )
-        ? 1
-        : 0),
-  );
+  const enCurso = lista.items.filter(a => a.estado === "en_curso").length;
+  const pendientes = lista.items.filter(a => a.estado === "pendiente").length;
 
   return (
     <>
       {error ? <p className={errorBox}>{error}</p> : null}
 
-      {/* StatChips de resumen de la jornada */}
-      <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <div className="rounded-xl border border-line bg-surface-raised p-3 text-center shadow-sm">
-          <div className="text-2xl font-bold leading-none text-foreground">
-            {lista.datos?.total ?? "—"}
-          </div>
-          <div className="mt-1 text-[11px] font-medium text-muted">
-            Locales asignados
-          </div>
-        </div>
-        <div className="rounded-xl border border-emerald-300/60 bg-emerald-50/50 p-3 text-center shadow-sm dark:border-emerald-800/60 dark:bg-emerald-950/20">
-          <div className="text-2xl font-bold leading-none text-emerald-700 dark:text-emerald-400">
-            {visitadas}
-          </div>
-          <div className="mt-1 text-[11px] font-medium text-emerald-800 dark:text-emerald-300">
-            Visitados en esta página
-          </div>
-        </div>
-        <div className="rounded-xl border border-sky-300/60 bg-sky-50/50 p-3 text-center shadow-sm dark:border-sky-800/60 dark:bg-sky-950/20">
-          <div className="text-2xl font-bold leading-none text-sky-700 dark:text-sky-400">
-            {enCurso}
-          </div>
-          <div className="mt-1 text-[11px] font-medium text-sky-800 dark:text-sky-300">
-            En curso
-          </div>
-        </div>
-        <div className="rounded-xl border border-line bg-surface-raised p-3 text-center shadow-sm">
-          <div className="text-2xl font-bold leading-none text-muted">
-            {pendientes}
-          </div>
-          <div className="mt-1 text-[11px] font-medium text-muted">
-            Pendientes en esta página
-          </div>
-        </div>
+      <div className="mb-2 sm:mb-3">
+        <ResumenRuta total={lista.datos?.total ?? "—"} visitadas={visitadas} enCurso={enCurso} pendientes={pendientes}
+          incompletas={lista.items.filter(a => a.estado === "incompleto").length} ausentes={lista.items.filter(a => a.estado === "ausente").length} porPagina />
       </div>
 
       {/* Banner de visita en curso */}
       {abierta ? (
-        <div className="mb-4 flex flex-col gap-3 rounded-xl border-2 border-sky-500 bg-sky-50/60 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between dark:bg-sky-950/40">
-          <div className="flex items-center gap-3">
-            <span className="relative flex h-3 w-3">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75"></span>
-              <span className="relative inline-flex h-3 w-3 rounded-full bg-sky-500"></span>
-            </span>
-            <div>
-              <p className="font-bold text-foreground">
-                Visita en curso · {abierta.local.nombre}
+        <div className="mb-2 flex min-w-0 items-center gap-2 rounded-lg border border-sky-500 bg-sky-50/60 px-3 py-1 sm:mb-3 dark:border-sky-700 dark:bg-sky-950/40">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full bg-sky-600 dark:bg-sky-400" />
+            <div className="min-w-0">
+              <p className="truncate text-xs font-semibold text-foreground" title={`Visita en curso · ${abierta.local.nombre}`}>
+                En curso · {abierta.local.nombre}
               </p>
-              <p className="text-xs text-muted font-mono">
-                Check-in registrado: {formatoFechaHora(abierta.entrada)}
+              <p className="truncate text-[11px] text-muted font-mono">
+                Entrada: {formatoFechaHora(abierta.entrada)}
               </p>
             </div>
           </div>
           <button
             type="button"
-            className="min-h-11 rounded-lg bg-red-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
+            aria-label={`Marcar salida de ${abierta.local.nombre}`}
+            className="flex min-h-11 shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-line bg-surface-raised px-3 text-xs font-semibold text-foreground transition hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:border-line dark:bg-surface-raised dark:text-foreground dark:hover:bg-surface-soft"
             onClick={() =>
               setMarca({
                 asignacionId: abierta.asignacionId,
@@ -223,14 +179,14 @@ function AgendaDelDia({
               <polyline points="16 17 21 12 16 7" />
               <line x1="21" y1="12" x2="9" y2="12" />
             </svg>
-            Marcar salida
+            Salida
           </button>
         </div>
       ) : null}
 
       {/* Buscador de locales de la agenda */}
-      <div className="mb-4 flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative flex-1 max-w-md">
+      <div className="mb-2 flex min-w-0 flex-wrap items-center gap-2 sm:mb-3 sm:justify-between">
+        <div className="relative min-w-0 flex-1 sm:max-w-sm">
           <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted">
             <svg
               className="h-4 w-4"
@@ -252,7 +208,7 @@ function AgendaDelDia({
             name="buscar-local"
             autoComplete="off"
             placeholder="Buscar en esta página…"
-            className="min-h-11 w-full rounded-xl border border-line bg-surface-raised py-2 pl-9 pr-12 text-sm text-foreground outline-none transition-colors placeholder:text-muted focus-visible:border-brand-600 focus-visible:ring-2 focus-visible:ring-brand-600/30"
+            className="h-11 min-h-11 w-full rounded-lg border border-line bg-surface-raised py-2 pl-9 pr-11 text-base text-foreground outline-none transition-colors placeholder:text-muted focus-visible:border-brand-600 focus-visible:ring-2 focus-visible:ring-brand-600/30 sm:text-sm dark:border-line dark:bg-surface-raised dark:text-foreground"
           />
           {busqueda && (
             <button
@@ -276,7 +232,7 @@ function AgendaDelDia({
             </button>
           )}
         </div>
-        <div className="text-xs text-muted">
+        <div className="hidden text-xs text-muted sm:block">
           <span>{itemsFiltrados.length} locales visibles en esta página</span>
         </div>
       </div>
@@ -355,31 +311,14 @@ function AgendaDelDia({
           {
             titulo: "Estado",
             valor: (a) => {
-              const estaEnCurso = abierta?.local.id === a.local.id;
-              const tieneVisitaCerrada = a.visitas.some((v) => v.salida);
-              return (
-                <span
-                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold border tracking-wider ${
-                    estaEnCurso
-                      ? "bg-sky-100 text-sky-800 border-sky-300 dark:bg-sky-950/60 dark:text-sky-300 dark:border-sky-800"
-                      : tieneVisitaCerrada
-                        ? "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800"
-                        : "bg-surface-soft text-muted border-line"
-                  }`}
-                >
-                  {estaEnCurso
-                    ? "EN CURSO"
-                    : tieneVisitaCerrada
-                      ? "VISITADO"
-                      : "PENDIENTE"}
-                </span>
-              );
+              return <div className="flex flex-wrap gap-1"><StatusStamp tone={RUTA[a.estado].tone}>{RUTA[a.estado].etiqueta}</StatusStamp>
+                <StatusStamp tone={PRESENTISMO[a.estadoPresentismo].tone}>{PRESENTISMO[a.estadoPresentismo].etiqueta}</StatusStamp></div>;
             },
           },
         ]}
         tarjetaMovil={(a) => {
-          const estaEnCurso = abierta?.local.id === a.local.id;
-          const tieneVisitaCerrada = a.visitas.some((v) => v.salida);
+          const estaEnCurso = a.estado === "en_curso";
+          const tieneVisitaCerrada = a.estado === "completado";
           const horarios = a.local.horarios;
           const ventanaTexto = horarios.length
             ? horarios.map((h) => `${h.entrada}–${h.salida}`).join(" · ")
@@ -391,11 +330,7 @@ function AgendaDelDia({
               ? "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800"
               : "bg-surface-soft text-muted border-line";
 
-          const statusLabel = estaEnCurso
-            ? "EN CURSO"
-            : tieneVisitaCerrada
-              ? "VISITADO"
-              : "PENDIENTE";
+          const statusLabel = RUTA[a.estado].etiqueta;
 
           return (
             <div
@@ -465,6 +400,7 @@ function AgendaDelDia({
                   </p>
 
                   <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <StatusStamp tone={PRESENTISMO[a.estadoPresentismo].tone}>{PRESENTISMO[a.estadoPresentismo].etiqueta}</StatusStamp>
                     <span className="inline-flex items-center gap-1 rounded-md bg-surface-soft px-2 py-0.5 font-mono text-[11px] text-foreground">
                       <svg
                         className="h-3 w-3 text-muted shrink-0"
@@ -997,8 +933,9 @@ function ListadoVisitas({ fecha, propia }: { fecha: string; propia: boolean }) {
         {
           titulo: "Entrada / salida",
           valor: (v) =>
-            `${formatoFechaHora(v.entrada)} / ${v.salida ? formatoFechaHora(v.salida) : "En curso"}`,
+            `${formatoFechaHora(v.entrada)} / ${v.salida ? formatoFechaHora(v.salida) : v.estado === "EN_CURSO" ? "En curso" : "Sin salida registrada"}`,
         },
+        { titulo: "Estado", valor: v => <StatusStamp tone={PRESENTISMO[v.estadoPresentismo].tone}>{PRESENTISMO[v.estadoPresentismo].etiqueta}</StatusStamp> },
         { titulo: "Tareas", valor: (v) => v._count.cumplimientos },
         {
           titulo: "Observaciones",

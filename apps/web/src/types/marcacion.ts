@@ -15,6 +15,8 @@ export interface DatosMarcacion {
   contexto: Record<string, ValorSenal>;
 }
 export interface DetalleMarcacion {
+  estado: import('./estado-jornada').EstadoVisita;
+  estadoPresentismo: import('./estado-jornada').EstadoPresentismo;
   id: number;
   usuario: { id: number; nombre: string };
   local: { id: number; nombre: string } | null;

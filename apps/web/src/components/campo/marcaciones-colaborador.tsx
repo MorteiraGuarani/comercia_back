@@ -12,6 +12,8 @@ import InfoColumna from '../InfoColumna';
 import { Modal } from '../modal';
 import { Paginacion } from '../paginacion';
 import { PantallaCarga } from '../pantalla-carga';
+import { PRESENTISMO } from '@/utils/estado-jornada';
+import { StatusStamp } from './ui/status-stamp';
 
 export default function MarcacionesColaborador({ colaboradorId, periodo }: { colaboradorId: number; periodo: PeriodoFiltro }) {
   const [page, setPage] = useState(1);
@@ -38,7 +40,8 @@ export default function MarcacionesColaborador({ colaboradorId, periodo }: { col
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-2"><div className="min-w-0"><h3 className="break-words text-sm font-semibold">{m.local?.nombre ?? 'Visita'}</h3><p className="text-xs text-muted">{m.fecha}</p></div>
         <button type="button" className="min-h-11 shrink-0 rounded-lg border border-control-line px-3 text-sm hover:bg-surface-soft focus-visible:outline-2 focus-visible:outline-focus" aria-label={`Datos de marcación de ${m.local?.nombre ?? 'la visita'}, ${m.fecha}`} onClick={() => setDetalle(m)}>Ver datos</button></div>
       <div className="mt-2 grid grid-cols-2 gap-2"><div><span className="text-xs text-muted">Entrada<InfoColumna titulo="Entrada" texto="Fecha y hora de entrada aceptadas para esta visita. Ver datos permite comparar la batería, ubicación, conexión y dispositivo de cada marca." /></span><p className="break-words text-xs tabular-nums">{valorMarcacion(m.entrada, {clave: 'registradaEn', etiqueta: 'Entrada', ayuda: '', formato: 'fecha'}, m.zonaHoraria)}</p></div>
-        <div><span className="text-xs text-muted">Salida<InfoColumna titulo="Salida" texto="Fecha y hora de salida aceptadas para esta visita. Pendiente indica que no hay salida registrada; No informado indica una señal que no se capturó." /></span><p className="break-words text-xs tabular-nums">{valorMarcacion(m.salida, {clave: 'registradaEn', etiqueta: 'Salida', ayuda: '', formato: 'fecha'}, m.zonaHoraria)}</p></div></div>
+        <div><span className="text-xs text-muted">Salida<InfoColumna titulo="Salida" texto="Fecha y hora de salida aceptadas para esta visita. Una jornada vencida sin salida se conserva como incompleta." /></span><p className="break-words text-xs tabular-nums">{!m.salida && m.estado === 'INCOMPLETA' ? 'Sin salida registrada' : valorMarcacion(m.salida, {clave: 'registradaEn', etiqueta: 'Salida', ayuda: '', formato: 'fecha'}, m.zonaHoraria)}</p></div></div>
+      <StatusStamp tone={PRESENTISMO[m.estadoPresentismo].tone}>{PRESENTISMO[m.estadoPresentismo].etiqueta}</StatusStamp>
     </li>)}</ul>
     {datos && !datos.items.length ? <p className="py-4 text-sm text-muted">Sin marcaciones en el período.</p> : null}
     {datos ? <Paginacion page={datos.page} totalPages={datos.totalPages} total={datos.total} limit={datos.limit} onPageChange={setPage}
