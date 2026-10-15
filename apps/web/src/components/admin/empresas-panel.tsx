@@ -1,4 +1,5 @@
 "use client";
+import { ToleranciasHorario } from "@/components/tolerancias-horario";
 
 import { useEffect, useState } from "react";
 import { apiFetch, ApiError } from "@/lib/api";
@@ -175,6 +176,8 @@ export function EmpresasPanel() {
 
   return (
     <div data-inicio-listado className="scroll-mt-20">
+      <ToleranciasHorario alcance="global" id={0} titulo="Tolerancias globales de Comercia" />
+      {empresaId !== "" ? <ToleranciasHorario key={empresaId} alcance="empresa" id={empresaId} titulo="Tolerancias de esta empresa" /> : null}
       <label className="flex flex-col gap-1.5 text-[13px] font-medium text-zinc-700 dark:text-zinc-300 sm:max-w-xs">
         Empresa
         <select

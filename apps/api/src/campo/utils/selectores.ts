@@ -81,6 +81,9 @@ export const TAREA_CAMPO_SELECT = {
   },
 } as const;
 export const VISITA_CAMPO_SELECT = {
+  toleranciasAplicadas: true,
+  entradaColor: true,
+  salidaColor: true,
   id: true,
   asignacionId: true,
   horarioId: true,

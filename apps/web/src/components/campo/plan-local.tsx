@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { apiFetch } from "@/lib/api";
+import { ToleranciasHorario } from "@/components/tolerancias-horario";
 import { useListaCampo, useOperacionCampo } from "@/hooks/use-lista-campo";
 import { fechaEnZonaIso } from "@/utils/fechas";
 import { Modal } from "@/components/modal";
@@ -244,6 +245,7 @@ function HorariosLocal({
                 className="flex flex-wrap items-center justify-end gap-2 pt-3 border-t mt-3"
                 style={{ borderColor: TOKENS.line }}
               >
+                <ToleranciasHorario alcance="horario" id={h.id} titulo="Tolerancias de esta franja" />
                 <BotonEditar
                   onClick={() => abrir(h)}
                   etiqueta={`Editar horario ${h.id}`}
@@ -773,6 +775,7 @@ function AsignacionesLocal({ localId }: { localId: number }) {
           ancho="xl"
         >
           <HorariosLocal localId={localId} asignacionId={horariosDe.id} />
+          <ToleranciasHorario alcance="usuario" id={horariosDe.usuario.id} titulo="Tolerancias de este usuario" />
         </Modal>
       )}
 

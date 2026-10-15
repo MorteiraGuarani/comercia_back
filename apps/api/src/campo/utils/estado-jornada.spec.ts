@@ -8,6 +8,35 @@ import {
 
 const fecha = new Date('2026-10-09T00:00:00Z');
 const hora = (h: string) => new Date(`2026-10-09T${h}:00-03:00`);
+
+it('respeta tolerancias guardadas y conserva el comportamiento histórico sin configuración', () => {
+  const base = {
+    fecha,
+    horaDesde: '10:30',
+    horaHasta: '18:00',
+    zonaHoraria: 'America/Asuncion',
+    entrada: hora('10:44'),
+    salida: hora('17:46'),
+  };
+  expect(evaluarPresentismo(base)).toBe('INCOMPLETO');
+  expect(
+    evaluarPresentismo({
+      ...base,
+      toleranciasAplicadas: {
+        toleranciaEntrada: 14,
+        toleranciaSalidaAntes: 14,
+      },
+    }),
+  ).toBe('PRESENTE');
+  expect(
+    evaluarPresentismo({
+      ...base,
+      entrada: hora('10:45'),
+      salida: hora('18:00'),
+      toleranciasAplicadas: { toleranciaEntrada: 14 },
+    }),
+  ).toBe('TARDE');
+});
 const turno = {
   fecha,
   horaDesde: '10:30',

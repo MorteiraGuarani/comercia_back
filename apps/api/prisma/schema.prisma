@@ -11,7 +11,20 @@ datasource db {
   provider = "postgresql"
 }
 
+// Claves construidas en servidor; se autoriza cada recurso antes de acceder.
+model ConfiguracionTolerancia {
+  clave String @id @db.VarChar(80)
+  empresaId Int? @map("empresa_id")
+  empresa Empresa? @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  valores Json
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@index([empresaId])
+  @@map("configuraciones_tolerancia")
+}
+
 model Empresa {
+  configuracionesTolerancia ConfiguracionTolerancia[]
   id                  Int                       @id @default(autoincrement())
   nombre              String                    @unique
   dbName              String?                   @map("db_name")
@@ -24,7 +37,6 @@ model Empresa {
   clientesCampo       ClienteCampo[]
   localesCampo        LocalCampo[]
   productos           Producto[]
-  precios             Precio[]
   preciosEspeciales   PrecioEspecial[]
   preciosEspDetalle   PrecioEspecialDetalle[]
   tareasCampo         TareaCampo[]
@@ -43,34 +55,27 @@ model Empresa {
 }
 
 model Producto {
+  id BigInt @id @default(autoincrement())
   empresaId Int @map("empresa_id")
   empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
-  cardCode String @map("cardcode") @db.VarChar(50)
-  descripcion String @db.VarChar(200)
-  iva Int
-  grupo Int
-  nombreGrupo String @map("nombre_grupo") @db.VarChar(200)
-  inventario Boolean
-  tipo String @db.VarChar(100)
-  precios Precio[]
+  itemcode String @db.VarChar(50)
+  itemname String @db.VarChar(200)
+  iva Int @db.SmallInt
+  itmsgrpcode Int
+  itmsgrpnam String? @db.VarChar(200)
+  inventory String? @default("Y") @db.Char(1)
+  pricelist Int @db.SmallInt
+  pricelistname String? @db.VarChar(200)
+  price Decimal? @db.Decimal(21, 6)
+  tipo String? @db.VarChar(50)
 
-  @@id([empresaId, cardCode])
-  @@index([empresaId, descripcion])
-  @@map("productos")
-}
-
-model Precio {
-  id Int @id @default(autoincrement())
-  empresaId Int @map("empresa_id")
-  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
-  cardCode String @map("cardcode") @db.VarChar(50)
-  producto Producto @relation(fields: [empresaId, cardCode], references: [empresaId, cardCode], onDelete: Cascade, onUpdate: Cascade)
-  nroListaPrecio Int @map("nro_lista_precio")
-  listaPrecio String @map("lista_precio") @db.VarChar(200)
-  precio Decimal @db.Decimal(21, 6)
-
-  @@index([empresaId, cardCode, nroListaPrecio])
-  @@map("precios")
+  @@unique([empresaId, itemcode, pricelist], map: "uq_tbl_itm1_item_pricelist")
+  @@index([itemcode], map: "idx_tbl_itm1_itemcode")
+  @@index([itemname], map: "idx_tbl_itm1_itemname")
+  @@index([itmsgrpcode], map: "idx_tbl_itm1_itmsgrpcode")
+  @@index([pricelist], map: "idx_tbl_itm1_pricelist")
+  @@index([tipo], map: "idx_tbl_itm1_tipo")
+  @@map("tbl_itm1")
 }
 
 // Precio especial por cliente (cardcode) y artículo (itemcode), como OSPP de
@@ -545,6 +550,9 @@ model TareaLocalCampo {
 }
 
 model VisitaCampo {
+  toleranciasAplicadas Json? @map("tolerancias_aplicadas")
+  entradaColor String? @map("entrada_color") @db.VarChar(8)
+  salidaColor String? @map("salida_color") @db.VarChar(8)
   id                   Int                       @id @default(autoincrement())
   localId              Int                       @map("local_id")
   local                LocalCampo                @relation(fields: [localId], references: [id])

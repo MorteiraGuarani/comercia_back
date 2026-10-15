@@ -13,10 +13,16 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator';
 import { TipoEventoUcheck } from '../../../generated/prisma/client';
+import { ToleranciaHorarioDto } from '../../tolerancias/dto/tolerancia-horario.dto';
 
 export class MarcacionUcheckDto {
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ToleranciaHorarioDto)
+  toleranciasAplicadas?: ToleranciaHorarioDto;
   @IsOptional()
   @Type(() => Number)
   @IsInt()

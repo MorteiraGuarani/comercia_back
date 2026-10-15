@@ -7,6 +7,7 @@ export type AsistenciaCampo =
   'sin_iniciar' | 'en_curso' | 'finalizado' | 'incompleto' | 'ausente';
 
 export interface RegistroPresentismoCampo {
+  toleranciasAplicadas?: unknown;
   fecha: Date | string;
   zonaHoraria?: string;
   horaDesde?: string | null;
@@ -16,6 +17,7 @@ export interface RegistroPresentismoCampo {
 }
 
 export interface VisitaParaEstado {
+  toleranciasAplicadas?: unknown;
   fecha: Date;
   entrada: Date;
   salida: Date | null;

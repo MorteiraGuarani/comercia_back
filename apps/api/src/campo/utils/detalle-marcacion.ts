@@ -5,6 +5,7 @@ import { conEstadoVisita } from './estado-jornada';
 
 export function selectorMarcaciones(empresaId: number, usuarioId: number) {
   return {
+    toleranciasAplicadas: true,
     id: true,
     fecha: true,
     entrada: true,

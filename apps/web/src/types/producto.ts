@@ -2,42 +2,30 @@ export interface EmpresaCatalogo {
   id: number;
   nombre: string;
 }
+
 export interface ProductoAdmin {
-  cardCode: string;
-  descripcion: string;
+  id: string;
+  itemcode: string;
+  itemname: string;
   iva: number;
-  grupo: number;
-  nombreGrupo: string;
-  inventario: boolean;
-  tipo: string;
-  _count: { precios: number };
+  itmsgrpcode: number;
+  itmsgrpnam: string | null;
+  inventory: string | null;
+  pricelist: number;
+  pricelistname: string | null;
+  price: string | null;
+  tipo: string | null;
 }
-export interface PrecioAdmin {
-  id: number;
-  cardCode: string;
-  nroListaPrecio: number;
-  listaPrecio: string;
-  precio: string;
-  producto: { descripcion: string };
-}
-export type RegistroCatalogo = ProductoAdmin | PrecioAdmin;
+
 export interface FormProducto {
-  cardCode: string;
-  descripcion: string;
+  itemcode: string;
+  itemname: string;
   iva: string;
-  grupo: string;
-  nombreGrupo: string;
-  inventario: boolean;
+  itmsgrpcode: string;
+  itmsgrpnam: string;
+  inventory: string;
+  pricelist: string;
+  pricelistname: string;
+  price: string;
   tipo: string;
-}
-export interface FormPrecio {
-  cardCode: string;
-  nroListaPrecio: string;
-  listaPrecio: string;
-  precio: string;
-}
-export type VistaCatalogo = "productos" | "precios";
-export interface FiltroProductoCatalogo {
-  cardCode: string;
-  nombre: string;
 }

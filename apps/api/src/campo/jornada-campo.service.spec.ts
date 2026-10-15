@@ -9,6 +9,7 @@ const local = { latitud: -25.3, longitud: -57.6, radioMetros: 100 };
 
 function contexto() {
   const tx = {
+    configuracionTolerancia: { findMany: jest.fn().mockResolvedValue([]) },
     $queryRaw: jest.fn().mockResolvedValue([]),
     asignacionCampo: {
       findFirst: jest.fn().mockResolvedValue({

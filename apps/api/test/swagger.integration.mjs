@@ -12,6 +12,8 @@ const { ProductosController } = require('../dist/src/productos/productos.control
 const { ProductosService } = require('../dist/src/productos/productos.service.js');
 const { PreciosEspecialesController } = require('../dist/src/productos/precios-especiales.controller.js');
 const { PreciosEspecialesService } = require('../dist/src/productos/precios-especiales.service.js');
+const { ToleranciasController } = require('../dist/src/tolerancias/tolerancias.controller.js');
+const { ToleranciasService } = require('../dist/src/tolerancias/tolerancias.service.js');
 const { PrismaService } = require('../dist/src/prisma/prisma.service.js');
 const { JwtAuthGuard } = require('../dist/src/auth/jwt-auth.guard.js');
 const { SuperadminGuard } = require('../dist/src/auth/superadmin.guard.js');
@@ -20,11 +22,12 @@ const jwt = new JwtService({ secret: 'clave-solo-para-pruebas-aisladas-swagger' 
 
 async function crearApp(enabled) {
   const module = await Test.createTestingModule({
-    controllers: [ProductosController, PreciosEspecialesController],
+    controllers: [ProductosController, PreciosEspecialesController, ToleranciasController],
     providers: [
       JwtAuthGuard, SuperadminGuard,
       { provide: ProductosService, useValue: {} },
       { provide: PreciosEspecialesService, useValue: {} },
+      { provide: ToleranciasService, useValue: {} },
       { provide: JwtService, useValue: jwt },
       { provide: ConfigService, useValue: { get: (key) => key === 'app.env' ? 'production' : key === 'app.swaggerEnabled' ? enabled : undefined } },
       { provide: PrismaService, useValue: { usuario: { findUnique: async ({ where }) => ({ id: where.id, empresaId: 10, esSuperadmin: where.id === 1, isActive: where.id !== 3 }) } } },
@@ -54,15 +57,27 @@ try {
   const { body: doc } = await request(http).get('/api/docs-json').set('Cookie', `${AUTH_COOKIE}=${admin}`).expect(200);
   assert.equal(doc.info.title, 'Comercia API');
   assert.ok(doc.paths['/api/v1/admin/catalogo/empresas/{empresaId}/productos'].post);
-  assert.ok(doc.paths['/api/v1/admin/catalogo/empresas/{empresaId}/precios/{id}'].delete);
-  assert.equal(doc.components.schemas.PrecioCatalogoDto.properties.precio.type, 'string');
-  assert.equal(doc.components.schemas.CrearProductoDto.properties.cardCode.maxLength, 50);
-  assert.ok(doc.components.schemas.CrearProductoDto.required.includes('inventario'));
+  assert.ok(doc.paths['/api/v1/admin/catalogo/empresas/{empresaId}/productos/{id}'].delete);
+  const producto = doc.components.schemas.CrearProductoDto;
+  assert.equal(producto.properties.price.type, 'string');
+  assert.equal(producto.properties.itemcode.maxLength, 50);
+  assert.equal(producto.properties.tipo.maxLength, 50);
+  assert.equal(producto.properties.pricelist.maximum, 32767);
+  assert.equal(producto.properties.inventory.default, 'Y');
+  assert.ok(producto.required.includes('pricelist'));
+  assert.ok(!producto.required.includes('inventory'));
+  assert.equal(doc.components.schemas.ProductoRespuestaDto.properties.id.type, 'string');
+  assert.equal(doc.components.schemas.ProductoRespuestaDto.properties.price.nullable, true);
+  assert.ok(doc.components.schemas.PaginaProductoDto.properties.items);
   const especiales = '/api/v1/admin/catalogo/empresas/{empresaId}/precios-especiales';
   assert.ok(doc.paths[especiales].get && doc.paths[especiales].post);
   assert.ok(doc.paths[`${especiales}/{id}`].patch && doc.paths[`${especiales}/{id}`].delete);
   assert.ok(doc.paths[`${especiales}-detalle`].get && doc.paths[`${especiales}-detalle/{id}`].patch);
   const { schemas } = doc.components;
+  assert.ok(doc.paths['/api/v1/campo/tolerancias/{alcance}/{id}'].get);
+  assert.ok(doc.paths['/api/v1/campo/tolerancias/{alcance}/{id}'].put);
+  assert.equal(schemas.ToleranciaHorarioDto.properties.toleranciaEntrada.maximum, 1440);
+  assert.equal(schemas.ToleranciaHorarioDto.properties.toleranciaEntrada.nullable, true);
   assert.equal(schemas.PrecioEspecialDto.required, undefined);
   assert.equal(schemas.PrecioEspecialDetalleDto.required, undefined);
   assert.equal(schemas.PrecioEspecialDto.properties.price.type, 'string');

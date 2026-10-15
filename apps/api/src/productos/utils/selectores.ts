@@ -1,21 +1,15 @@
 export const PRODUCTO_SELECT = {
-  cardCode: true,
-  descripcion: true,
-  iva: true,
-  grupo: true,
-  nombreGrupo: true,
-  inventario: true,
-  tipo: true,
-  _count: { select: { precios: true } },
-} as const;
-
-export const PRECIO_SELECT = {
   id: true,
-  cardCode: true,
-  nroListaPrecio: true,
-  listaPrecio: true,
-  precio: true,
-  producto: { select: { descripcion: true } },
+  itemcode: true,
+  itemname: true,
+  iva: true,
+  itmsgrpcode: true,
+  itmsgrpnam: true,
+  inventory: true,
+  pricelist: true,
+  pricelistname: true,
+  price: true,
+  tipo: true,
 } as const;
 
 export const PRECIO_ESPECIAL_SELECT = {

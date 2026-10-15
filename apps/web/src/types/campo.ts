@@ -110,6 +110,9 @@ export interface TareaCampo {
   locales: { local: { id: number; nombre: string } }[];
 }
 export interface VisitaCampo {
+  entradaColor?: string | null;
+  salidaColor?: string | null;
+  minutosComputables?: number | null;
   estado: import("./estado-jornada").EstadoVisita;
   estadoPresentismo: import("./estado-jornada").EstadoPresentismo;
   id: number;

@@ -1,3 +1,8 @@
+import { cargarToleranciasAgenda } from '../tolerancias/utils/cargar-tolerancias';
+import {
+  evaluarMarcaHorario,
+  heredarTolerancias,
+} from '../tolerancias/utils/tolerancia-horario';
 import {
   BadRequestException,
   ConflictException,
@@ -102,6 +107,12 @@ export class IntegracionesUcheckService {
       page: query.page,
       limit: query.limit,
     });
+    const tolerancias = await cargarToleranciasAgenda(
+      this.prisma,
+      usuario.empresaId,
+      usuario.id,
+      pagina.items.flatMap((a) => a.local.horarios.map((h) => h.id)),
+    );
     return {
       usuario: {
         id: usuario.id,
@@ -110,6 +121,16 @@ export class IntegracionesUcheckService {
       },
       empresa: usuario.empresa,
       ...pagina,
+      items: pagina.items.map((a) => ({
+        ...a,
+        local: {
+          ...a.local,
+          horarios: a.local.horarios.map((h) => ({
+            ...h,
+            tolerancias: tolerancias.get(h.id),
+          })),
+        },
+      })),
     };
   }
 
@@ -331,8 +352,30 @@ export class IntegracionesUcheckService {
 
       let visita = await tx.visitaCampo.findFirst({
         where: { ucheckJornadaId: dto.ucheckJornadaId },
-        select: { id: true, entrada: true, salida: true },
+        select: {
+          id: true,
+          entrada: true,
+          salida: true,
+          toleranciasAplicadas: true,
+        },
       });
+
+      const snapshot = visita
+        ? visita.toleranciasAplicadas
+        : dto.toleranciasAplicadas;
+      const tolerancias = snapshot ? heredarTolerancias(snapshot) : null;
+      const evaluacion =
+        tolerancias && dto.horaDesde && dto.horaHasta
+          ? evaluarMarcaHorario(
+              dto.tipo,
+              new Date(dto.registradaEn),
+              dto.fecha,
+              dto.horaDesde,
+              dto.horaHasta,
+              'America/Asuncion',
+              tolerancias,
+            )
+          : null;
 
       if (dto.tipo === 'ENTRADA') {
         if (!visita) {
@@ -343,7 +386,12 @@ export class IntegracionesUcheckService {
               fecha,
               usuarioId: usuario.id,
             },
-            select: { id: true, entrada: true, salida: true },
+            select: {
+              id: true,
+              entrada: true,
+              salida: true,
+              toleranciasAplicadas: true,
+            },
           });
         }
         if (visita?.salida)
@@ -359,10 +407,21 @@ export class IntegracionesUcheckService {
                 entradaLng: dto.longitud,
                 entradaPrecision: dto.precisionMetros,
                 entradaDistancia: dto.distanciaMetros,
-                entradaFueraHorario: dto.fueraHorario,
+                entradaFueraHorario: evaluacion
+                  ? evaluacion.color !== 'VERDE'
+                  : dto.fueraHorario,
+                entradaColor: evaluacion?.color,
+                toleranciasAplicadas: tolerancias
+                  ? { ...tolerancias }
+                  : undefined,
                 entradaFueraAtencion: dto.fueraAtencion,
               },
-              select: { id: true, entrada: true, salida: true },
+              select: {
+                id: true,
+                entrada: true,
+                salida: true,
+                toleranciasAplicadas: true,
+              },
             })
           : await tx.visitaCampo.create({
               data: {
@@ -379,10 +438,21 @@ export class IntegracionesUcheckService {
                 entradaLng: dto.longitud,
                 entradaPrecision: dto.precisionMetros,
                 entradaDistancia: dto.distanciaMetros,
-                entradaFueraHorario: dto.fueraHorario,
+                entradaFueraHorario: evaluacion
+                  ? evaluacion.color !== 'VERDE'
+                  : dto.fueraHorario,
+                entradaColor: evaluacion?.color,
+                toleranciasAplicadas: tolerancias
+                  ? { ...tolerancias }
+                  : undefined,
                 entradaFueraAtencion: dto.fueraAtencion,
               },
-              select: { id: true, entrada: true, salida: true },
+              select: {
+                id: true,
+                entrada: true,
+                salida: true,
+                toleranciasAplicadas: true,
+              },
             });
       } else {
         if (!visita)
@@ -401,10 +471,18 @@ export class IntegracionesUcheckService {
             salidaLng: dto.longitud,
             salidaPrecision: dto.precisionMetros,
             salidaDistancia: dto.distanciaMetros,
-            salidaFueraHorario: dto.fueraHorario,
+            salidaFueraHorario: evaluacion
+              ? evaluacion.color !== 'VERDE'
+              : dto.fueraHorario,
+            salidaColor: evaluacion?.color,
             salidaFueraAtencion: dto.fueraAtencion,
           },
-          select: { id: true, entrada: true, salida: true },
+          select: {
+            id: true,
+            entrada: true,
+            salida: true,
+            toleranciasAplicadas: true,
+          },
         });
       }
 

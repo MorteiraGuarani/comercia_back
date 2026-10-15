@@ -1,3 +1,8 @@
+import {
+  evaluarMarcaHorario,
+  heredarTolerancias,
+  minutosDentroHorario,
+} from '../../tolerancias/utils/tolerancia-horario';
 import type {
   AsistenciaCampo,
   EstadoPresentismo,
@@ -39,9 +44,40 @@ export function evaluarPresentismo(
   const termino = instante(ahora) >= fin;
   if (!r.entrada)
     return r.salida ? 'INCOMPLETO' : termino ? 'AUSENTE' : 'SIN_REGISTRO';
-  if (r.salida && instante(r.salida) < fin) return 'INCOMPLETO';
+  const t = r.toleranciasAplicadas
+    ? heredarTolerancias(r.toleranciasAplicadas)
+    : null;
+  if (
+    r.salida &&
+    (t
+      ? evaluarMarcaHorario(
+          'SALIDA',
+          new Date(r.salida),
+          fecha,
+          r.horaDesde,
+          r.horaHasta,
+          zona,
+          t,
+        ).desvioMinutos < -t.toleranciaSalidaAntes
+      : instante(r.salida) < fin)
+  )
+    return 'INCOMPLETO';
   if (!r.salida && termino) return 'INCOMPLETO';
-  return instante(r.entrada) > inicio ? 'TARDE' : 'PRESENTE';
+  return (
+    t
+      ? evaluarMarcaHorario(
+          'ENTRADA',
+          new Date(r.entrada),
+          fecha,
+          r.horaDesde,
+          r.horaHasta,
+          zona,
+          t,
+        ).desvioMinutos > t.toleranciaEntrada
+      : instante(r.entrada) > inicio
+  )
+    ? 'TARDE'
+    : 'PRESENTE';
 }
 
 export function estadoVisita(
@@ -63,6 +99,20 @@ export function conEstadoVisita<T extends VisitaParaEstado>(
   const evento = v.eventosUcheck?.[0];
   return {
     ...v,
+    minutosComputables:
+      v.toleranciasAplicadas &&
+      v.salida &&
+      (evento?.horaDesde ?? v.horario?.entrada) &&
+      (evento?.horaHasta ?? v.horario?.salida)
+        ? minutosDentroHorario(
+            v.entrada,
+            v.salida,
+            v.fecha.toISOString().slice(0, 10),
+            (evento?.horaDesde ?? v.horario?.entrada)!,
+            (evento?.horaHasta ?? v.horario?.salida)!,
+            v.local?.zonaHoraria ?? ZONA_CAMPO,
+          )
+        : null,
     estado: estadoVisita(v, ahora),
     estadoPresentismo: evaluarPresentismo(
       {

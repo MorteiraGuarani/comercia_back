@@ -1,4 +1,9 @@
 import { localesOperativos } from './utils/locales-operativos';
+import { cargarTolerancias } from '../tolerancias/utils/cargar-tolerancias';
+import {
+  evaluarMarcaHorario,
+  heredarTolerancias,
+} from '../tolerancias/utils/tolerancia-horario';
 import {
   BadRequestException,
   ConflictException,
@@ -76,7 +81,14 @@ export class JornadaCampoService {
       select: {
         id: true,
         localId: true,
-        local: { select: { latitud: true, longitud: true, radioMetros: true } },
+        local: {
+          select: {
+            latitud: true,
+            longitud: true,
+            radioMetros: true,
+            zonaHoraria: true,
+          },
+        },
         usuarioId: true,
         usuario: {
           select: {
@@ -196,6 +208,9 @@ export class JornadaCampoService {
           select: {
             id: true,
             horarioId: true,
+            toleranciasAplicadas: true,
+            entradaColor: true,
+            salidaColor: true,
             fecha: true,
             entrada: true,
             salida: true,
@@ -291,19 +306,31 @@ export class JornadaCampoService {
         const efectivos = horarios.some((h) => h.asignacionId === a.id)
           ? horarios.filter((h) => h.asignacionId === a.id)
           : horarios.filter((h) => h.asignacionId === null);
+        const h = efectivos.find((x) => x.id === dto.horarioId);
         if (efectivos.length) {
-          const h = efectivos.find((x) => x.id === dto.horarioId);
-          if (
-            !h ||
-            !ocurreHorario(h, fecha) ||
-            reloj.hora < h.entrada ||
-            reloj.hora >= h.salida
-          )
+          if (!h || !ocurreHorario(h, fecha))
             throw new BadRequestException(
-              'La entrada debe estar dentro de una franja de atención de hoy',
+              'Seleccioná una franja válida para hoy',
             );
         } else if (dto.horarioId != null)
           throw new BadRequestException('Horario no disponible');
+        const tolerancias = await cargarTolerancias(
+          tx,
+          u.empresaId,
+          u.id,
+          h?.id,
+        );
+        const evaluacion = h
+          ? evaluarMarcaHorario(
+              'ENTRADA',
+              ahora,
+              reloj.fecha,
+              h.entrada,
+              h.salida,
+              a.local.zonaHoraria,
+              tolerancias,
+            )
+          : null;
         const visita = await tx.visitaCampo.create({
           data: {
             localId: a.localId,
@@ -317,6 +344,11 @@ export class JornadaCampoService {
             entradaLng: dto.longitud,
             entradaPrecision: dto.precisionMetros,
             entradaDistancia: distancia,
+            toleranciasAplicadas: { ...tolerancias },
+            entradaColor: evaluacion?.color,
+            entradaFueraHorario: evaluacion
+              ? evaluacion.color !== 'VERDE'
+              : false,
             notaEntrada: dto.nota,
           },
           select: VISITA_CAMPO_SELECT,
@@ -359,11 +391,32 @@ export class JornadaCampoService {
         local: { empresaId: u.empresaId },
       },
       select: {
-        local: { select: { latitud: true, longitud: true, radioMetros: true } },
+        toleranciasAplicadas: true,
+        horario: { select: { entrada: true, salida: true } },
+        local: {
+          select: {
+            latitud: true,
+            longitud: true,
+            radioMetros: true,
+            zonaHoraria: true,
+          },
+        },
       },
     });
     if (!visita) throw new NotFoundException('Visita abierta no disponible');
     const distancia = comprobarMarcaEnLocal(dto, visita.local, ahora);
+    const evaluacion =
+      visita.horario && visita.toleranciasAplicadas
+        ? evaluarMarcaHorario(
+            'SALIDA',
+            ahora,
+            relojCampo(ahora).fecha,
+            visita.horario.entrada,
+            visita.horario.salida,
+            visita.local.zonaHoraria,
+            heredarTolerancias(visita.toleranciasAplicadas),
+          )
+        : null;
     const resultado = await this.prisma.visitaCampo.updateMany({
       where: {
         id,
@@ -378,6 +431,10 @@ export class JornadaCampoService {
         salidaLng: dto.longitud,
         salidaPrecision: dto.precisionMetros,
         salidaDistancia: distancia,
+        salidaColor: evaluacion?.color,
+        salidaFueraHorario: evaluacion
+          ? evaluacion.color !== 'VERDE'
+          : undefined,
         notaSalida: dto.nota,
       },
     });

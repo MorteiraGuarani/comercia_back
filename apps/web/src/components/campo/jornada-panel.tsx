@@ -1,4 +1,5 @@
 "use client";
+import { ColorHorario } from "@/components/color-horario";
 import { EstadoTelefono } from "./estado-telefono";
 import { PRESENTISMO, RUTA } from "@/utils/estado-jornada";
 import { StatusStamp } from "./ui/status-stamp";
@@ -934,7 +935,8 @@ function ListadoVisitas({ fecha, propia }: { fecha: string; propia: boolean }) {
           valor: (v) =>
             `${formatoFechaHora(v.entrada)} / ${v.salida ? formatoFechaHora(v.salida) : v.estado === "EN_CURSO" ? "En curso" : "Sin salida registrada"}`,
         },
-        { titulo: "Estado", valor: v => <StatusStamp tone={PRESENTISMO[v.estadoPresentismo].tone}>{PRESENTISMO[v.estadoPresentismo].etiqueta}</StatusStamp> },
+        { titulo: "Estado", valor: v => <div className="flex flex-wrap gap-1"><StatusStamp tone={PRESENTISMO[v.estadoPresentismo].tone}>{PRESENTISMO[v.estadoPresentismo].etiqueta}</StatusStamp><ColorHorario color={v.entradaColor}>Entrada: </ColorHorario><ColorHorario color={v.salidaColor}>Salida: </ColorHorario></div> },
+        { titulo: "Minutos computables", valor: v => v.minutosComputables ?? "—" },
         { titulo: "Tareas", valor: (v) => v._count.cumplimientos },
         {
           titulo: "Observaciones",

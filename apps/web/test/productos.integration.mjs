@@ -27,7 +27,7 @@ function cargar(ruta) {
   return modulo.exports;
 }
 const { SelectorPaginado } = cargar('components/selector-paginado.tsx');
-const { normalizarPrecio } = cargar('utils/precio-producto.ts');
+const { normalizarPrecio, datosProducto, formularioProducto } = cargar('utils/precio-producto.ts');
 const root = createRoot(document.getElementById('app'));
 try {
   for (const [id, buscable] of [[12, false], ['0001', false], ['0001', true]]) {
@@ -49,7 +49,18 @@ try {
   }
   assert.equal(normalizarPrecio(' 000123,123456 '), '123.123456');
   assert.equal(normalizarPrecio('999999999999999.123456'), '999999999999999.123456');
-  console.log('OK: selector numérico, CardCode con ceros y precio exacto sin navegador');
+  assert.equal(normalizarPrecio('-000123,123456'), '-123.123456');
+  const producto = {
+    id: '9007199254740993', itemcode: '0001', itemname: 'Artículo', iva: 10,
+    itmsgrpcode: 2, itmsgrpnam: null, inventory: null, pricelist: 0,
+    pricelistname: null, price: '999999999999999.123456', tipo: null,
+  };
+  const campos = { ...producto };
+  delete campos.id;
+  assert.deepEqual(JSON.parse(JSON.stringify(datosProducto(formularioProducto(producto)))), campos);
+  assert.equal(datosProducto({ ...formularioProducto(producto), price: '' }).price, null);
+  assert.equal(datosProducto({ ...formularioProducto(producto), price: '-0001,123456' }).price, '-1.123456');
+  console.log('OK: selector con IDs de texto, itemcode con ceros, price exacto y campos nulos sin navegador');
 } finally {
   await act(async () => root.unmount());
 }

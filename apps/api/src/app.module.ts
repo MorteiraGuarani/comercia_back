@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ToleranciasModule } from './tolerancias/tolerancias.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
@@ -33,6 +34,7 @@ if (process.env.NODE_ENV !== 'production' && !usaBaseProduccion) {
 
 @Module({
   imports: [
+    ToleranciasModule,
     ConfigModule.forRoot({
       isGlobal: true,
       cache: true,

@@ -154,7 +154,7 @@ export class PlanificacionCampoService {
         })) >= 20
       )
         throw new BadRequestException('Máximo 20 franjas activas por local');
-      return tx.horarioCampo.create({
+      const horario = await tx.horarioCampo.create({
         data: {
           ...data,
           localId,
@@ -164,6 +164,22 @@ export class PlanificacionCampoService {
         },
         select: HORARIO_CAMPO_SELECT,
       });
+      if (id) {
+        const configuracion = await tx.configuracionTolerancia.findUnique({
+          where: { clave: 'horario:' + id },
+          select: { valores: true },
+        });
+        if (configuracion)
+          await tx.configuracionTolerancia.create({
+            data: {
+              clave: 'horario:' + horario.id,
+              empresaId: u.empresaId,
+              valores: configuracion.valores as Prisma.InputJsonValue,
+            },
+            select: { clave: true },
+          });
+      }
+      return horario;
     });
   }
   async eliminarHorario(usuarioId: number, localId: number, id: number) {

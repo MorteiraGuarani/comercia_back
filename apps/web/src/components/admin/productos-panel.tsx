@@ -1,14 +1,10 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { SelectorPaginado } from "@/components/selector-paginado";
 import { BotonEditar } from "@/components/boton-editar";
 import { BotonEliminarCampo } from "@/components/campo/boton-eliminar-campo";
-import {
-  IconoBuscar,
-  IconoChevronAbajo,
-} from "@/components/campo/ui/iconos-campo";
 import { Modal } from "@/components/modal";
 import { IconoMas } from "@/components/icono-mas";
 import { Paginacion } from "@/components/paginacion";
@@ -24,100 +20,64 @@ import {
 import { useListaCampo, useOperacionCampo } from "@/hooks/use-lista-campo";
 import {
   formatearPrecio,
-  normalizarPrecio,
-  recortarPrecio,
+  datosProducto,
+  formularioProducto,
 } from "@/utils/precio-producto";
 import type {
   EmpresaCatalogo,
-  FiltroProductoCatalogo,
-  FormPrecio,
   FormProducto,
-  PrecioAdmin,
   ProductoAdmin,
-  RegistroCatalogo,
-  VistaCatalogo,
 } from "@/types/producto";
 
-const chip =
-  "inline-flex items-center whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold";
-const chipNeutro = `${chip} bg-surface-soft text-muted dark:bg-surface-soft dark:text-muted`;
-const chipActivo = `${chip} bg-brand-100 text-brand-800 dark:bg-brand-950 dark:text-brand-200`;
-const btnEnlace =
-  "inline-flex min-h-11 cursor-pointer items-center whitespace-nowrap rounded-lg px-2 text-sm font-semibold text-brand-700 underline-offset-2 transition-colors hover:bg-brand-50 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:text-brand-200 dark:hover:bg-brand-950";
-const celda = "px-4 py-3 align-middle";
-const encabezado =
-  "px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted dark:text-muted";
-const pieModal =
-  "flex flex-col-reverse gap-2 border-t border-line pt-4 sm:flex-row sm:justify-end dark:border-line";
 const PRODUCTO_VACIO: FormProducto = {
-  cardCode: "",
-  descripcion: "",
+  itemcode: "",
+  itemname: "",
   iva: "",
-  grupo: "",
-  nombreGrupo: "",
-  inventario: false,
+  itmsgrpcode: "",
+  itmsgrpnam: "",
+  inventory: "Y",
+  pricelist: "",
+  pricelistname: "",
+  price: "",
   tipo: "",
 };
+const celda = "px-4 py-3 align-middle";
+const encabezado =
+  "px-4 py-3 text-left text-xs font-semibold text-muted dark:text-muted";
+const pieModal =
+  "flex flex-col-reverse gap-2 border-t border-line pt-4 sm:flex-row sm:justify-end dark:border-line";
 
 export function ProductosPanel() {
   const [empresa, setEmpresa] = useState<EmpresaCatalogo | null>(null);
-  const [vista, setVista] = useState<VistaCatalogo>("productos");
-  // «Ver precios» desde un producto abre Precios ya filtrado por ese producto.
-  const [filtroInicial, setFiltroInicial] =
-    useState<FiltroProductoCatalogo | null>(null);
-
-  function cambiarVista(
-    nueva: VistaCatalogo,
-    filtro: FiltroProductoCatalogo | null = null,
-  ) {
-    setFiltroInicial(filtro);
-    setVista(nueva);
-  }
-
   return (
     <section
       className="campo-screen min-w-0 w-full space-y-4"
       aria-label="Productos y precios"
     >
-      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-end">
-        <div className="min-w-0 sm:w-80 lg:w-96">
-          <SelectorPaginado
-            url="/admin/catalogo/empresas"
-            etiqueta="Empresa"
-            value={empresa?.id ?? ""}
-            seleccionActual={empresa?.nombre}
-            placeholder="Elegí una empresa"
-            buscable
-            required
-            // Escribir solo busca: el catálogo visible cambia recién al
-            // elegir otra empresa, y al salir sin elegir vuelve la actual.
-            onChange={() => {}}
-            onSeleccionar={(item) => {
-              setFiltroInicial(null);
-              setEmpresa({ id: item.id, nombre: item.nombre ?? "" });
-            }}
-          />
-        </div>
-        {empresa && (
-          <SelectorVista vista={vista} onCambiar={(v) => cambiarVista(v)} />
-        )}
+      <div className="min-w-0 sm:w-80 lg:w-96">
+        <SelectorPaginado
+          url="/admin/catalogo/empresas"
+          etiqueta="Empresa"
+          value={empresa?.id ?? ""}
+          seleccionActual={empresa?.nombre}
+          placeholder="Elegí una empresa"
+          buscable
+          required
+          onChange={() => {}}
+          onSeleccionar={(item) =>
+            setEmpresa({ id: item.id, nombre: item.nombre ?? "" })
+          }
+        />
       </div>
       {empresa ? (
-        <RegistrosCatalogo
-          key={`${empresa.id}:${vista}:${filtroInicial?.cardCode ?? ""}`}
-          empresa={empresa}
-          vista={vista}
-          filtroInicial={filtroInicial}
-          onVerPrecios={(filtro) => cambiarVista("precios", filtro)}
-        />
+        <RegistrosCatalogo key={empresa.id} empresa={empresa} />
       ) : (
-        <div className="rounded-2xl border border-dashed border-line bg-surface-raised px-4 py-12 text-center dark:border-line dark:bg-surface-raised">
+        <div className="border border-dashed border-line px-4 py-12 text-center dark:border-line">
           <p className="font-semibold text-foreground dark:text-foreground">
             Elegí una empresa para empezar
           </p>
-          <p className="mx-auto mt-1 max-w-sm text-sm text-muted dark:text-muted">
-            Vas a ver su catálogo de productos y sus listas de precios para
-            crearlos, editarlos o eliminarlos.
+          <p className="mt-1 text-sm text-muted dark:text-muted">
+            Vas a ver sus artículos y precios por lista.
           </p>
         </div>
       )}
@@ -125,93 +85,22 @@ export function ProductosPanel() {
   );
 }
 
-function SelectorVista({
-  vista,
-  onCambiar,
-}: {
-  vista: VistaCatalogo;
-  onCambiar: (vista: VistaCatalogo) => void;
-}) {
-  return (
-    <div
-      role="group"
-      aria-label="Elegir catálogo"
-      className="grid min-w-0 grid-cols-2 overflow-hidden rounded-xl border border-control-line bg-surface-raised sm:inline-grid dark:border-control-line dark:bg-surface-raised"
-    >
-      {(["productos", "precios"] as const).map((opcion) => (
-        <button
-          key={opcion}
-          type="button"
-          aria-pressed={vista === opcion}
-          onClick={() => onCambiar(opcion)}
-          className={`min-h-11 cursor-pointer whitespace-nowrap px-6 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-600 ${
-            opcion === "precios"
-              ? "border-l border-control-line dark:border-control-line"
-              : ""
-          } ${
-            vista === opcion
-              ? "bg-brand-700 text-white dark:bg-brand-600 dark:text-white"
-              : "text-muted hover:bg-surface-soft hover:text-foreground dark:text-muted dark:hover:bg-surface-soft dark:hover:text-foreground"
-          }`}
-        >
-          {opcion === "productos" ? "Productos" : "Precios"}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function ListaPrecio({ nro, nombre }: { nro: number; nombre: string }) {
-  return (
-    <span className="inline-flex min-w-0 items-center gap-2">
-      <span className="grid h-6 min-w-6 shrink-0 place-items-center rounded-md bg-surface-soft px-1.5 font-mono text-xs font-semibold text-foreground dark:bg-surface-soft dark:text-foreground">
-        <span className="sr-only">Lista N.º </span>
-        {nro}
-      </span>
-      <span className="min-w-0 break-words text-sm text-foreground dark:text-foreground">
-        {nombre}
-      </span>
-    </span>
-  );
-}
-
-function RegistrosCatalogo({
-  empresa,
-  vista,
-  filtroInicial,
-  onVerPrecios,
-}: {
-  empresa: EmpresaCatalogo;
-  vista: VistaCatalogo;
-  filtroInicial: FiltroProductoCatalogo | null;
-  onVerPrecios: (filtro: FiltroProductoCatalogo) => void;
-}) {
-  const base = `/admin/catalogo/empresas/${empresa.id}`;
-  const entidad = vista === "productos" ? "producto" : "precio";
+function RegistrosCatalogo({ empresa }: { empresa: EmpresaCatalogo }) {
+  const base = `/admin/catalogo/empresas/${empresa.id}/productos`;
   const [busqueda, setBusqueda] = useState("");
   const [buscar, setBuscar] = useState("");
-  const [productoFiltro, setProductoFiltro] = useState(
-    filtroInicial?.cardCode ?? "",
-  );
-  const [nombreFiltro, setNombreFiltro] = useState(filtroInicial?.nombre ?? "");
-  const parametros = new URLSearchParams({ buscar });
-  if (productoFiltro) parametros.set("cardCode", productoFiltro);
-  const lista = useListaCampo<RegistroCatalogo>(
-    `${base}/${vista}?${parametros}`,
-    0,
+  const [lista, setLista] = useState("");
+  const [pricelist, setPricelist] = useState("");
+  const [revision, setRevision] = useState(0);
+  const parametros = new URLSearchParams();
+  if (buscar) parametros.set("buscar", buscar);
+  if (pricelist !== "") parametros.set("pricelist", pricelist);
+  const registros = useListaCampo<ProductoAdmin>(
+    `${base}?${parametros}`,
+    revision,
     7,
   );
-  const { setPage } = lista;
-  const op = useOperacionCampo();
-  const [formProducto, setFormProducto] = useState<FormProducto | null>(null);
-  const [codigoEditando, setCodigoEditando] = useState<string | null>(null);
-  const [formPrecio, setFormPrecio] = useState<FormPrecio | null>(null);
-  const [precioEditando, setPrecioEditando] = useState<number | null>(null);
-  const [nombreProducto, setNombreProducto] = useState("");
-  const [eliminando, setEliminando] = useState<RegistroCatalogo | null>(null);
-  const [detalleAbierto, setDetalleAbierto] = useState<string | null>(null);
-  const idDetalle = useId();
-
+  const { setPage } = registros;
   useEffect(() => {
     const timer = setTimeout(() => {
       setBuscar(busqueda.trim());
@@ -220,454 +109,252 @@ function RegistrosCatalogo({
     return () => clearTimeout(timer);
   }, [busqueda, setPage]);
 
-  function limpiarFiltros() {
-    setBusqueda("");
-    setBuscar("");
-    setProductoFiltro("");
-    setNombreFiltro("");
-    setPage(1);
-  }
-
-  function abrirProducto(producto?: ProductoAdmin) {
+  const op = useOperacionCampo();
+  const [form, setForm] = useState<FormProducto | null>(null);
+  const [editando, setEditando] = useState<string | null>(null);
+  const [eliminando, setEliminando] = useState<ProductoAdmin | null>(null);
+  function abrir(producto?: ProductoAdmin) {
     op.limpiarError();
-    setCodigoEditando(producto?.cardCode ?? null);
-    setFormProducto(
-      producto
-        ? {
-            ...producto,
-            iva: String(producto.iva),
-            grupo: String(producto.grupo),
-          }
-        : PRODUCTO_VACIO,
-    );
+    setEditando(producto?.id ?? null);
+    setForm(producto ? formularioProducto(producto) : { ...PRODUCTO_VACIO });
   }
-
-  function abrirPrecio(precio?: PrecioAdmin) {
-    op.limpiarError();
-    setPrecioEditando(precio?.id ?? null);
-    // Un precio nuevo arranca con el producto del filtro, si hay uno.
-    setNombreProducto(
-      precio
-        ? `${precio.cardCode} · ${precio.producto.descripcion}`
-        : nombreFiltro,
-    );
-    setFormPrecio(
-      precio
-        ? {
-            cardCode: precio.cardCode,
-            nroListaPrecio: String(precio.nroListaPrecio),
-            listaPrecio: precio.listaPrecio,
-            precio: recortarPrecio(precio.precio),
-          }
-        : {
-            cardCode: productoFiltro,
-            nroListaPrecio: "",
-            listaPrecio: "",
-            precio: "",
-          },
-    );
-  }
-
-  async function guardarProducto() {
-    if (!formProducto) return;
-    const { cardCode, ...campos } = formProducto;
-    const data = {
-      descripcion: campos.descripcion,
-      iva: Number(campos.iva),
-      grupo: Number(campos.grupo),
-      nombreGrupo: campos.nombreGrupo,
-      inventario: campos.inventario,
-      tipo: campos.tipo,
-    };
-    const ok = await op.ejecutar("Guardando producto", () =>
-      apiFetch(
-        `${base}/productos${codigoEditando !== null ? `/${encodeURIComponent(codigoEditando)}` : ""}`,
-        {
-          method: codigoEditando !== null ? "PUT" : "POST",
-          body: JSON.stringify(
-            codigoEditando !== null ? data : { ...data, cardCode },
-          ),
-        },
-      ),
+  async function guardar() {
+    if (!form) return;
+    const ok = await op.ejecutar("Guardando artículo y precio", () =>
+      apiFetch(`${base}${editando === null ? "" : `/${editando}`}`, {
+        method: editando === null ? "POST" : "PUT",
+        body: JSON.stringify(datosProducto(form)),
+      }),
     );
     if (ok) {
-      setFormProducto(null);
-      lista.refrescar();
+      setForm(null);
+      setRevision((n) => n + 1);
     }
   }
-
-  async function guardarPrecio() {
-    if (!formPrecio) return;
-    const ok = await op.ejecutar("Guardando precio", () =>
-      apiFetch(
-        `${base}/precios${precioEditando !== null ? `/${precioEditando}` : ""}`,
-        {
-          method: precioEditando !== null ? "PUT" : "POST",
-          body: JSON.stringify({
-            cardCode: formPrecio.cardCode,
-            nroListaPrecio: Number(formPrecio.nroListaPrecio),
-            listaPrecio: formPrecio.listaPrecio,
-            precio: normalizarPrecio(formPrecio.precio),
-          }),
-        },
-      ),
-    );
-    if (ok) {
-      setFormPrecio(null);
-      lista.refrescar();
-    }
-  }
-
   async function eliminar() {
     if (!eliminando) return;
-    const ruta =
-      "id" in eliminando
-        ? `precios/${eliminando.id}`
-        : `productos/${encodeURIComponent(eliminando.cardCode)}`;
-    const ok = await op.ejecutar("Eliminando registro del catálogo", () =>
-      apiFetch(`${base}/${ruta}`, { method: "DELETE" }),
+    const ok = await op.ejecutar("Eliminando artículo de la lista", () =>
+      apiFetch(`${base}/${eliminando.id}`, { method: "DELETE" }),
     );
     if (ok) {
       setEliminando(null);
-      lista.refrescar();
+      setRevision((n) => n + 1);
     }
   }
-
-  const etiquetaDe = (item: RegistroCatalogo) =>
-    `${"id" in item ? `precio ${item.id}` : `producto ${item.cardCode}`} de ${empresa.nombre}`;
-
-  const acciones = (item: RegistroCatalogo, movil: boolean) => (
-    <>
-      <BotonEditar
-        onClick={() =>
-          "id" in item ? abrirPrecio(item) : abrirProducto(item)
-        }
-        etiqueta={`Editar ${etiquetaDe(item)}`}
-        modo={movil ? "texto" : "icono"}
-      />
-      <BotonEliminarCampo
-        onClick={() => {
-          op.limpiarError();
-          setEliminando(item);
-        }}
-        etiqueta={`Eliminar ${etiquetaDe(item)}`}
-        modo={movil ? "texto" : "icono"}
-        disabled={!!op.mensaje}
-      />
-    </>
-  );
-
-  const verPrecios = (producto: ProductoAdmin) => (
-    <button
-      type="button"
-      className={btnEnlace}
-      aria-label={`Ver precios del producto ${producto.cardCode}`}
-      onClick={() =>
-        onVerPrecios({
-          cardCode: producto.cardCode,
-          nombre: `${producto.cardCode} · ${producto.descripcion}`,
-        })
-      }
-    >
-      {producto._count.precios}{" "}
-      {producto._count.precios === 1 ? "precio" : "precios"}
-    </button>
-  );
-
-  const identidad = (descripcion: string, cardCode: string) => (
-    <div className="min-w-0">
-      <p className="break-words font-semibold text-foreground dark:text-foreground">
-        {descripcion}
-      </p>
-      <p className="mt-0.5 break-words font-mono text-xs text-muted dark:text-muted">
-        {cardCode}
-      </p>
-    </div>
-  );
-
-  const vacio = buscar
-    ? {
-        titulo: `No hay ${vista} que coincidan con «${buscar}»`,
-        detalle: "Probá con otra búsqueda o quitá los filtros.",
-      }
-    : productoFiltro
-      ? {
-          titulo: "Este producto todavía no tiene precios",
-          detalle: "Usá el botón + para cargarle el primero.",
-        }
-      : {
-          titulo: `Esta empresa todavía no tiene ${vista}`,
-          detalle: `Usá el botón + para cargar el primer ${entidad}.`,
-        };
-  const total = lista.datos?.total ?? 0;
-
+  function acciones(item: ProductoAdmin, movil = false) {
+    const nombre = `${item.itemcode}, lista ${item.pricelist}`;
+    return (
+      <div className="flex items-center gap-2">
+        <BotonEditar
+          etiqueta={`Editar ${nombre}`}
+          onClick={() => abrir(item)}
+          modo={movil ? "texto" : "icono"}
+        />
+        <BotonEliminarCampo
+          etiqueta={`Eliminar ${nombre}`}
+          modo={movil ? "texto" : "icono"}
+          onClick={() => {
+            op.limpiarError();
+            setEliminando(item);
+          }}
+        />
+      </div>
+    );
+  }
+  const importe = (item: ProductoAdmin) =>
+    item.price === null ? "Sin precio" : formatearPrecio(item.price);
   return (
-    <div
-      data-inicio-listado
-      className="min-w-0 w-full scroll-mt-20 rounded-2xl border border-line bg-surface-raised shadow-sm dark:border-line dark:bg-surface-raised"
-    >
-      <div className="flex flex-wrap items-end gap-2 border-b border-line p-3 sm:p-4 md:flex-nowrap md:gap-3 dark:border-line">
-        <label
-          className={`${labelBase} order-1 min-w-0 grow basis-[calc(100%-3.5rem)] md:basis-0`}
-        >
-          Buscar
-          <span className="relative block">
-            <IconoBuscar className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted dark:text-muted" />
-            <input
-              type="search"
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-              className={`${inputBase} pl-10`}
-              placeholder={
-                vista === "productos"
-                  ? "CardCode o descripción"
-                  : "CardCode, descripción o lista"
-              }
-              maxLength={200}
-            />
-          </span>
-        </label>
-        {vista === "precios" && (
-          <div className="order-3 w-full md:order-2 md:w-72 lg:w-80">
-            <SelectorPaginado<string>
-              url={`${base}/productos/opciones`}
-              etiqueta="Producto"
-              value={productoFiltro}
-              seleccionActual={nombreFiltro}
-              placeholder="Todos los productos"
-              buscable
-              onChange={(id) => {
-                setProductoFiltro(id);
-                setPage(1);
-              }}
-              onSeleccionar={(item) => setNombreFiltro(item.nombre ?? "")}
-            />
-          </div>
-        )}
-        {(busqueda || productoFiltro) && (
-          <button
-            type="button"
-            onClick={limpiarFiltros}
-            className={`${btnEnlace} order-4 md:order-3`}
-          >
-            Limpiar filtros
-          </button>
-        )}
+    <div className="min-w-0 w-full space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-lg font-semibold text-foreground dark:text-foreground">
+            Artículos y precios
+          </h2>
+          <p className="text-sm text-muted dark:text-muted">
+            Una fila por artículo y lista de precios.
+          </p>
+        </div>
         <button
           type="button"
-          onClick={() =>
-            vista === "productos" ? abrirProducto() : abrirPrecio()
-          }
-          className={`${btnPrimary} order-2 h-11 w-11 shrink-0 p-0 md:order-4`}
-          aria-label={`Crear ${entidad}`}
-          title={`Crear ${entidad}`}
+          className={`${btnPrimary} h-11 w-11 shrink-0 px-0`}
+          aria-label="Crear producto"
+          title="Crear producto"
+          onClick={() => abrir()}
         >
-          <IconoMas className="h-5 w-5" />
+          <IconoMas />
         </button>
       </div>
-      {lista.error && (
-        <div
-          role="alert"
-          className={`${errorBox} m-3 flex flex-wrap items-center justify-between gap-2 sm:m-4`}
+      <div className="grid min-w-0 gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+        <label className={labelBase}>
+          Buscar artículo o lista
+          <input
+            className={inputBase}
+            type="search"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            maxLength={200}
+            placeholder="Código, nombre o lista"
+          />
+        </label>
+        <form
+          className="flex items-end gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            setPricelist(lista);
+            setPage(1);
+          }}
         >
-          <span className="min-w-0">{lista.error}</span>
+          <label className={`${labelBase} min-w-0 flex-1 sm:w-32`}>
+            pricelist
+            <input
+              className={inputBase}
+              type="number"
+              step="1"
+              min={-32768}
+              max={32767}
+              value={lista}
+              onChange={(e) => setLista(e.target.value)}
+              placeholder="Todas"
+            />
+          </label>
+          <button className={btnGhost} type="submit">
+            Filtrar
+          </button>
+        </form>
+      </div>
+      {registros.error && (
+        <div className={errorBox} role="alert">
+          {registros.error}
           <button
             type="button"
-            className={btnGhost}
-            onClick={lista.refrescar}
+            className={`${btnGhost} ml-3`}
+            onClick={registros.refrescar}
           >
             Reintentar
           </button>
         </div>
       )}
-      {!lista.cargando && !lista.error && !lista.items.length && (
-        <div className="px-4 py-12 text-center">
-          <p className="break-words font-semibold text-foreground dark:text-foreground">
-            {vacio.titulo}
+      {registros.items.length === 0 &&
+        !registros.cargando &&
+        !registros.error && (
+          <p className="py-8 text-center text-muted dark:text-muted">
+            No hay artículos para estos filtros.
           </p>
-          <p className="mx-auto mt-1 max-w-sm text-sm text-muted dark:text-muted">
-            {vacio.detalle}
-          </p>
-          {(buscar || productoFiltro) && (
-            <button
-              type="button"
-              onClick={limpiarFiltros}
-              className={`${btnGhost} mt-4`}
-            >
-              Limpiar filtros
-            </button>
-          )}
-        </div>
-      )}
-      {lista.items.length > 0 && (
+        )}
+      {registros.items.length > 0 && (
         <>
           <ul
+            aria-label="Artículos y precios"
             className="divide-y divide-line md:hidden dark:divide-line"
-            aria-label={vista === "productos" ? "Productos" : "Precios"}
           >
-            {lista.items.map((item, indice) => {
-              if ("id" in item)
-                return (
-                  <li
-                    key={item.id}
-                    className="min-w-0 space-y-3 px-4 py-4 [content-visibility:auto]"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      {identidad(item.producto.descripcion, item.cardCode)}
-                      <p className="shrink-0 whitespace-nowrap text-base font-bold text-foreground [font-variant-numeric:tabular-nums] dark:text-foreground">
-                        {formatearPrecio(item.precio)}
-                      </p>
-                    </div>
-                    <ListaPrecio
-                      nro={item.nroListaPrecio}
-                      nombre={item.listaPrecio}
-                    />
-                    <div className="flex flex-wrap items-center gap-2">
-                      {acciones(item, true)}
-                    </div>
-                  </li>
-                );
-              const abierto = detalleAbierto === item.cardCode;
-              const idPanel = `${idDetalle}-${indice}`;
-              return (
-                <li
-                  key={item.cardCode}
-                  className="min-w-0 space-y-3 px-4 py-4 [content-visibility:auto]"
-                >
-                  {identidad(item.descripcion, item.cardCode)}
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className={chipNeutro}>IVA {item.iva}%</span>
-                    <span className={item.inventario ? chipActivo : chipNeutro}>
-                      {item.inventario ? "Con inventario" : "Sin inventario"}
-                    </span>
-                    {verPrecios(item)}
+            {registros.items.map((item) => (
+              <li key={item.id} className="min-w-0 space-y-3 py-4">
+                <div className="break-words">
+                  <p className="font-semibold text-foreground dark:text-foreground">
+                    {item.itemname}
+                  </p>
+                  <p className="font-mono text-xs text-muted dark:text-muted">
+                    {item.itemcode}
+                  </p>
+                </div>
+                <dl className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <dt className="text-muted dark:text-muted">
+                      Lista {item.pricelist}
+                    </dt>
+                    <dd className="break-words">
+                      {item.pricelistname ?? "Sin nombre"}
+                    </dd>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {acciones(item, true)}
-                    <button
-                      type="button"
-                      aria-expanded={abierto}
-                      aria-controls={idPanel}
-                      onClick={() =>
-                        setDetalleAbierto(abierto ? null : item.cardCode)
-                      }
-                      className="ml-auto inline-flex min-h-11 cursor-pointer items-center gap-1 whitespace-nowrap rounded-lg px-2 text-sm font-semibold text-muted transition-colors hover:bg-surface-soft hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:text-muted dark:hover:bg-surface-soft dark:hover:text-foreground"
-                    >
-                      Detalles
-                      <IconoChevronAbajo
-                        className={`h-4 w-4 transition-transform ${abierto ? "rotate-180" : ""}`}
-                      />
-                    </button>
+                  <div>
+                    <dt className="text-muted dark:text-muted">Precio</dt>
+                    <dd className="break-words font-mono">{importe(item)}</dd>
                   </div>
-                  {abierto && (
-                    <dl
-                      id={idPanel}
-                      className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1.5 rounded-xl bg-surface-soft p-3 text-sm dark:bg-surface-soft"
-                    >
-                      <dt className="text-muted dark:text-muted">Grupo</dt>
-                      <dd className="break-words text-foreground dark:text-foreground">
-                        {item.grupo}
-                        {item.nombreGrupo ? ` · ${item.nombreGrupo}` : ""}
+                </dl>
+                <details className="text-sm">
+                  <summary className="min-h-11 cursor-pointer rounded px-2 py-3 text-muted hover:bg-surface-soft focus-visible:ring-2 focus-visible:ring-brand-600 dark:text-muted dark:hover:bg-surface-soft">
+                    Ver detalles de {item.itemcode}
+                  </summary>
+                  <dl className="grid grid-cols-2 gap-2 py-2">
+                    <div>
+                      <dt className="text-muted dark:text-muted">iva</dt>
+                      <dd>{item.iva}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted dark:text-muted">inventory</dt>
+                      <dd>{item.inventory ?? "Sin definir"}</dd>
+                    </div>
+                    <div className="min-w-0">
+                      <dt className="text-muted dark:text-muted">
+                        Grupo {item.itmsgrpcode}
+                      </dt>
+                      <dd className="break-words">
+                        {item.itmsgrpnam ?? "Sin nombre"}
                       </dd>
-                      <dt className="text-muted dark:text-muted">Tipo</dt>
-                      <dd className="break-words text-foreground dark:text-foreground">
-                        {item.tipo || "—"}
+                    </div>
+                    <div className="min-w-0">
+                      <dt className="text-muted dark:text-muted">tipo</dt>
+                      <dd className="break-words">
+                        {item.tipo ?? "Sin definir"}
                       </dd>
-                    </dl>
-                  )}
-                </li>
-              );
-            })}
+                    </div>
+                  </dl>
+                </details>
+                {acciones(item, true)}
+              </li>
+            ))}
           </ul>
-          <div className="hidden max-w-full overflow-x-auto md:block">
-            <table className="w-full min-w-[640px] text-left text-sm">
-              <caption className="sr-only">
-                {vista} de {empresa.nombre}
-              </caption>
-              <thead className="border-b border-line bg-surface-soft dark:border-line dark:bg-surface-soft">
+          <div className="hidden overflow-x-auto border-y border-line md:block dark:border-line">
+            <table className="w-full text-sm" aria-label="Artículos y precios">
+              <thead>
                 <tr>
-                  <th className={encabezado}>Producto</th>
-                  {vista === "productos" ? (
-                    <>
-                      <th className={encabezado}>Grupo</th>
-                      <th className={encabezado}>Tipo</th>
-                      <th className={`${encabezado} text-right`}>IVA</th>
-                      <th className={encabezado}>Inventario</th>
-                      <th className={encabezado}>Precios</th>
-                    </>
-                  ) : (
-                    <>
-                      <th className={encabezado}>Lista de precio</th>
-                      <th className={`${encabezado} text-right`}>Precio</th>
-                    </>
-                  )}
-                  <th className={encabezado}>
-                    <span className="sr-only">Acciones</span>
-                  </th>
+                  {[
+                    "Artículo",
+                    "Lista",
+                    "Precio",
+                    "iva",
+                    "Grupo / inventory",
+                    "Acciones",
+                  ].map((s) => (
+                    <th key={s} className={encabezado}>
+                      {s}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-line dark:divide-line">
-                {lista.items.map((item) => (
-                  <tr
-                    key={"id" in item ? item.id : item.cardCode}
-                    className="transition-colors hover:bg-surface-soft dark:hover:bg-surface-soft"
-                  >
-                    <td className={`${celda} min-w-48`}>
-                      {"id" in item
-                        ? identidad(item.producto.descripcion, item.cardCode)
-                        : identidad(item.descripcion, item.cardCode)}
-                    </td>
-                    {"id" in item ? (
-                      <>
-                        <td className={celda}>
-                          <ListaPrecio
-                            nro={item.nroListaPrecio}
-                            nombre={item.listaPrecio}
-                          />
-                        </td>
-                        <td
-                          className={`${celda} whitespace-nowrap text-right font-semibold text-foreground [font-variant-numeric:tabular-nums] dark:text-foreground`}
-                        >
-                          {formatearPrecio(item.precio)}
-                        </td>
-                      </>
-                    ) : (
-                      <>
-                        <td className={celda}>
-                          <p className="break-words text-foreground dark:text-foreground">
-                            {item.nombreGrupo || "—"}
-                          </p>
-                          <p className="mt-0.5 text-xs text-muted dark:text-muted">
-                            Grupo {item.grupo}
-                          </p>
-                        </td>
-                        <td
-                          className={`${celda} break-words text-foreground dark:text-foreground`}
-                        >
-                          {item.tipo || "—"}
-                        </td>
-                        <td
-                          className={`${celda} text-right [font-variant-numeric:tabular-nums]`}
-                        >
-                          {item.iva}%
-                        </td>
-                        <td className={celda}>
-                          <span
-                            className={
-                              item.inventario ? chipActivo : chipNeutro
-                            }
-                          >
-                            {item.inventario ? "Sí" : "No"}
-                          </span>
-                        </td>
-                        <td className={celda}>{verPrecios(item)}</td>
-                      </>
-                    )}
+                {registros.items.map((item) => (
+                  <tr key={item.id}>
                     <td className={celda}>
-                      <div className="flex items-center justify-end gap-1">
-                        {acciones(item, false)}
-                      </div>
+                      <p className="max-w-sm break-words font-semibold">
+                        {item.itemname}
+                      </p>
+                      <p className="font-mono text-xs text-muted dark:text-muted">
+                        {item.itemcode}
+                      </p>
                     </td>
+                    <td className={celda}>
+                      <p>{item.pricelist}</p>
+                      <p className="max-w-48 break-words text-xs text-muted dark:text-muted">
+                        {item.pricelistname ?? "Sin nombre"}
+                      </p>
+                    </td>
+                    <td
+                      className={`${celda} whitespace-nowrap font-mono tabular-nums`}
+                    >
+                      {importe(item)}
+                    </td>
+                    <td className={celda}>{item.iva}</td>
+                    <td className={celda}>
+                      <p className="max-w-48 break-words">
+                        {item.itmsgrpcode} · {item.itmsgrpnam ?? "Sin nombre"}
+                      </p>
+                      <p className="text-xs text-muted dark:text-muted">
+                        {item.inventory ?? "Sin definir"} ·{" "}
+                        {item.tipo ?? "Sin tipo"}
+                      </p>
+                    </td>
+                    <td className={celda}>{acciones(item)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -675,113 +362,57 @@ function RegistrosCatalogo({
           </div>
         </>
       )}
-      {total > 0 && (
-        <div className="border-t border-line px-3 pb-3 sm:px-4 dark:border-line">
-          <Paginacion
-            page={lista.page}
-            limit={lista.limit}
-            total={total}
-            totalPages={lista.datos?.totalPages ?? 1}
-            onPageChange={lista.setPage}
-            onLimitChange={lista.setLimit}
-          />
-        </div>
+      {registros.datos && (
+        <Paginacion
+          page={registros.page}
+          limit={registros.limit}
+          total={registros.datos.total}
+          totalPages={registros.datos.totalPages}
+          onPageChange={registros.setPage}
+          onLimitChange={registros.setLimit}
+        />
       )}
       <Modal
-        titulo={`${codigoEditando !== null ? "Editar" : "Crear"} producto · ${empresa.nombre}`}
-        abierto={!!formProducto}
+        abierto={form !== null}
+        titulo={`${editando === null ? "Crear" : "Editar"} producto · ${empresa.nombre}`}
         onCerrar={() => {
-          if (!op.mensaje) setFormProducto(null);
+          if (!op.mensaje) setForm(null);
         }}
-        ancho="lg"
       >
-        {formProducto && (
+        {form && (
           <FormularioProducto
-            form={formProducto}
-            onCambiar={setFormProducto}
-            editando={codigoEditando !== null}
+            form={form}
+            onCambiar={setForm}
             error={op.error}
-            procesando={!!op.mensaje}
-            onCancelar={() => setFormProducto(null)}
-            onGuardar={() => void guardarProducto()}
+            ocupado={!!op.mensaje}
+            onCancelar={() => setForm(null)}
+            onGuardar={() => void guardar()}
           />
         )}
       </Modal>
       <Modal
-        titulo={`${precioEditando !== null ? "Editar" : "Crear"} precio · ${empresa.nombre}`}
-        abierto={!!formPrecio}
-        onCerrar={() => {
-          if (!op.mensaje) setFormPrecio(null);
-        }}
-      >
-        {formPrecio && (
-          <FormularioPrecio
-            key={`precio:${precioEditando}`}
-            urlProductos={`${base}/productos/opciones`}
-            form={formPrecio}
-            onCambiar={setFormPrecio}
-            nombreProducto={nombreProducto}
-            onNombreProducto={setNombreProducto}
-            editando={precioEditando !== null}
-            error={op.error}
-            procesando={!!op.mensaje}
-            onCancelar={() => setFormPrecio(null)}
-            onGuardar={() => void guardarPrecio()}
-          />
-        )}
-      </Modal>
-      <Modal
-        titulo={`Eliminar ${eliminando && "id" in eliminando ? "precio" : "producto"}`}
-        abierto={!!eliminando}
+        abierto={eliminando !== null}
+        titulo="Eliminar artículo de la lista"
         onCerrar={() => {
           if (!op.mensaje) setEliminando(null);
         }}
       >
         {eliminando && (
           <div className="space-y-4">
-            <p className="break-words text-sm text-foreground dark:text-foreground">
-              {"id" in eliminando ? (
-                <>
-                  ¿Eliminar el precio de{" "}
-                  <strong>
-                    {eliminando.cardCode} · {eliminando.producto.descripcion}
-                  </strong>{" "}
-                  en la lista{" "}
-                  <strong>
-                    {eliminando.nroListaPrecio} · {eliminando.listaPrecio}
-                  </strong>{" "}
-                  ({formatearPrecio(eliminando.precio)})?
-                </>
-              ) : (
-                <>
-                  ¿Eliminar el producto{" "}
-                  <strong>
-                    {eliminando.cardCode} · {eliminando.descripcion}
-                  </strong>{" "}
-                  de {empresa.nombre}?
-                </>
-              )}
+            <p className="break-words">
+              ¿Eliminar {eliminando.itemcode} · {eliminando.itemname} de la
+              lista {eliminando.pricelist}?
             </p>
-            {!("id" in eliminando) && eliminando._count.precios > 0 && (
-              <p className={errorBox}>
-                También se{" "}
-                {eliminando._count.precios === 1
-                  ? "eliminará su precio"
-                  : `eliminarán sus ${eliminando._count.precios} precios`}
-                .
-              </p>
-            )}
             <p className="text-sm text-muted dark:text-muted">
-              Esta acción no se puede deshacer.
+              Las otras listas de este artículo se conservan.
             </p>
             {op.error && (
-              <p role="alert" className={errorBox}>
+              <p className={errorBox} role="alert">
                 {op.error}
               </p>
             )}
             <div className={pieModal}>
               <button
-                type="button"
                 className={btnGhost}
                 disabled={!!op.mensaje}
                 onClick={() => setEliminando(null)}
@@ -789,21 +420,22 @@ function RegistrosCatalogo({
                 Cancelar
               </button>
               <button
-                type="button"
                 className={btnDanger}
                 disabled={!!op.mensaje}
                 onClick={() => void eliminar()}
               >
-                Eliminar {"id" in eliminando ? "precio" : "producto"}
+                Eliminar
               </button>
             </div>
           </div>
         )}
       </Modal>
-      <PantallaCarga
-        visible={lista.cargando || !!op.mensaje}
-        mensaje={op.mensaje || `Cargando ${vista} de ${empresa.nombre}`}
-      />
+      {(op.mensaje || registros.cargando) && (
+        <PantallaCarga
+          visible
+          mensaje={op.mensaje || "Cargando artículos y precios"}
+        />
+      )}
     </div>
   );
 }
@@ -811,59 +443,18 @@ function RegistrosCatalogo({
 function FormularioProducto({
   form,
   onCambiar,
-  editando,
   error,
-  procesando,
+  ocupado,
   onCancelar,
   onGuardar,
 }: {
   form: FormProducto;
   onCambiar: (form: FormProducto) => void;
-  editando: boolean;
   error: string | null;
-  procesando: boolean;
+  ocupado: boolean;
   onCancelar: () => void;
   onGuardar: () => void;
 }) {
-  const texto = (
-    campo: "cardCode" | "descripcion" | "nombreGrupo" | "tipo",
-    etiqueta: string,
-    max: number,
-    clase = "",
-  ) => (
-    <label className={`${labelBase} ${clase}`}>
-      {etiqueta}
-      <input
-        className={`${inputBase} disabled:cursor-not-allowed disabled:bg-surface-soft disabled:text-muted dark:disabled:bg-surface-soft dark:disabled:text-muted`}
-        value={form[campo]}
-        maxLength={max}
-        required={campo === "cardCode" || campo === "descripcion"}
-        disabled={campo === "cardCode" && editando}
-        title={
-          campo === "cardCode" && editando
-            ? "El CardCode no se puede modificar"
-            : undefined
-        }
-        onChange={(e) => onCambiar({ ...form, [campo]: e.target.value })}
-      />
-    </label>
-  );
-  const numero = (campo: "iva" | "grupo", etiqueta: string, max: number) => (
-    <label className={labelBase}>
-      {etiqueta}
-      <input
-        type="number"
-        inputMode="numeric"
-        min={0}
-        max={max}
-        step={1}
-        required
-        className={inputBase}
-        value={form[campo]}
-        onChange={(e) => onCambiar({ ...form, [campo]: e.target.value })}
-      />
-    </label>
-  );
   return (
     <form
       className="space-y-4"
@@ -872,150 +463,140 @@ function FormularioProducto({
         onGuardar();
       }}
     >
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {texto("cardCode", "CardCode", 50)}
-        {texto("tipo", "Tipo", 100)}
-        {texto("descripcion", "Descripción", 200, "sm:col-span-2")}
-        {numero("grupo", "Grupo", 2147483647)}
-        {texto("nombreGrupo", "Nombre del grupo", 200)}
-        {numero("iva", "IVA (%)", 100)}
-        <label className="flex min-h-11 cursor-pointer items-center gap-3 self-end rounded-xl border border-control-line px-3.5 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-surface-soft dark:border-control-line dark:text-foreground dark:hover:bg-surface-soft">
-          <input
-            type="checkbox"
-            className="h-4 w-4 cursor-pointer accent-brand-700"
-            checked={form.inventario}
-            onChange={(e) => onCambiar({ ...form, inventario: e.target.checked })}
-          />
-          Maneja inventario
-        </label>
-      </div>
-      {error && (
-        <p role="alert" className={errorBox}>
-          {error}
-        </p>
-      )}
-      <div className={pieModal}>
-        <button
-          type="button"
-          className={btnGhost}
-          disabled={procesando}
-          onClick={onCancelar}
-        >
-          Cancelar
-        </button>
-        <button type="submit" className={btnPrimary} disabled={procesando}>
-          {editando ? "Guardar cambios" : "Crear producto"}
-        </button>
-      </div>
-    </form>
-  );
-}
-
-function FormularioPrecio({
-  urlProductos,
-  form,
-  onCambiar,
-  nombreProducto,
-  onNombreProducto,
-  editando,
-  error,
-  procesando,
-  onCancelar,
-  onGuardar,
-}: {
-  urlProductos: string;
-  form: FormPrecio;
-  onCambiar: (form: FormPrecio) => void;
-  nombreProducto: string;
-  onNombreProducto: (nombre: string) => void;
-  editando: boolean;
-  error: string | null;
-  procesando: boolean;
-  onCancelar: () => void;
-  onGuardar: () => void;
-}) {
-  const idAyuda = useId();
-  const normalizado = normalizarPrecio(form.precio);
-  // Vista previa del valor: evita que «12.500» se guarde como 12,5 sin aviso.
-  const valido = /^\d{1,15}(\.\d{1,6})?$/.test(normalizado);
-  return (
-    <form
-      className="space-y-4"
-      onSubmit={(e) => {
-        e.preventDefault();
-        onGuardar();
-      }}
-    >
-      <SelectorPaginado<string>
-        url={urlProductos}
-        etiqueta="Producto"
-        value={form.cardCode}
-        seleccionActual={nombreProducto}
-        required
-        buscable
-        onChange={(cardCode) => onCambiar({ ...form, cardCode })}
-        onSeleccionar={(p) => onNombreProducto(p.nombre ?? "")}
-      />
-      <div className="grid grid-cols-[6.5rem_minmax(0,1fr)] gap-3">
+      <fieldset
+        disabled={ocupado}
+        className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2"
+      >
         <label className={labelBase}>
-          N.º lista
+          itemcode
           <input
-            type="number"
-            inputMode="numeric"
-            min={0}
-            max={2147483647}
-            step={1}
-            required
             className={inputBase}
-            value={form.nroListaPrecio}
+            value={form.itemcode}
+            maxLength={50}
+            required
+            pattern=".*\S.*"
+            onChange={(e) => onCambiar({ ...form, itemcode: e.target.value })}
+          />
+        </label>
+        <label className={labelBase}>
+          itemname
+          <input
+            className={inputBase}
+            value={form.itemname}
+            maxLength={200}
+            required
+            pattern=".*\S.*"
+            onChange={(e) => onCambiar({ ...form, itemname: e.target.value })}
+          />
+        </label>
+        <label className={labelBase}>
+          iva
+          <input
+            className={inputBase}
+            type="number"
+            min={-32768}
+            max={32767}
+            step="1"
+            required
+            value={form.iva}
+            onChange={(e) => onCambiar({ ...form, iva: e.target.value })}
+          />
+        </label>
+        <label className={labelBase}>
+          itmsgrpcode
+          <input
+            className={inputBase}
+            type="number"
+            min={-2147483648}
+            max={2147483647}
+            step="1"
+            required
+            value={form.itmsgrpcode}
             onChange={(e) =>
-              onCambiar({ ...form, nroListaPrecio: e.target.value })
+              onCambiar({ ...form, itmsgrpcode: e.target.value })
             }
           />
         </label>
         <label className={labelBase}>
-          Lista de precio
+          itmsgrpnam
           <input
             className={inputBase}
+            value={form.itmsgrpnam}
             maxLength={200}
-            required
-            placeholder="Ej.: Mayorista"
-            value={form.listaPrecio}
-            onChange={(e) => onCambiar({ ...form, listaPrecio: e.target.value })}
+            onChange={(e) => onCambiar({ ...form, itmsgrpnam: e.target.value })}
           />
         </label>
-      </div>
-      <label className={labelBase}>
-        Precio
-        <input
-          type="text"
-          inputMode="decimal"
-          placeholder="0"
-          required
-          maxLength={22}
-          aria-describedby={idAyuda}
-          className={`${inputBase} text-right font-semibold [font-variant-numeric:tabular-nums]`}
-          value={form.precio}
-          onChange={(e) => onCambiar({ ...form, precio: e.target.value })}
-        />
-        <span
-          id={idAyuda}
-          className="text-xs font-normal text-muted dark:text-muted"
-        >
-          {valido ? (
-            <>
-              Se guardará como{" "}
-              <strong className="font-semibold text-foreground dark:text-foreground">
-                {formatearPrecio(normalizado)}
-              </strong>
-            </>
-          ) : (
-            "Sin separador de miles. Hasta 15 enteros y 6 decimales, con coma o punto."
-          )}
-        </span>
-      </label>
+        <label className={labelBase}>
+          inventory
+          <input
+            className={inputBase}
+            value={form.inventory}
+            maxLength={1}
+            placeholder="Y / N"
+            onChange={(e) => onCambiar({ ...form, inventory: e.target.value })}
+          />
+        </label>
+        <label className={labelBase}>
+          pricelist
+          <input
+            className={inputBase}
+            type="number"
+            min={-32768}
+            max={32767}
+            step="1"
+            required
+            value={form.pricelist}
+            onChange={(e) => onCambiar({ ...form, pricelist: e.target.value })}
+          />
+        </label>
+        <label className={labelBase}>
+          pricelistname
+          <input
+            className={inputBase}
+            value={form.pricelistname}
+            maxLength={200}
+            onChange={(e) =>
+              onCambiar({ ...form, pricelistname: e.target.value })
+            }
+          />
+        </label>
+        <label className={labelBase}>
+          price
+          <input
+            className={inputBase}
+            type="text"
+            inputMode="decimal"
+            value={form.price}
+            onChange={(e) => {
+              e.target.setCustomValidity("");
+              onCambiar({ ...form, price: e.target.value });
+            }}
+            onBlur={(e) => {
+              const value = datosProducto(form).price;
+              e.target.setCustomValidity(
+                value === null ||
+                  /^-?(?:0|[1-9]\d{0,14})(?:\.\d{1,6})?$/.test(value)
+                  ? ""
+                  : "Usá hasta 15 enteros y 6 decimales.",
+              );
+            }}
+          />
+          <span className="text-xs font-normal text-muted dark:text-muted">
+            Vacío: sin precio. Hasta 6 decimales.
+          </span>
+        </label>
+        <label className={labelBase}>
+          tipo
+          <input
+            className={inputBase}
+            value={form.tipo}
+            maxLength={50}
+            onChange={(e) => onCambiar({ ...form, tipo: e.target.value })}
+          />
+        </label>
+      </fieldset>
       {error && (
-        <p role="alert" className={errorBox}>
+        <p className={errorBox} role="alert">
           {error}
         </p>
       )}
@@ -1023,13 +604,13 @@ function FormularioPrecio({
         <button
           type="button"
           className={btnGhost}
-          disabled={procesando}
+          disabled={ocupado}
           onClick={onCancelar}
         >
           Cancelar
         </button>
-        <button type="submit" className={btnPrimary} disabled={procesando}>
-          {editando ? "Guardar cambios" : "Crear precio"}
+        <button type="submit" className={btnPrimary} disabled={ocupado}>
+          Guardar
         </button>
       </div>
     </form>
