@@ -20,7 +20,7 @@ export function configurarSwagger(app: INestApplication) {
   const documentConfig = new DocumentBuilder()
     .setTitle('Comercia API')
     .setDescription(
-      'Documentacion publica de la API de Comercia. Para ejecutar endpoints protegidos se requiere una sesion o un token con los permisos correspondientes.',
+      'Documentacion publica de la API de Comercia. Productos y precios permite todas sus operaciones sin sesion ni token. Las otras secciones mantienen sus permisos.',
     )
     .setVersion('1.0.0')
     .addBearerAuth()

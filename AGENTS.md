@@ -78,7 +78,12 @@
   `aSesion()` de `auth.service.ts`). `passwordHash`, `password_db` de
   conexiones, tokens y campos internos JAMÁS salen por la API.
 - **Todo endpoint nuevo lleva `JwtAuthGuard`** salvo justificación escrita en un
-  comentario. Los únicos públicos permitidos hoy: `health` y `auth/login`.
+  comentario. Son públicos `health`, `auth/login` y, por petición explícita del
+  usuario, los seis endpoints de `ProductosController` etiquetados
+  **Productos y precios** (empresas, opciones y CRUD de artículos/listas).
+  Esta excepción incluye GET, POST, PUT y DELETE sin sesión ni token; conservar
+  validación de DTOs, existencia de empresa, paginación y filtros por empresa.
+  `Precios especiales` es otra sección y conserva sus permisos.
   El alta de usuarios se realiza desde el ABM autenticado de usuarios.
 - **Autenticado ≠ autorizado**: además del guard, verificar DENTRO del handler
   que el recurso pertenezca al usuario o a su alcance (su empresa, su equipo,
@@ -90,8 +95,8 @@
 - Swagger puede estar habilitado en producción (`SWAGGER_ENABLED=true`) por
   petición del usuario. `/api/docs`, sus archivos y las especificaciones
   JSON/YAML son públicos y no requieren sesión, por petición explícita del
-  usuario. Mantener los guards y permisos de todos los endpoints funcionales;
-  consultar Swagger no autoriza ejecutar sus operaciones.
+  usuario. Los endpoints funcionales conservan sus permisos salvo las
+  excepciones públicas explícitas indicadas arriba.
 - Nota de realidad: los endpoints y SUS PROPIOS datos siempre serán visibles
   para el usuario logueado en su navegador (DevTools) — eso es inevitable y
   correcto. La seguridad es autenticación + autorización + DTO mínimo, nunca
@@ -129,7 +134,7 @@
 
 - Keep validation at the edge: DTOs plus global `ValidationPipe`.
 - Never trust request payloads, params, headers, cookies, or query strings without validation.
-- Add authentication and authorization checks inside every mutation/action endpoint, not only at controller level.
+- Add authentication and authorization checks inside every mutation/action endpoint, not only at controller level, except for the explicitly public endpoints listed above.
 - Use Prisma migrations for schema changes. Do not hand-edit generated Prisma client files.
 - Prefer Prisma parameterized APIs. If raw SQL is unavoidable, use Prisma tagged templates only.
 - Keep secrets in `.env`; do not commit `.env`.

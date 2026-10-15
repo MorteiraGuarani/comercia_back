@@ -4,7 +4,6 @@ import {
   IsInt,
   IsOptional,
   IsString,
-  Matches,
   Max,
   MaxLength,
   Min,
@@ -19,7 +18,7 @@ import {
   MIN_INT4,
 } from '../../common/utils/numeros';
 import { trimString } from '../../common/utils/transforms';
-import { esIdProducto } from '../utils/producto';
+import { esIdProducto, esPrecioProducto } from '../utils/producto';
 
 export class ConsultaCatalogoDto extends PaginacionDto {
   @IsOptional() @IsString() @MaxLength(200) buscar?: string;
@@ -48,19 +47,48 @@ export class ProductoCatalogoParams extends EmpresaCatalogoParams {
 
 // Una fila de tbl_itm1 por artículo y lista. empresa_id proviene de la ruta.
 export class DatosProductoDto {
+  @ApiProperty({ type: String, maxLength: 50, example: 'A0001' })
   @Transform(trimString)
   @IsString()
   @MinLength(1)
   @MaxLength(50)
   itemcode!: string;
+  @ApiProperty({ type: String, maxLength: 200, example: 'Artículo de ejemplo' })
   @Transform(trimString)
   @IsString()
   @MinLength(1)
   @MaxLength(200)
   itemname!: string;
-  @IsInt() @Min(MIN_INT2) @Max(MAX_INT2) iva!: number;
-  @IsInt() @Min(MIN_INT4) @Max(MAX_INT4) itmsgrpcode!: number;
-  @ApiPropertyOptional({ type: String, nullable: true, maxLength: 200 })
+  @ApiProperty({
+    type: 'integer',
+    format: 'int32',
+    minimum: MIN_INT2,
+    maximum: MAX_INT2,
+    example: 10,
+    description: 'SMALLINT (int2).',
+  })
+  @IsInt()
+  @Min(MIN_INT2)
+  @Max(MAX_INT2)
+  iva!: number;
+  @ApiProperty({
+    type: 'integer',
+    format: 'int32',
+    minimum: MIN_INT4,
+    maximum: MAX_INT4,
+    example: 100,
+    description: 'INTEGER (int4).',
+  })
+  @IsInt()
+  @Min(MIN_INT4)
+  @Max(MAX_INT4)
+  itmsgrpcode!: number;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    maxLength: 200,
+    example: 'Alimentos',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(200)
@@ -70,28 +98,58 @@ export class DatosProductoDto {
     nullable: true,
     default: 'Y',
     maxLength: 1,
+    example: 'Y',
+    description: 'CHAR(1), admite null. Al crear, usa Y si se omite.',
   })
   @IsOptional()
   @IsString()
   @MaxLength(1)
   inventory?: string | null;
-  @IsInt() @Min(MIN_INT2) @Max(MAX_INT2) pricelist!: number;
-  @ApiPropertyOptional({ type: String, nullable: true, maxLength: 200 })
+  @ApiProperty({
+    type: 'integer',
+    format: 'int32',
+    minimum: MIN_INT2,
+    maximum: MAX_INT2,
+    example: 1,
+    description: 'SMALLINT (int2).',
+  })
+  @IsInt()
+  @Min(MIN_INT2)
+  @Max(MAX_INT2)
+  pricelist!: number;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    maxLength: 200,
+    example: 'General',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(200)
   pricelistname?: string | null;
   @ApiPropertyOptional({
-    type: String,
+    type: Number,
     nullable: true,
-    example: '15000.123456',
-    description: 'NUMERIC(21,6) como texto: hasta 15 enteros y 6 decimales.',
+    example: 15000.123456,
+    description:
+      'NUMERIC(21,6): número JSON con hasta 15 enteros y 6 decimales. También acepta texto decimal exacto por compatibilidad.',
   })
   @IsOptional()
-  @IsString()
-  @Matches(/^-?(?:0|[1-9]\d{0,14})(?:\.\d{1,6})?$/)
-  price?: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true, maxLength: 50 })
+  @ValidateBy({
+    name: 'precioProducto',
+    validator: {
+      validate: esPrecioProducto,
+      defaultMessage: () =>
+        'price debe ser numérico, con hasta 15 enteros y 6 decimales',
+    },
+  })
+  price?: number | string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    maxLength: 50,
+    example: 'Artículo',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(50)

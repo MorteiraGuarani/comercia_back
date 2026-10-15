@@ -21,7 +21,14 @@ Usa los nombres y tipos del DDL de origen, sin el prefijo `convertia`:
 Se conserva `empresa_id`, por decisión del usuario, y el único
 `uq_tbl_itm1_item_pricelist` cubre `(empresa_id, itemcode, pricelist)`.
 Los cinco índices del DDL conservan sus nombres. La API y el panel usan los
-nombres de los campos; IDs y precios viajan como texto para evitar redondeos.
+nombres de los campos. El cuerpo de entrada acepta `price` numérico; las
+respuestas conservan IDs y precios como texto para evitar redondeos. También
+se admite la entrada decimal como texto por compatibilidad con el panel.
+
+Los seis endpoints de **Productos y precios** son públicos por petición del
+usuario, incluido POST/PUT/DELETE. Se mantiene la validación de parámetros,
+DTOs, existencia de empresa y separación de filas por empresa. La sección
+**Precios especiales** conserva autenticación y permisos de superadmin.
 
 ## Migración
 
@@ -63,7 +70,9 @@ usan el ID de la fila, no el código del artículo.
 `npm run test:productos --workspace=api` ejecuta SQL real en PGlite sin usar
 la base configurada. Comprueba conservación, rollback, unicidad, tipos,
 secuencia BIGINT, nulos y separación por empresa y lista. Los tests de
-`productos` y `precios-especiales` verifican autorización y validación.
+`productos` verifica acceso sin sesión y validación; `precios-especiales`
+verifica sus permisos. `test:swagger` prueba los seis endpoints del catálogo
+por HTTP, los tipos de los ejemplos y la entrada de precios numéricos.
 
 El panel conserva los componentes y tokens de Comercia: IBM Plex Sans/Mono,
 fondo `#e8dfd3`, texto `#211c18`, acento `#c98248` y modo oscuro existente.

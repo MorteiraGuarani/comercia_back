@@ -7,20 +7,13 @@ import {
   Post,
   Put,
   Query,
-  Req,
-  UseGuards,
 } from '@nestjs/common';
 import {
-  ApiBearerAuth,
-  ApiCookieAuth,
   ApiOkResponse,
   ApiCreatedResponse,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { SuperadminGuard } from '../auth/superadmin.guard';
-import type { RequestConUsuario } from '../auth/interfaces/request-con-usuario.interface';
 import { ProductosService } from './productos.service';
 import {
   ConsultaCatalogoDto,
@@ -34,24 +27,19 @@ import {
 
 @Controller('admin/catalogo')
 @ApiTags('Productos y precios')
-@ApiBearerAuth()
-@ApiCookieAuth()
-@UseGuards(JwtAuthGuard, SuperadminGuard)
+// Sección pública por petición explícita del usuario, incluido su CRUD.
+// La empresa de la ruta y los DTOs siguen validándose en cada operación.
 export class ProductosController {
   constructor(private readonly servicio: ProductosService) {}
 
   @Get('empresas')
-  empresas(@Req() r: RequestConUsuario, @Query() q: ConsultaCatalogoDto) {
-    return this.servicio.empresas(r.usuarioId, q);
+  empresas(@Query() q: ConsultaCatalogoDto) {
+    return this.servicio.empresas(q);
   }
 
   @Get('empresas/:empresaId/productos/opciones')
-  opciones(
-    @Req() r: RequestConUsuario,
-    @Param() p: EmpresaCatalogoParams,
-    @Query() q: ConsultaCatalogoDto,
-  ) {
-    return this.servicio.productos(r.usuarioId, p.empresaId, q, true);
+  opciones(@Param() p: EmpresaCatalogoParams, @Query() q: ConsultaCatalogoDto) {
+    return this.servicio.productos(p.empresaId, q, true);
   }
 
   @Get('empresas/:empresaId/productos')
@@ -60,35 +48,26 @@ export class ProductosController {
   })
   @ApiOkResponse({ type: PaginaProductoDto })
   productos(
-    @Req() r: RequestConUsuario,
     @Param() p: EmpresaCatalogoParams,
     @Query() q: ConsultaCatalogoDto,
   ) {
-    return this.servicio.productos(r.usuarioId, p.empresaId, q);
+    return this.servicio.productos(p.empresaId, q);
   }
 
   @Post('empresas/:empresaId/productos')
   @ApiCreatedResponse({ type: ProductoRespuestaDto })
-  crear(
-    @Req() r: RequestConUsuario,
-    @Param() p: EmpresaCatalogoParams,
-    @Body() d: CrearProductoDto,
-  ) {
-    return this.servicio.crearProducto(r.usuarioId, p.empresaId, d);
+  crear(@Param() p: EmpresaCatalogoParams, @Body() d: CrearProductoDto) {
+    return this.servicio.crearProducto(p.empresaId, d);
   }
 
   @Put('empresas/:empresaId/productos/:id')
   @ApiOkResponse({ type: ProductoRespuestaDto })
-  editar(
-    @Req() r: RequestConUsuario,
-    @Param() p: ProductoCatalogoParams,
-    @Body() d: DatosProductoDto,
-  ) {
-    return this.servicio.editarProducto(r.usuarioId, p.empresaId, p.id, d);
+  editar(@Param() p: ProductoCatalogoParams, @Body() d: DatosProductoDto) {
+    return this.servicio.editarProducto(p.empresaId, p.id, d);
   }
 
   @Delete('empresas/:empresaId/productos/:id')
-  eliminar(@Req() r: RequestConUsuario, @Param() p: ProductoCatalogoParams) {
-    return this.servicio.eliminarProducto(r.usuarioId, p.empresaId, p.id);
+  eliminar(@Param() p: ProductoCatalogoParams) {
+    return this.servicio.eliminarProducto(p.empresaId, p.id);
   }
 }

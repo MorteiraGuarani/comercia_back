@@ -18,7 +18,8 @@ import { errorCatalogo } from './utils/error-catalogo';
 export class ProductosService {
   constructor(private readonly prisma: PrismaService) {}
 
-  // Compartido con PreciosEspecialesService.
+  // Precios especiales conserva su autorización; el catálogo público solo
+  // comprueba la empresa y los datos de la operación.
   async autorizar(usuarioId: number, empresaId?: number) {
     const usuario = await this.prisma.usuario.findFirst({
       where: { id: usuarioId, esSuperadmin: true, isActive: true },
@@ -26,8 +27,11 @@ export class ProductosService {
     });
     if (!usuario)
       throw new ForbiddenException('Requiere permisos de superadministrador');
+    if (empresaId !== undefined) await this.comprobarEmpresa(empresaId);
+  }
+
+  private async comprobarEmpresa(empresaId: number) {
     if (
-      empresaId !== undefined &&
       !(await this.prisma.empresa.findUnique({
         where: { id: empresaId },
         select: { id: true },
@@ -36,8 +40,7 @@ export class ProductosService {
       throw new NotFoundException('Empresa no disponible');
   }
 
-  async empresas(usuarioId: number, query: ConsultaCatalogoDto) {
-    await this.autorizar(usuarioId);
+  async empresas(query: ConsultaCatalogoDto) {
     const where = query.buscar
       ? { nombre: { contains: query.buscar, mode: 'insensitive' as const } }
       : {};
@@ -56,12 +59,11 @@ export class ProductosService {
   }
 
   async productos(
-    usuarioId: number,
     empresaId: number,
     query: ConsultaCatalogoDto,
     opciones = false,
   ) {
-    await this.autorizar(usuarioId, empresaId);
+    await this.comprobarEmpresa(empresaId);
     const texto = { contains: query.buscar, mode: 'insensitive' as const };
     const where = {
       empresaId,
@@ -101,12 +103,8 @@ export class ProductosService {
     return respuestaPaginada(items.map(productoRespuesta), total, page, limit);
   }
 
-  async crearProducto(
-    usuarioId: number,
-    empresaId: number,
-    dto: CrearProductoDto,
-  ) {
-    await this.autorizar(usuarioId, empresaId);
+  async crearProducto(empresaId: number, dto: CrearProductoDto) {
+    await this.comprobarEmpresa(empresaId);
     try {
       const fila = await this.prisma.producto.create({
         data: { ...dto, empresaId },
@@ -118,13 +116,8 @@ export class ProductosService {
     }
   }
 
-  async editarProducto(
-    usuarioId: number,
-    empresaId: number,
-    id: string,
-    dto: DatosProductoDto,
-  ) {
-    await this.autorizar(usuarioId, empresaId);
+  async editarProducto(empresaId: number, id: string, dto: DatosProductoDto) {
+    await this.comprobarEmpresa(empresaId);
     try {
       const fila = await this.prisma.producto.update({
         where: { id: BigInt(id), empresaId },
@@ -137,8 +130,8 @@ export class ProductosService {
     }
   }
 
-  async eliminarProducto(usuarioId: number, empresaId: number, id: string) {
-    await this.autorizar(usuarioId, empresaId);
+  async eliminarProducto(empresaId: number, id: string) {
+    await this.comprobarEmpresa(empresaId);
     try {
       await this.prisma.producto.delete({
         where: { id: BigInt(id), empresaId },
