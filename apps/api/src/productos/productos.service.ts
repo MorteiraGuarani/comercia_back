@@ -19,7 +19,8 @@ import { errorCatalogo } from './utils/error-catalogo';
 export class ProductosService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private async autorizar(usuarioId: number, empresaId?: number) {
+  // También lo usa PreciosEspecialesService: un solo control para el catálogo.
+  async autorizar(usuarioId: number, empresaId?: number) {
     const usuario = await this.prisma.usuario.findFirst({
       where: { id: usuarioId, esSuperadmin: true, isActive: true },
       select: { id: true },

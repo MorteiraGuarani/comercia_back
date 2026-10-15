@@ -10,6 +10,8 @@ const request = require('supertest');
 const { configurarSwagger } = require('../dist/src/common/utils/swagger.js');
 const { ProductosController } = require('../dist/src/productos/productos.controller.js');
 const { ProductosService } = require('../dist/src/productos/productos.service.js');
+const { PreciosEspecialesController } = require('../dist/src/productos/precios-especiales.controller.js');
+const { PreciosEspecialesService } = require('../dist/src/productos/precios-especiales.service.js');
 const { PrismaService } = require('../dist/src/prisma/prisma.service.js');
 const { JwtAuthGuard } = require('../dist/src/auth/jwt-auth.guard.js');
 const { SuperadminGuard } = require('../dist/src/auth/superadmin.guard.js');
@@ -18,10 +20,11 @@ const jwt = new JwtService({ secret: 'clave-solo-para-pruebas-aisladas-swagger' 
 
 async function crearApp(enabled) {
   const module = await Test.createTestingModule({
-    controllers: [ProductosController],
+    controllers: [ProductosController, PreciosEspecialesController],
     providers: [
       JwtAuthGuard, SuperadminGuard,
       { provide: ProductosService, useValue: {} },
+      { provide: PreciosEspecialesService, useValue: {} },
       { provide: JwtService, useValue: jwt },
       { provide: ConfigService, useValue: { get: (key) => key === 'app.env' ? 'production' : key === 'app.swaggerEnabled' ? enabled : undefined } },
       { provide: PrismaService, useValue: { usuario: { findUnique: async ({ where }) => ({ id: where.id, empresaId: 10, esSuperadmin: where.id === 1, isActive: where.id !== 3 }) } } },
@@ -55,6 +58,19 @@ try {
   assert.equal(doc.components.schemas.PrecioCatalogoDto.properties.precio.type, 'string');
   assert.equal(doc.components.schemas.CrearProductoDto.properties.cardCode.maxLength, 50);
   assert.ok(doc.components.schemas.CrearProductoDto.required.includes('inventario'));
+  const especiales = '/api/v1/admin/catalogo/empresas/{empresaId}/precios-especiales';
+  assert.ok(doc.paths[especiales].get && doc.paths[especiales].post);
+  assert.ok(doc.paths[`${especiales}/{id}`].patch && doc.paths[`${especiales}/{id}`].delete);
+  assert.ok(doc.paths[`${especiales}-detalle`].get && doc.paths[`${especiales}-detalle/{id}`].patch);
+  const { schemas } = doc.components;
+  assert.equal(schemas.PrecioEspecialDto.required, undefined);
+  assert.equal(schemas.PrecioEspecialDetalleDto.required, undefined);
+  assert.equal(schemas.PrecioEspecialDto.properties.price.type, 'string');
+  assert.deepEqual(schemas.PrecioEspecialDto.properties.valid.enum, ['Y', 'N']);
+  assert.equal(schemas.PrecioEspecialDetalleDto.properties.cardCode.maxLength, 15);
+  assert.equal(schemas.PrecioEspecialDetalleDto.properties.lineNum.maximum, 32767);
+  assert.equal(schemas.PrecioEspecialDetalleRespuestaDto.properties.fromDate.format, 'date-time');
+  assert.ok(schemas.PaginaPrecioEspecialDto.properties.items);
   assert.ok(doc.components.securitySchemes.bearer);
   assert.ok(doc.components.securitySchemes.cookie);
   console.log('OK: Swagger real compilado, DTOs, JWT/cookie, superadmin, activos, assets y especificaciones protegidas');

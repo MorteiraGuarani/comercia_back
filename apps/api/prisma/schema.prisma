@@ -25,6 +25,8 @@ model Empresa {
   localesCampo        LocalCampo[]
   productos           Producto[]
   precios             Precio[]
+  preciosEspeciales   PrecioEspecial[]
+  preciosEspDetalle   PrecioEspecialDetalle[]
   tareasCampo         TareaCampo[]
   eventosUcheck       IntegracionUcheckEvento[]
   modulos             EmpresaModulo[]
@@ -69,6 +71,55 @@ model Precio {
 
   @@index([empresaId, cardCode, nroListaPrecio])
   @@map("precios")
+}
+
+// Precio especial por cliente (cardcode) y artículo (itemcode), como OSPP de
+// SAP. Los datos de negocio son opcionales porque la carga puede venir parcial.
+model PrecioEspecial {
+  id            BigInt   @id @default(autoincrement())
+  empresaId     Int      @map("empresa_id")
+  empresa       Empresa  @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  cardCode      String?  @map("cardcode") @db.VarChar(50)
+  cardName      String?  @map("cardname") @db.VarChar(200)
+  cardType      String?  @map("cardtype") @db.VarChar(20)
+  listPriceName String?  @map("listpricename") @db.VarChar(100)
+  listPriceCod  Int?     @map("listpricecod")
+  itemCode      String?  @map("itemcode") @db.VarChar(50)
+  itemName      String?  @map("itemname") @db.VarChar(200)
+  price         Decimal? @default(0) @db.Decimal(21, 6)
+  um            String?  @db.VarChar(20)
+  itmsGrpCode   Int?     @map("itmsgrpcode")
+  itmsGrpNam    String?  @map("itmsgrpnam") @db.VarChar(200)
+  valid         String?  @default("Y") @db.Char(1)
+
+  @@unique([empresaId, itemCode, listPriceCod, cardCode, cardType], map: "uq_tbl_ospp_item_listprice")
+  @@map("tbl_ospp")
+}
+
+// Detalle del precio especial por línea y vigencia, como SPP1 de SAP. Se
+// relaciona con la cabecera por empresa, cardcode e itemcode (sin FK: ambos
+// lados admiten nulos).
+model PrecioEspecialDetalle {
+  id        BigInt    @id @default(autoincrement())
+  empresaId Int       @map("empresa_id")
+  empresa   Empresa   @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  itemCode  String?   @map("itemcode") @db.VarChar(50)
+  cardCode  String?   @map("cardcode") @db.VarChar(15)
+  lineNum   Int?      @map("linenum") @db.SmallInt
+  price     Decimal?  @db.Decimal(21, 6)
+  currency  String?   @db.VarChar(3)
+  discount  Decimal?  @db.Decimal(21, 6)
+  listNum   Int?      @default(0) @map("listnum") @db.SmallInt
+  fromDate  DateTime? @map("fromdate") @db.Timestamp(6)
+  toDate    DateTime? @map("todate") @db.Timestamp(6)
+
+  // El único (empresa, cardcode, itemcode, ...) ya cubre las búsquedas por
+  // cliente y por cliente + artículo.
+  @@unique([empresaId, cardCode, itemCode, lineNum, listNum], map: "uq_tbl_spp1")
+  @@index([empresaId, itemCode], map: "idx_tbl_spp1_itemcode")
+  @@index([empresaId, currency], map: "idx_tbl_spp1_currency")
+  @@index([empresaId, fromDate, toDate], map: "idx_tbl_spp1_validity")
+  @@map("tbl_spp1")
 }
 
 model Conexion {
