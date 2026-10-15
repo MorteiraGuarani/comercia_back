@@ -5,7 +5,7 @@ Usa los nombres y tipos del DDL de origen, sin el prefijo `convertia`:
 
 | Campo | Tipo | Nulo / valor predeterminado |
 | --- | --- | --- |
-| id | BIGSERIAL, clave primaria | No |
+| id | BIGSERIAL, identificador único | No |
 | empresa_id | INTEGER, FK a empresas | No |
 | itemcode | VARCHAR(50) | No |
 | itemname | VARCHAR(200) | No |
@@ -18,8 +18,12 @@ Usa los nombres y tipos del DDL de origen, sin el prefijo `convertia`:
 | price | NUMERIC(21,6) | Sí |
 | tipo | VARCHAR(50) | Sí |
 
-Se conserva `empresa_id`, por decisión del usuario, y el único
-`uq_tbl_itm1_item_pricelist` cubre `(empresa_id, itemcode, pricelist)`.
+Se conserva `empresa_id`, por decisión del usuario. La clave primaria compuesta
+`tbl_itm1_pkey` cubre `(empresa_id, itemcode, pricelist)`: un mismo `itemcode`
+puede existir en las listas 1 y 2 de una empresa, pero no dos veces en la misma
+lista. Otra empresa conserva su propio catálogo. `id` sigue autogenerándose y
+es único mediante `uq_tbl_itm1_id`; permite conservar las URLs y los selectores
+existentes sin cambiar los IDs de ninguna fila.
 Los cinco índices del DDL conservan sus nombres. La API y el panel usan los
 nombres de los campos. El cuerpo de entrada acepta `price` numérico; las
 respuestas conservan IDs y precios como texto para evitar redondeos. También
@@ -64,6 +68,19 @@ Después de resolver esos casos, se aplica por el proceso habitual
 contrato. Los clientes externos deben reemplazar `/precios` y las propiedades
 anteriores por `/productos` con los campos de `tbl_itm1`; edición y borrado
 usan el ID de la fila, no el código del artículo.
+
+## Conversión a clave primaria compuesta
+
+[20261015200000_tbl_itm1_clave_compuesta](../apps/api/prisma/migrations/20261015200000_tbl_itm1_clave_compuesta/migration.sql)
+convierte la clave única de negocio en la clave primaria de la tabla, dentro
+de una transacción. Conserva todas las filas, IDs, secuencia, tipos, índices de
+búsqueda y FK a empresas. No elimina ni fusiona productos. La restricción
+única anterior queda reemplazada por la PK, que impone la misma regla por
+empresa, artículo y lista. `id` pasa de clave primaria a identificador único.
+
+POST y PUT devuelven 409 si la combinación ya existe en esa empresa. Editar
+por `id` puede cambiar de lista si la combinación nueva está libre; borrar una
+fila no borra las demás listas del mismo artículo.
 
 ## Verificación aislada
 

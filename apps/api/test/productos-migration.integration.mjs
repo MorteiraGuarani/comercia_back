@@ -106,5 +106,26 @@ try {
   assert.deepEqual(await rows("SELECT inventory,price::text price FROM tbl_itm1 WHERE itemcode='BIGINT'"), [{ inventory: null, price: '-1.123456' }]);
   await db.exec("DELETE FROM tbl_itm1 WHERE empresa_id=10 AND itemcode='0001' AND pricelist=1");
   assert.equal((await rows("SELECT count(*)::int n FROM tbl_itm1 WHERE itemcode='0001'"))[0].n, 2);
-  console.log('OK: ALTER tbl_itm1 atómico, tipos e índices, IDs y decimales exactos, artículos sin precio, unicidad y aislamiento por empresa/lista');
+  const antesClave = await rows('SELECT * FROM tbl_itm1 ORDER BY id');
+  await db.exec(await readFile(new URL('../prisma/migrations/20261015200000_tbl_itm1_clave_compuesta/migration.sql', import.meta.url), 'utf8'));
+  assert.deepEqual(await rows('SELECT * FROM tbl_itm1 ORDER BY id'), antesClave, 'Cambiar la PK conserva todas las filas e IDs');
+  assert.deepEqual(await rows(`
+    SELECT a.attname AS columna FROM pg_constraint c
+    CROSS JOIN LATERAL unnest(c.conkey) WITH ORDINALITY AS k(attnum,orden)
+    JOIN pg_attribute a ON a.attrelid=c.conrelid AND a.attnum=k.attnum
+    WHERE c.conrelid='tbl_itm1'::regclass AND c.contype='p' ORDER BY k.orden
+  `), [{ columna: 'empresa_id' }, { columna: 'itemcode' }, { columna: 'pricelist' }]);
+  await db.exec(`${insertar}(10,'COMPUESTO','Lista uno',10,1,1),(10,'COMPUESTO','Lista dos',10,1,2),(20,'COMPUESTO','Otra empresa',10,1,1)`);
+  await assert.rejects(db.exec(`${insertar}(10,'COMPUESTO','Duplicado',10,1,1)`), /tbl_itm1_pkey/);
+  await assert.rejects(db.exec("UPDATE tbl_itm1 SET pricelist=1 WHERE empresa_id=10 AND itemcode='COMPUESTO' AND pricelist=2"), /tbl_itm1_pkey/);
+  await assert.rejects(db.exec("INSERT INTO tbl_itm1(id,empresa_id,itemcode,itemname,iva,itmsgrpcode,pricelist) SELECT id,empresa_id,'OTRO ID','ID repetido',iva,itmsgrpcode,pricelist FROM tbl_itm1 WHERE itemcode='COMPUESTO' LIMIT 1"), /uq_tbl_itm1_id/);
+  await db.exec("UPDATE tbl_itm1 SET price=123.123456 WHERE id=(SELECT id FROM tbl_itm1 WHERE empresa_id=10 AND itemcode='COMPUESTO' AND pricelist=2)");
+  assert.deepEqual(await rows("SELECT pricelist,price::text price FROM tbl_itm1 WHERE empresa_id=10 AND itemcode='COMPUESTO' ORDER BY pricelist"), [
+    { pricelist: 1, price: null }, { pricelist: 2, price: '123.123456' },
+  ]);
+  await db.exec("DELETE FROM tbl_itm1 WHERE id=(SELECT id FROM tbl_itm1 WHERE empresa_id=10 AND itemcode='COMPUESTO' AND pricelist=1)");
+  assert.equal((await rows("SELECT count(*)::int n FROM tbl_itm1 WHERE itemcode='COMPUESTO'"))[0].n, 2);
+  const nuevosIndices = (await rows("SELECT indexname FROM pg_indexes WHERE tablename='tbl_itm1'")).map((i) => i.indexname).sort();
+  assert.deepEqual(nuevosIndices, ['tbl_itm1_pkey','uq_tbl_itm1_id','idx_tbl_itm1_itemcode','idx_tbl_itm1_itemname','idx_tbl_itm1_itmsgrpcode','idx_tbl_itm1_pricelist','idx_tbl_itm1_tipo'].sort());
+  console.log('OK: clave primaria compuesta por empresa, itemcode repetible entre listas, duplicados rechazados, IDs y datos conservados, CRUD por ID y tipos exactos');
 } finally { await db.close(); }

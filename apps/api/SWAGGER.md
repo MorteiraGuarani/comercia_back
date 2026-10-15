@@ -34,6 +34,10 @@ Referencia del plugin: https://docs.nestjs.com/openapi/cli-plugin
   `PUT/DELETE /empresas/:empresaId/productos/:id`, bajo `/api/v1/admin/catalogo`.
 - La empresa de la ruta debe existir; datos y parámetros inválidos siguen
   devolviendo 400, registros no disponibles 404 y duplicados 409.
+- La clave primaria es compuesta por `(empresa_id, itemcode, pricelist)`.
+  Dentro de una empresa se permite `A0001` con lista 1 y con lista 2; repetir
+  `A0001` con lista 1 devuelve 409 tanto al crear como al editar.
+  `id` continúa siendo único y autogenerado para mantener las URLs existentes.
 - Campos de entrada: `itemcode`, `itemname`, `iva`, `itmsgrpcode`, `itmsgrpnam`,
   `inventory`, `pricelist`, `pricelistname`, `price`, `tipo`. `empresa_id` se
   obtiene de la ruta, nunca del cuerpo.

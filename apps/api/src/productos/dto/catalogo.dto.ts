@@ -47,7 +47,13 @@ export class ProductoCatalogoParams extends EmpresaCatalogoParams {
 
 // Una fila de tbl_itm1 por artículo y lista. empresa_id proviene de la ruta.
 export class DatosProductoDto {
-  @ApiProperty({ type: String, maxLength: 50, example: 'A0001' })
+  @ApiProperty({
+    type: String,
+    maxLength: 50,
+    example: 'A0001',
+    description:
+      'Código de artículo. Puede repetirse con distinto pricelist dentro de la empresa.',
+  })
   @Transform(trimString)
   @IsString()
   @MinLength(1)
@@ -111,7 +117,8 @@ export class DatosProductoDto {
     minimum: MIN_INT2,
     maximum: MAX_INT2,
     example: 1,
-    description: 'SMALLINT (int2).',
+    description:
+      'SMALLINT (int2). Junto a itemcode identifica la fila dentro de la empresa; no puede repetirse esa pareja.',
   })
   @IsInt()
   @Min(MIN_INT2)

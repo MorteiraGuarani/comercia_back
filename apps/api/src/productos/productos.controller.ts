@@ -45,6 +45,8 @@ export class ProductosController {
   @Get('empresas/:empresaId/productos')
   @ApiOperation({
     summary: 'Listar tbl_itm1: una fila por artículo y lista de la empresa',
+    description:
+      'itemcode puede repetirse con distinto pricelist. La clave primaria es (empresa_id, itemcode, pricelist).',
   })
   @ApiOkResponse({ type: PaginaProductoDto })
   productos(
@@ -55,12 +57,22 @@ export class ProductosController {
   }
 
   @Post('empresas/:empresaId/productos')
+  @ApiOperation({
+    summary: 'Crear un artículo en una lista',
+    description:
+      'Permite el mismo itemcode en listas diferentes. Si ya existe con el mismo pricelist en la empresa, devuelve 409.',
+  })
   @ApiCreatedResponse({ type: ProductoRespuestaDto })
   crear(@Param() p: EmpresaCatalogoParams, @Body() d: CrearProductoDto) {
     return this.servicio.crearProducto(p.empresaId, d);
   }
 
   @Put('empresas/:empresaId/productos/:id')
+  @ApiOperation({
+    summary: 'Editar un artículo de una lista por su ID',
+    description:
+      'id continúa siendo único. Cambiar itemcode o pricelist no puede duplicar la combinación dentro de la empresa (409).',
+  })
   @ApiOkResponse({ type: ProductoRespuestaDto })
   editar(@Param() p: ProductoCatalogoParams, @Body() d: DatosProductoDto) {
     return this.servicio.editarProducto(p.empresaId, p.id, d);

@@ -85,6 +85,9 @@ try {
   for (const campo of ['iva', 'itmsgrpcode', 'pricelist']) assert.equal(producto.properties[campo].type, 'integer');
   for (const campo of ['itemcode', 'itemname', 'itmsgrpnam', 'inventory', 'pricelistname', 'tipo']) assert.equal(producto.properties[campo].type, 'string');
   assert.equal(producto.properties.itemcode.maxLength, 50);
+  assert.ok(producto.properties.itemcode.description.includes('distinto pricelist'));
+  assert.ok(producto.properties.pricelist.description.includes('itemcode'));
+  assert.ok(doc.paths['/api/v1/admin/catalogo/empresas/{empresaId}/productos'].post.description.includes('409'));
   assert.equal(producto.properties.tipo.maxLength, 50);
   assert.equal(producto.properties.pricelist.maximum, 32767);
   assert.equal(producto.properties.inventory.default, 'Y');
