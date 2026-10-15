@@ -44,17 +44,15 @@ async function crearApp(enabled) {
 const app = await crearApp(true);
 try {
   const http = app.getHttpServer();
-  const admin = jwt.sign({ sub: 1 });
   const regular = jwt.sign({ sub: 2 });
-  for (const path of ['/api/docs', '/api/docs-json', '/api/docs-yaml', '/api/docs/swagger-ui-init.js']) {
-    await request(http).get(path).expect(401);
-    await request(http).get(path).set('Authorization', `Bearer ${regular}`).expect(403);
-    const response = await request(http).get(path).set('Authorization', `Bearer ${admin}`).expect(200);
+  for (const path of ['/api/docs', '/api/docs-json', '/api/docs-yaml', '/api/docs/swagger-ui-init.js', '/api/docs/swagger-ui.css', '/api/docs/swagger-ui-bundle.js']) {
+    const response = await request(http).get(path).expect(200);
     assert.equal(response.headers['cache-control'], 'no-store');
   }
-  await request(http).get('/api/docs-json').set('Cookie', `${AUTH_COOKIE}=${jwt.sign({ sub: 3 })}`).expect(401);
-  await request(http).get('/api/docs-json').set('Cookie', `${AUTH_COOKIE}=invalido`).expect(401);
-  const { body: doc } = await request(http).get('/api/docs-json').set('Cookie', `${AUTH_COOKIE}=${admin}`).expect(200);
+  await request(http).get('/api/docs-json').set('Authorization', `Bearer ${regular}`).expect(200);
+  await request(http).get('/api/docs-json').set('Cookie', `${AUTH_COOKIE}=${jwt.sign({ sub: 3 })}`).expect(200);
+  await request(http).get('/api/docs-json').set('Cookie', `${AUTH_COOKIE}=invalido`).expect(200);
+  const { body: doc } = await request(http).get('/api/docs-json').expect(200);
   assert.equal(doc.info.title, 'Comercia API');
   assert.ok(doc.paths['/api/v1/admin/catalogo/empresas/{empresaId}/productos'].post);
   assert.ok(doc.paths['/api/v1/admin/catalogo/empresas/{empresaId}/productos/{id}'].delete);
@@ -88,7 +86,18 @@ try {
   assert.ok(schemas.PaginaPrecioEspecialDto.properties.items);
   assert.ok(doc.components.securitySchemes.bearer);
   assert.ok(doc.components.securitySchemes.cookie);
-  console.log('OK: Swagger real compilado, DTOs, JWT/cookie, superadmin, activos, assets y especificaciones protegidas');
+  // La documentación pública no elimina los guards de las operaciones.
+  const empresas = '/api/v1/admin/catalogo/empresas';
+  await request(http).get(empresas).expect(401);
+  await request(http).get(empresas).set('Authorization', `Bearer ${regular}`).expect(403);
+  await request(http).get(empresas).set('Cookie', `${AUTH_COOKIE}=invalido`).expect(401);
+  await request(http).get(empresas).set('Authorization', `Bearer ${jwt.sign({ sub: 3 })}`).expect(401);
+  const productos = '/api/v1/admin/catalogo/empresas/10/productos';
+  await request(http).get(productos).expect(401);
+  await request(http).post(productos).send({}).expect(401);
+  await request(http).post(productos).set('Authorization', `Bearer ${regular}`).send({}).expect(403);
+  await request(http).get('/api/v1/campo/tolerancias/global/0').expect(401);
+  console.log('OK: Swagger público, assets y especificaciones sin sesión, DTOs y endpoints protegidos por JWT/cookie y permisos');
 } finally {
   await app.close();
 }
@@ -96,6 +105,8 @@ const disabled = await crearApp(false);
 try {
   await request(disabled.getHttpServer()).get('/api/docs').expect(404);
   await request(disabled.getHttpServer()).get('/api/docs-json').expect(404);
+  await request(disabled.getHttpServer()).get('/api/docs-yaml').expect(404);
+  await request(disabled.getHttpServer()).get('/api/docs/swagger-ui-init.js').expect(404);
   console.log('OK: SWAGGER_ENABLED=false desactiva UI y especificacion');
 } finally {
   await disabled.close();

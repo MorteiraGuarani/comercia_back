@@ -89,7 +89,9 @@
   "Usuario o contraseña incorrectos", nunca "ese usuario no existe").
 - Swagger puede estar habilitado en producción (`SWAGGER_ENABLED=true`) por
   petición del usuario. `/api/docs`, sus archivos y las especificaciones
-  JSON/YAML requieren una sesión de superadmin; no quitar esa protección.
+  JSON/YAML son públicos y no requieren sesión, por petición explícita del
+  usuario. Mantener los guards y permisos de todos los endpoints funcionales;
+  consultar Swagger no autoriza ejecutar sus operaciones.
 - Nota de realidad: los endpoints y SUS PROPIOS datos siempre serán visibles
   para el usuario logueado en su navegador (DevTools) — eso es inevitable y
   correcto. La seguridad es autenticación + autorización + DTO mínimo, nunca
