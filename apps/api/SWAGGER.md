@@ -21,6 +21,23 @@ Produccion: https://api.comercia.pro/api/docs
 
 Referencia del plugin: https://docs.nestjs.com/openapi/cli-plugin
 
+## Tamaño de las solicitudes
+
+- Todos los endpoints aceptan cuerpos JSON y `application/x-www-form-urlencoded`
+  de hasta **50 MiB (52.428.800 bytes)** por defecto. Se configura con
+  `HTTP_BODY_LIMIT_MB` (entero de 1 a 256); Docker Compose también propaga ese valor.
+- El tamaño incluye espacios y saltos de línea; para `gzip` se aplica al contenido
+  descomprimido. Un cuerpo mayor devuelve 413 con `limitBytes` y un mensaje con el
+  límite configurado. El límite de formularios es de 100.000 parámetros.
+- El proxy delante de la API debe permitir al menos ese mismo tamaño.
+- Varios objetos se envían como un único arreglo JSON `[{...}, {...}]`, con
+  `Content-Type: application/json`. Objetos consecutivos sin `[]` son JSON inválido
+  y devuelven 400; el límite de tamaño puede producir 413 antes de validar el JSON.
+- Cada endpoint conserva sus DTOs y permisos. Los archivos `multipart/form-data`
+  conservan sus límites específicos de imágenes y adjuntos.
+- Prueba HTTP sin base de datos: `npm run test:http-body --workspace=api` después
+  de compilar. Comprueba el límite de 50 MiB, formularios y JSON comprimido.
+
 ## Catálogo de artículos (`tbl_itm1`)
 
 - Una fila por artículo y lista de precios dentro de cada empresa. La tabla no
@@ -34,12 +51,15 @@ Referencia del plugin: https://docs.nestjs.com/openapi/cli-plugin
   `PUT/DELETE /empresas/:empresaId/productos/:id`, bajo `/api/v1/admin/catalogo`.
 - La empresa de la ruta debe existir; datos y parámetros inválidos siguen
   devolviendo 400, registros no disponibles 404 y duplicados 409.
-- `POST` acepta un objeto o un arreglo de 1 a 500 objetos en la misma ruta.
+- `POST` acepta un objeto o un arreglo de 1 a 50.000 objetos en la misma ruta,
+  dentro del límite de tamaño HTTP configurado.
   Devuelve 201 con un objeto o un arreglo, respectivamente, conservando el
   orden de entrada. Cada elemento se valida con los mismos tipos y campos.
   El lote es atómico: ante un error 400 o 409 no se inserta ninguna fila.
   Los errores del lote incluyen `index` (desde 0); los conflictos identifican
   `itemcode` y `pricelist`. No se omiten duplicados ni se sobrescriben precios.
+  Se inserta en bloques de 1.000 dentro de una única transacción con hasta 120 s
+  de ejecución; un error en un bloque posterior también revierte los anteriores.
 - La clave primaria es compuesta por `(empresa_id, itemcode, pricelist)`.
   Dentro de una empresa se permite `A0001` con lista 1 y con lista 2; repetir
   `A0001` con lista 1 devuelve 409 tanto al crear como al editar.

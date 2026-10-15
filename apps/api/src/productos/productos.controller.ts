@@ -65,8 +65,7 @@ export class ProductosController {
   @Post('empresas/:empresaId/productos')
   @ApiOperation({
     summary: 'Crear un artículo o un lote de artículos y listas',
-    description:
-      'Acepta un objeto o un arreglo de 1 a 500 objetos. Permite el mismo itemcode en listas diferentes. El lote es atómico: si una fila es inválida (400) o repite itemcode y pricelist en la empresa (409), no se guarda ninguna. La respuesta conserva el formato y orden de entrada.',
+    description: `Acepta un objeto o un arreglo de 1 a ${MAX_PRODUCTOS_POR_LOTE} objetos, dentro del límite HTTP configurado (50 MB por defecto). Permite el mismo itemcode en listas diferentes. El lote es atómico: si una fila es inválida (400) o repite itemcode y pricelist en la empresa (409), no se guarda ninguna. La respuesta conserva el formato y orden de entrada.`,
   })
   @ApiBody({
     schema: {

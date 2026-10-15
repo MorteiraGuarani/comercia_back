@@ -50,6 +50,8 @@ jobs:
         run: npm run test:productos --workspace=web
       - name: Validar Swagger compilado y permisos de produccion sin navegador
         run: npm run test:swagger --workspace=api
+      - name: Validar cuerpos HTTP de 50 MB y respuestas 413 sin navegador
+        run: npm run test:http-body --workspace=api
 
   changes:
     runs-on: ubuntu-24.04

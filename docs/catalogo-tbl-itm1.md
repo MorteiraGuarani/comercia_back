@@ -85,17 +85,24 @@ fila no borra las demás listas del mismo artículo.
 ## Alta por lote
 
 El mismo `POST /api/v1/admin/catalogo/empresas/:empresaId/productos` acepta
-un objeto o un arreglo de 1 a 500 objetos. Conserva la respuesta individual
+un objeto o un arreglo de 1 a 50.000 objetos, sujeto al límite HTTP de 50 MiB
+por defecto (`HTTP_BODY_LIMIT_MB`). Conserva la respuesta individual
 para los clientes existentes; para un arreglo devuelve los registros creados
 en el mismo orden, con IDs y precios serializados igual que en el GET.
 
 Se validan todos los elementos antes de escribir. La inserción del lote usa
-un único `createManyAndReturn`, atómico en PostgreSQL. Un duplicado dentro del
+`createManyAndReturn` en bloques de 1.000 dentro de una única transacción de
+PostgreSQL, con un máximo de 120 segundos de ejecución. Un error en cualquier
+bloque revierte todos los bloques de la solicitud. Un duplicado dentro del
 arreglo o contra una fila de esa empresa devuelve 409 y no guarda ninguna
 fila. El conflicto incluye `index` (desde 0), `itemcode` y `pricelist`; una fila
 inválida devuelve 400 indicando su posición. No se hace upsert ni se ignoran
 duplicados. Esta ampliación de la API usa la clave compuesta existente y no
 requiere otra migración de estructura.
+
+La búsqueda de una pareja en conflicto se limita al bloque que falló, evitando
+consultas con decenas de miles de condiciones. La respuesta conserva el orden
+original aunque la base devuelva las filas de cada bloque en otro orden.
 
 ## Verificación aislada
 

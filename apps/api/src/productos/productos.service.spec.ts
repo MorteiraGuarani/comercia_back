@@ -5,6 +5,10 @@ import { Decimal } from '@prisma/client/runtime/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProductosService } from './productos.service';
 import {
+  PRODUCTOS_POR_BLOQUE,
+  TIMEOUT_LOTE_PRODUCTOS_MS,
+} from './productos.constants';
+import {
   ConsultaCatalogoDto,
   CrearProductoDto,
   ProductoCatalogoParams,
@@ -35,6 +39,7 @@ describe('Catálogo tbl_itm1 por empresa', () => {
     usuario: { findFirst: jest.Mock };
     empresa: { findUnique: jest.Mock; count: jest.Mock; findMany: jest.Mock };
     producto: ReturnType<typeof modelo>;
+    $transaction: jest.Mock;
   };
   let service: ProductosService;
   beforeEach(() => {
@@ -51,6 +56,13 @@ describe('Catálogo tbl_itm1 por empresa', () => {
         findMany: jest.fn().mockResolvedValue([]),
       },
       producto: modelo(),
+      $transaction: jest.fn(
+        (
+          operacion: (tx: {
+            producto: ReturnType<typeof modelo>;
+          }) => Promise<unknown>,
+        ) => operacion({ producto: db.producto }),
+      ),
     };
     db.producto.findMany.mockResolvedValue([fila]);
     db.producto.create.mockResolvedValue(fila);
@@ -216,6 +228,73 @@ describe('Catálogo tbl_itm1 por empresa', () => {
       NotFoundException,
     );
     expect(db.producto.createManyAndReturn).not.toHaveBeenCalled();
+  });
+
+  it('divide envíos grandes en bloques dentro de una sola transacción y conserva el orden', async () => {
+    const lote = Array.from({ length: 5_000 }, (_, index) => ({
+      ...producto,
+      itemcode: `LOTE-${index}`,
+      price: 123.5,
+    }));
+    db.producto.createManyAndReturn.mockImplementation(
+      ({ data }: { data: CrearProductoDto[] }) =>
+        Promise.resolve(
+          data
+            .map((p) => ({
+              ...p,
+              id: BigInt(p.itemcode.slice(5)) + 1n,
+              price: new Decimal(123.5),
+            }))
+            .reverse(),
+        ),
+    );
+    const resultado = await service.crearProductos(20, lote);
+    expect(resultado).toHaveLength(5_000);
+    expect(resultado[0].itemcode).toBe('LOTE-0');
+    expect(resultado[4_999].itemcode).toBe('LOTE-4999');
+    expect(db.$transaction).toHaveBeenCalledTimes(1);
+    expect(db.$transaction).toHaveBeenCalledWith(expect.any(Function), {
+      maxWait: 5_000,
+      timeout: TIMEOUT_LOTE_PRODUCTOS_MS,
+    });
+    expect(db.producto.createManyAndReturn).toHaveBeenCalledTimes(5);
+    for (const [args] of db.producto.createManyAndReturn.mock.calls as [
+      { data: unknown[] },
+    ][])
+      expect(args.data).toHaveLength(PRODUCTOS_POR_BLOQUE);
+  });
+
+  it('reporta el índice original de un conflicto en un bloque posterior', async () => {
+    const lote = Array.from(
+      { length: PRODUCTOS_POR_BLOQUE + 2 },
+      (_, index) => ({ ...producto, itemcode: `LOTE-${index}` }),
+    );
+    db.producto.createManyAndReturn
+      .mockResolvedValueOnce([])
+      .mockRejectedValueOnce({ code: 'P2002' });
+    db.producto.findMany.mockResolvedValue([
+      { itemcode: 'LOTE-1001', pricelist: 1 },
+    ]);
+    await expect(service.crearProductos(20, lote)).rejects.toMatchObject({
+      response: {
+        statusCode: 409,
+        index: 1_001,
+        itemcode: 'LOTE-1001',
+        pricelist: 1,
+      },
+    });
+    expect(db.producto.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        take: 2,
+        where: {
+          empresaId: 20,
+          OR: [
+            { itemcode: 'LOTE-1000', pricelist: 1 },
+            { itemcode: 'LOTE-1001', pricelist: 1 },
+          ],
+        },
+      }),
+    );
   });
 
   it.each([

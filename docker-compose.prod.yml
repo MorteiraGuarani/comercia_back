@@ -68,6 +68,7 @@ services:
       UCHECK_SSO_SECRET: ${UCHECK_SSO_SECRET:?Falta UCHECK_SSO_SECRET en .env}
       THROTTLE_TTL: ${THROTTLE_TTL:-60000}
       THROTTLE_LIMIT: ${THROTTLE_LIMIT:-100}
+      HTTP_BODY_LIMIT_MB: ${HTTP_BODY_LIMIT_MB:-50}
       SWAGGER_ENABLED: ${SWAGGER_ENABLED:-true}
       # Fotos de visitas: persisten en el volumen uploads_data
       UPLOADS_DIR: /app/uploads

@@ -8,6 +8,7 @@ const { JwtService } = require('@nestjs/jwt');
 const cookieParser = require('cookie-parser');
 const request = require('supertest');
 const { configurarSwagger } = require('../dist/src/common/utils/swagger.js');
+const { configurarCuerpoHttp } = require('../dist/src/common/utils/cuerpo-http.js');
 const { ProductosController } = require('../dist/src/productos/productos.controller.js');
 const { ProductosService } = require('../dist/src/productos/productos.service.js');
 const { PreciosEspecialesController } = require('../dist/src/productos/precios-especiales.controller.js');
@@ -43,6 +44,15 @@ async function crearApp(enabled) {
     return fila;
   };
   const prisma = {
+    $transaction: async (operacion) => {
+      const antes = new Map(productos);
+      try { return await operacion(prisma); }
+      catch (error) {
+        productos.clear();
+        for (const [id, fila] of antes) productos.set(id, fila);
+        throw error;
+      }
+    },
     usuario: {
       findUnique: async ({ where }) => ({ id: where.id, empresaId: 10, esSuperadmin: where.id === 1, isActive: where.id !== 3 }),
       findFirst: async () => { throw new Error('El catálogo público no consulta una sesión'); },
@@ -80,7 +90,10 @@ async function crearApp(enabled) {
       { provide: PreciosEspecialesService, useValue: {} },
       { provide: ToleranciasService, useValue: {} },
       { provide: JwtService, useValue: jwt },
-      { provide: ConfigService, useValue: { get: (key) => key === 'app.env' ? 'production' : key === 'app.swaggerEnabled' ? enabled : undefined } },
+      { provide: ConfigService, useValue: {
+        get: (key) => key === 'app.env' ? 'production' : key === 'app.swaggerEnabled' ? enabled : undefined,
+        getOrThrow: (key) => key === 'app.httpBodyLimitMb' ? 50 : undefined,
+      } },
       { provide: PrismaService, useValue: prisma },
     ],
   }).compile();
@@ -88,6 +101,7 @@ async function crearApp(enabled) {
   app.setGlobalPrefix('api');
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
   app.use(cookieParser());
+  configurarCuerpoHttp(app);
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true, transformOptions: { enableImplicitConversion: true } }));
   configurarSwagger(app);
   await app.init();
@@ -120,7 +134,7 @@ try {
   const post = doc.paths['/api/v1/admin/catalogo/empresas/{empresaId}/productos'].post;
   assert.deepEqual(post.requestBody.content['application/json'].schema.oneOf, [
     { $ref: '#/components/schemas/CrearProductoDto' },
-    { type: 'array', minItems: 1, maxItems: 500, items: { $ref: '#/components/schemas/CrearProductoDto' } },
+    { type: 'array', minItems: 1, maxItems: 50000, items: { $ref: '#/components/schemas/CrearProductoDto' } },
   ]);
   assert.ok(post.responses['201'].content['application/json'].schema.oneOf.some((schema) => schema.type === 'array'));
   assert.equal(producto.properties.tipo.maxLength, 50);
@@ -208,16 +222,27 @@ try {
   await request(http).post(productos).send([nueva, nueva]).expect(409);
   const invalido = await request(http).post(productos).send([nueva, { ...nueva, pricelist: 24, price: 'no-numero' }]).expect(400);
   assert.equal(invalido.body.index, 1);
-  for (const body of [[], [null], [[nueva]], Array(501).fill(nueva)]) await request(http).post(productos).send(body).expect(400);
+  for (const body of [[], [null], [[nueva]]]) await request(http).post(productos).send(body).expect(400);
   await request(http).post(productos).send([nueva, { ...nueva, pricelist: 24, empresa_id: 20 }]).expect(400);
   await request(http).get(productos).query({ itemcode: 'AV00018', pricelist: 23 }).expect(200).then((r) => assert.equal(r.body.total, 0));
   await request(http).post('/api/v1/admin/catalogo/empresas/999/productos').send(lote).expect(404);
+  const grande = Array.from({ length: 5000 }, (_, i) => ({ ...baseLote, itemcode: `GRANDE-${i}`, pricelist: 13, price: 141650 }));
+  const jsonGrande = JSON.stringify(grande, null, 2);
+  assert.ok(Buffer.byteLength(jsonGrande) > 1024 * 1024);
+  const loteGrande = await request(http).post(productos).set('Content-Type', 'application/json').send(jsonGrande).expect(201);
+  assert.equal(loteGrande.body.length, 5000);
+  assert.equal(loteGrande.body[4999].itemcode, 'GRANDE-4999');
+  const rollback = Array.from({ length: 1001 }, (_, i) => ({ ...baseLote, itemcode: 'ROLLBACK', pricelist: i, price: 1 }));
+  rollback.push(grande[0]);
+  const errorTardio = await request(http).post(productos).send(rollback).expect(409);
+  assert.equal(errorTardio.body.index, 1001);
+  await request(http).get(productos).query({ itemcode: 'ROLLBACK' }).expect(200).then((r) => assert.equal(r.body.total, 0));
   await request(http).get('/api/v1/admin/catalogo/empresas/999/productos').expect(404);
   // Las otras secciones conservan sus permisos.
   await request(http).get('/api/v1/admin/catalogo/empresas/10/precios-especiales').expect(401);
   await request(http).get('/api/v1/admin/catalogo/empresas/10/precios-especiales').set('Authorization', `Bearer ${regular}`).expect(403);
   await request(http).get('/api/v1/campo/tolerancias/global/0').expect(401);
-  console.log('OK: Swagger público, POST individual y lote de cinco listas, orden y tipos, conflictos detallados, validación completa sin altas parciales y permisos de las otras secciones');
+  console.log('OK: Swagger público, POST individual, cinco listas y 5000 objetos de más de 1 MB; rollback entre bloques, orden, tipos, validación y permisos');
 } finally {
   await app.close();
 }

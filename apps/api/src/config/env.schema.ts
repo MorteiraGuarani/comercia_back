@@ -22,6 +22,7 @@ const rawEnvSchema = z
     CORS_ORIGINS: z.string().default('http://localhost:3000'),
     THROTTLE_TTL: z.coerce.number().int().min(1000).default(60000),
     THROTTLE_LIMIT: z.coerce.number().int().min(1).default(100),
+    HTTP_BODY_LIMIT_MB: z.coerce.number().int().min(1).max(256).default(50),
     SWAGGER_ENABLED: booleanFromString.default(true),
     COOKIE_SECRET: z.string().min(32).optional(),
     UCHECK_INTEGRATION_SECRET: z.string().min(32).optional(),

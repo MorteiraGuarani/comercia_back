@@ -14,6 +14,10 @@ import {
 import { PRODUCTO_SELECT } from './utils/selectores';
 import { productoRespuesta } from './utils/producto';
 import { errorCatalogo } from './utils/error-catalogo';
+import {
+  PRODUCTOS_POR_BLOQUE,
+  TIMEOUT_LOTE_PRODUCTOS_MS,
+} from './productos.constants';
 
 @Injectable()
 export class ProductosService {
@@ -132,20 +136,38 @@ export class ProductosService {
         });
       vistas.add(clave);
     }
+    let inicioBloque = 0;
     try {
-      // Un solo INSERT: PostgreSQL revierte todo el lote ante un conflicto.
-      const filas = await this.prisma.producto.createManyAndReturn({
-        data: dtos.map((dto) => ({ ...dto, empresaId })),
-        select: PRODUCTO_SELECT,
-      });
-      // createManyAndReturn no garantiza el orden de las filas devueltas.
-      const porClave = new Map(
-        filas.map((fila) => [
-          JSON.stringify([fila.itemcode, fila.pricelist]),
-          productoRespuesta(fila),
-        ]),
+      return await this.prisma.$transaction(
+        async (tx) => {
+          const porClave = new Map<
+            string,
+            ReturnType<typeof productoRespuesta>
+          >();
+          for (
+            inicioBloque = 0;
+            inicioBloque < dtos.length;
+            inicioBloque += PRODUCTOS_POR_BLOQUE
+          ) {
+            const bloque = dtos.slice(
+              inicioBloque,
+              inicioBloque + PRODUCTOS_POR_BLOQUE,
+            );
+            const filas = await tx.producto.createManyAndReturn({
+              data: bloque.map((dto) => ({ ...dto, empresaId })),
+              select: PRODUCTO_SELECT,
+            });
+            // El orden de RETURNING puede diferir del de entrada.
+            for (const fila of filas)
+              porClave.set(
+                JSON.stringify([fila.itemcode, fila.pricelist]),
+                productoRespuesta(fila),
+              );
+          }
+          return claves.map((clave) => porClave.get(clave)!);
+        },
+        { maxWait: 5_000, timeout: TIMEOUT_LOTE_PRODUCTOS_MS },
       );
-      return claves.map((clave) => porClave.get(clave)!);
     } catch (error: unknown) {
       if (
         typeof error === 'object' &&
@@ -153,24 +175,33 @@ export class ProductosService {
         'code' in error &&
         error.code === 'P2002'
       ) {
+        // La transacción ya se revirtió. Consultar solo el bloque que falló
+        // evita generar un OR de decenas de miles de condiciones.
+        const bloque = dtos.slice(
+          inicioBloque,
+          inicioBloque + PRODUCTOS_POR_BLOQUE,
+        );
         const existentes = await this.prisma.producto.findMany({
           where: {
             empresaId,
-            OR: dtos.map(({ itemcode, pricelist }) => ({
+            OR: bloque.map(({ itemcode, pricelist }) => ({
               itemcode,
               pricelist,
             })),
           },
           select: { itemcode: true, pricelist: true },
-          take: dtos.length,
+          take: bloque.length,
         });
         const ocupadas = new Set(
           existentes.map((fila) =>
             JSON.stringify([fila.itemcode, fila.pricelist]),
           ),
         );
-        const index = claves.findIndex((clave) => ocupadas.has(clave));
-        if (index !== -1)
+        const posicion = claves
+          .slice(inicioBloque, inicioBloque + PRODUCTOS_POR_BLOQUE)
+          .findIndex((clave) => ocupadas.has(clave));
+        if (posicion !== -1) {
+          const index = inicioBloque + posicion;
           throw new ConflictException({
             statusCode: 409,
             message: `Fila ${index + 1}: ya existe itemcode "${dtos[index].itemcode}" con pricelist ${dtos[index].pricelist} en la empresa`,
@@ -178,6 +209,7 @@ export class ProductosService {
             itemcode: dtos[index].itemcode,
             pricelist: dtos[index].pricelist,
           });
+        }
       }
       errorCatalogo(error, 'El lote contiene un identificador duplicado');
     }

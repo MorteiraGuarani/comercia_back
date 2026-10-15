@@ -1,1 +1,3 @@
-export const MAX_PRODUCTOS_POR_LOTE = 500;
+export const MAX_PRODUCTOS_POR_LOTE = 50_000;
+export const PRODUCTOS_POR_BLOQUE = 1_000;
+export const TIMEOUT_LOTE_PRODUCTOS_MS = 120_000;

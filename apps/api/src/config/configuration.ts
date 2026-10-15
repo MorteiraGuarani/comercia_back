@@ -8,6 +8,7 @@ export default () => ({
     corsOrigins: parseCorsOrigins(process.env.CORS_ORIGINS ?? ''),
     swaggerEnabled: process.env.SWAGGER_ENABLED === 'true',
     cookieSecret: process.env.COOKIE_SECRET,
+    httpBodyLimitMb: Number(process.env.HTTP_BODY_LIMIT_MB),
   },
   database: {
     url: process.env.DATABASE_URL,
