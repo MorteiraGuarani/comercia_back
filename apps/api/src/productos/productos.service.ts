@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -113,6 +114,72 @@ export class ProductosService {
       return productoRespuesta(fila);
     } catch (error: unknown) {
       errorCatalogo(error, 'Ya existe ese itemcode y pricelist en la empresa');
+    }
+  }
+
+  async crearProductos(empresaId: number, dtos: CrearProductoDto[]) {
+    await this.comprobarEmpresa(empresaId);
+    const claves = dtos.map((d) => JSON.stringify([d.itemcode, d.pricelist]));
+    const vistas = new Set<string>();
+    for (const [index, clave] of claves.entries()) {
+      if (vistas.has(clave))
+        throw new ConflictException({
+          statusCode: 409,
+          message: `Fila ${index + 1}: itemcode y pricelist repetidos dentro del lote`,
+          index,
+          itemcode: dtos[index].itemcode,
+          pricelist: dtos[index].pricelist,
+        });
+      vistas.add(clave);
+    }
+    try {
+      // Un solo INSERT: PostgreSQL revierte todo el lote ante un conflicto.
+      const filas = await this.prisma.producto.createManyAndReturn({
+        data: dtos.map((dto) => ({ ...dto, empresaId })),
+        select: PRODUCTO_SELECT,
+      });
+      // createManyAndReturn no garantiza el orden de las filas devueltas.
+      const porClave = new Map(
+        filas.map((fila) => [
+          JSON.stringify([fila.itemcode, fila.pricelist]),
+          productoRespuesta(fila),
+        ]),
+      );
+      return claves.map((clave) => porClave.get(clave)!);
+    } catch (error: unknown) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        error.code === 'P2002'
+      ) {
+        const existentes = await this.prisma.producto.findMany({
+          where: {
+            empresaId,
+            OR: dtos.map(({ itemcode, pricelist }) => ({
+              itemcode,
+              pricelist,
+            })),
+          },
+          select: { itemcode: true, pricelist: true },
+          take: dtos.length,
+        });
+        const ocupadas = new Set(
+          existentes.map((fila) =>
+            JSON.stringify([fila.itemcode, fila.pricelist]),
+          ),
+        );
+        const index = claves.findIndex((clave) => ocupadas.has(clave));
+        if (index !== -1)
+          throw new ConflictException({
+            statusCode: 409,
+            message: `Fila ${index + 1}: ya existe itemcode "${dtos[index].itemcode}" con pricelist ${dtos[index].pricelist} en la empresa`,
+            index,
+            itemcode: dtos[index].itemcode,
+            pricelist: dtos[index].pricelist,
+          });
+      }
+      errorCatalogo(error, 'El lote contiene un identificador duplicado');
     }
   }
 

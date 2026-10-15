@@ -1,0 +1,1 @@
+export const MAX_PRODUCTOS_POR_LOTE = 500;

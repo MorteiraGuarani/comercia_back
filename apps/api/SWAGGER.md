@@ -34,6 +34,12 @@ Referencia del plugin: https://docs.nestjs.com/openapi/cli-plugin
   `PUT/DELETE /empresas/:empresaId/productos/:id`, bajo `/api/v1/admin/catalogo`.
 - La empresa de la ruta debe existir; datos y parámetros inválidos siguen
   devolviendo 400, registros no disponibles 404 y duplicados 409.
+- `POST` acepta un objeto o un arreglo de 1 a 500 objetos en la misma ruta.
+  Devuelve 201 con un objeto o un arreglo, respectivamente, conservando el
+  orden de entrada. Cada elemento se valida con los mismos tipos y campos.
+  El lote es atómico: ante un error 400 o 409 no se inserta ninguna fila.
+  Los errores del lote incluyen `index` (desde 0); los conflictos identifican
+  `itemcode` y `pricelist`. No se omiten duplicados ni se sobrescriben precios.
 - La clave primaria es compuesta por `(empresa_id, itemcode, pricelist)`.
   Dentro de una empresa se permite `A0001` con lista 1 y con lista 2; repetir
   `A0001` con lista 1 devuelve 409 tanto al crear como al editar.
@@ -74,6 +80,17 @@ Ejemplo de cuerpo para `POST /api/v1/admin/catalogo/empresas/1/productos`
   "tipo": "Artículo"
 }
 ```
+
+Para crear varias listas de un mismo artículo, enviar directamente un arreglo:
+
+```json
+[
+  { "itemcode": "AV00018", "itemname": "PAPAS TRAD. 9,5 MM 4X2.5 KG-XL", "iva": 10, "itmsgrpcode": 143, "pricelist": 13, "price": 141650, "tipo": null },
+  { "itemcode": "AV00018", "itemname": "PAPAS TRAD. 9,5 MM 4X2.5 KG-XL", "iva": 10, "itmsgrpcode": 143, "pricelist": 14, "price": 141650, "tipo": null }
+]
+```
+
+Que ya exista `AV00018` con lista 11 no impide crear las listas 13 y 14.
 
 La sección **Precios especiales** conserva sus permisos de superadmin y su
 contrato propio; no forma parte de la etiqueta **Productos y precios**.

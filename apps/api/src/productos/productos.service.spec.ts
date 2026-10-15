@@ -27,6 +27,7 @@ describe('Catálogo tbl_itm1 por empresa', () => {
     count: jest.fn<Promise<number>, [unknown]>().mockResolvedValue(1),
     findMany: jest.fn(),
     create: jest.fn(),
+    createManyAndReturn: jest.fn(),
     update: jest.fn(),
     delete: jest.fn(),
   });
@@ -138,6 +139,83 @@ describe('Catálogo tbl_itm1 por empresa', () => {
     await expect(service.editarProducto(20, '5', producto)).rejects.toThrow(
       NotFoundException,
     );
+  });
+
+  it('crea un lote con el mismo artículo en listas distintas y conserva el orden', async () => {
+    const lote = [13, 14, 16, 21, 22].map((pricelist) => ({
+      ...producto,
+      itemcode: 'AV00018',
+      pricelist,
+      price: 141650,
+    }));
+    db.producto.createManyAndReturn.mockResolvedValue(
+      lote
+        .map((p) => ({
+          ...p,
+          id: BigInt(p.pricelist),
+          price: new Decimal(p.price),
+        }))
+        .reverse(),
+    );
+    const resultado = await service.crearProductos(20, lote);
+    expect(resultado.map((p) => p.pricelist)).toEqual([13, 14, 16, 21, 22]);
+    expect(resultado[0].price).toBe('141650.000000');
+    expect(db.producto.createManyAndReturn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: lote.map((p) => ({ ...p, empresaId: 20 })),
+      }),
+    );
+    expect(db.producto.create).not.toHaveBeenCalled();
+  });
+
+  it('rechaza parejas repetidas dentro del lote antes de insertar', async () => {
+    await expect(
+      service.crearProductos(20, [producto, producto]),
+    ).rejects.toMatchObject({
+      response: {
+        statusCode: 409,
+        index: 1,
+        itemcode: '0001',
+        pricelist: 1,
+      },
+    });
+    expect(db.producto.createManyAndReturn).not.toHaveBeenCalled();
+  });
+
+  it('identifica la fila en conflicto con una pareja existente de la misma empresa', async () => {
+    db.producto.createManyAndReturn.mockRejectedValue({ code: 'P2002' });
+    db.producto.findMany.mockResolvedValue([
+      { itemcode: '0001', pricelist: 1 },
+    ]);
+    await expect(
+      service.crearProductos(20, [{ ...producto, pricelist: 13 }, producto]),
+    ).rejects.toMatchObject({
+      response: {
+        statusCode: 409,
+        index: 1,
+        itemcode: '0001',
+        pricelist: 1,
+      },
+    });
+    expect(db.producto.findMany).toHaveBeenCalledWith({
+      where: {
+        empresaId: 20,
+        OR: [
+          { itemcode: '0001', pricelist: 13 },
+          { itemcode: '0001', pricelist: 1 },
+        ],
+      },
+      select: { itemcode: true, pricelist: true },
+      take: 2,
+    });
+  });
+
+  it('no ejecuta el lote sobre una empresa inexistente', async () => {
+    db.empresa.findUnique.mockResolvedValue(null);
+    await expect(service.crearProductos(20, [producto])).rejects.toThrow(
+      NotFoundException,
+    );
+    expect(db.producto.createManyAndReturn).not.toHaveBeenCalled();
   });
 
   it.each([

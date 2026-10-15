@@ -30,6 +30,18 @@ async function crearApp(enabled) {
     pricelist: data.pricelist, pricelistname: data.pricelistname ?? null,
     price: data.price == null ? null : new Decimal(data.price), tipo: data.tipo ?? null,
   });
+  let siguienteId = 0n;
+  const productos = new Map();
+  const coincide = (p, where) => p.empresaId === where.empresaId
+    && (where.itemcode === undefined || p.itemcode === where.itemcode)
+    && (where.pricelist === undefined || p.pricelist === where.pricelist)
+    && (!where.OR || where.OR.some((clave) => p.itemcode === clave.itemcode && p.pricelist === clave.pricelist));
+  const existe = (data) => [...productos.values()].some((p) => p.empresaId === data.empresaId && p.itemcode === data.itemcode && p.pricelist === data.pricelist);
+  const guardar = (data) => {
+    const fila = filaProducto(data, ++siguienteId);
+    productos.set(fila.id, { ...fila, empresaId: data.empresaId });
+    return fila;
+  };
   const prisma = {
     usuario: {
       findUnique: async ({ where }) => ({ id: where.id, empresaId: 10, esSuperadmin: where.id === 1, isActive: where.id !== 3 }),
@@ -37,10 +49,27 @@ async function crearApp(enabled) {
     },
     empresa: { findUnique: async ({ where }) => where.id === empresa.id ? empresa : null, count: async () => 1, findMany: async () => [empresa] },
     producto: {
-      count: async () => 0, findMany: async () => [],
-      create: async ({ data }) => filaProducto(data),
-      update: async ({ where, data }) => filaProducto(data, where.id),
-      delete: async ({ where }) => ({ id: where.id }),
+      count: async ({ where }) => [...productos.values()].filter((p) => coincide(p, where)).length,
+      findMany: async ({ where, skip = 0, take }) => [...productos.values()].filter((p) => coincide(p, where)).slice(skip, skip + take).map((p) => filaProducto(p, p.id)),
+      create: async ({ data }) => {
+        if (existe(data)) throw { code: 'P2002' };
+        return guardar(data);
+      },
+      createManyAndReturn: async ({ data }) => {
+        if (data.some(existe)) throw { code: 'P2002' };
+        return data.map(guardar).reverse();
+      },
+      update: async ({ where, data }) => {
+        const anterior = productos.get(where.id);
+        if (!anterior || anterior.empresaId !== where.empresaId) throw { code: 'P2025' };
+        const fila = filaProducto({ ...anterior, ...data }, where.id);
+        productos.set(where.id, { ...fila, empresaId: where.empresaId });
+        return fila;
+      },
+      delete: async ({ where }) => {
+        productos.delete(where.id);
+        return { id: where.id };
+      },
     },
   };
   const module = await Test.createTestingModule({
@@ -88,6 +117,12 @@ try {
   assert.ok(producto.properties.itemcode.description.includes('distinto pricelist'));
   assert.ok(producto.properties.pricelist.description.includes('itemcode'));
   assert.ok(doc.paths['/api/v1/admin/catalogo/empresas/{empresaId}/productos'].post.description.includes('409'));
+  const post = doc.paths['/api/v1/admin/catalogo/empresas/{empresaId}/productos'].post;
+  assert.deepEqual(post.requestBody.content['application/json'].schema.oneOf, [
+    { $ref: '#/components/schemas/CrearProductoDto' },
+    { type: 'array', minItems: 1, maxItems: 500, items: { $ref: '#/components/schemas/CrearProductoDto' } },
+  ]);
+  assert.ok(post.responses['201'].content['application/json'].schema.oneOf.some((schema) => schema.type === 'array'));
   assert.equal(producto.properties.tipo.maxLength, 50);
   assert.equal(producto.properties.pricelist.maximum, 32767);
   assert.equal(producto.properties.inventory.default, 'Y');
@@ -145,12 +180,44 @@ try {
   await request(http).post(productos).send({ ...cuerpo, iva: 32768 }).expect(400);
   await request(http).post(productos).send({ ...cuerpo, pricelist: 1.5 }).expect(400);
   await request(http).post(productos).send({ ...cuerpo, empresa_id: 20 }).expect(400);
+  const baseLote = {
+    itemcode: 'AV00018', itemname: 'PAPAS TRAD. 9,5 MM 4X2.5 KG-XL', iva: 10,
+    itmsgrpcode: 143, itmsgrpnam: 'Papas', inventory: 'Y', tipo: null,
+  };
+  await request(http).post(productos).send({ ...baseLote, pricelist: 11, pricelistname: 'Distribuidores', price: 130050 }).expect(201);
+  const lote = [
+    { pricelist: 13, pricelistname: 'Minoristas', price: 141650 },
+    { pricelist: 14, pricelistname: 'Especiales', price: 141650 },
+    { pricelist: 16, pricelistname: 'South Food', price: 123800 },
+    { pricelist: 21, pricelistname: 'Mayoristas', price: 139100 },
+    { pricelist: 22, pricelistname: 'Mayoristas Especiales', price: 139100 },
+  ].map((lista) => ({ ...baseLote, ...lista }));
+  const creados = await request(http).post(productos).send(lote).expect(201);
+  assert.deepEqual(creados.body.map((p) => p.pricelist), [13, 14, 16, 21, 22]);
+  assert.equal(creados.body[2].price, '123800.000000');
+  assert.equal(creados.body[0].tipo, null);
+  const consultados = await request(http).get(productos).query({ itemcode: 'AV00018' }).expect(200);
+  assert.equal(consultados.body.total, 6);
+  assert.equal(consultados.body.items.find((p) => p.pricelist === 11).price, '130050.000000');
+  const nueva = { ...baseLote, pricelist: 23 };
+  const conflicto = await request(http).post(productos).send([nueva, lote[0]]).expect(409);
+  assert.equal(conflicto.body.index, 1);
+  assert.equal(conflicto.body.itemcode, 'AV00018');
+  assert.equal(conflicto.body.pricelist, 13);
+  await request(http).get(productos).query({ itemcode: 'AV00018', pricelist: 23 }).expect(200).then((r) => assert.equal(r.body.total, 0));
+  await request(http).post(productos).send([nueva, nueva]).expect(409);
+  const invalido = await request(http).post(productos).send([nueva, { ...nueva, pricelist: 24, price: 'no-numero' }]).expect(400);
+  assert.equal(invalido.body.index, 1);
+  for (const body of [[], [null], [[nueva]], Array(501).fill(nueva)]) await request(http).post(productos).send(body).expect(400);
+  await request(http).post(productos).send([nueva, { ...nueva, pricelist: 24, empresa_id: 20 }]).expect(400);
+  await request(http).get(productos).query({ itemcode: 'AV00018', pricelist: 23 }).expect(200).then((r) => assert.equal(r.body.total, 0));
+  await request(http).post('/api/v1/admin/catalogo/empresas/999/productos').send(lote).expect(404);
   await request(http).get('/api/v1/admin/catalogo/empresas/999/productos').expect(404);
   // Las otras secciones conservan sus permisos.
   await request(http).get('/api/v1/admin/catalogo/empresas/10/precios-especiales').expect(401);
   await request(http).get('/api/v1/admin/catalogo/empresas/10/precios-especiales').set('Authorization', `Bearer ${regular}`).expect(403);
   await request(http).get('/api/v1/campo/tolerancias/global/0').expect(401);
-  console.log('OK: Swagger y seis endpoints de Productos y precios sin sesión; price numérico, tipos SQL, validación y permisos de las otras secciones');
+  console.log('OK: Swagger público, POST individual y lote de cinco listas, orden y tipos, conflictos detallados, validación completa sin altas parciales y permisos de las otras secciones');
 } finally {
   await app.close();
 }
