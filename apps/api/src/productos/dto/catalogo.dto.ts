@@ -187,3 +187,34 @@ export class PaginaProductoDto {
   limit!: number;
   totalPages!: number;
 }
+
+export class LoteProductosRespuestaDto {
+  @ApiProperty({ type: 'integer', minimum: 1, example: 5000 })
+  recibidos!: number;
+  @ApiProperty({ type: 'integer', minimum: 0, example: 4800 })
+  insertados!: number;
+  @ApiProperty({
+    type: 'integer',
+    minimum: 0,
+    example: 200,
+    description:
+      'Combinaciones únicas del envío que ya existen en la empresa, incluidas las creadas por otro envío concurrente. No se modifican.',
+  })
+  existentes!: number;
+  @ApiProperty({
+    type: 'integer',
+    minimum: 0,
+    example: 0,
+    description:
+      'Repeticiones adicionales de itemcode y pricelist dentro del arreglo. Se considera solo la primera aparición.',
+  })
+  duplicadosEnLote!: number;
+  @ApiProperty({
+    type: 'integer',
+    minimum: 0,
+    example: 200,
+    description:
+      'Total no insertado: existentes + duplicadosEnLote. recibidos = insertados + omitidos.',
+  })
+  omitidos!: number;
+}

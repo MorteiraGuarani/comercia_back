@@ -50,19 +50,27 @@ Referencia del plugin: https://docs.nestjs.com/openapi/cli-plugin
   `GET/POST /empresas/:empresaId/productos` y
   `PUT/DELETE /empresas/:empresaId/productos/:id`, bajo `/api/v1/admin/catalogo`.
 - La empresa de la ruta debe existir; datos y parámetros inválidos siguen
-  devolviendo 400, registros no disponibles 404 y duplicados 409.
+  devolviendo 400 y registros no disponibles 404. El POST individual y el PUT
+  conservan el conflicto 409 para combinaciones duplicadas.
 - `POST` acepta un objeto o un arreglo de 1 a 50.000 objetos en la misma ruta,
   dentro del límite de tamaño HTTP configurado.
-  Devuelve 201 con un objeto o un arreglo, respectivamente, conservando el
-  orden de entrada. Cada elemento se valida con los mismos tipos y campos.
-  El lote es atómico: ante un error 400 o 409 no se inserta ninguna fila.
-  Los errores del lote incluyen `index` (desde 0); los conflictos identifican
-  `itemcode` y `pricelist`. No se omiten duplicados ni se sobrescriben precios.
+  Para un objeto devuelve 201 con el producto. Para un arreglo devuelve 201
+  con `{ recibidos, insertados, existentes, duplicadosEnLote, omitidos }`,
+  incluso cuando todos ya existen. Omite las combinaciones existentes en esa
+  empresa y continúa con las nuevas; no sobrescribe nombres ni precios.
+  Las repeticiones de la misma pareja dentro del arreglo se cuentan como
+  `duplicadosEnLote` y prevalece la primera aparición. `existentes` cuenta
+  combinaciones únicas no insertadas, incluidas las de envíos concurrentes.
+  `omitidos = existentes + duplicadosEnLote` y `recibidos = insertados + omitidos`.
+  Cada elemento se valida antes de escribir: una fila inválida devuelve 400
+  con `index` (desde 0) y no inserta ninguna fila del lote.
   Se inserta en bloques de 1.000 dentro de una única transacción con hasta 120 s
-  de ejecución; un error en un bloque posterior también revierte los anteriores.
+  de ejecución; un error real de base de datos en un bloque posterior también
+  revierte los anteriores. Los duplicados no son errores del lote.
 - La clave primaria es compuesta por `(empresa_id, itemcode, pricelist)`.
   Dentro de una empresa se permite `A0001` con lista 1 y con lista 2; repetir
-  `A0001` con lista 1 devuelve 409 tanto al crear como al editar.
+  `A0001` con lista 1 devuelve 409 al crear un objeto individual o editar;
+  al enviar un arreglo, se omite y se incluye en el resumen.
   `id` continúa siendo único y autogenerado para mantener las URLs existentes.
 - Campos de entrada: `itemcode`, `itemname`, `iva`, `itmsgrpcode`, `itmsgrpnam`,
   `inventory`, `pricelist`, `pricelistname`, `price`, `tipo`. `empresa_id` se
@@ -111,6 +119,21 @@ Para crear varias listas de un mismo artículo, enviar directamente un arreglo:
 ```
 
 Que ya exista `AV00018` con lista 11 no impide crear las listas 13 y 14.
+
+Ejemplo de respuesta de un lote de 20.000 objetos con 200 combinaciones existentes:
+
+```json
+{
+  "recibidos": 20000,
+  "insertados": 19800,
+  "existentes": 200,
+  "duplicadosEnLote": 0,
+  "omitidos": 200
+}
+```
+
+El resumen reemplaza el arreglo de productos en la respuesta del bulk.
+Reenviar el mismo lote es seguro: los existentes se omiten sin modificarlos.
 
 La sección **Precios especiales** conserva sus permisos de superadmin y su
 contrato propio; no forma parte de la etiqueta **Productos y precios**.

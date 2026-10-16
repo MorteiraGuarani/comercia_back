@@ -28,11 +28,16 @@ import {
   ProductoCatalogoParams,
   ProductoRespuestaDto,
   PaginaProductoDto,
+  LoteProductosRespuestaDto,
 } from './dto/catalogo.dto';
 
 @Controller('admin/catalogo')
 @ApiTags('Productos y precios')
-@ApiExtraModels(CrearProductoDto, ProductoRespuestaDto)
+@ApiExtraModels(
+  CrearProductoDto,
+  ProductoRespuestaDto,
+  LoteProductosRespuestaDto,
+)
 // Sección pública por petición explícita del usuario, incluido su CRUD.
 // La empresa de la ruta y los DTOs siguen validándose en cada operación.
 export class ProductosController {
@@ -65,7 +70,7 @@ export class ProductosController {
   @Post('empresas/:empresaId/productos')
   @ApiOperation({
     summary: 'Crear un artículo o un lote de artículos y listas',
-    description: `Acepta un objeto o un arreglo de 1 a ${MAX_PRODUCTOS_POR_LOTE} objetos, dentro del límite HTTP configurado (50 MB por defecto). Permite el mismo itemcode en listas diferentes. El lote es atómico: si una fila es inválida (400) o repite itemcode y pricelist en la empresa (409), no se guarda ninguna. La respuesta conserva el formato y orden de entrada.`,
+    description: `Acepta un objeto o un arreglo de 1 a ${MAX_PRODUCTOS_POR_LOTE} objetos, dentro del límite HTTP configurado (50 MB por defecto). Permite el mismo itemcode en listas diferentes. Para un arreglo, omite las combinaciones (empresa, itemcode, pricelist) existentes y las repeticiones dentro del envío, sin modificar sus datos, e inserta las restantes. En repeticiones del arreglo prevalece la primera aparición. Devuelve un resumen con recibidos, insertados, existentes, duplicadosEnLote y omitidos, incluso si no se inserta ninguna fila (201). Valida todo antes de escribir: una fila inválida devuelve 400 sin insertar el lote. Otros errores de base de datos revierten la transacción completa. Para un objeto individual conserva la respuesta del producto y el conflicto 409 si ya existe.`,
   })
   @ApiBody({
     schema: {
@@ -110,10 +115,7 @@ export class ProductosController {
     schema: {
       oneOf: [
         { $ref: getSchemaPath(ProductoRespuestaDto) },
-        {
-          type: 'array',
-          items: { $ref: getSchemaPath(ProductoRespuestaDto) },
-        },
+        { $ref: getSchemaPath(LoteProductosRespuestaDto) },
       ],
     },
   })

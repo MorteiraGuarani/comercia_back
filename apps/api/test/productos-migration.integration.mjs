@@ -127,5 +127,21 @@ try {
   assert.equal((await rows("SELECT count(*)::int n FROM tbl_itm1 WHERE itemcode='COMPUESTO'"))[0].n, 2);
   const nuevosIndices = (await rows("SELECT indexname FROM pg_indexes WHERE tablename='tbl_itm1'")).map((i) => i.indexname).sort();
   assert.deepEqual(nuevosIndices, ['tbl_itm1_pkey','uq_tbl_itm1_id','idx_tbl_itm1_itemcode','idx_tbl_itm1_itemname','idx_tbl_itm1_itmsgrpcode','idx_tbl_itm1_pricelist','idx_tbl_itm1_tipo'].sort());
-  console.log('OK: clave primaria compuesta por empresa, itemcode repetible entre listas, duplicados rechazados, IDs y datos conservados, CRUD por ID y tipos exactos');
+  // Mismo ON CONFLICT DO NOTHING que usa createMany(skipDuplicates), sobre la PK real.
+  await db.exec(`INSERT INTO tbl_itm1(empresa_id,itemcode,itemname,iva,itmsgrpcode,pricelist,price)
+    SELECT 10,'BULK-' || n,'Existente',10,1,13,1 FROM generate_series(1,200) n`);
+  const sqlBulk = `INSERT INTO tbl_itm1(empresa_id,itemcode,itemname,iva,itmsgrpcode,pricelist,price)
+    SELECT 10,'BULK-' || n,'Nuevo',10,1,13,2 FROM generate_series(1,20000) n
+    ON CONFLICT DO NOTHING RETURNING itemcode`;
+  assert.equal((await rows(sqlBulk)).length, 19800);
+  assert.equal((await rows(sqlBulk)).length, 0, 'Reenviar no crea duplicados');
+  assert.deepEqual(await rows("SELECT itemname,price::text price FROM tbl_itm1 WHERE empresa_id=10 AND itemcode='BULK-1'"), [{ itemname: 'Existente', price: '1.000000' }]);
+  assert.equal((await rows("SELECT count(*)::int n FROM tbl_itm1 WHERE empresa_id=10 AND itemcode LIKE 'BULK-%'"))[0].n, 20000);
+  assert.equal((await rows(`${insertar}(20,'BULK-1','Otra empresa',10,1,13),(10,'BULK-1','Otra lista',10,1,14) ON CONFLICT DO NOTHING RETURNING id`)).length, 2);
+  await db.exec('BEGIN');
+  await db.exec(`${insertar}(10,'BULK-ROLLBACK','Temporal',10,1,13) ON CONFLICT DO NOTHING`);
+  await assert.rejects(db.exec(`${insertar}(99,'BULK-ERROR','Empresa inválida',10,1,13) ON CONFLICT DO NOTHING`), /tbl_itm1_empresa_id_fkey/);
+  await db.exec('ROLLBACK');
+  assert.equal((await rows("SELECT count(*)::int n FROM tbl_itm1 WHERE itemcode='BULK-ROLLBACK'"))[0].n, 0, 'Un error real revierte el lote');
+  console.log('OK: PK por empresa, listas e IDs conservados, tipos exactos y bulk de 20000 con 200 existentes; omite duplicados, conserva precios, reenvío seguro y rollback de errores reales');
 } finally { await db.close(); }

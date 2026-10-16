@@ -78,7 +78,7 @@ búsqueda y FK a empresas. No elimina ni fusiona productos. La restricción
 única anterior queda reemplazada por la PK, que impone la misma regla por
 empresa, artículo y lista. `id` pasa de clave primaria a identificador único.
 
-POST y PUT devuelven 409 si la combinación ya existe en esa empresa. Editar
+POST individual y PUT devuelven 409 si la combinación ya existe en esa empresa. Editar
 por `id` puede cambiar de lista si la combinación nueva está libre; borrar una
 fila no borra las demás listas del mismo artículo.
 
@@ -87,22 +87,29 @@ fila no borra las demás listas del mismo artículo.
 El mismo `POST /api/v1/admin/catalogo/empresas/:empresaId/productos` acepta
 un objeto o un arreglo de 1 a 50.000 objetos, sujeto al límite HTTP de 50 MiB
 por defecto (`HTTP_BODY_LIMIT_MB`). Conserva la respuesta individual
-para los clientes existentes; para un arreglo devuelve los registros creados
-en el mismo orden, con IDs y precios serializados igual que en el GET.
+para los clientes existentes; para un arreglo devuelve un resumen, reemplazando
+la respuesta anterior de registros: `{ recibidos, insertados, existentes,
+duplicadosEnLote, omitidos }`. Se admiten 5.000, 20.000 o hasta 50.000 objetos
+si el JSON está dentro del límite HTTP configurado.
 
 Se validan todos los elementos antes de escribir. La inserción del lote usa
-`createManyAndReturn` en bloques de 1.000 dentro de una única transacción de
-PostgreSQL, con un máximo de 120 segundos de ejecución. Un error en cualquier
-bloque revierte todos los bloques de la solicitud. Un duplicado dentro del
-arreglo o contra una fila de esa empresa devuelve 409 y no guarda ninguna
-fila. El conflicto incluye `index` (desde 0), `itemcode` y `pricelist`; una fila
-inválida devuelve 400 indicando su posición. No se hace upsert ni se ignoran
-duplicados. Esta ampliación de la API usa la clave compuesta existente y no
+`createMany` con `skipDuplicates: true` en bloques de 1.000 dentro de una única transacción de
+PostgreSQL, con un máximo de 120 segundos de ejecución. Un error de base de
+datos en cualquier bloque revierte todos los bloques de la solicitud.
+Los duplicados existentes en esa empresa se omiten sin modificar sus datos,
+y las filas nuevas continúan insertándose. Las repeticiones de una pareja
+dentro del arreglo se deduplican antes de insertar; prevalece la primera aparición.
+Una fila inválida devuelve 400 indicando su `index` (desde 0), sin escribir el lote.
+Esta ampliación de la API usa la clave compuesta existente y no
 requiere otra migración de estructura.
 
-La búsqueda de una pareja en conflicto se limita al bloque que falló, evitando
-consultas con decenas de miles de condiciones. La respuesta conserva el orden
-original aunque la base devuelva las filas de cada bloque en otro orden.
+El resumen usa el conteo real de inserciones de PostgreSQL, incluso con envíos
+concurrentes. `existentes` cuenta parejas únicas no insertadas y
+`duplicadosEnLote` cuenta apariciones adicionales del arreglo. Por tanto,
+`omitidos = existentes + duplicadosEnLote` y `recibidos = insertados + omitidos`.
+Por ejemplo, 20.000 filas con 200 existentes y sin repeticiones devuelven
+`{ recibidos: 20000, insertados: 19800, existentes: 200, duplicadosEnLote: 0, omitidos: 200 }`.
+Si todo el lote existe, devuelve 201 con cero insertados, sin conflicto 409.
 
 ## Verificación aislada
 

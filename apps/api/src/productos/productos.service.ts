@@ -1,5 +1,4 @@
 import {
-  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -123,96 +122,40 @@ export class ProductosService {
 
   async crearProductos(empresaId: number, dtos: CrearProductoDto[]) {
     await this.comprobarEmpresa(empresaId);
-    const claves = dtos.map((d) => JSON.stringify([d.itemcode, d.pricelist]));
     const vistas = new Set<string>();
-    for (const [index, clave] of claves.entries()) {
-      if (vistas.has(clave))
-        throw new ConflictException({
-          statusCode: 409,
-          message: `Fila ${index + 1}: itemcode y pricelist repetidos dentro del lote`,
-          index,
-          itemcode: dtos[index].itemcode,
-          pricelist: dtos[index].pricelist,
-        });
+    const unicos = dtos.filter((dto) => {
+      const clave = JSON.stringify([dto.itemcode, dto.pricelist]);
+      if (vistas.has(clave)) return false;
       vistas.add(clave);
-    }
-    let inicioBloque = 0;
-    try {
-      return await this.prisma.$transaction(
-        async (tx) => {
-          const porClave = new Map<
-            string,
-            ReturnType<typeof productoRespuesta>
-          >();
-          for (
-            inicioBloque = 0;
-            inicioBloque < dtos.length;
-            inicioBloque += PRODUCTOS_POR_BLOQUE
-          ) {
-            const bloque = dtos.slice(
-              inicioBloque,
-              inicioBloque + PRODUCTOS_POR_BLOQUE,
-            );
-            const filas = await tx.producto.createManyAndReturn({
-              data: bloque.map((dto) => ({ ...dto, empresaId })),
-              select: PRODUCTO_SELECT,
-            });
-            // El orden de RETURNING puede diferir del de entrada.
-            for (const fila of filas)
-              porClave.set(
-                JSON.stringify([fila.itemcode, fila.pricelist]),
-                productoRespuesta(fila),
-              );
-          }
-          return claves.map((clave) => porClave.get(clave)!);
-        },
-        { maxWait: 5_000, timeout: TIMEOUT_LOTE_PRODUCTOS_MS },
-      );
-    } catch (error: unknown) {
-      if (
-        typeof error === 'object' &&
-        error !== null &&
-        'code' in error &&
-        error.code === 'P2002'
-      ) {
-        // La transacción ya se revirtió. Consultar solo el bloque que falló
-        // evita generar un OR de decenas de miles de condiciones.
-        const bloque = dtos.slice(
-          inicioBloque,
-          inicioBloque + PRODUCTOS_POR_BLOQUE,
-        );
-        const existentes = await this.prisma.producto.findMany({
-          where: {
-            empresaId,
-            OR: bloque.map(({ itemcode, pricelist }) => ({
-              itemcode,
-              pricelist,
-            })),
-          },
-          select: { itemcode: true, pricelist: true },
-          take: bloque.length,
-        });
-        const ocupadas = new Set(
-          existentes.map((fila) =>
-            JSON.stringify([fila.itemcode, fila.pricelist]),
-          ),
-        );
-        const posicion = claves
-          .slice(inicioBloque, inicioBloque + PRODUCTOS_POR_BLOQUE)
-          .findIndex((clave) => ocupadas.has(clave));
-        if (posicion !== -1) {
-          const index = inicioBloque + posicion;
-          throw new ConflictException({
-            statusCode: 409,
-            message: `Fila ${index + 1}: ya existe itemcode "${dtos[index].itemcode}" con pricelist ${dtos[index].pricelist} en la empresa`,
-            index,
-            itemcode: dtos[index].itemcode,
-            pricelist: dtos[index].pricelist,
+      return true;
+    });
+    return this.prisma.$transaction(
+      async (tx) => {
+        let insertados = 0;
+        for (
+          let inicio = 0;
+          inicio < unicos.length;
+          inicio += PRODUCTOS_POR_BLOQUE
+        ) {
+          const bloque = unicos.slice(inicio, inicio + PRODUCTOS_POR_BLOQUE);
+          // ON CONFLICT DO NOTHING evita carreras con otros envíos y conserva
+          // los datos de los productos existentes, sin abortar el resto del lote.
+          const resultado = await tx.producto.createMany({
+            data: bloque.map((dto) => ({ ...dto, empresaId })),
+            skipDuplicates: true,
           });
+          insertados += resultado.count;
         }
-      }
-      errorCatalogo(error, 'El lote contiene un identificador duplicado');
-    }
+        return {
+          recibidos: dtos.length,
+          insertados,
+          existentes: unicos.length - insertados,
+          duplicadosEnLote: dtos.length - unicos.length,
+          omitidos: dtos.length - insertados,
+        };
+      },
+      { maxWait: 5_000, timeout: TIMEOUT_LOTE_PRODUCTOS_MS },
+    );
   }
 
   async editarProducto(empresaId: number, id: string, dto: DatosProductoDto) {

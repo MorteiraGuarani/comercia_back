@@ -65,9 +65,14 @@ async function crearApp(enabled) {
         if (existe(data)) throw { code: 'P2002' };
         return guardar(data);
       },
-      createManyAndReturn: async ({ data }) => {
-        if (data.some(existe)) throw { code: 'P2002' };
-        return data.map(guardar).reverse();
+      createMany: async ({ data, skipDuplicates }) => {
+        assert.equal(skipDuplicates, true);
+        let count = 0;
+        for (const fila of data) {
+          if (existe(fila)) continue;
+          guardar(fila); count++;
+        }
+        return { count };
       },
       update: async ({ where, data }) => {
         const anterior = productos.get(where.id);
@@ -136,7 +141,10 @@ try {
     { $ref: '#/components/schemas/CrearProductoDto' },
     { type: 'array', minItems: 1, maxItems: 50000, items: { $ref: '#/components/schemas/CrearProductoDto' } },
   ]);
-  assert.ok(post.responses['201'].content['application/json'].schema.oneOf.some((schema) => schema.type === 'array'));
+  assert.ok(post.responses['201'].content['application/json'].schema.oneOf.some((schema) => schema.$ref === '#/components/schemas/LoteProductosRespuestaDto'));
+  for (const campo of ['recibidos', 'insertados', 'existentes', 'duplicadosEnLote', 'omitidos']) {
+    assert.equal(doc.components.schemas.LoteProductosRespuestaDto.properties[campo].type, 'integer');
+  }
   assert.equal(producto.properties.tipo.maxLength, 50);
   assert.equal(producto.properties.pricelist.maximum, 32767);
   assert.equal(producto.properties.inventory.default, 'Y');
@@ -207,42 +215,45 @@ try {
     { pricelist: 22, pricelistname: 'Mayoristas Especiales', price: 139100 },
   ].map((lista) => ({ ...baseLote, ...lista }));
   const creados = await request(http).post(productos).send(lote).expect(201);
-  assert.deepEqual(creados.body.map((p) => p.pricelist), [13, 14, 16, 21, 22]);
-  assert.equal(creados.body[2].price, '123800.000000');
-  assert.equal(creados.body[0].tipo, null);
+  assert.deepEqual(creados.body, { recibidos: 5, insertados: 5, existentes: 0, duplicadosEnLote: 0, omitidos: 0 });
   const consultados = await request(http).get(productos).query({ itemcode: 'AV00018' }).expect(200);
   assert.equal(consultados.body.total, 6);
   assert.equal(consultados.body.items.find((p) => p.pricelist === 11).price, '130050.000000');
+  assert.equal(consultados.body.items.find((p) => p.pricelist === 16).price, '123800.000000');
+  assert.equal(consultados.body.items[0].tipo, null);
   const nueva = { ...baseLote, pricelist: 23 };
-  const conflicto = await request(http).post(productos).send([nueva, lote[0]]).expect(409);
-  assert.equal(conflicto.body.index, 1);
-  assert.equal(conflicto.body.itemcode, 'AV00018');
-  assert.equal(conflicto.body.pricelist, 13);
-  await request(http).get(productos).query({ itemcode: 'AV00018', pricelist: 23 }).expect(200).then((r) => assert.equal(r.body.total, 0));
-  await request(http).post(productos).send([nueva, nueva]).expect(409);
-  const invalido = await request(http).post(productos).send([nueva, { ...nueva, pricelist: 24, price: 'no-numero' }]).expect(400);
+  const mixto = await request(http).post(productos).send([{ ...lote[0], price: 1 }, nueva, { ...nueva, price: 2 }]).expect(201);
+  assert.deepEqual(mixto.body, { recibidos: 3, insertados: 1, existentes: 1, duplicadosEnLote: 1, omitidos: 2 });
+  await request(http).get(productos).query({ itemcode: 'AV00018', pricelist: 13 }).expect(200).then((r) => assert.equal(r.body.items[0].price, '141650.000000', 'No sobrescribe los precios existentes'));
+  await request(http).get(productos).query({ itemcode: 'AV00018', pricelist: 23 }).expect(200).then((r) => assert.equal(r.body.items[0].price, null, 'Conserva la primera aparición del arreglo'));
+  const repetido = await request(http).post(productos).send([nueva, nueva]).expect(201);
+  assert.deepEqual(repetido.body, { recibidos: 2, insertados: 0, existentes: 1, duplicadosEnLote: 1, omitidos: 2 });
+  await request(http).post(productos).send(nueva).expect(409);
+  const libre = { ...nueva, pricelist: 25 };
+  const invalido = await request(http).post(productos).send([libre, { ...nueva, pricelist: 24, price: 'no-numero' }]).expect(400);
   assert.equal(invalido.body.index, 1);
   for (const body of [[], [null], [[nueva]]]) await request(http).post(productos).send(body).expect(400);
   await request(http).post(productos).send([nueva, { ...nueva, pricelist: 24, empresa_id: 20 }]).expect(400);
-  await request(http).get(productos).query({ itemcode: 'AV00018', pricelist: 23 }).expect(200).then((r) => assert.equal(r.body.total, 0));
+  await request(http).get(productos).query({ itemcode: 'AV00018', pricelist: 25 }).expect(200).then((r) => assert.equal(r.body.total, 0));
   await request(http).post('/api/v1/admin/catalogo/empresas/999/productos').send(lote).expect(404);
   const grande = Array.from({ length: 5000 }, (_, i) => ({ ...baseLote, itemcode: `GRANDE-${i}`, pricelist: 13, price: 141650 }));
+  await request(http).post(productos).send(grande.slice(0, 200)).expect(201);
   const jsonGrande = JSON.stringify(grande, null, 2);
   assert.ok(Buffer.byteLength(jsonGrande) > 1024 * 1024);
   const loteGrande = await request(http).post(productos).set('Content-Type', 'application/json').send(jsonGrande).expect(201);
-  assert.equal(loteGrande.body.length, 5000);
-  assert.equal(loteGrande.body[4999].itemcode, 'GRANDE-4999');
-  const rollback = Array.from({ length: 1001 }, (_, i) => ({ ...baseLote, itemcode: 'ROLLBACK', pricelist: i, price: 1 }));
-  rollback.push(grande[0]);
-  const errorTardio = await request(http).post(productos).send(rollback).expect(409);
-  assert.equal(errorTardio.body.index, 1001);
-  await request(http).get(productos).query({ itemcode: 'ROLLBACK' }).expect(200).then((r) => assert.equal(r.body.total, 0));
+  assert.deepEqual(loteGrande.body, { recibidos: 5000, insertados: 4800, existentes: 200, duplicadosEnLote: 0, omitidos: 200 });
+  await request(http).get(productos).query({ itemcode: 'GRANDE-4999' }).expect(200).then((r) => assert.equal(r.body.total, 1));
+  const bloques = Array.from({ length: 1001 }, (_, i) => ({ ...baseLote, itemcode: 'BLOQUES', pricelist: i, price: 1 }));
+  bloques.push(grande[0], bloques[0]);
+  const tardio = await request(http).post(productos).send(bloques).expect(201);
+  assert.deepEqual(tardio.body, { recibidos: 1003, insertados: 1001, existentes: 1, duplicadosEnLote: 1, omitidos: 2 });
+  await request(http).get(productos).query({ itemcode: 'BLOQUES' }).expect(200).then((r) => assert.equal(r.body.total, 1001));
   await request(http).get('/api/v1/admin/catalogo/empresas/999/productos').expect(404);
   // Las otras secciones conservan sus permisos.
   await request(http).get('/api/v1/admin/catalogo/empresas/10/precios-especiales').expect(401);
   await request(http).get('/api/v1/admin/catalogo/empresas/10/precios-especiales').set('Authorization', `Bearer ${regular}`).expect(403);
   await request(http).get('/api/v1/campo/tolerancias/global/0').expect(401);
-  console.log('OK: Swagger público, POST individual, cinco listas y 5000 objetos de más de 1 MB; rollback entre bloques, orden, tipos, validación y permisos');
+  console.log('OK: Swagger público, POST individual, cinco listas y 5000 objetos de más de 1 MB con 200 existentes; resumen, duplicados entre bloques, conservación de precios, tipos, validación y permisos');
 } finally {
   await app.close();
 }

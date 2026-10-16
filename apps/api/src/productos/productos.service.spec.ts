@@ -31,7 +31,7 @@ describe('Catálogo tbl_itm1 por empresa', () => {
     count: jest.fn<Promise<number>, [unknown]>().mockResolvedValue(1),
     findMany: jest.fn(),
     create: jest.fn(),
-    createManyAndReturn: jest.fn(),
+    createMany: jest.fn(),
     update: jest.fn(),
     delete: jest.fn(),
   });
@@ -153,72 +153,73 @@ describe('Catálogo tbl_itm1 por empresa', () => {
     );
   });
 
-  it('crea un lote con el mismo artículo en listas distintas y conserva el orden', async () => {
+  it('crea un lote con el mismo artículo en listas distintas y devuelve el resumen', async () => {
     const lote = [13, 14, 16, 21, 22].map((pricelist) => ({
       ...producto,
       itemcode: 'AV00018',
       pricelist,
       price: 141650,
     }));
-    db.producto.createManyAndReturn.mockResolvedValue(
-      lote
-        .map((p) => ({
-          ...p,
-          id: BigInt(p.pricelist),
-          price: new Decimal(p.price),
-        }))
-        .reverse(),
-    );
+    db.producto.createMany.mockResolvedValue({ count: 5 });
     const resultado = await service.crearProductos(20, lote);
-    expect(resultado.map((p) => p.pricelist)).toEqual([13, 14, 16, 21, 22]);
-    expect(resultado[0].price).toBe('141650.000000');
-    expect(db.producto.createManyAndReturn).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: lote.map((p) => ({ ...p, empresaId: 20 })),
-      }),
-    );
+    expect(resultado).toEqual({
+      recibidos: 5,
+      insertados: 5,
+      existentes: 0,
+      duplicadosEnLote: 0,
+      omitidos: 0,
+    });
+    expect(db.producto.createMany).toHaveBeenCalledWith({
+      data: lote.map((p) => ({ ...p, empresaId: 20 })),
+      skipDuplicates: true,
+    });
     expect(db.producto.create).not.toHaveBeenCalled();
   });
 
-  it('rechaza parejas repetidas dentro del lote antes de insertar', async () => {
-    await expect(
-      service.crearProductos(20, [producto, producto]),
-    ).rejects.toMatchObject({
-      response: {
-        statusCode: 409,
-        index: 1,
-        itemcode: '0001',
-        pricelist: 1,
-      },
+  it('omite parejas repetidas dentro del lote y conserva los datos de la primera aparición', async () => {
+    db.producto.createMany.mockResolvedValue({ count: 1 });
+    expect(
+      await service.crearProductos(20, [producto, { ...producto, price: 1 }]),
+    ).toEqual({
+      recibidos: 2,
+      insertados: 1,
+      existentes: 0,
+      duplicadosEnLote: 1,
+      omitidos: 1,
     });
-    expect(db.producto.createManyAndReturn).not.toHaveBeenCalled();
+    expect(db.producto.createMany).toHaveBeenCalledWith({
+      data: [{ ...producto, empresaId: 20 }],
+      skipDuplicates: true,
+    });
   });
 
-  it('identifica la fila en conflicto con una pareja existente de la misma empresa', async () => {
-    db.producto.createManyAndReturn.mockRejectedValue({ code: 'P2002' });
-    db.producto.findMany.mockResolvedValue([
-      { itemcode: '0001', pricelist: 1 },
-    ]);
-    await expect(
-      service.crearProductos(20, [{ ...producto, pricelist: 13 }, producto]),
-    ).rejects.toMatchObject({
-      response: {
-        statusCode: 409,
-        index: 1,
-        itemcode: '0001',
-        pricelist: 1,
-      },
+  it('continúa con las parejas nuevas y cuenta los existentes sin sobrescribirlos', async () => {
+    db.producto.createMany.mockResolvedValue({ count: 1 });
+    expect(
+      await service.crearProductos(20, [
+        producto,
+        { ...producto, pricelist: 13 },
+        producto,
+      ]),
+    ).toEqual({
+      recibidos: 3,
+      insertados: 1,
+      existentes: 1,
+      duplicadosEnLote: 1,
+      omitidos: 2,
     });
-    expect(db.producto.findMany).toHaveBeenCalledWith({
-      where: {
-        empresaId: 20,
-        OR: [
-          { itemcode: '0001', pricelist: 13 },
-          { itemcode: '0001', pricelist: 1 },
-        ],
-      },
-      select: { itemcode: true, pricelist: true },
-      take: 2,
+    expect(db.producto.update).not.toHaveBeenCalled();
+    expect(db.producto.findMany).not.toHaveBeenCalled();
+  });
+
+  it('acepta un lote que ya existe completo y cuenta sus repeticiones por separado', async () => {
+    db.producto.createMany.mockResolvedValue({ count: 0 });
+    expect(await service.crearProductos(20, [producto, producto])).toEqual({
+      recibidos: 2,
+      insertados: 0,
+      existentes: 1,
+      duplicadosEnLote: 1,
+      omitidos: 2,
     });
   });
 
@@ -227,73 +228,86 @@ describe('Catálogo tbl_itm1 por empresa', () => {
     await expect(service.crearProductos(20, [producto])).rejects.toThrow(
       NotFoundException,
     );
-    expect(db.producto.createManyAndReturn).not.toHaveBeenCalled();
+    expect(db.producto.createMany).not.toHaveBeenCalled();
   });
 
-  it('divide envíos grandes en bloques dentro de una sola transacción y conserva el orden', async () => {
-    const lote = Array.from({ length: 5_000 }, (_, index) => ({
-      ...producto,
-      itemcode: `LOTE-${index}`,
-      price: 123.5,
-    }));
-    db.producto.createManyAndReturn.mockImplementation(
-      ({ data }: { data: CrearProductoDto[] }) =>
-        Promise.resolve(
-          data
-            .map((p) => ({
-              ...p,
-              id: BigInt(p.itemcode.slice(5)) + 1n,
-              price: new Decimal(123.5),
-            }))
-            .reverse(),
-        ),
-    );
-    const resultado = await service.crearProductos(20, lote);
-    expect(resultado).toHaveLength(5_000);
-    expect(resultado[0].itemcode).toBe('LOTE-0');
-    expect(resultado[4_999].itemcode).toBe('LOTE-4999');
-    expect(db.$transaction).toHaveBeenCalledTimes(1);
-    expect(db.$transaction).toHaveBeenCalledWith(expect.any(Function), {
-      maxWait: 5_000,
-      timeout: TIMEOUT_LOTE_PRODUCTOS_MS,
-    });
-    expect(db.producto.createManyAndReturn).toHaveBeenCalledTimes(5);
-    for (const [args] of db.producto.createManyAndReturn.mock.calls as [
-      { data: unknown[] },
-    ][])
-      expect(args.data).toHaveLength(PRODUCTOS_POR_BLOQUE);
-  });
+  it.each([5_000, 20_000])(
+    'divide %i filas en bloques y continúa cuando las primeras 200 ya existen',
+    async (cantidad) => {
+      const lote = Array.from({ length: cantidad }, (_, index) => ({
+        ...producto,
+        itemcode: `LOTE-${index}`,
+        price: 123.5,
+      }));
+      db.producto.createMany
+        .mockResolvedValue({ count: PRODUCTOS_POR_BLOQUE })
+        .mockResolvedValueOnce({ count: PRODUCTOS_POR_BLOQUE - 200 });
+      const resultado = await service.crearProductos(20, lote);
+      expect(resultado).toEqual({
+        recibidos: cantidad,
+        insertados: cantidad - 200,
+        existentes: 200,
+        duplicadosEnLote: 0,
+        omitidos: 200,
+      });
+      expect(db.$transaction).toHaveBeenCalledTimes(1);
+      expect(db.$transaction).toHaveBeenCalledWith(expect.any(Function), {
+        maxWait: 5_000,
+        timeout: TIMEOUT_LOTE_PRODUCTOS_MS,
+      });
+      expect(db.producto.createMany).toHaveBeenCalledTimes(
+        cantidad / PRODUCTOS_POR_BLOQUE,
+      );
+      for (const [args] of db.producto.createMany.mock.calls as [
+        { data: { empresaId: number }[]; skipDuplicates: boolean },
+      ][]) {
+        expect(args.data).toHaveLength(PRODUCTOS_POR_BLOQUE);
+        expect(args.data.every((d) => d.empresaId === 20)).toBe(true);
+        expect(args.skipDuplicates).toBe(true);
+      }
+    },
+  );
 
-  it('reporta el índice original de un conflicto en un bloque posterior', async () => {
+  it('omite repeticiones entre bloques y sigue contabilizando los existentes en bloques posteriores', async () => {
     const lote = Array.from(
       { length: PRODUCTOS_POR_BLOQUE + 2 },
       (_, index) => ({ ...producto, itemcode: `LOTE-${index}` }),
     );
-    db.producto.createManyAndReturn
-      .mockResolvedValueOnce([])
-      .mockRejectedValueOnce({ code: 'P2002' });
-    db.producto.findMany.mockResolvedValue([
-      { itemcode: 'LOTE-1001', pricelist: 1 },
-    ]);
-    await expect(service.crearProductos(20, lote)).rejects.toMatchObject({
-      response: {
-        statusCode: 409,
-        index: 1_001,
-        itemcode: 'LOTE-1001',
-        pricelist: 1,
-      },
+    lote.push({ ...lote[0], price: 1 });
+    db.producto.createMany
+      .mockResolvedValueOnce({ count: PRODUCTOS_POR_BLOQUE })
+      .mockResolvedValueOnce({ count: 1 });
+    expect(await service.crearProductos(20, lote)).toEqual({
+      recibidos: 1003,
+      insertados: 1001,
+      existentes: 1,
+      duplicadosEnLote: 1,
+      omitidos: 2,
     });
-    expect(db.producto.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        take: 2,
-        where: {
-          empresaId: 20,
-          OR: [
-            { itemcode: 'LOTE-1000', pricelist: 1 },
-            { itemcode: 'LOTE-1001', pricelist: 1 },
-          ],
-        },
-      }),
+    expect(db.producto.createMany).toHaveBeenNthCalledWith(2, {
+      data: lote.slice(1000, 1002).map((p) => ({ ...p, empresaId: 20 })),
+      skipDuplicates: true,
+    });
+  });
+
+  it('propaga errores reales de base de datos para revertir la transacción completa', async () => {
+    const error = new Error('Base de datos no disponible');
+    const lote = Array.from(
+      { length: PRODUCTOS_POR_BLOQUE + 1 },
+      (_, index) => ({ ...producto, itemcode: `LOTE-${index}` }),
+    );
+    db.producto.createMany
+      .mockResolvedValueOnce({ count: PRODUCTOS_POR_BLOQUE })
+      .mockRejectedValueOnce(error);
+    await expect(service.crearProductos(20, lote)).rejects.toBe(error);
+    expect(db.producto.createMany).toHaveBeenCalledTimes(2);
+  });
+
+  it('la misma pareja en otra empresa se inserta dentro del alcance solicitado', async () => {
+    db.producto.createMany.mockResolvedValue({ count: 1 });
+    expect((await service.crearProductos(30, [producto])).insertados).toBe(1);
+    expect(db.producto.createMany).toHaveBeenCalledWith(
+      expect.objectContaining({ data: [{ ...producto, empresaId: 30 }] }),
     );
   });
 
