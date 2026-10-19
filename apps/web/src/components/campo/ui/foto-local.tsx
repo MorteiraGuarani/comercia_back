@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { colorCartelLocal, textoCartelLocal } from "@/utils/foto-local";
 
 interface FotoLocalProps {
@@ -8,22 +11,25 @@ interface FotoLocalProps {
 
 /**
  * Imagen chica del local en la tarjeta de la agenda. Los locales todavía no
- * tienen foto propia: se usa el logo del cliente o una ilustración del frente.
+ * tienen foto propia: se usa el logo del cliente o una ilustración del frente,
+ * que también reemplaza al logo si la imagen no carga.
  */
 export function FotoLocal({ nombre, cliente, className = "" }: FotoLocalProps) {
   const logo = cliente?.logoUrl;
   const color = colorCartelLocal(nombre);
+  const [logoRoto, setLogoRoto] = useState<string | null>(null);
   return (
     <div
       className={`relative aspect-[4/3] overflow-hidden rounded-lg border border-line bg-surface-soft ${className}`}
     >
-      {logo ? (
+      {logo && logoRoto !== logo ? (
         // eslint-disable-next-line @next/next/no-img-element -- logo subido por la empresa, sin optimizador de imágenes
         <img
           src={logo}
           alt={`Logo de ${cliente?.nombre ?? nombre}`}
           loading="lazy"
           decoding="async"
+          onError={() => setLogoRoto(logo)}
           className="h-full w-full bg-white object-contain p-2 dark:bg-stone-100"
         />
       ) : (

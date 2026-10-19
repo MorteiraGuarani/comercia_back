@@ -3,6 +3,7 @@
 import { use, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { esRolLiderCampo, paginaPermitidaLider } from "@/utils/rol-campo";
 import { usePanel } from "@/components/panel/contexto";
 
 const ClientesPanel = dynamic(() =>
@@ -69,7 +70,12 @@ export default function PaginaModulo({
   const mod = modulos.find((item) => item.ruta === modulo);
   const pag = mod?.paginas.find((item) => item.ruta === pagina);
 
-  if (!mod || !pag) {
+  // TeamLeader y Supervisor no administran clientes ni tareas desde acá.
+  const ocultaParaLider =
+    esRolLiderCampo(usuario.rol?.descripcion) &&
+    !paginaPermitidaLider(modulo, pagina);
+
+  if (!mod || !pag || ocultaParaLider) {
     return (
       <div className="m-4 min-w-0 rounded-xl border border-line bg-surface-raised p-6 text-center sm:m-6">
         <p className="text-sm text-zinc-500 dark:text-zinc-400">

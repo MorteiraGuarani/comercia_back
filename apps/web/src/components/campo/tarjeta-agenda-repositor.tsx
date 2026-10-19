@@ -44,6 +44,7 @@ interface TarjetaAgendaRepositorProps {
   onSalida: (visita: VisitaCampo) => void;
   onTareas: () => void;
   onMapa: () => void;
+  onNovedad: () => void;
 }
 
 const ESTILO: Record<EstadoRuta, { franja: string; pill: string }> = {
@@ -134,6 +135,7 @@ export function TarjetaAgendaRepositor({
   onSalida,
   onTareas,
   onMapa,
+  onNovedad,
 }: TarjetaAgendaRepositorProps) {
   const estilo = ESTILO[a.estado];
   const idDetalle = `detalle-agenda-${a.id}`;
@@ -258,10 +260,12 @@ export function TarjetaAgendaRepositor({
               ) : null}
 
               <div className="mt-auto flex flex-wrap gap-1.5 pt-1">
-                {/* Ver siempre se puede; empezar y completar, solo con entrada. */}
+                {/* Tareas e inventario se usan dentro del local: con la entrada marcada. */}
                 <button
                   type="button"
                   onClick={onTareas}
+                  disabled={!visitaAqui}
+                  title={visitaAqui ? undefined : "Marcá entrada para ver las tareas"}
                   aria-label={
                     tareas
                       ? `Tareas de ${a.local.nombre}: ${tareas.hechas} de ${tareas.total} hechas`
@@ -284,11 +288,32 @@ export function TarjetaAgendaRepositor({
                   ) : null}
                 </button>
                 {rutaInventario ? (
-                  <Link href={rutaInventario} className={btnInfo}>
-                    <IconoCaja className="h-3.5 w-3.5 shrink-0" />
-                    Inventario
-                  </Link>
+                  visitaAqui ? (
+                    <Link href={rutaInventario} className={btnInfo}>
+                      <IconoCaja className="h-3.5 w-3.5 shrink-0" />
+                      Inventario
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled
+                      title="Marcá entrada para usar el inventario"
+                      className={btnInfo}
+                    >
+                      <IconoCaja className="h-3.5 w-3.5 shrink-0" />
+                      Inventario
+                    </button>
+                  )
                 ) : null}
+                <button
+                  type="button"
+                  onClick={onNovedad}
+                  aria-label={`Reportar una novedad de ${a.local.nombre}`}
+                  className={btnInfo}
+                >
+                  <IconoAlerta className="h-3.5 w-3.5 shrink-0" />
+                  Novedad
+                </button>
               </div>
             </div>
           </div>
@@ -363,7 +388,7 @@ export function TarjetaAgendaRepositor({
               ))}
               <p className="flex items-center justify-center gap-1 text-[11px] text-muted sm:text-xs">
                 <IconoCandado className="h-3 w-3 shrink-0" />
-                Podés ver las tareas; para empezarlas, marcá entrada.
+                Tareas e inventario se habilitan al marcar entrada.
               </p>
             </div>
           ) : null}

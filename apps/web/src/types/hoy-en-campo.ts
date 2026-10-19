@@ -35,3 +35,6 @@ export interface ItemAtencionHoy {
   accion: string;
   abre: HojaHoy;
 }
+
+/** Período que muestra Inicio. */
+export type PeriodoInicio = "hoy" | "ayer" | "semana" | "mes";

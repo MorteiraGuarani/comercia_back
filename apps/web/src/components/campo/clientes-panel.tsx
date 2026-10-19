@@ -92,17 +92,6 @@ export function ClientesPanel() {
     }
   }
 
-  const iniciales = (nombre: string) => {
-    return (
-      nombre
-        .split(" ")
-        .map((p) => p[0])
-        .slice(0, 2)
-        .join("")
-        .toUpperCase() || "CL"
-    );
-  };
-
   // Manejar subida de archivo de logo
   const subirLogo = async (file: File) => {
     if (!file || !form) return;
@@ -226,7 +215,7 @@ export function ClientesPanel() {
                         />
                         <div className="p-3 pl-4">
                           <div className="flex min-w-0 items-start gap-3">
-                            <LogoCliente nombre={cliente.nombre} logoUrl={cliente.logoUrl} className="h-14 w-14" />
+                            <LogoCliente nombre={cliente.nombre} logoUrl={cliente.logoUrl} className="h-14 w-14 rounded-xl" />
                             <div className="min-w-0 flex-1">
                               <div className="flex min-w-0 items-start justify-between gap-2">
                                 <h3 className="min-w-0 break-words text-sm font-bold leading-snug text-foreground">{cliente.nombre}</h3>
@@ -310,7 +299,7 @@ export function ClientesPanel() {
                             {/* Cliente */}
                             <td className="py-2.5 px-3.5">
                               <div className="flex items-center gap-2.5 min-w-0 max-w-[260px]">
-                                <LogoCliente nombre={cliente.nombre} logoUrl={cliente.logoUrl} className="h-11 w-11" />
+                                <LogoCliente nombre={cliente.nombre} logoUrl={cliente.logoUrl} className="h-11 w-11 rounded-xl" />
                                 <div className="min-w-0">
                                   <p className="truncate text-sm font-bold leading-tight text-foreground">
                                     {cliente.nombre}
@@ -401,13 +390,12 @@ export function ClientesPanel() {
             <div className="p-3 rounded-xl border bg-surface-soft flex items-center gap-3.5" style={{ borderColor: TOKENS.line }}>
               {/* Preview del Logo */}
               <div className="relative w-14 h-14 rounded-xl overflow-hidden border border-line shadow-xs bg-surface-raised shrink-0 flex items-center justify-center">
-                {form.logoUrl ? (
-                  <img src={form.logoUrl} alt="Vista previa del logo" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="font-bold text-base text-muted">
-                    {iniciales(form.nombre || "CL")}
-                  </span>
-                )}
+                <LogoCliente
+                  nombre={form.nombre || "Cliente"}
+                  logoUrl={form.logoUrl}
+                  className="h-full w-full border-0"
+                  claseTexto="text-base"
+                />
                 {subiendoLogo && (
                   <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                     <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />

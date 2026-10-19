@@ -31,6 +31,12 @@ describe('Catálogo de tareas', () => {
         },
       }),
     };
+    // Las altas y ediciones pasan por administrar(), que valida igual que gestionar().
+    Object.assign(acceso, {
+      administrar: jest.fn((usuarioId: number, pagina: string): unknown =>
+        acceso.gestionar(usuarioId, pagina),
+      ),
+    });
     const service = new CatalogoCampoService(
       prisma as unknown as PrismaService,
       acceso as unknown as CampoAccesoService,
@@ -73,6 +79,12 @@ describe('Catálogo de tareas', () => {
         },
       }),
     };
+    // Las altas y ediciones pasan por administrar(), que valida igual que gestionar().
+    Object.assign(acceso, {
+      administrar: jest.fn((usuarioId: number, pagina: string): unknown =>
+        acceso.gestionar(usuarioId, pagina),
+      ),
+    });
     const service = new CatalogoCampoService(
       prisma as unknown as PrismaService,
       acceso as unknown as CampoAccesoService,

@@ -108,7 +108,7 @@ export class CatalogoCampoService {
     };
   }
   async guardarCliente(usuarioId: number, dto: ClienteCampoDto, id?: number) {
-    const u = await this.acceso.gestionar(usuarioId, 'clientes');
+    const u = await this.acceso.administrar(usuarioId, 'clientes');
     return this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM empresas WHERE id = ${u.empresaId} FOR UPDATE`;
       if (
@@ -136,8 +136,9 @@ export class CatalogoCampoService {
     id: number,
     dto: EliminarClienteCampoDto = new EliminarClienteCampoDto(),
   ) {
-    const u = await this.acceso.gestionar(usuarioId, 'clientes');
-    if (dto.eliminarLocales) await this.acceso.gestionar(usuarioId, 'locales');
+    const u = await this.acceso.administrar(usuarioId, 'clientes');
+    if (dto.eliminarLocales)
+      await this.acceso.administrar(usuarioId, 'locales');
     await this.prisma.$transaction(async (tx) => {
       // Serializa también las asociaciones: un alta concurrente no puede
       // volver a asociar un local al cliente que se está eliminando.
@@ -354,7 +355,7 @@ export class CatalogoCampoService {
     return respuestaPaginada(items, total, page, limit);
   }
   async guardarLocal(usuarioId: number, dto: LocalCampoDto, id?: number) {
-    const u = await this.acceso.gestionar(usuarioId, 'locales');
+    const u = await this.acceso.administrar(usuarioId, 'locales');
     return this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM empresas WHERE id = ${u.empresaId} FOR UPDATE`;
       if (dto.clienteId !== null) {
@@ -418,7 +419,7 @@ export class CatalogoCampoService {
     });
   }
   async eliminarLocal(usuarioId: number, id: number) {
-    const u = await this.acceso.gestionar(usuarioId, 'locales');
+    const u = await this.acceso.administrar(usuarioId, 'locales');
     await this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM empresas WHERE id = ${u.empresaId} FOR UPDATE`;
       const where = { id, empresaId: u.empresaId, eliminadoEn: null };

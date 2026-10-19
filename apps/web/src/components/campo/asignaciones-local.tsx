@@ -16,7 +16,14 @@ import { HorariosLocal } from "./horarios-local";
 
 // Responsables del local y sus reemplazos (backups).
 
-export function AsignacionesLocal({ localId }: { localId: number }) {
+export function AsignacionesLocal({
+  localId,
+  soloLectura = false,
+}: {
+  localId: number;
+  /** Líderes de campo: ven responsables y reemplazos sin cambiarlos. */
+  soloLectura?: boolean;
+}) {
   const lista = useListaCampo<AsignacionCampo>(
     `/campo/locales/${localId}/asignaciones`,
   );
@@ -39,19 +46,21 @@ export function AsignacionesLocal({ localId }: { localId: number }) {
             Colaboradores titulares encargados de atender este punto de venta.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            setCrear(true);
-            setUsuarioId("");
-          }}
-          aria-label="Asignar colaborador"
-          title="Asignar colaborador"
-          className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-white dark:text-[#3b1219] transition-all hover:brightness-110"
-          style={{ backgroundColor: TOKENS.carne }}
-        >
-          <IconoMas />
-        </button>
+        {soloLectura ? null : (
+          <button
+            type="button"
+            onClick={() => {
+              setCrear(true);
+              setUsuarioId("");
+            }}
+            aria-label="Asignar colaborador"
+            title="Asignar colaborador"
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-white dark:text-[#3b1219] transition-all hover:brightness-110"
+            style={{ backgroundColor: TOKENS.carne }}
+          >
+            <IconoMas />
+          </button>
+        )}
       </div>
 
       {lista.items.length === 0 ? (
@@ -115,15 +124,17 @@ export function AsignacionesLocal({ localId }: { localId: number }) {
                 className="grid min-w-0 grid-cols-2 gap-2 border-t pt-3 mt-3"
                 style={{ borderColor: TOKENS.line }}
               >
-                <button type="button" aria-pressed={a.usuario.localPrincipalId === localId}
-                  title="Mostrar este local primero en Ucheck"
-                  className="min-h-11 min-w-0 rounded-lg border border-line bg-surface-raised px-2 text-xs font-semibold text-foreground hover:bg-surface-soft focus-visible:ring-2 focus-visible:ring-focus"
-                  onClick={() => void op.ejecutar("Guardando local principal", async () => {
-                    await apiFetch(`/campo/asignaciones/${a.id}/principal`, { method: "PUT", body: JSON.stringify({ principal: a.usuario.localPrincipalId !== localId }) });
-                    lista.refrescar();
-                  })}>
-                  {a.usuario.localPrincipalId === localId ? "★ Principal" : "☆ Principal"}
-                </button>
+                {soloLectura ? null : (
+                  <button type="button" aria-pressed={a.usuario.localPrincipalId === localId}
+                    title="Mostrar este local primero en Ucheck"
+                    className="min-h-11 min-w-0 rounded-lg border border-line bg-surface-raised px-2 text-xs font-semibold text-foreground hover:bg-surface-soft focus-visible:ring-2 focus-visible:ring-focus"
+                    onClick={() => void op.ejecutar("Guardando local principal", async () => {
+                      await apiFetch(`/campo/asignaciones/${a.id}/principal`, { method: "PUT", body: JSON.stringify({ principal: a.usuario.localPrincipalId !== localId }) });
+                      lista.refrescar();
+                    })}>
+                    {a.usuario.localPrincipalId === localId ? "★ Principal" : "☆ Principal"}
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => setHorariosDe(a)}
@@ -141,21 +152,23 @@ export function AsignacionesLocal({ localId }: { localId: number }) {
                   <IconoRefrescar className="w-3.5 h-3.5" />
                   <span>Reemplazos</span>
                 </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    void op.ejecutar("Quitando asignación", async () => {
-                      await apiFetch(`/campo/asignaciones/${a.id}`, {
-                        method: "DELETE",
-                      });
-                      lista.refrescar();
-                    })
-                  }
-                  aria-label={`Quitar asignación de ${a.usuario.nombre} ${a.usuario.apellido}`}
-                  className="col-span-2 min-h-11 min-w-0 whitespace-nowrap rounded-lg border border-red-200 bg-red-50 px-3 text-xs font-semibold text-red-700 hover:bg-red-100 focus-visible:ring-2 focus-visible:ring-focus dark:border-red-800 dark:bg-red-950 dark:text-red-300 dark:hover:bg-red-900"
-                >
-                  Quitar
-                </button>
+                {soloLectura ? null : (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void op.ejecutar("Quitando asignación", async () => {
+                        await apiFetch(`/campo/asignaciones/${a.id}`, {
+                          method: "DELETE",
+                        });
+                        lista.refrescar();
+                      })
+                    }
+                    aria-label={`Quitar asignación de ${a.usuario.nombre} ${a.usuario.apellido}`}
+                    className="col-span-2 min-h-11 min-w-0 whitespace-nowrap rounded-lg border border-red-200 bg-red-50 px-3 text-xs font-semibold text-red-700 hover:bg-red-100 focus-visible:ring-2 focus-visible:ring-focus dark:border-red-800 dark:bg-red-950 dark:text-red-300 dark:hover:bg-red-900"
+                  >
+                    Quitar
+                  </button>
+                )}
               </div>
             </div>
           ))}
@@ -274,6 +287,7 @@ export function AsignacionesLocal({ localId }: { localId: number }) {
       {backup && (
         <ModalBackups
           asignacion={backup}
+          soloLectura={soloLectura}
           cerrar={() => {
             setBackup(null);
             lista.refrescar();
@@ -287,7 +301,11 @@ export function AsignacionesLocal({ localId }: { localId: number }) {
           onCerrar={() => setHorariosDe(null)}
           ancho="xl"
         >
-          <HorariosLocal localId={localId} asignacionId={horariosDe.id} />
+          <HorariosLocal
+            localId={localId}
+            asignacionId={horariosDe.id}
+            soloLectura={soloLectura}
+          />
           <ToleranciasHorario alcance="usuario" id={horariosDe.usuario.id} titulo="Tolerancias de este usuario" />
         </Modal>
       )}
@@ -310,9 +328,11 @@ export function AsignacionesLocal({ localId }: { localId: number }) {
 export function ModalBackups({
   asignacion,
   cerrar,
+  soloLectura = false,
 }: {
   asignacion: AsignacionCampo;
   cerrar: () => void;
+  soloLectura?: boolean;
 }) {
   const lista = useListaCampo<BackupCampo>(
     `/campo/asignaciones/${asignacion.id}/backups`,
@@ -341,16 +361,18 @@ export function ModalBackups({
           <span className="text-xs font-bold uppercase tracking-wider text-foreground">
             Suplentes Registrados ({lista.items.length})
           </span>
-          <button
-            type="button"
-            onClick={() => setCrear(true)}
-            aria-label="Agregar suplente"
-            title="Agregar suplente"
-            className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-background"
-            style={{ backgroundColor: TOKENS.ink }}
-          >
-            <IconoMas />
-          </button>
+          {soloLectura ? null : (
+            <button
+              type="button"
+              onClick={() => setCrear(true)}
+              aria-label="Agregar suplente"
+              title="Agregar suplente"
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-background"
+              style={{ backgroundColor: TOKENS.ink }}
+            >
+              <IconoMas />
+            </button>
+          )}
         </div>
 
         {lista.items.length === 0 ? (
@@ -392,21 +414,23 @@ export function ModalBackups({
                     {b.fechaDesde.slice(0, 10)} al {b.fechaHasta.slice(0, 10)}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    void op.ejecutar("Quitando reemplazo", async () => {
-                      await apiFetch(
-                        `/campo/asignaciones/${asignacion.id}/backups/${b.id}`,
-                        { method: "DELETE" },
-                      );
-                      lista.refrescar();
-                    })
-                  }
-                  className="px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-red-600 dark:text-red-300 bg-red-50 dark:bg-red-950/60 hover:bg-red-100 dark:hover:bg-red-900 rounded border border-red-200 dark:border-red-900"
-                >
-                  Quitar
-                </button>
+                {soloLectura ? null : (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void op.ejecutar("Quitando reemplazo", async () => {
+                        await apiFetch(
+                          `/campo/asignaciones/${asignacion.id}/backups/${b.id}`,
+                          { method: "DELETE" },
+                        );
+                        lista.refrescar();
+                      })
+                    }
+                    className="px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-red-600 dark:text-red-300 bg-red-50 dark:bg-red-950/60 hover:bg-red-100 dark:hover:bg-red-900 rounded border border-red-200 dark:border-red-900"
+                  >
+                    Quitar
+                  </button>
+                )}
               </div>
             ))}
           </div>

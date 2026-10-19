@@ -1,5 +1,6 @@
 "use client";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { EstadoTelefono } from "./estado-telefono";
 import {
   ETIQUETA_FILTRO,
@@ -12,6 +13,7 @@ import { StatusStamp } from "./ui/status-stamp";
 import { SaludoRuta } from "./ui/saludo-ruta";
 import { KpisRuta } from "./ui/kpis-ruta";
 import { TarjetaAgendaRepositor } from "./tarjeta-agenda-repositor";
+import { ModalNovedadLocal } from "./modal-novedad-local";
 import {
   IconoCalendario,
   IconoCruz,
@@ -97,6 +99,7 @@ function AgendaDelDia({
   const [error, setError] = useState("");
   const [mapa, setMapa] = useState<LocalCampo | null>(null);
   const [tareas, setTareas] = useState<AgendaCampo | null>(null);
+  const [novedadDe, setNovedadDe] = useState<AgendaCampo | null>(null);
   // Sube al cerrar el modal de tareas para refrescar el "2/5" de la tarjeta.
   const [revisionTareas, setRevisionTareas] = useState(0);
   const [busqueda, setBusqueda] = useState("");
@@ -651,6 +654,7 @@ function AgendaDelDia({
             }
             onTareas={() => setTareas(a)}
             onMapa={() => setMapa(a.local)}
+            onNovedad={() => setNovedadDe(a)}
           />
         )}
         acciones={(a) => (
@@ -658,8 +662,35 @@ function AgendaDelDia({
             <button className={btnGhost} onClick={() => setMapa(a.local)}>
               Mapa
             </button>
-            <button className={btnGhost} onClick={() => setTareas(a)}>
+            <button
+              className={btnGhost}
+              onClick={() => setTareas(a)}
+              disabled={abierta?.asignacionId !== a.id}
+              title={
+                abierta?.asignacionId === a.id
+                  ? undefined
+                  : "Marcá entrada para ver las tareas"
+              }
+            >
               Tareas
+            </button>
+            {rutaInventario ? (
+              abierta?.asignacionId === a.id ? (
+                <Link href={rutaInventario} className={btnGhost}>
+                  Inventario
+                </Link>
+              ) : (
+                <button
+                  className={btnGhost}
+                  disabled
+                  title="Marcá entrada para usar el inventario"
+                >
+                  Inventario
+                </button>
+              )
+            ) : null}
+            <button className={btnGhost} onClick={() => setNovedadDe(a)}>
+              Novedad
             </button>
             {/* Un solo botón, sin hora: el del próximo horario sin visita. */}
             {hoy && !abierta
@@ -694,6 +725,15 @@ function AgendaDelDia({
         detalle="Usamos tu GPS, los horarios y la distancia entre locales."
       />
       {mapa ? <MapaLocal local={mapa} cerrar={() => setMapa(null)} /> : null}
+      {novedadDe ? (
+        <ModalNovedadLocal
+          local={novedadDe.local}
+          visitaId={
+            abierta?.asignacionId === novedadDe.id ? abierta.id : undefined
+          }
+          cerrar={() => setNovedadDe(null)}
+        />
+      ) : null}
       {tareas ? (
         <TareasDeLocal
           agenda={tareas}

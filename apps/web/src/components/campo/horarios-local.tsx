@@ -19,9 +19,12 @@ import type { FormHorarioCampo, HorarioCampo } from "@/types/campo";
 export function HorariosLocal({
   localId,
   asignacionId,
+  soloLectura = false,
 }: {
   localId: number;
   asignacionId?: number;
+  /** Líderes de campo: ven las franjas sin poder cambiarlas. */
+  soloLectura?: boolean;
 }) {
   const ruta = asignacionId
     ? `/campo/asignaciones/${asignacionId}/horarios`
@@ -62,16 +65,18 @@ export function HorariosLocal({
               : "Se aplican a todos los colaboradores sin franjas propias."}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => abrir()}
-          aria-label="Agregar franja"
-          title="Agregar franja"
-          className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-white dark:text-[#3b1219] transition-all hover:brightness-110"
-          style={{ backgroundColor: TOKENS.carne }}
-        >
-          <IconoMas />
-        </button>
+        {soloLectura ? null : (
+          <button
+            type="button"
+            onClick={() => abrir()}
+            aria-label="Agregar franja"
+            title="Agregar franja"
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-white dark:text-[#3b1219] transition-all hover:brightness-110"
+            style={{ backgroundColor: TOKENS.carne }}
+          >
+            <IconoMas />
+          </button>
+        )}
       </div>
 
       {/* Lista de Franjas */}
@@ -141,31 +146,33 @@ export function HorariosLocal({
                 </p>
               </div>
 
-              <div
-                className="flex flex-wrap items-center justify-end gap-2 pt-3 border-t mt-3"
-                style={{ borderColor: TOKENS.line }}
-              >
-                <ToleranciasHorario alcance="horario" id={h.id} titulo="Tolerancias de esta franja" />
-                <BotonEditar
-                  onClick={() => abrir(h)}
-                  etiqueta={`Editar horario ${h.id}`}
-                  modo="texto"
-                />
-                <button
-                  type="button"
-                  onClick={() =>
-                    void op.ejecutar("Quitando horario", async () => {
-                      await apiFetch(`${ruta}/${h.id}`, {
-                        method: "DELETE",
-                      });
-                      lista.refrescar();
-                    })
-                  }
-                  className="min-h-11 whitespace-nowrap px-2.5 py-1 text-xs font-bold uppercase tracking-wider rounded border text-red-600 dark:text-red-300 border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/60 hover:bg-red-100 dark:hover:bg-red-900"
+              {soloLectura ? null : (
+                <div
+                  className="flex flex-wrap items-center justify-end gap-2 pt-3 border-t mt-3"
+                  style={{ borderColor: TOKENS.line }}
                 >
-                  Quitar
-                </button>
-              </div>
+                  <ToleranciasHorario alcance="horario" id={h.id} titulo="Tolerancias de esta franja" />
+                  <BotonEditar
+                    onClick={() => abrir(h)}
+                    etiqueta={`Editar horario ${h.id}`}
+                    modo="texto"
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void op.ejecutar("Quitando horario", async () => {
+                        await apiFetch(`${ruta}/${h.id}`, {
+                          method: "DELETE",
+                        });
+                        lista.refrescar();
+                      })
+                    }
+                    className="min-h-11 whitespace-nowrap px-2.5 py-1 text-xs font-bold uppercase tracking-wider rounded border text-red-600 dark:text-red-300 border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/60 hover:bg-red-100 dark:hover:bg-red-900"
+                  >
+                    Quitar
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>

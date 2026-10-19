@@ -10,7 +10,14 @@ import {
   IconoRefrescar,
 } from "@/components/campo/ui/iconos-campo";
 import { apiFetch } from "@/lib/api";
-import { fechaEnZonaIso } from "@/utils/fechas";
+import { fechaEnZonaIso, textoRangoFechas } from "@/utils/fechas";
+import {
+  consultaPeriodoInicio,
+  cuandoPeriodoInicio,
+  rangoPeriodoInicio,
+} from "@/utils/periodo-inicio";
+import { SelectorPeriodoInicio } from "@/components/campo/ui/periodo-inicio";
+import type { PeriodoInicio } from "@/types/hoy-en-campo";
 import { etiquetaPaginaMenu } from "@/utils/nombres-menu";
 import type { AgendaCampo, SupervisionResumenData } from "@/types/campo";
 import type { RespuestaPaginada } from "@/types/paginacion";
@@ -127,6 +134,11 @@ function InicioResumen({
     null,
   );
   const [errores, setErrores] = useState<string[]>([]);
+  const [periodo, setPeriodo] = useState<PeriodoInicio>("hoy");
+  const hoy = fechaEnZonaIso(new Date());
+  const consulta = consultaPeriodoInicio(periodo, hoy);
+  const rango = rangoPeriodoInicio(periodo, hoy);
+  const cuando = cuandoPeriodoInicio(periodo);
   const [revision, setRevision] = useState(0);
   const [terminada, setTerminada] = useState(-1);
   const cargando = terminada !== revision;
@@ -154,7 +166,7 @@ function InicioResumen({
         solicitudes.push(
           consultar<SupervisionResumenData>(
             "Equipo",
-            `/campo/supervision/resumen?fecha=${fecha}`,
+            `/campo/supervision/resumen?${consulta}`,
             setResumen,
           ),
         );
@@ -178,14 +190,14 @@ function InicioResumen({
         solicitudes.push(
           consultar<RespuestaPaginada<AgendaCampo>>(
             "Locales",
-            `/campo/jornada?fecha=${fecha}&page=1&limit=1`,
+            `/campo/jornada?${consulta}&page=1&limit=1`,
             (d) => setLocales(d.total),
           ),
         );
         solicitudes.push(
           consultar<{ total: number }>(
             "Visitas",
-            `/campo/jornada/visitas?fecha=${fecha}&page=1&limit=1`,
+            `/campo/jornada/visitas?${consulta}&page=1&limit=1`,
             (d) => setVisitasHoy(d.total),
           ),
         );
@@ -218,7 +230,7 @@ function InicioResumen({
     }
     void cargar();
     return () => controller.abort();
-  }, [visitas, novedades, avisos, jornada, tareas, revision]);
+  }, [visitas, novedades, avisos, jornada, tareas, revision, consulta]);
 
   const href = (pagina: string) => `/panel/${modulo.ruta}/${pagina}`;
   if (!visitas && !jornada && !avisos && !novedades) return null;
@@ -230,10 +242,10 @@ function InicioResumen({
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-xs font-medium text-accent-ink">
-            Hoy · {fechaEnZonaIso(new Date())}
+            {textoRangoFechas(rango.desde, rango.hasta)}
           </p>
           <h2 className="ft-display text-2xl font-semibold">
-            {equipo ? "Tu equipo hoy" : "Tu jornada hoy"}
+            {equipo ? `Tu equipo ${cuando}` : `Tu jornada ${cuando}`}
           </h2>
         </div>
         <button
@@ -247,6 +259,7 @@ function InicioResumen({
           <IconoRefrescar />
         </button>
       </div>
+      <SelectorPeriodoInicio valor={periodo} onCambiar={setPeriodo} />
       {cargando ? (
         <p role="status" className="py-4 text-sm text-muted">
           Cargando resumen…
@@ -293,7 +306,7 @@ function InicioResumen({
                   detail={
                     resumen
                       ? `${resumen.presentismo.totalEquipo} colaboradores`
-                      : "Equipo de hoy"
+                      : `Equipo de ${cuando}`
                   }
                 />
                 <KpiInicio
@@ -343,13 +356,13 @@ function InicioResumen({
               <>
                 <KpiInicio
                   href={href(rutaPagina)}
-                  label="Locales hoy"
+                  label={`Locales ${cuando}`}
                   value={errores.includes("Locales") ? "—" : (locales ?? "—")}
                   detail="Asignaciones de tu jornada"
                 />
                 <KpiInicio
                   href={href(rutaPagina)}
-                  label="Visitas hoy"
+                  label={`Visitas ${cuando}`}
                   value={
                     errores.includes("Visitas") ? "—" : (visitasHoy ?? "—")
                   }

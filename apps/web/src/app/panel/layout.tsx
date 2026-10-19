@@ -6,6 +6,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, LazyMotion, m } from "motion/react";
 import { apiFetch } from "@/lib/api";
 import { borrarCacheSesion } from "@/lib/cache-sesion";
+import {
+  esRolLiderCampo,
+  ordenPaginaLider,
+  paginaPermitidaLider,
+} from "@/utils/rol-campo";
 import type { UsuarioSesion } from "@/types/usuario";
 import type { ModuloMenu } from "@/types/plataforma";
 import { BrandMark } from "@/components/auth-shell";
@@ -116,10 +121,20 @@ export default function PanelLayout({
   const soloEnCampana = (moduloRuta: string, paginaRuta: string) =>
     (moduloRuta === "gestion-campo" || moduloRuta === "mi-jornada") &&
     (paginaRuta === "avisos" || paginaRuta === "novedades");
+  // TeamLeader y Supervisor: Inicio, Presentismo y PDV (solo consulta).
+  const esLider = esRolLiderCampo(usuario.rol?.descripcion);
   const enlaces = [
     { href: "/panel", nombre: "Inicio", icono: "inicio" },
     ...modulos.flatMap((m) =>
-      m.paginas.filter((p) => !soloEnCampana(m.ruta, p.ruta)).map((p) => ({
+      m.paginas
+        .filter((p) => !soloEnCampana(m.ruta, p.ruta))
+        .filter((p) => !esLider || paginaPermitidaLider(m.ruta, p.ruta))
+        .sort((a, b) =>
+          esLider
+            ? ordenPaginaLider(m.ruta, a.ruta) - ordenPaginaLider(m.ruta, b.ruta)
+            : 0,
+        )
+        .map((p) => ({
         href: `/panel/${m.ruta}/${p.ruta}`,
         nombre: etiquetaPaginaMenu(m.ruta, p.ruta, p.nombre),
         icono: resolverIconoPagina({

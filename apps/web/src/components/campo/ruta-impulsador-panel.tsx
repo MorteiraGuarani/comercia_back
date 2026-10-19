@@ -7,11 +7,7 @@ import { useJornadaCompleta } from "@/hooks/use-jornada-completa";
 import { useFechaCampo } from "@/hooks/use-fecha-campo";
 import { queryFechasCampo } from "@/utils/fechas";
 import { formatoDistancia, metrosEntre } from "@/utils/distancia";
-import {
-  ordenarParadasPorRuta,
-  urlGoogleMapsRuta,
-  type CoordenadaCampo,
-} from "@/utils/ruta-recomendada";
+import { ordenarParadasPorRuta, urlGoogleMapsRuta, type CoordenadaCampo } from "@/utils/ruta-recomendada";
 import { mensajeError } from "@/utils/error";
 import { RUTA, PRESENTISMO } from "@/utils/estado-jornada";
 import { formatoFechaHora } from "@/utils/fechas";
@@ -19,21 +15,10 @@ import { TOKENS } from "./tokens";
 import { StatusStamp } from "./ui/status-stamp";
 import { ResumenRuta } from "./ui/resumen-ruta";
 import { TopBar } from "./ui/top-bar";
-import {
-  SelectorFechaFiltro,
-  type PeriodoFiltro,
-} from "./ui/selector-fecha-filtro";
-import { Modal } from "@/components/modal";
+import { SelectorFechaFiltro, type PeriodoFiltro } from "./ui/selector-fecha-filtro";
 import { PantallaCarga } from "@/components/pantalla-carga";
-import { crearNovedadCampo } from "@/lib/api-adjuntos-campo";
-import { SelectorFotosCampo } from "./selector-fotos-campo";
-import type {
-  AgendaCampo,
-  LocalCampo,
-  VisitaCampo,
-  TipoNovedad,
-} from "@/types/campo";
-import { mostrarToast } from "@/components/toast/toast-controller";
+import type { AgendaCampo, LocalCampo, VisitaCampo } from "@/types/campo";
+import { ModalNovedadLocal } from "./modal-novedad-local";
 
 // Leaflet solo se descarga al abrir un mapa.
 const MapaLocal = dynamic(
@@ -64,12 +49,6 @@ export function RutaImpulsadorPanel() {
   const [novedadLocal, setNovedadLocal] = useState<LocalParaNovedad | null>(
     null,
   );
-  const [tipoNovedad, setTipoNovedad] = useState<TipoNovedad>("INCIDENCIA");
-  const [tituloNovedad, setTituloNovedad] = useState("");
-  const [descNovedad, setDescNovedad] = useState("");
-  const [fotosNovedad, setFotosNovedad] = useState<File[]>([]);
-  const [guardandoNovedad, setGuardandoNovedad] = useState(false);
-  const [novedadExito, setNovedadExito] = useState(false);
   const [rutaCalc, setRutaCalc] = useState<{
     qs: string;
     origen: CoordenadaCampo;
@@ -231,45 +210,6 @@ export function RutaImpulsadorPanel() {
     window.open(url, "_blank", "noopener,noreferrer");
   }
 
-  const enviarNovedad = async () => {
-    if (
-      !novedadLocal ||
-      !tituloNovedad.trim() ||
-      !descNovedad.trim() ||
-      guardandoNovedad
-    )
-      return;
-    try {
-      setGuardandoNovedad(true);
-      await crearNovedadCampo(
-        {
-          localId: novedadLocal.id,
-          tipo: tipoNovedad,
-          titulo: tituloNovedad.trim(),
-          descripcion: descNovedad.trim(),
-          visitaId:
-            abierta?.local.id === novedadLocal.id ? abierta.id : undefined,
-        },
-        fotosNovedad,
-      );
-      setNovedadExito(true);
-      setTimeout(() => {
-        setNovedadLocal(null);
-        setTituloNovedad("");
-        setDescNovedad("");
-        setFotosNovedad([]);
-        setNovedadExito(false);
-      }, 1400);
-    } catch (e) {
-      mostrarToast(
-        "error",
-        mensajeError(e, "Error inesperado"),
-        "No se pudo reportar la novedad",
-      );
-    } finally {
-      setGuardandoNovedad(false);
-    }
-  };
 
   return (
     <div
@@ -522,14 +462,6 @@ export function RutaImpulsadorPanel() {
         mensaje="Calculando mejor ruta"
         detalle="Usamos tu GPS, los horarios y la distancia entre locales."
       />
-      <PantallaCarga
-        visible={guardandoNovedad}
-        mensaje={
-          fotosNovedad.length
-            ? "Enviando novedad y subiendo fotos"
-            : "Enviando novedad"
-        }
-      />
 
       {/* Modal de Mapa */}
       {mapa && (
@@ -553,133 +485,13 @@ export function RutaImpulsadorPanel() {
         />
       )}
 
-      {/* Modal Reportar Novedad */}
-      {novedadLocal && (
-        <Modal
-          titulo={`Novedad · ${novedadLocal.nombre}`}
-          abierto={!!novedadLocal}
-          onCerrar={() => {
-            if (!guardandoNovedad) {
-              setNovedadLocal(null);
-              setFotosNovedad([]);
-            }
-          }}
-          ancho="md"
-        >
-          {novedadExito ? (
-            <div className="py-6 text-center text-emerald-700 space-y-2">
-              <svg
-                className="w-12 h-12 mx-auto text-emerald-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-              <p className="ft-display text-xl font-bold">
-                ¡Novedad enviada con éxito!
-              </p>
-              <p className="ft-body text-xs text-muted">
-                Tu Team Leader ya fue notificado.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <p className="ft-body text-xs text-muted">
-                Si ocurrió un imprevisto en este local (local cerrado, faltante
-                de stock, reclamo de precio, etc.), reportalo para que tu
-                supervisor intervenga.
-              </p>
-
-              <div>
-                <label className="block text-xs font-semibold text-foreground mb-1">
-                  Tipo de Novedad:
-                </label>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {(
-                    ["INCIDENCIA", "RECLAMO", "CONSULTA", "SUGERENCIA"] as const
-                  ).map((t) => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => setTipoNovedad(t)}
-                      className={`py-1.5 px-2 rounded-md text-xs font-semibold border transition cursor-pointer ${
-                        tipoNovedad === t
-                          ? "bg-zinc-900 text-white border-zinc-900"
-                          : "bg-surface-raised text-foreground border-line"
-                      }`}
-                    >
-                      {t}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-foreground mb-1">
-                  Asunto / Título:
-                </label>
-                <input
-                  type="text"
-                  value={tituloNovedad}
-                  onChange={(e) => setTituloNovedad(e.target.value)}
-                  placeholder="Ej: Local cerrado por inventario"
-                  className="w-full text-xs p-2.5 rounded-lg border border-line bg-surface-raised outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-foreground mb-1">
-                  Descripción detallada:
-                </label>
-                <textarea
-                  value={descNovedad}
-                  onChange={(e) => setDescNovedad(e.target.value)}
-                  rows={3}
-                  placeholder="Detallá lo sucedido con la mayor precisión posible..."
-                  className="w-full text-xs p-2.5 rounded-lg border border-line bg-surface-raised outline-none"
-                />
-              </div>
-
-              <SelectorFotosCampo
-                archivos={fotosNovedad}
-                onChange={setFotosNovedad}
-                disabled={guardandoNovedad}
-              />
-
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setNovedadLocal(null);
-                    setFotosNovedad([]);
-                  }}
-                  className="flex-1 py-2 text-xs font-semibold border rounded-lg text-foreground"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={enviarNovedad}
-                  disabled={
-                    !tituloNovedad.trim() ||
-                    !descNovedad.trim() ||
-                    guardandoNovedad
-                  }
-                  className="flex-1 py-2 text-xs font-bold bg-[#1E2320] text-white rounded-lg hover:bg-black transition disabled:opacity-50 cursor-pointer"
-                >
-                  {guardandoNovedad ? "Enviando..." : "Reportar Novedad"}
-                </button>
-              </div>
-            </div>
-          )}
-        </Modal>
-      )}
+      {novedadLocal ? (
+        <ModalNovedadLocal
+          local={novedadLocal}
+          visitaId={abierta?.local.id === novedadLocal.id ? abierta.id : undefined}
+          cerrar={() => setNovedadLocal(null)}
+        />
+      ) : null}
     </div>
   );
 }

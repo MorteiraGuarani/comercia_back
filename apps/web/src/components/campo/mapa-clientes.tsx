@@ -7,6 +7,7 @@ import { apiFetch } from "@/lib/api";
 import { mensajeError } from "@/utils/error";
 import { escaparHtml } from "@/utils/html";
 import { TOKENS } from "./tokens";
+import { LogoCliente } from "./ui/logo-cliente";
 import { montarCapaUsuario, type CapaUsuarioMapa } from "./ui/marcador-usuario-mapa";
 import { useGeolocalizacionMapa } from "./ui/use-geolocalizacion-mapa";
 import { CAPA_MAPA_CLARA, CAPA_MAPA_OSCURA, useTemaOscuroMapa } from "./ui/use-tema-mapa";
@@ -270,9 +271,13 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
         `<div style="overflow-wrap:anywhere;">${escaparHtml(`${usuario.rol?.descripcion ?? "Impulsador"} ${usuario.nombre} ${usuario.apellido}`)}</div>`,
       ).join("");
 
-      const innerAvatar = logoUrlSeguro
-        ? `<img src="${logoUrlSeguro}" alt="${nombreClienteSeguro}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`
-        : `<div style="width:100%;height:100%;border-radius:50%;background:#8B2635;color:white;font-weight:bold;font-size:13px;display:flex;align-items:center;justify-content:center;font-family:sans-serif;">${inicialesSeguras}</div>`;
+      // Iniciales debajo y logo encima: si la imagen no carga, se quita y
+      // quedan las iniciales en vez de un ícono de imagen rota.
+      const imagenLogo = (estilo: string) =>
+        logoUrlSeguro
+          ? `<img src="${logoUrlSeguro}" alt="" onerror="this.remove()" style="position:absolute;inset:0;${estilo}" />`
+          : "";
+      const innerAvatar = `<div style="position:relative;width:100%;height:100%;border-radius:50%;background:#8B2635;color:white;font-weight:bold;font-size:13px;display:flex;align-items:center;justify-content:center;font-family:sans-serif;">${inicialesSeguras}${imagenLogo("width:100%;height:100%;object-fit:cover;border-radius:50%;background:white;")}</div>`;
 
       const pinHtml = `
         <div style="position:relative;width:46px;height:56px;display:flex;flex-direction:column;align-items:center;cursor:pointer;filter:drop-shadow(0 6px 12px rgba(0,0,0,0.38));">
@@ -294,11 +299,7 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
       const popupContent = `
         <div style="width:min(300px,calc(100vw - 80px));font-family:sans-serif;padding:8px;">
           <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;border-bottom:1px solid #ECE9E2;padding-bottom:10px;">
-            ${
-              logoUrlSeguro
-                ? `<img src="${logoUrlSeguro}" alt="" style="width:38px;height:38px;border-radius:50%;object-fit:cover;border:2px solid #DAD5C9;" />`
-                : `<span style="font-size:13px;font-weight:bold;background:#1E2320;color:white;padding:4px 10px;border-radius:8px;">${inicialesSeguras}</span>`
-            }
+            <span style="position:relative;flex:none;width:38px;height:38px;border-radius:50%;background:#1E2320;color:white;font-size:13px;font-weight:bold;display:flex;align-items:center;justify-content:center;">${inicialesSeguras}${imagenLogo("width:38px;height:38px;border-radius:50%;object-fit:cover;border:2px solid #DAD5C9;background:white;")}</span>
             <div>
               <span style="font-size:13px;font-weight:bold;text-transform:uppercase;color:#726C60;letter-spacing:0.5px;display:block;overflow-wrap:anywhere;">${nombreClienteSeguro}</span>
               <span style="font-size:11px;color:#888;font-family:monospace;">Local #${loc.id}</span>
@@ -517,17 +518,12 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
                       }`}
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
-                        {c.logoUrl ? (
-                          <img
-                            src={c.logoUrl}
-                            alt={c.nombre}
-                            className="w-7 h-7 rounded-md object-cover border border-line shrink-0 bg-surface-raised"
-                          />
-                        ) : (
-                          <div className="w-7 h-7 rounded-md bg-[#8B2635] text-white dark:bg-[#e5a2ae] dark:text-[#3b1219] flex items-center justify-center font-bold text-xs shrink-0">
-                            {c.nombre.slice(0, 2).toUpperCase()}
-                          </div>
-                        )}
+                        <LogoCliente
+                          nombre={c.nombre}
+                          logoUrl={c.logoUrl}
+                          className="h-7 w-7 rounded-md"
+                          claseTexto="text-[10px]"
+                        />
                         <div className="min-w-0">
                           <p className="font-bold text-xs truncate leading-snug">{c.nombre}</p>
                           <p className={`text-[11px] font-mono truncate ${esActivo ? "text-background/70" : "text-muted"}`}>

@@ -9,6 +9,7 @@ import { IconoEquipo } from "./ui/iconos-campo";
 import type { LocalCampo } from "@/types/campo";
 import { HorariosLocal } from "./horarios-local";
 import { AsignacionesLocal } from "./asignaciones-local";
+import { esRolLiderCampo } from "@/utils/rol-campo";
 
 export function PlanLocal({
   local,
@@ -20,6 +21,7 @@ export function PlanLocal({
   const [vista, setVista] = useState<"horarios" | "equipo">("horarios");
   const { usuario } = usePanel();
   const equipo = usuario.rol?.equipoCampo?.nombre ?? "Sin equipo operativo";
+  const soloLectura = esRolLiderCampo(usuario.rol?.descripcion);
 
   return (
     <Modal
@@ -93,9 +95,9 @@ export function PlanLocal({
 
         {/* Contenido según pestaña */}
         {vista === "horarios" ? (
-          <HorariosLocal localId={local.id} />
+          <HorariosLocal localId={local.id} soloLectura={soloLectura} />
         ) : (
-          <AsignacionesLocal localId={local.id} />
+          <AsignacionesLocal localId={local.id} soloLectura={soloLectura} />
         )}
       </div>
     </Modal>

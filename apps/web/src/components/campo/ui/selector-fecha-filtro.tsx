@@ -80,6 +80,8 @@ function periodosDesdeHoy(hoy: string): PeriodoFiltro[] {
 
 export function SelectorFechaFiltro({ valorActual, onChange }: SelectorFechaFiltroProps) {
   const [abierto, setAbierto] = useState(false);
+  // Desde `sm` el panel flota junto al botón, del lado donde hay lugar.
+  const [alinearIzquierda, setAlinearIzquierda] = useState(false);
   const [desdePersonalizado, setDesdePersonalizado] = useState(
     valorActual.fechaInicio ?? valorActual.fecha ?? fechaEnZonaIso(new Date()),
   );
@@ -96,13 +98,25 @@ export function SelectorFechaFiltro({ valorActual, onChange }: SelectorFechaFilt
         setAbierto(false);
       }
     }
+    function cerrarConEscape(e: KeyboardEvent) {
+      if (e.key === "Escape") setAbierto(false);
+    }
     if (abierto) {
       document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("keydown", cerrarConEscape);
     }
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", cerrarConEscape);
     };
   }, [abierto]);
+
+  const alternar = () => {
+    const caja = popoverRef.current?.getBoundingClientRect();
+    // 20rem del panel: si a la izquierda del botón no entra, se abre hacia la derecha.
+    if (caja) setAlinearIzquierda(caja.right < 336);
+    setAbierto((prev) => !prev);
+  };
 
   const seleccionarPreset = (p: PeriodoFiltro) => {
     onChange(p);
@@ -146,7 +160,7 @@ export function SelectorFechaFiltro({ valorActual, onChange }: SelectorFechaFilt
     <div className="relative inline-block text-left" ref={popoverRef}>
       <button
         type="button"
-        onClick={() => setAbierto((prev) => !prev)}
+        onClick={alternar}
         aria-expanded={abierto}
         className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-line bg-surface-raised px-3 py-2 text-xs text-foreground shadow-sm transition-colors hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40"
         title="Cambiar fecha o período de visualización"
@@ -181,9 +195,21 @@ export function SelectorFechaFiltro({ valorActual, onChange }: SelectorFechaFilt
       </button>
 
       {abierto && (
+        <>
+        {/* En celular es una hoja desde abajo: nunca queda fuera de la pantalla. */}
         <div
-          className="absolute right-0 z-50 mt-2 max-h-[60dvh] w-[min(18rem,calc(100vw-2rem))] overflow-y-auto rounded-xl border border-line bg-surface-raised p-3 text-foreground shadow-2xl animate-in fade-in zoom-in-95 duration-100 sm:max-h-[70dvh] sm:w-80"
+          aria-hidden="true"
+          onClick={() => setAbierto(false)}
+          className="fixed inset-0 z-[60] bg-black/40 sm:hidden"
+        />
+        <div
+          role="dialog"
+          aria-label="Elegir período"
+          className={`fixed inset-x-0 bottom-0 z-[61] max-h-[85dvh] overflow-y-auto rounded-t-2xl border border-line bg-surface-raised p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] text-foreground shadow-2xl max-sm:motion-safe:animate-hoja-subir sm:absolute sm:inset-x-auto sm:bottom-auto sm:z-50 sm:mt-2 sm:max-h-[70dvh] sm:w-80 sm:rounded-xl sm:p-3 ${
+            alinearIzquierda ? "sm:left-0" : "sm:right-0"
+          }`}
         >
+          <span aria-hidden="true" className="mx-auto mb-3 block h-1 w-10 rounded-full bg-line sm:hidden" />
           <div className="mb-2 flex flex-wrap items-center justify-between gap-1 border-b border-line pb-2">
             <span className="ft-display text-xs font-bold uppercase tracking-wider text-accent-ink">
               Filtro Temporal
@@ -257,6 +283,7 @@ export function SelectorFechaFiltro({ valorActual, onChange }: SelectorFechaFilt
             </div>
           </div>
         </div>
+        </>
       )}
     </div>
   );

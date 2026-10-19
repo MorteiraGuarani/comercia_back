@@ -10,7 +10,7 @@ export const btnPrimary =
   "inline-flex min-h-11 items-center justify-center rounded-xl border border-brand-800 bg-brand-700 px-4 py-2.5 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-brand-800 focus:outline-none focus:ring-2 focus:ring-focus focus:ring-offset-2 focus:ring-offset-surface active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0";
 
 export const btnGhost =
-  "inline-flex min-h-11 items-center justify-center rounded-xl border border-control-line bg-surface-raised px-4 py-2 text-sm font-semibold text-foreground transition hover:border-brand-500 hover:bg-surface-soft focus:outline-none focus:ring-2 focus:ring-focus focus:ring-offset-2 focus:ring-offset-surface";
+  "inline-flex min-h-11 items-center justify-center rounded-xl border border-control-line bg-surface-raised px-4 py-2 text-sm font-semibold text-foreground transition hover:border-brand-500 hover:bg-surface-soft focus:outline-none focus:ring-2 focus:ring-focus focus:ring-offset-2 focus:ring-offset-surface cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-control-line disabled:hover:bg-surface-raised";
 
 export const errorBox =
   "rounded-xl border border-red-300 bg-red-50 px-3.5 py-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-100";

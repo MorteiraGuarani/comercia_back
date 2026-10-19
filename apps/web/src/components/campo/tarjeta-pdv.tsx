@@ -21,9 +21,10 @@ export function TarjetaPdv({
 }: {
   local: LocalCampo;
   ocupado: boolean;
-  onEditar: () => void;
+  /** Sin onEditar/onEliminar la tarjeta queda en solo lectura. */
+  onEditar?: () => void;
   onRuta: () => void;
-  onEliminar: () => void;
+  onEliminar?: () => void;
 }) {
   const asignaciones = local.asignaciones ?? [];
   return (
@@ -89,7 +90,9 @@ export function TarjetaPdv({
         </div>
 
         <div className="mt-3 flex items-center gap-2 border-t border-line/70 pt-2.5">
-          <BotonEditar onClick={onEditar} etiqueta={`Editar local ${local.nombre}`} modo="texto" className="flex-1" />
+          {onEditar ? (
+            <BotonEditar onClick={onEditar} etiqueta={`Editar local ${local.nombre}`} modo="texto" className="flex-1" />
+          ) : null}
           <button
             type="button"
             onClick={onRuta}
@@ -98,7 +101,9 @@ export function TarjetaPdv({
             <IconoPlanificacion className="h-4 w-4" />
             Ruta
           </button>
-          <BotonEliminarCampo onClick={onEliminar} etiqueta={`Eliminar local ${local.nombre}`} disabled={ocupado} />
+          {onEliminar ? (
+            <BotonEliminarCampo onClick={onEliminar} etiqueta={`Eliminar local ${local.nombre}`} disabled={ocupado} />
+          ) : null}
         </div>
       </div>
     </article>

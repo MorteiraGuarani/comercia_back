@@ -114,6 +114,12 @@ function contexto(rol: string, equipo: DestinatarioTareaCampo) {
     }),
     local: jest.fn().mockResolvedValue({ id: 20 }),
   };
+  // Las altas y ediciones pasan por administrar(), que valida igual que gestionar().
+  Object.assign(acceso, {
+    administrar: jest.fn((usuarioId: number, pagina: string): unknown =>
+      acceso.gestionar(usuarioId, pagina),
+    ),
+  });
   return {
     prisma,
     catalogo: new CatalogoCampoService(
@@ -248,6 +254,12 @@ describe('Roles sin nombre conocido', () => {
         equipoCampo: null,
       }),
     };
+    // Las altas y ediciones pasan por administrar(), que valida igual que gestionar().
+    Object.assign(acceso, {
+      administrar: jest.fn((usuarioId: number, pagina: string): unknown =>
+        acceso.gestionar(usuarioId, pagina),
+      ),
+    });
     const catalogo = new CatalogoCampoService(
       prisma as unknown as PrismaService,
       acceso as unknown as CampoAccesoService,

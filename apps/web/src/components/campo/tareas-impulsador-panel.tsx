@@ -2,7 +2,12 @@
 import dynamic from "next/dynamic";
 import { RUTA } from "@/utils/estado-jornada";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { apiFetch } from "@/lib/api";
 import { enviarAccionTarea } from "@/lib/pendientes-tareas";
 import { usePanel } from "@/components/panel/contexto";
@@ -16,10 +21,7 @@ import { TOKENS } from "./tokens";
 import { StatusStamp } from "./ui/status-stamp";
 import { StatChip } from "./ui/stat-chip";
 import { TopBar } from "./ui/top-bar";
-import {
-  SelectorFechaFiltro,
-  type PeriodoFiltro,
-} from "./ui/selector-fecha-filtro";
+import { SelectorFechaFiltro, type PeriodoFiltro } from "./ui/selector-fecha-filtro";
 import { Modal } from "@/components/modal";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { SubidorFotos } from "./subidor-fotos";
@@ -27,8 +29,6 @@ import { PanelComentarios } from "./panel-comentarios";
 import { Paginacion } from "@/components/paginacion";
 import type { RespuestaPaginada } from "@/types/paginacion";
 import { IconoAlerta, IconoCamara, IconoMensaje } from "./ui/iconos-campo";
-import { crearNovedadCampo } from "@/lib/api-adjuntos-campo";
-import { SelectorFotosCampo } from "./selector-fotos-campo";
 import { VisitaRepositor } from "./visita-repositor";
 import type {
   AgendaCampo,
@@ -36,8 +36,8 @@ import type {
   TareaJornadaCampo,
   TareasDeAsignacion,
   VisitaCampo,
-  TipoNovedad,
 } from "@/types/campo";
+import { ModalNovedadLocal } from "./modal-novedad-local";
 
 // Leaflet solo se descarga al abrir un mapa.
 const MapaLocal = dynamic(
@@ -104,13 +104,6 @@ export function TareasImpulsadorPanel({
     tareaId: number;
     nombreTarea: string;
   } | null>(null);
-  const [tipoNovedad, setTipoNovedad] = useState<TipoNovedad>("INCIDENCIA");
-  const [tituloNovedad, setTituloNovedad] = useState("");
-  const [descNovedad, setDescNovedad] = useState("");
-  const [fotosNovedad, setFotosNovedad] = useState<File[]>([]);
-  const [guardandoNovedad, setGuardandoNovedad] = useState(false);
-  const [novedadExito, setNovedadExito] = useState(false);
-  const [errorNovedad, setErrorNovedad] = useState("");
   const [errorAccion, setErrorAccion] = useState("");
 
   // Tareas por local
@@ -281,41 +274,6 @@ export function TareasImpulsadorPanel({
     }
   };
 
-  const enviarNovedad = async () => {
-    if (
-      !novedadTarea ||
-      !tituloNovedad.trim() ||
-      !descNovedad.trim() ||
-      guardandoNovedad
-    )
-      return;
-    try {
-      setGuardandoNovedad(true);
-      setErrorNovedad("");
-      await crearNovedadCampo(
-        {
-          localId: novedadTarea.localId,
-          tareaId: novedadTarea.tareaId,
-          tipo: tipoNovedad,
-          titulo: tituloNovedad.trim(),
-          descripcion: descNovedad.trim(),
-          visitaId:
-            abierta?.local.id === novedadTarea.localId ? abierta.id : undefined,
-        },
-        fotosNovedad,
-      );
-      setNovedadExito(true);
-      setTituloNovedad("");
-      setDescNovedad("");
-      setFotosNovedad([]);
-    } catch (e: unknown) {
-      setErrorNovedad(
-        e instanceof Error ? e.message : "No se pudo enviar la novedad",
-      );
-    } finally {
-      setGuardandoNovedad(false);
-    }
-  };
 
   // Visita abierta de hoy (vista del repositor)
   const agendaVisita = abierta
@@ -413,8 +371,6 @@ export function TareasImpulsadorPanel({
             }
             onNovedad={(t) => {
               if (!agendaVisita) return;
-              setNovedadExito(false);
-              setErrorNovedad("");
               setNovedadTarea({
                 localId: agendaVisita.local.id,
                 tareaId: t.id,
@@ -595,8 +551,6 @@ export function TareasImpulsadorPanel({
                             <button
                               type="button"
                               onClick={() => {
-                                setNovedadExito(false);
-                                setErrorNovedad("");
                                 setNovedadTarea({
                                   localId: ag.local.id,
                                   tareaId: t.id,
@@ -724,16 +678,7 @@ export function TareasImpulsadorPanel({
       </div>
         </>
       )}
-      <PantallaCarga
-        visible={!!completandoId || guardandoNovedad}
-        mensaje={
-          guardandoNovedad && fotosNovedad.length
-            ? "Enviando novedad y subiendo fotos"
-            : guardandoNovedad
-              ? "Enviando novedad"
-              : "Completando tarea"
-        }
-      />
+      <PantallaCarga visible={!!completandoId} mensaje="Completando tarea" />
 
       {mapaLocal ? (
         <MapaLocal local={mapaLocal} cerrar={() => setMapaLocal(null)} />
@@ -773,126 +718,21 @@ export function TareasImpulsadorPanel({
       )}
 
       {/* Modal Reportar Novedad sobre Tarea */}
-      {novedadTarea && (
-        <Modal
-          titulo={`Reportar Novedad · ${novedadTarea.nombreTarea}`}
-          abierto={!!novedadTarea}
-          onCerrar={() => {
-            if (!guardandoNovedad) {
-              setNovedadTarea(null);
-              setFotosNovedad([]);
-            }
+      {novedadTarea ? (
+        <ModalNovedadLocal
+          local={{
+            id: novedadTarea.localId,
+            nombre:
+              agendas.find((ag) => ag.local.id === novedadTarea.localId)?.local
+                .nombre ?? "Local",
           }}
-          ancho="md"
-        >
-          {novedadExito ? (
-            <div className="py-6 text-center text-emerald-700 space-y-2">
-              <p className="ft-display text-xl font-bold">
-                ¡Novedad enviada con éxito!
-              </p>
-              <p className="ft-body text-xs text-muted">
-                Tu reporte quedó registrado para el equipo.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {errorNovedad && (
-                <p
-                  role="alert"
-                  className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-200"
-                >
-                  {errorNovedad}
-                </p>
-              )}
-              <p className="ft-body text-xs text-muted">
-                Detallá el motivo o inconveniente para realizar la tarea «
-                {novedadTarea.nombreTarea}».
-              </p>
-
-              <div>
-                <label className="block text-xs font-semibold text-foreground mb-1">
-                  Tipo:
-                </label>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {(
-                    ["INCIDENCIA", "RECLAMO", "CONSULTA", "SUGERENCIA"] as const
-                  ).map((t) => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => setTipoNovedad(t)}
-                      className={`py-1.5 px-2 rounded-md text-xs font-semibold border transition cursor-pointer ${
-                        tipoNovedad === t
-                          ? "bg-zinc-900 text-white border-zinc-900"
-                          : "bg-surface-raised text-foreground border-line"
-                      }`}
-                    >
-                      {t}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-foreground mb-1">
-                  Asunto:
-                </label>
-                <input
-                  type="text"
-                  value={tituloNovedad}
-                  onChange={(e) => setTituloNovedad(e.target.value)}
-                  placeholder="Ej: Falta de stock para reposición"
-                  className="w-full text-xs p-2.5 rounded-lg border border-line bg-surface-raised outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-foreground mb-1">
-                  Descripción detallada:
-                </label>
-                <textarea
-                  value={descNovedad}
-                  onChange={(e) => setDescNovedad(e.target.value)}
-                  rows={3}
-                  placeholder="Detallá el motivo..."
-                  className="w-full text-xs p-2.5 rounded-lg border border-line bg-surface-raised outline-none"
-                />
-              </div>
-
-              <SelectorFotosCampo
-                archivos={fotosNovedad}
-                onChange={setFotosNovedad}
-                disabled={guardandoNovedad}
-              />
-
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setNovedadTarea(null);
-                    setFotosNovedad([]);
-                  }}
-                  className="flex-1 py-2 text-xs font-semibold border rounded-lg text-foreground"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={enviarNovedad}
-                  disabled={
-                    !tituloNovedad.trim() ||
-                    !descNovedad.trim() ||
-                    guardandoNovedad
-                  }
-                  className="flex-1 py-2 text-xs font-bold bg-[#1E2320] text-white rounded-lg hover:bg-black transition disabled:opacity-50 cursor-pointer"
-                >
-                  {guardandoNovedad ? "Enviando..." : "Enviar Novedad"}
-                </button>
-              </div>
-            </div>
-          )}
-        </Modal>
-      )}
+          tarea={{ id: novedadTarea.tareaId, nombre: novedadTarea.nombreTarea }}
+          visitaId={
+            abierta?.local.id === novedadTarea.localId ? abierta.id : undefined
+          }
+          cerrar={() => setNovedadTarea(null)}
+        />
+      ) : null}
     </div>
   );
 }

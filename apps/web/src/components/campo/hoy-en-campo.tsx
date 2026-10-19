@@ -27,7 +27,13 @@ import {
   IconoTelefono,
 } from "./ui/iconos-campo";
 import { RUTA } from "@/utils/estado-jornada";
-import { fechaEnZonaIso, formatoDiaLargo, formatoHora, horaOFechaCorta } from "@/utils/fechas";
+import { fechaEnZonaIso, formatoHora, horaOFechaCorta, textoRangoFechas } from "@/utils/fechas";
+import {
+  consultaPeriodoInicio,
+  cuandoPeriodoInicio,
+  rangoPeriodoInicio,
+} from "@/utils/periodo-inicio";
+import { SelectorPeriodoInicio } from "./ui/periodo-inicio";
 import {
   conAlertas,
   filtrarEquipo,
@@ -50,6 +56,7 @@ import type {
   HojaHoy,
   IndicadorHoy,
   ItemAtencionHoy,
+  PeriodoInicio,
   TonoHoy,
 } from "@/types/hoy-en-campo";
 
@@ -92,14 +99,28 @@ export function HoyEnCampo() {
     modulos.some((m) => m.ruta === modulo && m.paginas.some((p) => p.ruta === pagina));
   const verNovedades = tienePagina("gestion-campo", "novedades");
   const hoy = fechaEnZonaIso(new Date());
+  const [periodo, setPeriodo] = useState<PeriodoInicio>("hoy");
+  const consulta = consultaPeriodoInicio(periodo, hoy);
+  const rango = rangoPeriodoInicio(periodo, hoy);
+  const cuando = cuandoPeriodoInicio(periodo);
 
   const [revision, setRevision] = useState(0);
   const [terminada, setTerminada] = useState(-1);
-  const claveCache = `hoy|${usuario.id}|${hoy}`;
-  // Lo último que se vio hoy en esta pestaña aparece enseguida.
+  const claveCache = `hoy|${usuario.id}|${consulta}`;
+  // Lo último que se vio de este período en esta pestaña aparece enseguida.
   const [datos, setDatos] = useState<DatosHoy | null>(
     () => leerCacheSesion<DatosHoy>(claveCache)?.valor ?? null,
   );
+  const cambiarPeriodo = (nuevo: PeriodoInicio) => {
+    if (nuevo === periodo) return;
+    setPeriodo(nuevo);
+    // No mezclar los números de otro período mientras llegan los nuevos.
+    setDatos(
+      leerCacheSesion<DatosHoy>(
+        `hoy|${usuario.id}|${consultaPeriodoInicio(nuevo, hoy)}`,
+      )?.valor ?? null,
+    );
+  };
   const [error, setError] = useState("");
   const [pila, setPila] = useState<HojaHoy[]>([]);
   const [filtro, setFiltro] = useState<FiltroEquipoHoy>("todos");
@@ -112,7 +133,7 @@ export function HoyEnCampo() {
     const controller = new AbortController();
     const opciones = { signal: controller.signal };
     const pedidoResumen = apiFetch<SupervisionResumenData>(
-      `/campo/supervision/resumen?fecha=${fechaEnZonaIso(new Date())}`,
+      `/campo/supervision/resumen?${consulta}`,
       opciones,
     );
     const pedidoNovedades = verNovedades
@@ -154,7 +175,7 @@ export function HoyEnCampo() {
         if (!controller.signal.aborted) setTerminada(revision);
       });
     return () => controller.abort();
-  }, [revision, verNovedades, claveCache]);
+  }, [revision, verNovedades, claveCache, consulta]);
 
   // Se actualiza solo cada 5 minutos mientras la pestaña está visible.
   useEffect(() => {
@@ -186,15 +207,16 @@ export function HoyEnCampo() {
         : "Novedad";
 
   return (
-    <section aria-label="Hoy en campo" className="min-w-0 space-y-4 sm:space-y-5">
+    <section aria-label="Inicio del equipo" className="min-w-0 space-y-4 sm:space-y-5">
       <EncabezadoTablero
         rotulo={`${usuario.rol?.descripcion ?? "Supervisión"} · ${usuario.empresa.nombre}`}
-        titulo="Hoy en campo"
-        subtitulo={`${formatoDiaLargo(hoy)}${resumen ? ` · ${resumen.presentismo.totalEquipo} personas en tu equipo · ${resumen.rutas.total} visitas` : ""}`}
+        titulo={`${cuando.charAt(0).toUpperCase()}${cuando.slice(1)} en campo`}
+        subtitulo={`${textoRangoFechas(rango.desde, rango.hasta)}${resumen ? ` · ${resumen.presentismo.totalEquipo} personas en tu equipo · ${resumen.rutas.total} visitas` : ""}`}
         cargando={cargando}
         actualizado={datos ? formatoHora(datos.actualizado) : null}
         onActualizar={actualizar}
       />
+      <SelectorPeriodoInicio valor={periodo} onCambiar={cambiarPeriodo} />
 
       {error ? (
         <p role="alert" className="rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-100">
@@ -208,27 +230,30 @@ export function HoyEnCampo() {
       {!resumen ? (
         cargando ? (
           <p role="status" className="py-8 text-center text-sm text-muted">
-            Cargando el día de tu equipo…
+            Cargando los datos de tu equipo…
           </p>
         ) : null
       ) : (
         <>
           <div>
             <p className="mb-2 flex items-baseline justify-between gap-2 px-0.5">
-              <span className="text-[11px] font-bold uppercase tracking-wide text-muted">Indicadores del día</span>
+              <span className="text-[11px] font-bold uppercase tracking-wide text-muted">
+                {periodo === "hoy" ? "Indicadores del día" : `Indicadores · ${cuando}`}
+              </span>
               <span className="text-[11px] text-muted sm:text-xs">Tocá para ver el detalle</span>
             </p>
             <Indicadores
               resumen={resumen}
               novedades={datos?.novedades ?? []}
               abiertas={datos?.abiertas ?? null}
+              cuando={cuando}
               onAbrir={(indicador) => abrir({ tipo: "indicador", indicador })}
             />
           </div>
 
           <div className="grid min-w-0 gap-4 lg:grid-cols-2 lg:items-start">
             <SeccionTablero
-              titulo="Atender ahora"
+              titulo={periodo === "hoy" ? "Atender ahora" : "Para revisar"}
               resumen={atender.length ? `${atender.length} pendientes` : "Todo en orden"}
               destacado={atender.some((a) => a.tono === "bad")}
             >
@@ -264,7 +289,11 @@ export function HoyEnCampo() {
                   </button>
                 ))}
               </div>
-              <ListaEquipo equipo={visibles} onAbrir={(id) => abrir({ tipo: "persona", id })} />
+              <ListaEquipo
+                equipo={visibles}
+                cuando={cuando}
+                onAbrir={(id) => abrir({ tipo: "persona", id })}
+              />
             </SeccionTablero>
           </div>
         </>
@@ -298,7 +327,12 @@ export function HoyEnCampo() {
                 onAbrir={abrir}
               />
             ) : hoja.tipo === "persona" ? (
-              <HojaColaborador id={hoja.id} item={personaHoja} fecha={hoy} />
+              <HojaColaborador
+                id={hoja.id}
+                item={personaHoja}
+                consulta={consulta}
+                cuando={cuando}
+              />
             ) : (
               <HiloNovedad id={hoja.id} onActualizado={actualizar} />
             )}
@@ -313,11 +347,14 @@ function Indicadores({
   resumen,
   novedades,
   abiertas,
+  cuando,
   onAbrir,
 }: {
   resumen: SupervisionResumenData;
   novedades: NovedadCampoItem[];
   abiertas: number | null;
+  /** "hoy", "ayer", "esta semana"… */
+  cuando: string;
   onAbrir: (indicador: IndicadorHoy) => void;
 }) {
   const e = resumen.presentismo.estados;
@@ -429,7 +466,7 @@ function Indicadores({
       valor: (
         <>
           {abiertas ?? reportadasHoy}
-          <small className="text-base font-semibold text-muted">{abiertas !== null ? " abiertas" : " hoy"}</small>
+          <small className="text-base font-semibold text-muted">{abiertas !== null ? " abiertas" : ` ${cuando}`}</small>
         </>
       ),
       barra: (
@@ -445,7 +482,7 @@ function Indicadores({
       nota: (
         <>
           {criticas ? <span className="font-semibold text-red-700 dark:text-red-300">{criticas} crítica{criticas > 1 ? "s" : ""} · </span> : null}
-          {reportadasHoy} reportada{reportadasHoy === 1 ? "" : "s"} hoy
+          {reportadasHoy} reportada{reportadasHoy === 1 ? "" : "s"} {cuando}
         </>
       ),
     },
@@ -529,9 +566,11 @@ function MiniBarra({ etiqueta, hechas, total, segmentos }: { etiqueta: string; h
 
 function ListaEquipo({
   equipo,
+  cuando,
   onAbrir,
 }: {
   equipo: ColaboradorResumen[];
+  cuando: string;
   onAbrir: (id: number) => void;
 }) {
   if (!equipo.length)
@@ -560,7 +599,7 @@ function ListaEquipo({
                   {c.novedadesCount ? (
                     <span
                       className="inline-flex items-center gap-0.5 rounded-md bg-sky-100 px-1.5 text-[11px] font-bold text-sky-800 dark:bg-sky-950/60 dark:text-sky-300"
-                      title={`${c.novedadesCount} novedades reportadas hoy`}
+                      title={`${c.novedadesCount} novedades reportadas ${cuando}`}
                     >
                       <IconoAlerta className="h-3 w-3" />
                       {c.novedadesCount}
@@ -877,11 +916,14 @@ function DetalleIndicador({
 function HojaColaborador({
   id,
   item,
-  fecha,
+  consulta,
+  cuando,
 }: {
   id: number;
   item: ColaboradorResumen | null;
-  fecha: string;
+  /** Parámetros de fecha del período ("fecha=…" o "fechaInicio=…&fechaFin=…"). */
+  consulta: string;
+  cuando: string;
 }) {
   const [detalle, setDetalle] = useState<ColaboradorDetalleData | null>(null);
   const [error, setError] = useState("");
@@ -889,7 +931,7 @@ function HojaColaborador({
   useEffect(() => {
     const controller = new AbortController();
     apiFetch<ColaboradorDetalleData>(
-      `/campo/supervision/colaboradores/${id}?fecha=${fecha}`,
+      `/campo/supervision/colaboradores/${id}?${consulta}`,
       { signal: controller.signal },
     )
       .then((d) => {
@@ -900,7 +942,7 @@ function HojaColaborador({
           setError(e instanceof Error ? e.message : "No se pudo cargar el detalle");
       });
     return () => controller.abort();
-  }, [id, fecha]);
+  }, [id, consulta]);
 
   const telefono = detalle?.colaborador.telefono ?? item?.telefono ?? "";
 
@@ -925,7 +967,7 @@ function HojaColaborador({
             ["Visitas", `${item.ruta.completadas} de ${item.ruta.total}`],
             ["Tareas", `${item.tareas.completadas} de ${item.tareas.total}`],
             ["Obligatorias pend.", String(item.tareas.obligPendientes)],
-            ["Novedades hoy", String(item.novedadesCount)],
+            [`Novedades ${cuando}`, String(item.novedadesCount)],
           ].map(([k, v]) => (
             <div key={k} className="min-w-0 rounded-xl border border-line bg-surface-raised px-3 py-2">
               <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-muted">{k}</p>
@@ -964,7 +1006,7 @@ function HojaColaborador({
                 </div>
               ))
             ) : (
-              <p className="text-sm text-muted">Sin locales en la agenda de hoy.</p>
+              <p className="text-sm text-muted">Sin locales en la agenda de {cuando}.</p>
             )}
           </div>
           {detalle.novedades.length ? (

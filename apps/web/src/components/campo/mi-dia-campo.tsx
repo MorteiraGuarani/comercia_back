@@ -25,7 +25,13 @@ import {
   IconoTienda,
 } from "./ui/iconos-campo";
 import { RUTA } from "@/utils/estado-jornada";
-import { fechaEnZonaIso, formatoDiaLargo, formatoHora } from "@/utils/fechas";
+import { fechaEnZonaIso, formatoHora, textoRangoFechas } from "@/utils/fechas";
+import {
+  consultaPeriodoInicio,
+  cuandoPeriodoInicio,
+  rangoPeriodoInicio,
+} from "@/utils/periodo-inicio";
+import { SelectorPeriodoInicio } from "./ui/periodo-inicio";
 import { pct, resumenMiDia } from "@/utils/hoy-en-campo";
 import { tareaCumplidaEnVisita } from "@/utils/tareas-campo";
 import type {
@@ -36,6 +42,7 @@ import type {
   VisitaCampo,
 } from "@/types/campo";
 import type { RespuestaPaginada } from "@/types/paginacion";
+import type { PeriodoInicio } from "@/types/hoy-en-campo";
 
 // Inicio del repositor o impulsador: los mismos indicadores del supervisor,
 // pero solo con su propio día (ruta, presentismo, tareas y novedades).
@@ -66,10 +73,20 @@ export function MiDiaCampo() {
   const rutaNovedades = pagina("novedades") ? "/panel/mi-jornada/novedades" : null;
   const rutaAvisos = pagina("avisos") ? "/panel/mi-jornada/avisos" : null;
   const hoy = fechaEnZonaIso(new Date());
+  const [periodo, setPeriodo] = useState<PeriodoInicio>("hoy");
+  const consulta = consultaPeriodoInicio(periodo, hoy);
+  const rango = rangoPeriodoInicio(periodo, hoy);
+  const cuando = cuandoPeriodoInicio(periodo);
 
   const [revision, setRevision] = useState(0);
   const [terminada, setTerminada] = useState(-1);
   const [datos, setDatos] = useState<DatosMiDia | null>(null);
+  const cambiarPeriodo = (nuevo: PeriodoInicio) => {
+    if (nuevo === periodo) return;
+    setPeriodo(nuevo);
+    // No mezclar los números de otro período mientras llegan los nuevos.
+    setDatos(null);
+  };
   const [error, setError] = useState("");
   const cargando = terminada !== revision;
   const actualizar = () => setRevision((n) => n + 1);
@@ -80,7 +97,7 @@ export function MiDiaCampo() {
     const fecha = fechaEnZonaIso(new Date());
     async function cargar() {
       const [agenda, abierta, novedades, avisos] = await Promise.all([
-        apiFetch<RespuestaPaginada<AgendaCampo>>(`/campo/jornada?fecha=${fecha}&page=1&limit=50`, opciones),
+        apiFetch<RespuestaPaginada<AgendaCampo>>(`/campo/jornada?${consulta}&page=1&limit=50`, opciones),
         apiFetch<VisitaCampo | null>("/campo/jornada/abierta", opciones),
         rutaNovedades
           ? apiFetch<NovedadesResponse>("/campo/novedades?estado=ABIERTA&page=1&limit=1", opciones).catch(() => null)
@@ -120,7 +137,7 @@ export function MiDiaCampo() {
         if (!controller.signal.aborted) setTerminada(revision);
       });
     return () => controller.abort();
-  }, [revision, rutaNovedades, rutaAvisos]);
+  }, [revision, rutaNovedades, rutaAvisos, consulta]);
 
   // Se actualiza solo cada 5 minutos mientras la pestaña está visible.
   useEffect(() => {
@@ -151,11 +168,12 @@ export function MiDiaCampo() {
       <EncabezadoTablero
         rotulo={`${usuario.rol?.descripcion ?? "Mi jornada"} · ${usuario.empresa.nombre}`}
         titulo={nombre ? `¡Hola, ${nombre}!` : "Tu día"}
-        subtitulo={`${formatoDiaLargo(hoy)}${datos ? ` · ${r.total} ${r.total === 1 ? "local" : "locales"} en tu ruta` : ""}`}
+        subtitulo={`${textoRangoFechas(rango.desde, rango.hasta)}${datos ? ` · ${r.total} ${r.total === 1 ? "local" : "locales"} en tu ruta` : ""}`}
         cargando={cargando}
         actualizado={datos ? formatoHora(datos.actualizado) : null}
         onActualizar={actualizar}
       />
+      <SelectorPeriodoInicio valor={periodo} onCambiar={cambiarPeriodo} />
 
       {error ? (
         <p role="alert" className="rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-100">
@@ -176,7 +194,7 @@ export function MiDiaCampo() {
         <>
           <div>
             <p className="mb-2 flex items-baseline justify-between gap-2 px-0.5">
-              <span className="text-[11px] font-bold uppercase tracking-wide text-muted">Tus indicadores de hoy</span>
+              <span className="text-[11px] font-bold uppercase tracking-wide text-muted">Tus indicadores de {cuando}</span>
               <span className="text-[11px] text-muted sm:text-xs">Tocá para ir al detalle</span>
             </p>
             <div className="grid min-w-0 grid-cols-2 gap-2.5 lg:grid-cols-4 lg:gap-3">
@@ -226,7 +244,7 @@ export function MiDiaCampo() {
                       Primera entrada <b className="font-mono text-foreground">{formatoHora(r.primeraEntrada)}</b>
                     </>
                   ) : (
-                    "Todavía no marcaste entrada hoy"
+                    "Todavía no marcaste entrada " + cuando
                   )
                 }
               />
@@ -397,7 +415,7 @@ export function MiDiaCampo() {
               </ListaAtencion>
             </SeccionTablero>
 
-            <SeccionTablero titulo="Tu ruta de hoy" resumen={`${r.completadas} de ${r.total} visitados`}>
+            <SeccionTablero titulo={`Tu ruta de ${cuando}`} resumen={`${r.completadas} de ${r.total} visitados`}>
               {agenda.length ? (
                 <ul className="overflow-hidden rounded-2xl border border-line bg-surface-raised shadow-[0_2px_8px_rgba(var(--warm-shadow),0.06)]">
                   {agenda.slice(0, 8).map((a, i) => (
@@ -420,7 +438,7 @@ export function MiDiaCampo() {
                 </ul>
               ) : (
                 <p className="rounded-xl border border-dashed border-line p-4 text-center text-sm text-muted">
-                  No tenés locales asignados para hoy.
+                  No tenés locales asignados para {cuando}.
                 </p>
               )}
               {rutaRuta && agenda.length ? (
