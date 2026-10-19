@@ -1,4 +1,4 @@
-import { parseCorsOrigins } from './env.schema';
+import { parseCorsOrigins, parseTrustProxy } from './env.schema';
 
 export default () => ({
   app: {
@@ -16,6 +16,7 @@ export default () => ({
   security: {
     throttleTtl: Number(process.env.THROTTLE_TTL),
     throttleLimit: Number(process.env.THROTTLE_LIMIT),
+    trustProxy: parseTrustProxy(process.env.TRUST_PROXY ?? ''),
   },
   integrations: {
     ucheckSecret: process.env.UCHECK_INTEGRATION_SECRET,

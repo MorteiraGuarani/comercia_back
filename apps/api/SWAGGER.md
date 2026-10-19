@@ -137,3 +137,19 @@ Reenviar el mismo lote es seguro: los existentes se omiten sin modificarlos.
 
 La sección **Precios especiales** conserva sus permisos de superadmin y su
 contrato propio; no forma parte de la etiqueta **Productos y precios**.
+
+## Inventario del impulsador
+
+`GET /api/v1/campo/inventario/items` requiere sesión y acceso a la página
+**Mi jornada · Inventario** (migración
+`20261016150000_pagina_inventario_mi_jornada`). Devuelve todas las filas de
+`tbl_itm1` de la empresa del usuario, sin filtrar: un artículo aparece una vez
+por cada lista de precios, ordenado por código y lista
+(`{ items: [{ id, itemcode, itemname, pricelist, pricelistname, price }], total }`).
+`id` y `price` viajan como texto, igual que en Productos y precios.
+
+Es una excepción a la paginación obligatoria, por pedido explícito del usuario:
+la web guarda el catálogo completo en IndexedDB con Dexie para usarlo sin
+conexión. Tiene un tope de 50.000 artículos y responde 413 antes que truncar.
+La web lo renueva al menos una vez por día calendario y reemplaza la copia
+anterior solo cuando la descarga terminó.

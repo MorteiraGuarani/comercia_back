@@ -22,6 +22,9 @@ const rawEnvSchema = z
     CORS_ORIGINS: z.string().default('http://localhost:3000'),
     THROTTLE_TTL: z.coerce.number().int().min(1000).default(60000),
     THROTTLE_LIMIT: z.coerce.number().int().min(1).default(100),
+    // Proxies de confianza para leer la IP real (sintaxis de Express "trust
+    // proxy"). Vacío: se usa la IP de la conexión.
+    TRUST_PROXY: z.string().default(''),
     HTTP_BODY_LIMIT_MB: z.coerce.number().int().min(1).max(256).default(50),
     SWAGGER_ENABLED: booleanFromString.default(true),
     COOKIE_SECRET: z.string().min(32).optional(),
@@ -55,6 +58,17 @@ export function parseCorsOrigins(value: string): string[] {
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
+}
+
+// "" o "false": desactivado; "true": cualquier proxy (inseguro si la API
+// también se publica directo); número: saltos; resto: IPs, subredes o
+// nombres de Express ("loopback, linklocal, uniquelocal").
+export function parseTrustProxy(value: string): boolean | number | string {
+  const valor = value.trim();
+  if (!valor || valor.toLowerCase() === 'false') return false;
+  if (valor.toLowerCase() === 'true') return true;
+  if (/^\d+$/.test(valor)) return Number(valor);
+  return valor;
 }
 
 export function validateEnv(config: Record<string, unknown>): Env {

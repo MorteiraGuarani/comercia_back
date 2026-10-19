@@ -15,6 +15,9 @@ async function bootstrap() {
   const corsOrigins = configService.getOrThrow<string[]>('app.corsOrigins');
   const cookieSecret = configService.get<string>('app.cookieSecret');
 
+  // IP real del cliente detrás de Caddy u otro proxy (opcional, ver ENV.md).
+  app.set('trust proxy', configService.get('security.trustProxy') ?? false);
+
   app.setGlobalPrefix('api');
   app.enableVersioning({
     type: VersioningType.URI,

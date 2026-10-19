@@ -2,7 +2,9 @@ import { Module } from '@nestjs/common';
 import { ToleranciasModule } from './tolerancias/tolerancias.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
+import { JwtService } from '@nestjs/jwt';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { rastreoPorSesion } from './auth/utils/rastreo-limite';
 import { config as cargarEnv } from 'dotenv';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -20,6 +22,7 @@ import { RolesModule } from './roles/roles.module';
 import { ProductosModule } from './productos/productos.module';
 import { CampoModule } from './campo/campo.module';
 import { IntegracionesUcheckModule } from './integraciones-ucheck/integraciones-ucheck.module';
+import { InventarioModule } from './inventario/inventario.module';
 
 const usaBaseProduccion = process.env.COMERCIA_DATABASE_TARGET === 'production';
 
@@ -46,13 +49,18 @@ if (process.env.NODE_ENV !== 'production' && !usaBaseProduccion) {
       load: [configuration],
     }),
     ThrottlerModule.forRootAsync({
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => [
-        {
-          ttl: configService.getOrThrow<number>('security.throttleTtl'),
-          limit: configService.getOrThrow<number>('security.throttleLimit'),
-        },
-      ],
+      imports: [AuthModule],
+      inject: [ConfigService, JwtService],
+      useFactory: (configService: ConfigService, jwt: JwtService) => ({
+        throttlers: [
+          {
+            ttl: configService.getOrThrow<number>('security.throttleTtl'),
+            limit: configService.getOrThrow<number>('security.throttleLimit'),
+          },
+        ],
+        // Por usuario con sesión válida; por IP sin sesión (ver rastreo-limite).
+        getTracker: rastreoPorSesion(jwt),
+      }),
     }),
     PrismaModule,
     HealthModule,
@@ -61,6 +69,7 @@ if (process.env.NODE_ENV !== 'production' && !usaBaseProduccion) {
     RolesModule,
     ProductosModule,
     CampoModule,
+    InventarioModule,
     IntegracionesUcheckModule,
     PlataformaModule,
     UsuariosModule,

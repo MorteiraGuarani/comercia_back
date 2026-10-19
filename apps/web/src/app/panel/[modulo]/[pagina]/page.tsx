@@ -38,6 +38,14 @@ const NovedadesPanel = dynamic(() =>
 const AvisosPanel = dynamic(() =>
   import("@/components/campo/avisos-panel").then((m) => m.AvisosPanel),
 );
+// Usa IndexedDB (Dexie): se renderiza solo en el navegador.
+const InventarioPanel = dynamic(
+  () =>
+    import("@/components/campo/inventario-panel").then(
+      (m) => m.InventarioPanel,
+    ),
+  { ssr: false },
+);
 
 export default function PaginaModulo({
   params,
@@ -89,6 +97,7 @@ export default function PaginaModulo({
       );
     if (pagina === "novedades") return <NovedadesPanel esImpulsador={true} />;
     if (pagina === "avisos") return <AvisosPanel esImpulsador={true} />;
+    if (pagina === "inventario") return <InventarioPanel />;
     if (pagina === "agenda")
       return usuario.rol?.equipoCampo?.activo &&
         usuario.rol.equipoCampo.tipo === "REPOSITOR" ? (

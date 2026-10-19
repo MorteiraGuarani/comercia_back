@@ -112,6 +112,10 @@
 - **Default 7 registros por página, máximo 50** (constantes del helper — no
   hardcodear otros valores).
 - Prohibido `findMany` sin `take` en endpoints que respondan al front.
+- **Excepción por petición explícita del usuario**: `GET /campo/inventario/items`
+  devuelve todos los artículos de la empresa (`{ items, total }`), sin
+  paginar, para guardarlo sin conexión en el navegador. Conserva un tope de
+  seguridad (`LIMITE_ITEMS_INVENTARIO`) y responde 413 en vez de truncar.
 - El front consume esto con el componente `apps/web/src/components/paginacion.tsx`
   y el tipo `RespuestaPaginada<T>` (regla espejo en `apps/web/AGENTS.md`).
 
