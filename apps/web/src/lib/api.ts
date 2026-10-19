@@ -21,10 +21,34 @@ function extraerMensaje(data: unknown): string | null {
   return null;
 }
 
+// Un corte breve (túnel a la base, señal móvil) suele resolverse en segundos:
+// las lecturas se reintentan una vez antes de mostrar el error.
+const ESTADOS_REINTENTABLES = new Set([0, 502, 503, 504]);
+const ESPERA_REINTENTO_MS = 1500;
+
 export async function apiFetch<T>(
   path: string,
   init?: RequestInit,
 ): Promise<T> {
+  try {
+    return await pedir<T>(path, init);
+  } catch (error) {
+    const lectura = (init?.method ?? "GET").toUpperCase() === "GET";
+    if (
+      !lectura ||
+      !(error instanceof ApiError) ||
+      !ESTADOS_REINTENTABLES.has(error.status) ||
+      init?.signal?.aborted ||
+      (typeof navigator !== "undefined" && navigator.onLine === false)
+    )
+      throw error;
+    await new Promise((resolver) => setTimeout(resolver, ESPERA_REINTENTO_MS));
+    if (init?.signal?.aborted) throw error;
+    return pedir<T>(path, init);
+  }
+}
+
+async function pedir<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {
     const headers = new Headers(init?.headers);

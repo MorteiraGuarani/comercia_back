@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, LazyMotion, m } from "motion/react";
 import { apiFetch } from "@/lib/api";
+import { borrarCacheSesion } from "@/lib/cache-sesion";
 import type { UsuarioSesion } from "@/types/usuario";
 import type { ModuloMenu } from "@/types/plataforma";
 import { BrandMark } from "@/components/auth-shell";
@@ -88,6 +89,7 @@ export default function PanelLayout({
     setCerrandoSesion(true);
     try {
       await apiFetch("/auth/logout", { method: "POST" }).catch(() => undefined);
+      borrarCacheSesion();
       router.replace("/login");
     } finally {
       setCerrandoSesion(false);

@@ -35,20 +35,34 @@ import type {
 
 const SelectorUbicacion = dynamic(() => import("./selector-ubicacion"), {
   ssr: false,
-  loading: () => <p className="text-xs font-mono text-zinc-500 py-4 text-center">Cargando mapa GPS…</p>,
+  loading: () => (
+    <p className="text-xs font-mono text-zinc-500 py-4 text-center">
+      Cargando mapa GPS…
+    </p>
+  ),
 });
-const MapaClientes = dynamic(() => import("./mapa-clientes").then((modulo) => modulo.MapaClientes), {
-  ssr: false,
-  loading: () => <p className="py-4 text-center text-sm text-muted">Cargando mapa de cobertura…</p>,
-});
+const MapaClientes = dynamic(
+  () => import("./mapa-clientes").then((modulo) => modulo.MapaClientes),
+  {
+    ssr: false,
+    loading: () => (
+      <p className="py-4 text-center text-sm text-muted">
+        Cargando mapa de cobertura…
+      </p>
+    ),
+  },
+);
 
 export function LocalesPanel() {
   const [mostrarMapaCobertura, setMostrarMapaCobertura] = useState(false);
   const [busqueda, setBusqueda] = useState("");
   const [clienteFiltro, setClienteFiltro] = useState<number | "">("");
-  const [clienteSeleccionadoFiltro, setClienteSeleccionadoFiltro] = useState<ClienteCampo | null>(null);
+  const [clienteSeleccionadoFiltro, setClienteSeleccionadoFiltro] =
+    useState<ClienteCampo | null>(null);
   const [sinCliente, setSinCliente] = useState(false);
-  const [filtroEstado, setFiltroEstado] = useState<"todos" | "activos" | "inactivos">("todos");
+  const [filtroEstado, setFiltroEstado] = useState<
+    "todos" | "activos" | "inactivos"
+  >("todos");
 
   const [clientes, setClientes] = useState<ClienteCampo[]>([]);
 
@@ -120,7 +134,9 @@ export function LocalesPanel() {
     setForm({
       id: 0,
       clienteId: clienteDefault?.id ?? null,
-      cliente: clienteDefault ? { id: clienteDefault.id, nombre: clienteDefault.nombre } : null,
+      cliente: clienteDefault
+        ? { id: clienteDefault.id, nombre: clienteDefault.nombre }
+        : null,
       nombre: "",
       direccion: "",
       contacto: "",
@@ -146,25 +162,48 @@ export function LocalesPanel() {
         subtitle="Supermercados, carnicerías y bocas de expendio con franjas y asignaciones"
         right={
           <>
-          <button type="button" onClick={() => setMostrarMapaCobertura((actual) => !actual)} aria-pressed={mostrarMapaCobertura} aria-label={mostrarMapaCobertura ? "Ocultar mapa de cobertura" : "Mostrar mapa de cobertura"} title={mostrarMapaCobertura ? "Ocultar mapa de cobertura" : "Mostrar mapa de cobertura"} className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-line bg-surface-raised text-foreground transition hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600">
-            <IconoMapa className="h-5 w-5" />
-          </button>
-          <button
-            type="button"
-            onClick={abrirCrear}
-            aria-label="Crear local"
-            title="Crear local"
-            className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-white shadow-sm transition-all hover:brightness-110 active:scale-95 cursor-pointer"
-            style={{ backgroundColor: TOKENS.carne }}
-          >
-            <IconoMas className="w-4 h-4" />
-          </button>
+            <button
+              type="button"
+              onClick={() => setMostrarMapaCobertura((actual) => !actual)}
+              aria-pressed={mostrarMapaCobertura}
+              aria-label={
+                mostrarMapaCobertura
+                  ? "Ocultar mapa de cobertura"
+                  : "Mostrar mapa de cobertura"
+              }
+              title={
+                mostrarMapaCobertura
+                  ? "Ocultar mapa de cobertura"
+                  : "Mostrar mapa de cobertura"
+              }
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-line bg-surface-raised text-foreground transition hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
+            >
+              <IconoMapa className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={abrirCrear}
+              aria-label="Crear local"
+              title="Crear local"
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-white shadow-sm transition-all hover:brightness-110 active:scale-95 cursor-pointer"
+              style={{ backgroundColor: TOKENS.carne }}
+            >
+              <IconoMas className="w-4 h-4" />
+            </button>
           </>
         }
       />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
-        {mostrarMapaCobertura && <MapaClientes key={revisionMapa} clientes={clientes} clienteSeleccionadoId={typeof clienteFiltro === "number" ? clienteFiltro : null} />}
+        {mostrarMapaCobertura && (
+          <MapaClientes
+            key={revisionMapa}
+            clientes={clientes}
+            clienteSeleccionadoId={
+              typeof clienteFiltro === "number" ? clienteFiltro : null
+            }
+          />
+        )}
         {/* Indicadores que filtran: reemplazan las pestañas de estado y "sin cliente" */}
         <KpisFiltro
           etiqueta="Filtrar puntos de venta"
@@ -182,10 +221,38 @@ export function LocalesPanel() {
             lista.setPage(1);
           }}
           items={[
-            { clave: "todos", etiqueta: "Locales", valor: resumen?.total ?? "—", detalle: "Red de puntos de venta", icono: <IconoTienda />, tono: "marca" },
-            { clave: "activos", etiqueta: "Activos", valor: resumen?.activos ?? "—", detalle: "Con visitas programadas", icono: <IconoCheck />, tono: "verde" },
-            { clave: "inactivos", etiqueta: "Inactivos", valor: resumen?.inactivos ?? "—", detalle: "Pausados o en baja", icono: <IconoCruz />, tono: "gris" },
-            { clave: "sin_cliente", etiqueta: "Sin cliente", valor: resumen?.sinCliente ?? "—", detalle: "Falta asociar cliente", icono: <IconoCliente />, tono: "ambar" },
+            {
+              clave: "todos",
+              etiqueta: "Locales",
+              valor: resumen?.total ?? "—",
+              detalle: "Red de puntos de venta",
+              icono: <IconoTienda />,
+              tono: "marca",
+            },
+            {
+              clave: "activos",
+              etiqueta: "Activos",
+              valor: resumen?.activos ?? "—",
+              detalle: "Con visitas programadas",
+              icono: <IconoCheck />,
+              tono: "verde",
+            },
+            {
+              clave: "inactivos",
+              etiqueta: "Inactivos",
+              valor: resumen?.inactivos ?? "—",
+              detalle: "Pausados o en baja",
+              icono: <IconoCruz />,
+              tono: "gris",
+            },
+            {
+              clave: "sin_cliente",
+              etiqueta: "Sin cliente",
+              valor: resumen?.sinCliente ?? "—",
+              detalle: "Falta asociar cliente",
+              icono: <IconoCliente />,
+              tono: "ambar",
+            },
           ]}
         />
 
@@ -203,7 +270,10 @@ export function LocalesPanel() {
           <div className="min-w-0">
             <SelectorClienteCombobox
               valorId={clienteFiltro || null}
-              clienteSeleccionado={clienteSeleccionadoFiltro ?? clientes.find((cliente) => cliente.id === clienteFiltro)}
+              clienteSeleccionado={
+                clienteSeleccionadoFiltro ??
+                clientes.find((cliente) => cliente.id === clienteFiltro)
+              }
               placeholder="Cliente: todos"
               compacto
               alSeleccionar={(cliente) => {
@@ -212,7 +282,11 @@ export function LocalesPanel() {
                 setSinCliente(false);
                 lista.setPage(1);
               }}
-              alLimpiar={() => { setClienteFiltro(""); setClienteSeleccionadoFiltro(null); lista.setPage(1); }}
+              alLimpiar={() => {
+                setClienteFiltro("");
+                setClienteSeleccionadoFiltro(null);
+                lista.setPage(1);
+              }}
             />
           </div>
         </div>
@@ -233,7 +307,9 @@ export function LocalesPanel() {
               <div className="w-10 h-10 mx-auto rounded-full bg-surface-soft flex items-center justify-center text-muted mb-2.5">
                 <IconoTienda className="w-5 h-5" />
               </div>
-              <p className="text-sm font-bold text-foreground">No se encontraron locales</p>
+              <p className="text-sm font-bold text-foreground">
+                No se encontraron locales
+              </p>
               <p className="text-xs text-muted mt-1 max-w-sm mx-auto">
                 {busqueda || clienteFiltro
                   ? "Prueba cambiando los filtros de búsqueda o cliente seleccionado."
@@ -252,83 +328,129 @@ export function LocalesPanel() {
             </div>
           ) : (
             <>
-            <ul className="grid gap-2.5 p-2.5 md:hidden" aria-label="Puntos de venta">
-              {itemsFiltrados.map((local) => (
-                <li key={local.id} className="min-w-0">
-                  <TarjetaPdv
-                    local={local}
-                    ocupado={!!op.mensaje}
-                    onEditar={() => setForm(local)}
-                    onRuta={() => setPlan(local)}
-                    onEliminar={() => abrirEliminar(local)}
-                  />
-                </li>
-              ))}
-            </ul>
-            <div className="hidden overflow-x-auto md:block">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-line bg-surface-soft text-[11px] font-bold uppercase tracking-wider text-muted">
-                    <th className="py-2.5 px-3.5">Acciones</th>
-                    <th className="py-2.5 px-3.5">PDV</th>
-                    <th className="py-2.5 px-3.5">Asignado</th>
-                    <th className="py-2.5 px-3.5 text-center">Estado</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-line text-xs">
-                  {itemsFiltrados.map((local) => (
-                    <tr key={local.id} className="transition-colors hover:bg-surface-soft">
-                      <td className="whitespace-nowrap px-3.5 py-2.5">
-                        <div className="flex items-center gap-1.5">
-                          <BotonEditar onClick={() => setForm(local)} etiqueta={`Editar local ${local.nombre}`} />
-                          <button
-                            type="button"
-                            onClick={() => setPlan(local)}
-                            className="inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-md border border-line px-2.5 font-semibold text-foreground hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
-                          >
-                            <IconoPlanificacion className="h-3.5 w-3.5" />
-                            Ruta
-                          </button>
-                          <BotonEliminarCampo onClick={() => abrirEliminar(local)} etiqueta={`Eliminar local ${local.nombre}`} disabled={!!op.mensaje} />
-                        </div>
-                      </td>
-                      <td className="min-w-[240px] px-3.5 py-2.5">
-                        <div className="flex min-w-0 items-center gap-3">
-                        <FotoLocal nombre={local.nombre} cliente={local.cliente} className="w-16 shrink-0" />
-                        <div className="min-w-0">
-                        <p className="text-sm font-bold text-foreground">{local.nombre}</p>
-                        <p className={`mt-0.5 break-words text-[11px] font-semibold ${local.cliente ? "text-brand-700 dark:text-brand-200" : "text-amber-700 dark:text-amber-300"}`}>{local.cliente?.nombre ?? "Sin cliente"}</p>
-                        <p className="mt-0.5 break-words text-[11px] text-muted">{local.direccion || "Sin dirección"}</p>
-                        </div>
-                        </div>
-                      </td>
-                      <td className="max-w-[260px] px-3.5 py-2.5">
-                        <div className="flex flex-wrap gap-1">
-                          {local.asignaciones?.length ? (
-                            local.asignaciones.map((asignacion) => (
-                              <span key={asignacion.id} title={asignacion.usuario.rol?.descripcion ?? undefined} className="inline-flex max-w-full items-center rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[11px] font-semibold text-sky-900 dark:border-sky-900 dark:bg-sky-950/50 dark:text-sky-200">
-                                <span className="truncate">{asignacion.usuario.nombre} {asignacion.usuario.apellido}</span>
-                              </span>
-                            ))
-                          ) : (
-                            <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-300">Sin asignar</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="whitespace-nowrap px-3.5 py-2.5 text-center">
-                        <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-bold ${local.activo ? "border-emerald-300 bg-emerald-100 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300" : "border-stone-300 bg-stone-100 text-stone-700 dark:border-stone-700 dark:bg-stone-800/70 dark:text-stone-200"}`}>
-                          {local.activo ? "Activo" : "Inactivo"}
-                        </span>
-                      </td>
+              <ul
+                className="grid gap-2.5 p-2.5 md:hidden"
+                aria-label="Puntos de venta"
+              >
+                {itemsFiltrados.map((local) => (
+                  <li key={local.id} className="min-w-0">
+                    <TarjetaPdv
+                      local={local}
+                      ocupado={!!op.mensaje}
+                      onEditar={() => setForm(local)}
+                      onRuta={() => setPlan(local)}
+                      onEliminar={() => abrirEliminar(local)}
+                    />
+                  </li>
+                ))}
+              </ul>
+              <div className="hidden overflow-x-auto md:block">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-line bg-surface-soft text-[11px] font-bold uppercase tracking-wider text-muted">
+                      <th className="py-2.5 px-3.5">Acciones</th>
+                      <th className="py-2.5 px-3.5">PDV</th>
+                      <th className="py-2.5 px-3.5">Asignado</th>
+                      <th className="py-2.5 px-3.5 text-center">Estado</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-line text-xs">
+                    {itemsFiltrados.map((local) => (
+                      <tr
+                        key={local.id}
+                        className="transition-colors hover:bg-surface-soft"
+                      >
+                        <td className="whitespace-nowrap px-3.5 py-2.5">
+                          <div className="flex items-center gap-1.5">
+                            <BotonEditar
+                              onClick={() => setForm(local)}
+                              etiqueta={`Editar local ${local.nombre}`}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setPlan(local)}
+                              className="inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-md border border-line px-2.5 font-semibold text-foreground hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
+                            >
+                              <IconoPlanificacion className="h-3.5 w-3.5" />
+                              Ruta
+                            </button>
+                            <BotonEliminarCampo
+                              onClick={() => abrirEliminar(local)}
+                              etiqueta={`Eliminar local ${local.nombre}`}
+                              disabled={!!op.mensaje}
+                            />
+                          </div>
+                        </td>
+                        <td className="min-w-[240px] px-3.5 py-2.5">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <FotoLocal
+                              nombre={local.nombre}
+                              cliente={local.cliente}
+                              className="w-16 shrink-0"
+                            />
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold text-foreground">
+                                {local.nombre}
+                              </p>
+                              <p
+                                className={`mt-0.5 break-words text-[11px] font-semibold ${local.cliente ? "text-brand-700 dark:text-brand-200" : "text-amber-700 dark:text-amber-300"}`}
+                              >
+                                {local.cliente?.nombre ?? "Sin cliente"}
+                              </p>
+                              <p className="mt-0.5 break-words text-[11px] text-muted">
+                                {local.direccion || "Sin dirección"}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="max-w-[260px] px-3.5 py-2.5">
+                          <div className="flex flex-wrap gap-1">
+                            {local.asignaciones?.length ? (
+                              local.asignaciones.map((asignacion) => (
+                                <span
+                                  key={asignacion.id}
+                                  title={
+                                    asignacion.usuario.rol?.descripcion ??
+                                    undefined
+                                  }
+                                  className="inline-flex max-w-full items-center rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[11px] font-semibold text-sky-900 dark:border-sky-900 dark:bg-sky-950/50 dark:text-sky-200"
+                                >
+                                  <span className="truncate">
+                                    {asignacion.usuario.nombre}{" "}
+                                    {asignacion.usuario.apellido}
+                                  </span>
+                                </span>
+                              ))
+                            ) : (
+                              <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-300">
+                                Sin asignar
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="whitespace-nowrap px-3.5 py-2.5 text-center">
+                          <span
+                            className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-bold ${local.activo ? "border-emerald-300 bg-emerald-100 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300" : "border-stone-300 bg-stone-100 text-stone-700 dark:border-stone-700 dark:bg-stone-800/70 dark:text-stone-200"}`}
+                          >
+                            {local.activo ? "Activo" : "Inactivo"}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </>
           )}
 
-          <Paginacion page={lista.page} totalPages={lista.datos?.totalPages ?? 1} total={totalRegistros} limit={lista.limit} onPageChange={lista.setPage} onLimitChange={lista.setLimit} />
+          <Paginacion
+            page={lista.page}
+            totalPages={lista.datos?.totalPages ?? 1}
+            total={totalRegistros}
+            limit={lista.limit}
+            onPageChange={lista.setPage}
+            onLimitChange={lista.setLimit}
+          />
         </div>
       </main>
 
@@ -337,7 +459,9 @@ export function LocalesPanel() {
 
       {/* Modal de Creación / Edición */}
       <Modal
-        titulo={form?.id ? `Editar Local · ${form.nombre}` : "Registrar Nuevo Local"}
+        titulo={
+          form?.id ? `Editar Local · ${form.nombre}` : "Registrar Nuevo Local"
+        }
         abierto={!!form}
         onCerrar={() => {
           if (!op.mensaje) setForm(null);
@@ -363,11 +487,13 @@ export function LocalesPanel() {
               };
               const id = form.id;
               if (
-                await op.ejecutar(id ? "Actualizando local" : "Creando local", () =>
-                  apiFetch(`/campo/locales${id ? `/${id}` : ""}`, {
-                    method: id ? "PUT" : "POST",
-                    body: JSON.stringify(data),
-                  }),
+                await op.ejecutar(
+                  id ? "Actualizando local" : "Creando local",
+                  () =>
+                    apiFetch(`/campo/locales${id ? `/${id}` : ""}`, {
+                      method: id ? "PUT" : "POST",
+                      body: JSON.stringify(data),
+                    }),
                 )
               ) {
                 setForm(null);
@@ -413,7 +539,6 @@ export function LocalesPanel() {
                   }}
                   placeholder="Sin cliente"
                 />
-                <p className="mt-1 text-xs text-muted dark:text-muted">Opcional. El local puede quedar sin cliente o asociado a un solo cliente.</p>
               </div>
 
               <div>
@@ -439,7 +564,9 @@ export function LocalesPanel() {
               <input
                 type="text"
                 value={form.direccion}
-                onChange={(e) => setForm({ ...form, direccion: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, direccion: e.target.value })
+                }
                 placeholder="Ej: Avda. San Martín esq. Molas López"
                 className="w-full px-3 py-2 rounded-lg border bg-white text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#1E2320]"
                 style={{ borderColor: TOKENS.line }}
@@ -451,7 +578,10 @@ export function LocalesPanel() {
               <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-600 mb-1">
                 Ubicación Satelital GPS (Pin en el Mapa)
               </label>
-              <div className="rounded-xl border overflow-hidden" style={{ borderColor: TOKENS.line }}>
+              <div
+                className="rounded-xl border overflow-hidden"
+                style={{ borderColor: TOKENS.line }}
+              >
                 <SelectorUbicacion
                   latitud={form.latitud}
                   longitud={form.longitud}
@@ -467,7 +597,10 @@ export function LocalesPanel() {
             </div>
 
             <div>
-              <label htmlFor="local-radio-metros" className="block text-[11px] font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-300 mb-1">
+              <label
+                htmlFor="local-radio-metros"
+                className="block text-[11px] font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-300 mb-1"
+              >
                 Radio máximo para marcar (metros) *
               </label>
               <input
@@ -478,11 +611,14 @@ export function LocalesPanel() {
                 step={1}
                 required
                 value={form.radioMetros}
-                onChange={(e) => setForm({ ...form, radioMetros: Number(e.target.value) })}
+                onChange={(e) =>
+                  setForm({ ...form, radioMetros: Number(e.target.value) })
+                }
                 className="w-full px-3 py-2 rounded-lg border border-line bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#1E2320]"
               />
               <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                Entrada y salida requieren GPS dentro de este radio. Valor inicial: 100 m.
+                Entrada y salida requieren GPS dentro de este radio. Valor
+                inicial: 100 m.
               </p>
             </div>
 
@@ -494,7 +630,9 @@ export function LocalesPanel() {
                 <input
                   type="text"
                   value={form.contacto}
-                  onChange={(e) => setForm({ ...form, contacto: e.target.value })}
+                  onChange={(e) =>
+                    setForm({ ...form, contacto: e.target.value })
+                  }
                   placeholder="Ej: Encargado de Salón"
                   className="w-full px-3 py-2 rounded-lg border bg-white text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#1E2320]"
                   style={{ borderColor: TOKENS.line }}
@@ -508,7 +646,9 @@ export function LocalesPanel() {
                 <input
                   type="text"
                   value={form.telefono}
-                  onChange={(e) => setForm({ ...form, telefono: e.target.value })}
+                  onChange={(e) =>
+                    setForm({ ...form, telefono: e.target.value })
+                  }
                   placeholder="Ej: 0981 123456"
                   className="w-full px-3 py-2 rounded-lg border bg-white text-xs sm:text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#1E2320]"
                   style={{ borderColor: TOKENS.line }}
@@ -538,12 +678,18 @@ export function LocalesPanel() {
                 onChange={(e) => setForm({ ...form, activo: e.target.checked })}
                 className="w-4 h-4 rounded border-zinc-300 text-[#1E2320] focus:ring-[#1E2320] cursor-pointer"
               />
-              <label htmlFor="local-activo-check" className="text-xs font-semibold text-zinc-800 cursor-pointer">
+              <label
+                htmlFor="local-activo-check"
+                className="text-xs font-semibold text-zinc-800 cursor-pointer"
+              >
                 Local Activo para Visitas y Rutas
               </label>
             </div>
 
-            <div className="flex items-center justify-end gap-2.5 pt-3 border-t" style={{ borderColor: TOKENS.line }}>
+            <div
+              className="flex items-center justify-end gap-2.5 pt-3 border-t"
+              style={{ borderColor: TOKENS.line }}
+            >
               <button
                 type="button"
                 onClick={() => setForm(null)}
@@ -558,14 +704,27 @@ export function LocalesPanel() {
                 className="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider text-white shadow-sm transition-all hover:brightness-110 disabled:opacity-50 cursor-pointer"
                 style={{ backgroundColor: TOKENS.ink }}
               >
-                {op.mensaje ? "Guardando..." : form.id ? "Guardar Cambios" : "Crear Local"}
+                {op.mensaje
+                  ? "Guardando..."
+                  : form.id
+                    ? "Guardar Cambios"
+                    : "Crear Local"}
               </button>
             </div>
           </form>
         )}
       </Modal>
 
-      {eliminando && <ConfirmarEliminacionCampo tipo="local" nombre={eliminando.nombre} procesando={!!op.mensaje} error={op.error} onCerrar={() => setEliminando(null)} onConfirmar={() => void eliminar()} />}
+      {eliminando && (
+        <ConfirmarEliminacionCampo
+          tipo="local"
+          nombre={eliminando.nombre}
+          procesando={!!op.mensaje}
+          error={op.error}
+          onCerrar={() => setEliminando(null)}
+          onConfirmar={() => void eliminar()}
+        />
+      )}
       <PantallaCarga
         visible={!!op.mensaje}
         mensaje={op.mensaje ?? "Procesando"}

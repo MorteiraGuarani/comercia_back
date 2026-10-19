@@ -19,26 +19,28 @@ export class MiPlataformaService {
       throw new UnauthorizedException();
     }
 
-    const habilitados = await this.prisma.empresaModulo.findMany({
-      where: { empresaId: usuario.empresaId, modulo: { activo: true } },
-      include: {
-        modulo: {
-          include: {
-            paginas: {
-              where: { activo: true },
-              orderBy: [{ orden: 'asc' }, { nombre: 'asc' }],
+    // Módulos y páginas asignadas no dependen entre sí: van juntos.
+    const [habilitados, paginasAsignadas] = await Promise.all([
+      this.prisma.empresaModulo.findMany({
+        where: { empresaId: usuario.empresaId, modulo: { activo: true } },
+        include: {
+          modulo: {
+            include: {
+              paginas: {
+                where: { activo: true },
+                orderBy: [{ orden: 'asc' }, { nombre: 'asc' }],
+              },
             },
           },
         },
-      },
-      orderBy: { modulo: { orden: 'asc' } },
-    });
-
-    // Páginas específicas visibles (cuando el módulo no es "todas las páginas")
-    const paginasAsignadas = await this.prisma.empresaPagina.findMany({
-      where: { empresaId: usuario.empresaId },
-      select: { paginaId: true, rolIds: true },
-    });
+        orderBy: { modulo: { orden: 'asc' } },
+      }),
+      // Páginas específicas visibles (cuando el módulo no es "todas las páginas")
+      this.prisma.empresaPagina.findMany({
+        where: { empresaId: usuario.empresaId },
+        select: { paginaId: true, rolIds: true },
+      }),
+    ]);
     const asignacionPorPagina = new Map(
       paginasAsignadas.map((p) => [p.paginaId, p.rolIds]),
     );

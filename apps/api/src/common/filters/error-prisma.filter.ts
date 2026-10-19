@@ -15,7 +15,7 @@ export class ErrorPrismaFilter extends BaseExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost) {
     const traducida = traducirErrorPrisma(exception);
     if (!traducida) return super.catch(exception, host);
-    const codigo = codigoErrorPrisma(exception);
+    const codigo = codigoErrorPrisma(exception) ?? 'sin código (conexión)';
     if (traducida.getStatus() >= 500) {
       this.logger.error(`Prisma ${codigo}: ${traducida.message}`);
     } else {

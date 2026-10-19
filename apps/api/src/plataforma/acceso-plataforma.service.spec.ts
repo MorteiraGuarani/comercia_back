@@ -19,6 +19,7 @@ describe('AccesoPlataformaService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    service.limpiarCache();
     prisma.usuario.findUnique.mockResolvedValue({
       id: 10,
       empresaId: 20,
@@ -66,6 +67,29 @@ describe('AccesoPlataformaService', () => {
       service.exigirAccesoPagina(10, 'repositor', 'clientes'),
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(prisma.empresaModulo.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('recuerda el permiso unos segundos para no repetir consultas', async () => {
+    prisma.modulo.findUnique.mockResolvedValue({
+      id: 8,
+      activo: true,
+      paginas: [{ id: 15, activo: true }],
+    });
+    prisma.empresaModulo.findUnique.mockResolvedValue({
+      todasLasPaginas: true,
+      rolIds: [5],
+    });
+    prisma.empresaPagina.findUnique.mockResolvedValue(null);
+    await service.exigirAccesoPagina(10, 'gestion-campo', 'visitas');
+    await service.exigirAccesoPagina(10, 'gestion-campo', 'visitas');
+    expect(prisma.usuario.findUnique).toHaveBeenCalledTimes(1);
+    // Un 401 no se recuerda: el próximo pedido vuelve a consultar.
+    prisma.usuario.findUnique.mockResolvedValueOnce(null);
+    await expect(
+      service.exigirAccesoPagina(10, 'gestion-campo', 'locales'),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+    await service.exigirAccesoPagina(10, 'gestion-campo', 'locales');
+    expect(prisma.usuario.findUnique).toHaveBeenCalledTimes(3);
   });
 
   it('autoriza una página específica del módulo Repositor', async () => {

@@ -33,7 +33,7 @@ export function SelectorClienteCombobox({
     <fieldset disabled={disabled} className="min-w-0 border-0 p-0">
       <SelectorPaginado
         url="/campo/clientes"
-        etiqueta="Cliente"
+        etiqueta=""
         buscable
         compacto={compacto}
         placeholder={compacto ? placeholder : undefined}

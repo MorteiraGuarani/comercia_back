@@ -3,6 +3,8 @@ import { PRESENTISMO, RUTA } from "@/utils/estado-jornada";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch } from "@/lib/api";
+import { guardarCacheSesion, leerCacheSesion } from "@/lib/cache-sesion";
+import { usePanel } from "@/components/panel/contexto";
 import { mensajeError } from "@/utils/error";
 import { queryFechasCampo } from "@/utils/fechas";
 import { useFechaCampo } from "@/hooks/use-fecha-campo";
@@ -140,7 +142,11 @@ export function SupervisionPanel({
   const periodoVigente = periodo.clave === "hoy" ? { ...periodo, fecha: hoyStr, fechaInicio: hoyStr, fechaFin: hoyStr } : periodo;
   const fechasPeriodo = queryFechasCampo(periodoVigente);
 
+  const { usuario } = usePanel();
   const [resumen, setResumen] = useState<SupervisionResumenData | null>(null);
+  // Período de los datos en pantalla: si coincide con el elegido, se
+  // actualizan sin tapar la pantalla.
+  const [periodoResumen, setPeriodoResumen] = useState<string | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -155,6 +161,14 @@ export function SupervisionPanel({
   // Cargar resumen de supervisión según el período seleccionado
   const cargarResumen = useCallback(async () => {
     const peticion = ++peticionResumen.current;
+    const claveCache = `presentismo|${usuario.id}|${fechasPeriodo}`;
+    const guardado = leerCacheSesion<SupervisionResumenData>(claveCache);
+    if (guardado) {
+      // Los últimos datos de este período se ven ya; los nuevos llegan después.
+      setResumen(guardado.valor);
+      setPeriodoResumen(fechasPeriodo);
+      setActualizado(new Intl.DateTimeFormat("es-PY", { timeZone: "America/Asuncion", hour: "2-digit", minute: "2-digit" }).format(new Date(guardado.guardado)));
+    }
     try {
       setCargando(true);
       setError(null);
@@ -164,13 +178,15 @@ export function SupervisionPanel({
       );
       if (peticion !== peticionResumen.current) return;
       setResumen(data);
+      setPeriodoResumen(fechasPeriodo);
+      guardarCacheSesion(claveCache, data);
       setActualizado(new Intl.DateTimeFormat("es-PY", { timeZone: "America/Asuncion", hour: "2-digit", minute: "2-digit" }).format(new Date()));
     } catch (e) {
       if (peticion === peticionResumen.current) setError(mensajeError(e, "Error al cargar datos de supervisión"));
     } finally {
       if (peticion === peticionResumen.current) setCargando(false);
     }
-  }, [fechasPeriodo]);
+  }, [fechasPeriodo, usuario.id]);
 
   useEffect(() => {
     void Promise.resolve().then(cargarResumen);
@@ -538,7 +554,7 @@ export function SupervisionPanel({
           </div>
         )}
       </div>
-      <PantallaCarga visible={cargando && !!resumen} mensaje="Actualizando presentismo…" />
+      <PantallaCarga visible={cargando && !!resumen && periodoResumen !== fechasPeriodo} mensaje="Actualizando presentismo…" />
     </div>
   );
 }

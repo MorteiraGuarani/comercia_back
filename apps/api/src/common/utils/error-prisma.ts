@@ -30,6 +30,28 @@ export function relanzarDuplicado(error: unknown, mensaje: string): never {
 }
 
 const SIN_CONEXION = new Set(['P1001', 'P1002', 'P1008', 'P1017', 'P2024']);
+// SQLSTATE de PostgreSQL cuando el servidor corta o todavía no acepta conexiones.
+const SQLSTATE_SIN_CONEXION = new Set(['57P01', '57P02', '57P03']);
+
+/**
+ * Conexión con PostgreSQL cortada a mitad de una consulta (por ejemplo, se
+ * cayó el túnel SSH). El driver pg lo informa como un Error común, sin código
+ * de Prisma. Se mira solo el mensaje propio de pg y los SQLSTATE: un
+ * ECONNRESET de otra integración (UCheck) no es un problema de la base.
+ */
+export function esCorteConexionBase(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const codigo = 'code' in error ? error.code : undefined;
+  return (
+    /^Connection terminated( unexpectedly| due to connection timeout)/.test(
+      error.message,
+    ) ||
+    (typeof codigo === 'string' && SQLSTATE_SIN_CONEXION.has(codigo))
+  );
+}
+
+const BASE_NO_DISPONIBLE =
+  'La base de datos no está disponible en este momento. Probá de nuevo en unos segundos.';
 
 /**
  * Traduce los errores de Prisma que no atrapó un servicio a una respuesta
@@ -38,11 +60,13 @@ const SIN_CONEXION = new Set(['P1001', 'P1002', 'P1008', 'P1017', 'P2024']);
  */
 export function traducirErrorPrisma(error: unknown): HttpException | null {
   const codigo = codigoErrorPrisma(error);
-  if (!codigo) return null;
+  if (!codigo) {
+    return esCorteConexionBase(error)
+      ? new ServiceUnavailableException(BASE_NO_DISPONIBLE)
+      : null;
+  }
   if (SIN_CONEXION.has(codigo)) {
-    return new ServiceUnavailableException(
-      'La base de datos no está disponible en este momento. Probá de nuevo en unos segundos.',
-    );
+    return new ServiceUnavailableException(BASE_NO_DISPONIBLE);
   }
   switch (codigo) {
     case 'P2002':

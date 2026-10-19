@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { apiFetch } from "@/lib/api";
+import { guardarCacheSesion, leerCacheSesion } from "@/lib/cache-sesion";
 import { usePanel } from "@/components/panel/contexto";
 import { Modal } from "@/components/modal";
 import { HiloNovedad } from "./hilo-novedad";
@@ -94,7 +95,11 @@ export function HoyEnCampo() {
 
   const [revision, setRevision] = useState(0);
   const [terminada, setTerminada] = useState(-1);
-  const [datos, setDatos] = useState<DatosHoy | null>(null);
+  const claveCache = `hoy|${usuario.id}|${hoy}`;
+  // Lo último que se vio hoy en esta pestaña aparece enseguida.
+  const [datos, setDatos] = useState<DatosHoy | null>(
+    () => leerCacheSesion<DatosHoy>(claveCache)?.valor ?? null,
+  );
   const [error, setError] = useState("");
   const [pila, setPila] = useState<HojaHoy[]>([]);
   const [filtro, setFiltro] = useState<FiltroEquipoHoy>("todos");
@@ -106,26 +111,39 @@ export function HoyEnCampo() {
   useEffect(() => {
     const controller = new AbortController();
     const opciones = { signal: controller.signal };
-    Promise.all([
-      apiFetch<SupervisionResumenData>(
-        `/campo/supervision/resumen?fecha=${fechaEnZonaIso(new Date())}`,
-        opciones,
-      ),
-      verNovedades
-        ? apiFetch<NovedadesResponse>(
-            "/campo/novedades?estado=ABIERTA&page=1&limit=10",
-            opciones,
-          ).catch(() => null)
-        : Promise.resolve(null),
-    ])
+    const pedidoResumen = apiFetch<SupervisionResumenData>(
+      `/campo/supervision/resumen?fecha=${fechaEnZonaIso(new Date())}`,
+      opciones,
+    );
+    const pedidoNovedades = verNovedades
+      ? apiFetch<NovedadesResponse>(
+          "/campo/novedades?estado=ABIERTA&page=1&limit=10",
+          opciones,
+        ).catch(() => null)
+      : Promise.resolve(null);
+    // El resumen se muestra apenas llega, sin esperar las novedades.
+    pedidoResumen
+      .then((resumen) => {
+        if (controller.signal.aborted) return;
+        setDatos((previo) => ({
+          resumen,
+          novedades: previo?.novedades ?? [],
+          abiertas: previo?.abiertas ?? null,
+          actualizado: new Date().toISOString(),
+        }));
+      })
+      .catch(() => undefined);
+    Promise.all([pedidoResumen, pedidoNovedades])
       .then(([resumen, novedades]) => {
         if (controller.signal.aborted) return;
-        setDatos({
+        const nuevos: DatosHoy = {
           resumen,
           novedades: novedades?.items ?? [],
           abiertas: novedades ? novedades.counts.abierta : null,
           actualizado: new Date().toISOString(),
-        });
+        };
+        setDatos(nuevos);
+        guardarCacheSesion(claveCache, nuevos);
         setError("");
       })
       .catch((e: unknown) => {
@@ -136,7 +154,7 @@ export function HoyEnCampo() {
         if (!controller.signal.aborted) setTerminada(revision);
       });
     return () => controller.abort();
-  }, [revision, verNovedades]);
+  }, [revision, verNovedades, claveCache]);
 
   // Se actualiza solo cada 5 minutos mientras la pestaña está visible.
   useEffect(() => {

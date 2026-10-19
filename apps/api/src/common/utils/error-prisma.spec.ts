@@ -20,6 +20,21 @@ describe('errores de Prisma', () => {
     expect(traducirErrorPrisma({ code: 'P1001' })?.getStatus()).toBe(503);
     expect(traducirErrorPrisma({ code: 'P2024' })?.getStatus()).toBe(503);
     expect(traducirErrorPrisma({ code: 'P9999' })).toBeNull();
+    // Corte del driver pg (túnel caído): 503, no 500.
+    expect(
+      traducirErrorPrisma(
+        new Error('Connection terminated unexpectedly'),
+      )?.getStatus(),
+    ).toBe(503);
+    const reinicio = Object.assign(new Error('terminating connection'), {
+      code: '57P01',
+    });
+    expect(traducirErrorPrisma(reinicio)?.getStatus()).toBe(503);
+    // Un corte de otra integración no se confunde con la base.
+    const ucheck = Object.assign(new Error('fetch failed'), {
+      code: 'ECONNRESET',
+    });
+    expect(traducirErrorPrisma(ucheck)).toBeNull();
     expect(traducirErrorPrisma(new Error('otro'))).toBeNull();
   });
 
