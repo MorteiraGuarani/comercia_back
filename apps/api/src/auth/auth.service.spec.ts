@@ -1,3 +1,4 @@
+import type { ConfigService } from '@nestjs/config';
 import type { JwtService } from '@nestjs/jwt';
 import type { PrismaService } from '../prisma/prisma.service';
 import { AuthService } from './auth.service';
@@ -15,13 +16,25 @@ jest.mock('../../generated/prisma/client', () => ({
 describe('AuthService', () => {
   const prisma = { usuario: { findMany: jest.fn() } };
   const jwt = { sign: jest.fn() };
+  const config = { get: jest.fn() };
   const service = new AuthService(
     prisma as unknown as PrismaService,
     jwt as unknown as JwtService,
+    config as unknown as ConfigService,
   );
 
   beforeEach(() => {
     jest.clearAllMocks();
+    config.get.mockReturnValue(true);
+  });
+
+  it('con el login por SIM apagado no consulta usuarios ni firma sesión', async () => {
+    config.get.mockReturnValue(false);
+    await expect(
+      service.loginMovilConSim({ telefonos: ['0981123456'] }),
+    ).rejects.toThrow('No se pudo iniciar sesión automáticamente');
+    expect(prisma.usuario.findMany).not.toHaveBeenCalled();
+    expect(jwt.sign).not.toHaveBeenCalled();
   });
 
   it('normaliza el número de SIM y crea sesión si hay un único usuario activo', async () => {

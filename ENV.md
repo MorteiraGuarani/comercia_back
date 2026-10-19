@@ -127,3 +127,12 @@ publica las imágenes y el servidor las instala.
 
 Nunca pongas una URL, contraseña o túnel de producción en
 `.env.development`, `apps/web/.env.development` o `.env`.
+
+## Límites de seguridad de la API
+
+| Variable | Defecto | Uso |
+|---|---|---|
+| `HTTP_BODY_LIMIT_MB` | `50` | Tamaño máximo del cuerpo solo en la carga masiva de productos del catálogo. |
+| `HTTP_BODY_LIMIT_GENERAL_MB` | `1` | Tamaño máximo del cuerpo JSON y urlencoded en el resto de la API. Las fotos van por multipart y tienen su propio tope de 5 MB. |
+| `FOTOS_RETENCION_DIAS` | `0` | Días que se guardan las fotos «antes» y «después» de las tareas. Con `0` no se borra nada. Con un valor (mínimo 90), la API borra una vez por día los registros y archivos más antiguos; no se puede deshacer salvo desde un backup. Los adjuntos de novedades y avisos no se tocan. |
+| `LOGIN_SIM_HABILITADO` | `false` | Login automático de la app Android por número de SIM. El número lo informa el teléfono y no prueba identidad: con `true`, quien conozca el celular de un usuario puede entrar como él. Apagado, la API responde igual que ante un número desconocido y la app pide usuario y contraseña. |

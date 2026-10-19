@@ -1,8 +1,12 @@
-import { diskStorage } from 'multer';
+import { diskStorage, memoryStorage } from 'multer';
 import { extname, isAbsolute, join, resolve } from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { BadRequestException } from '@nestjs/common';
-import { existsSync, mkdirSync } from 'fs';
+import { existsSync, mkdirSync, unlinkSync } from 'fs';
+import {
+  detectarTipoImagen,
+  leerCabeceraArchivo,
+} from '../../common/utils/firma-imagen';
 import { MulterOptions } from '@nestjs/platform-express/multer/interfaces/multer-options.interface';
 
 // Tipos MIME permitidos
@@ -93,70 +97,39 @@ export const multerConfigFotosTareas: MulterOptions = {
       cb(null, `${uniqueId}${ext}`);
     },
   }),
-  limits: {
-    fileSize: MAX_FILE_SIZE,
-  },
-  fileFilter: (req, file, cb) => {
-    if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
-      return cb(
-        new BadRequestException('Solo se permiten imágenes JPG, PNG o WebP'),
-        false,
-      );
-    }
-
-    // Validación adicional: verificar extensión del archivo original
-    const ext = extname(file.originalname).toLowerCase();
-    const validExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
-
-    if (!validExtensions.includes(ext)) {
-      return cb(
-        new BadRequestException('Extensión de archivo no válida'),
-        false,
-      );
-    }
-
-    cb(null, true);
-  },
+  limits: { fileSize: MAX_FILE_SIZE },
+  fileFilter: filtroImagen,
 };
 
 /**
- * Configuración de Multer para logos de clientes
+ * Logos de clientes: quedan en memoria hasta que el servicio comprueba el
+ * permiso y la firma de la imagen; recién ahí se escriben en disco. Sin SVG:
+ * puede llevar scripts y se serviría desde el mismo origen que la app.
  */
 export const multerConfigLogoCliente: MulterOptions = {
-  storage: diskStorage({
-    destination: (req, file, cb) => {
-      const dir = join(directorioUploads(), 'clientes');
-      if (!existsSync(dir)) {
-        mkdirSync(dir, { recursive: true });
-      }
-      cb(null, dir);
-    },
-    filename: (req, file, cb) => {
-      const uniqueId = uuidv4();
-      const ext = extname(file.originalname).toLowerCase();
-      cb(null, `logo_${uniqueId}${ext}`);
-    },
-  }),
-  limits: {
-    fileSize: MAX_FILE_SIZE,
-  },
-  fileFilter: (req, file, cb) => {
-    const tipos = [...ALLOWED_MIME_TYPES, 'image/svg+xml'];
-    if (!tipos.includes(file.mimetype)) {
-      return cb(
-        new BadRequestException(
-          'Solo se permiten imágenes JPG, PNG, WebP o SVG',
-        ),
-        false,
-      );
-    }
-    cb(null, true);
-  },
+  storage: memoryStorage(),
+  limits: { fileSize: MAX_FILE_SIZE, files: 1 },
+  fileFilter: filtroImagen,
 };
 
+export function directorioLogosClientes(): string {
+  return join(directorioUploads(), 'clientes');
+}
+
+function descartar(file: Express.Multer.File): void {
+  if (!file.path) return;
+  try {
+    unlinkSync(file.path);
+  } catch {
+    // Puede haberlo borrado otra limpieza.
+  }
+}
+
 /**
- * Validación adicional de archivo de imagen (verificar magic bytes)
- * Previene spoofing de MIME type
+ * Valida tipo, tamaño y firma (primeros bytes) de una imagen subida. Si la
+ * firma no es de JPG, PNG o WebP borra el archivo y rechaza la subida; si
+ * coincide pero el navegador informó otro tipo, corrige `mimetype`, que es
+ * el que se guarda y se usa al servirla.
  */
 export function validarArchivoImagen(file: Express.Multer.File): void {
   if (!file) {
@@ -164,15 +137,21 @@ export function validarArchivoImagen(file: Express.Multer.File): void {
   }
 
   if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+    descartar(file);
     throw new BadRequestException('Solo se permiten imágenes JPG, PNG o WebP');
   }
 
   if (file.size > MAX_FILE_SIZE) {
+    descartar(file);
     throw new BadRequestException('La imagen no puede superar 5 MB');
   }
 
-  // Verificar magic bytes (primeros bytes del archivo) para evitar spoofing
-  // Esto requiere leer el archivo desde disco o buffer
-  // Por ahora, la validación de MIME type y extensión es suficiente
-  // En producción, considerar agregar validación de magic bytes con 'file-type' package
+  const tipo = detectarTipoImagen(leerCabeceraArchivo(file));
+  if (!tipo) {
+    descartar(file);
+    throw new BadRequestException(
+      'El archivo no es una imagen JPG, PNG o WebP válida',
+    );
+  }
+  file.mimetype = tipo.mime;
 }

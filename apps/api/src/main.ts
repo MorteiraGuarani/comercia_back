@@ -1,6 +1,6 @@
 import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { NestFactory } from '@nestjs/core';
+import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
@@ -8,6 +8,7 @@ import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { configurarSwagger } from './common/utils/swagger';
 import { configurarCuerpoHttp } from './common/utils/cuerpo-http';
+import { ErrorPrismaFilter } from './common/filters/error-prisma.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -49,6 +50,10 @@ async function bootstrap() {
         enableImplicitConversion: true,
       },
     }),
+  );
+
+  app.useGlobalFilters(
+    new ErrorPrismaFilter(app.get(HttpAdapterHost).httpAdapter),
   );
 
   configurarSwagger(app);

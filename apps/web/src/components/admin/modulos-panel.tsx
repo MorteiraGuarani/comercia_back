@@ -191,7 +191,7 @@ export function ModulosPanel() {
                     }
                     aria-label={`Crear página en ${m.nombre}`}
                     title="Crear página"
-                    className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-brand-700 transition hover:bg-brand-50 focus-visible:ring-2 focus-visible:ring-brand-600/40 dark:text-brand-400 dark:hover:bg-brand-950"
+                    className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-brand-700 transition hover:bg-brand-50 focus-visible:ring-2 focus-visible:ring-brand-600/40 dark:text-brand-200 dark:hover:bg-brand-950"
                   >
                     <IconoMas className="h-5 w-5" />
                   </button>
@@ -224,7 +224,7 @@ export function ModulosPanel() {
                           }
                           aria-label={`Crear ejecutable en ${p.nombre}`}
                           title="Crear ejecutable"
-                          className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-brand-700 transition hover:bg-brand-50 focus-visible:ring-2 focus-visible:ring-brand-600/40 dark:text-brand-400 dark:hover:bg-brand-950"
+                          className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-brand-700 transition hover:bg-brand-50 focus-visible:ring-2 focus-visible:ring-brand-600/40 dark:text-brand-200 dark:hover:bg-brand-950"
                         >
                           <IconoMas className="h-5 w-5" />
                         </button>
@@ -257,7 +257,7 @@ export function ModulosPanel() {
                               <span className="rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-[10px] text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
                                 {e.motor}
                               </span>
-                              <span className="rounded bg-brand-50 px-1.5 py-0.5 text-[10px] font-medium text-brand-700 dark:bg-brand-950 dark:text-brand-300">
+                              <span className="rounded bg-brand-50 px-1.5 py-0.5 text-[10px] font-medium text-brand-700 dark:bg-brand-950 dark:text-brand-200">
                                 {e.tipo}
                               </span>
                               <span className="flex-1 truncate">

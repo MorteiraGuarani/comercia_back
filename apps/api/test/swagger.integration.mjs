@@ -97,7 +97,8 @@ async function crearApp(enabled) {
       { provide: JwtService, useValue: jwt },
       { provide: ConfigService, useValue: {
         get: (key) => key === 'app.env' ? 'production' : key === 'app.swaggerEnabled' ? enabled : undefined,
-        getOrThrow: (key) => key === 'app.httpBodyLimitMb' ? 50 : undefined,
+        getOrThrow: (key) => key === 'app.httpBodyLimitMb' ? 50
+          : key === 'app.httpBodyLimitGeneralMb' ? 1 : undefined,
       } },
       { provide: PrismaService, useValue: prisma },
     ],

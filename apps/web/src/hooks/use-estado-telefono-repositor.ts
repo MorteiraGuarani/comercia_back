@@ -57,8 +57,14 @@ export function useEstadoTelefonoRepositor() {
   useEffect(() => {
     vigente.current = true;
     queueMicrotask(() => void consultar());
-    const timer = setInterval(() => void consultar(), 15_000);
+    // Con la pestaña oculta no consulta UCheck; al volver, actualiza enseguida.
+    const siVisible = () => {
+      if (!document.hidden) void consultar();
+    };
+    const timer = setInterval(siVisible, 15_000);
+    document.addEventListener("visibilitychange", siVisible);
     return () => {
+      document.removeEventListener("visibilitychange", siVisible);
       vigente.current = false;
       solicitudActual.current?.abort();
       solicitudActual.current = null;

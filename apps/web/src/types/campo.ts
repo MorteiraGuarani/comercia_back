@@ -179,6 +179,11 @@ export interface TareaJornadaCampo {
   tieneAntes?: boolean;
   tieneDespues?: boolean;
 }
+
+/** Página de tareas de un local, tal como la devuelve `GET /campo/jornada/tareas`. */
+export type TareasDeAsignacion = RespuestaPaginada<TareaJornadaCampo> & {
+  asignacionId: number;
+};
 export interface FormHorarioCampo {
   frecuencia: HorarioCampo["frecuencia"];
   intervalo: number;
@@ -590,4 +595,10 @@ export interface ColaboradorDetalleData {
     }[];
   }[];
   novedades: NovedadColaboradorItem[];
+}
+
+export interface PropsAvisosPanel {
+  esImpulsador?: boolean;
+  /** Llega en true desde el "+" de la campana: abre la redacción al entrar. */
+  abrirRedactar?: boolean;
 }

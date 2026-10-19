@@ -3,16 +3,12 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import {
-  Prisma,
-  type Ejecutable,
-  type Modulo,
-  type Pagina,
-} from '../../generated/prisma/client';
+import type { Ejecutable, Modulo, Pagina } from '../../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActualizarModuloDto, CrearModuloDto } from './dto/modulo.dto';
 import { ActualizarPaginaDto, CrearPaginaDto } from './dto/pagina.dto';
 import type { ModuloDto, PaginaDto } from './interfaces/plataforma.interface';
+import { esErrorDuplicado } from '../common/utils/error-prisma';
 
 @Injectable()
 export class ModulosService {
@@ -158,13 +154,7 @@ export class ModulosService {
   }
 
   private mapErrorRuta(e: unknown, mensaje: string): unknown {
-    if (
-      e instanceof Prisma.PrismaClientKnownRequestError &&
-      e.code === 'P2002'
-    ) {
-      return new ConflictException(mensaje);
-    }
-    return e;
+    return esErrorDuplicado(e) ? new ConflictException(mensaje) : e;
   }
 
   private aModuloDto(

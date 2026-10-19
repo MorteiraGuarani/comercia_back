@@ -322,7 +322,7 @@ export function NovedadesPanel({
                         <button
                           type="button"
                           onClick={() => setNovedadAbiertaId(n.id)}
-                          className="min-h-9 rounded-lg border border-line px-2.5 text-xs font-semibold text-foreground hover:bg-surface-soft"
+                          className="min-h-11 rounded-lg border border-line px-2.5 text-xs font-semibold text-foreground hover:bg-surface-soft"
                         >
                           Ver hilo
                         </button>

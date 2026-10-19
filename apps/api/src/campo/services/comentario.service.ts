@@ -169,14 +169,14 @@ export class ComentarioService {
       tareaId,
     );
 
-    const comentarios = await this.prisma.comentarioTareaCampo.findMany({
+    // Los 50 más recientes, devueltos en orden cronológico.
+    const recientes = await this.prisma.comentarioTareaCampo.findMany({
       where: {
         cumplimientoVisitaId: visitaId,
         cumplimientoTareaId: tareaId,
       },
-      orderBy: {
-        creadoAt: 'asc',
-      },
+      orderBy: [{ creadoAt: 'desc' }, { id: 'desc' }],
+      take: 50,
       select: {
         id: true,
         comentario: true,
@@ -192,6 +192,7 @@ export class ComentarioService {
         leidoAt: true,
       },
     });
+    const comentarios = recientes.reverse();
 
     return comentarios.map((c) => ({
       id: c.id,

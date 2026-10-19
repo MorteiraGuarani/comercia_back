@@ -273,7 +273,7 @@ describe('Catálogo tbl_itm1 por empresa', () => {
       { length: PRODUCTOS_POR_BLOQUE + 2 },
       (_, index) => ({ ...producto, itemcode: `LOTE-${index}` }),
     );
-    lote.push({ ...lote[0], price: 1 });
+    lote.push({ ...lote[0], price: '1' });
     db.producto.createMany
       .mockResolvedValueOnce({ count: PRODUCTOS_POR_BLOQUE })
       .mockResolvedValueOnce({ count: 1 });

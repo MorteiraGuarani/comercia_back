@@ -76,7 +76,7 @@ const btnPrincipal = `${btnBase} bg-brand-700 text-white shadow-sm hover:bg-bran
 const btnSalida = `${btnBase} border border-red-300 bg-red-50 text-red-700 hover:bg-red-100 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300 dark:hover:bg-red-950/70`;
 // Tareas e inventario, dentro del bloque de información del local.
 const btnInfo =
-  "flex min-h-10 min-w-0 grow cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-lg border border-line bg-surface-raised px-2 text-xs font-semibold text-foreground transition-colors hover:border-brand-500 hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-line disabled:hover:bg-surface-raised";
+  "flex min-h-11 min-w-0 grow cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-lg border border-line bg-surface-raised px-2 text-xs font-semibold text-foreground transition-colors hover:border-brand-500 hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-line disabled:hover:bg-surface-raised";
 
 function Marcador({ estado, orden }: { estado: EstadoRuta; orden: number }) {
   const base =

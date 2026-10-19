@@ -17,6 +17,13 @@ import {
   exigirEquipoCampo,
 } from './utils/equipo-campo';
 import { datosTareaRegistrada, detalleTarea } from './utils/version-tarea';
+import {
+  aTareaJornada,
+  camposTareaJornada,
+  CUMPLIMIENTO_JORNADA_SELECT,
+  TAREA_JORNADA_SELECT,
+} from './utils/tarea-jornada';
+import { ConsultaTareasDiaDto } from './dto/consulta-tareas-dia.dto';
 import { prepararEvidencia, tareaParaEvidencia } from './utils/evidencia-tarea';
 import { PrismaService } from '../prisma/prisma.service';
 import { rangoPaginacion, respuestaPaginada } from '../common/utils/paginacion';
@@ -50,6 +57,7 @@ import type {
   FilaAgendaId,
   TotalAgenda,
 } from './interfaces/calendario.interface';
+import { relanzarDuplicado } from '../common/utils/error-prisma';
 
 @Injectable()
 export class JornadaCampoService {
@@ -356,12 +364,7 @@ export class JornadaCampoService {
         return conEstadoVisita(visita, ahora);
       });
     } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002'
-      )
-        throw new ConflictException('Ya se registró esta visita');
-      throw error;
+      relanzarDuplicado(error, 'Ya se registró esta visita');
     }
   }
   async abierta(usuarioId: number) {
@@ -526,14 +529,7 @@ export class JornadaCampoService {
       this.prisma.tareaCampo.findMany({
         where,
         select: {
-          id: true,
-          nombre: true,
-          destinatario: true,
-          descripcion: true,
-          requiereFotos: true,
-          fotosObligatorias: true,
-          categoria: true,
-          esObligatoria: true,
+          ...TAREA_JORNADA_SELECT,
           cumplimientos: {
             // Incluye borradores para que el impulsador pueda ver las
             // evidencias cargadas antes de completar la tarea.
@@ -545,15 +541,7 @@ export class JornadaCampoService {
               },
             },
             take: 21,
-            select: {
-              visitaId: true,
-              completadaAt: true,
-              iniciadaAt: true,
-              detalleTarea: true,
-              versionTarea: true,
-              visita: { select: { fecha: true, entrada: true, salida: true } },
-              fotos: { select: { momento: true }, take: 2 },
-            },
+            select: CUMPLIMIENTO_JORNADA_SELECT,
           },
         },
         orderBy: [{ nombre: 'asc' }, { id: 'asc' }],
@@ -562,39 +550,163 @@ export class JornadaCampoService {
       }),
     ]);
     return respuestaPaginada(
-      items.map(({ cumplimientos, ...t }) => ({
-        ...datosTareaRegistrada(
-          t,
-          cumplimientos.find(
-            (c) =>
-              c.completadaAt === null && estadoVisita(c.visita) === 'EN_CURSO',
-          )?.detalleTarea,
-          cumplimientos.find(
-            (c) =>
-              c.completadaAt === null && estadoVisita(c.visita) === 'EN_CURSO',
-          )?.versionTarea,
-        ),
-        iniciadaAt:
-          cumplimientos.find(
-            (c) =>
-              c.iniciadaAt &&
-              c.completadaAt === null &&
-              estadoVisita(c.visita) === 'EN_CURSO',
-          )?.iniciadaAt ?? null,
-        visitasCompletadas: cumplimientos
-          .filter((c) => c.completadaAt !== null)
-          .map((c) => c.visitaId),
-        tieneAntes: cumplimientos.some((c) =>
-          c.fotos.some((foto) => foto.momento === 'ANTES'),
-        ),
-        tieneDespues: cumplimientos.some((c) =>
-          c.fotos.some((foto) => foto.momento === 'DESPUES'),
-        ),
-      })),
+      items.map(({ cumplimientos, ...t }) => aTareaJornada(t, cumplimientos)),
       total,
       page,
       limit,
     );
+  }
+  /**
+   * Tareas de varios locales de la ruta en un pedido: valida todas las
+   * asignaciones de una vez y trae las tareas de esos locales en una sola
+   * consulta. Devuelve, por asignación, la misma página que
+   * `jornada/asignaciones/:id/tareas`. Las asignaciones ajenas o fuera de
+   * fecha se omiten. La lista exterior está acotada a 50 asignaciones.
+   */
+  async tareasDelDia(usuarioId: number, query: ConsultaTareasDiaDto) {
+    const u = await this.acceso.ejecutar(usuarioId);
+    const { desde, hasta } = rangoConsulta(query);
+    const fechaDesde = fechaCampo(desde);
+    const fechaHasta = fechaCampo(hasta);
+    const encontradas = await this.prisma.asignacionCampo.findMany({
+      where: {
+        id: { in: query.asignaciones },
+        usuario: { rol: rolDelEquipoCampo(u.equipoCampo) },
+        activo: true,
+        fechaDesde: { lte: fechaHasta },
+        OR: [{ fechaHasta: null }, { fechaHasta: { gte: fechaDesde } }],
+        local: {
+          activo: true,
+          ...localesOperativos(u.empresaId),
+        },
+      },
+      select: {
+        id: true,
+        localId: true,
+        usuarioId: true,
+        backups: {
+          where: {
+            activo: true,
+            fechaDesde: { lte: fechaHasta },
+            fechaHasta: { gte: fechaDesde },
+          },
+          select: { usuarioId: true },
+        },
+      },
+      take: query.asignaciones.length,
+    });
+    const asignaciones = encontradas.filter(
+      (a) =>
+        a.usuarioId === u.id || a.backups.some((b) => b.usuarioId === u.id),
+    );
+    if (asignaciones.length === 0) return { items: [] };
+    const localIds = [...new Set(asignaciones.map((a) => a.localId))];
+    const asignacionIds = asignaciones.map((a) => a.id);
+    const tareas = await this.prisma.tareaCampo.findMany({
+      where: {
+        empresaId: u.empresaId,
+        equipoCampoId: exigirEquipoCampo(u.equipoCampo).id,
+        destinatario: destinatarioCampo(u.equipoCampo),
+        OR: [
+          {
+            activo: true,
+            fechaDesde: { lte: fechaHasta },
+            AND: [
+              {
+                OR: [{ fechaHasta: null }, { fechaHasta: { gte: fechaDesde } }],
+              },
+              {
+                OR: [
+                  { todosLocales: true },
+                  { locales: { some: { localId: { in: localIds } } } },
+                ],
+              },
+            ],
+          },
+          {
+            cumplimientos: {
+              some: {
+                completadaAt: null,
+                visita: {
+                  usuarioId,
+                  asignacionId: { in: asignacionIds },
+                  salida: null,
+                  fecha: { gte: fechaDesde, lte: fechaHasta },
+                },
+              },
+            },
+          },
+        ],
+      },
+      select: {
+        ...TAREA_JORNADA_SELECT,
+        activo: true,
+        fechaDesde: true,
+        fechaHasta: true,
+        todosLocales: true,
+        locales: {
+          where: { localId: { in: localIds } },
+          select: { localId: true },
+        },
+        cumplimientos: {
+          where: {
+            visita: {
+              usuarioId,
+              asignacionId: { in: asignacionIds },
+              fecha: { gte: fechaDesde, lte: fechaHasta },
+            },
+          },
+          take: 21 * asignacionIds.length,
+          select: {
+            ...CUMPLIMIENTO_JORNADA_SELECT,
+            visita: {
+              select: {
+                asignacionId: true,
+                fecha: true,
+                entrada: true,
+                salida: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: [{ nombre: 'asc' }, { id: 'asc' }],
+    });
+    const { skip, take, page, limit } = rangoPaginacion(query);
+    return {
+      items: asignaciones.map((a) => {
+        // Mismas reglas que tareas(): vigente para su local, o con una
+        // ejecución abierta en esta asignación.
+        const delLocal = tareas.filter(
+          (t) =>
+            (t.activo &&
+              t.fechaDesde <= fechaHasta &&
+              (t.fechaHasta === null || t.fechaHasta >= fechaDesde) &&
+              (t.todosLocales ||
+                t.locales.some((l) => l.localId === a.localId))) ||
+            t.cumplimientos.some(
+              (c) =>
+                c.completadaAt === null &&
+                c.visita.salida === null &&
+                c.visita.asignacionId === a.id,
+            ),
+        );
+        const pagina = delLocal
+          .slice(skip, skip + take)
+          .map((t) =>
+            aTareaJornada(
+              camposTareaJornada(t),
+              t.cumplimientos
+                .filter((c) => c.visita.asignacionId === a.id)
+                .slice(0, 21),
+            ),
+          );
+        return {
+          asignacionId: a.id,
+          ...respuestaPaginada(pagina, delLocal.length, page, limit),
+        };
+      }),
+    };
   }
   async iniciarTarea(usuarioId: number, visitaId: number, tareaId: number) {
     const u = await this.acceso.ejecutar(usuarioId);

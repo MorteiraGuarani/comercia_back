@@ -9,6 +9,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import type { IdentidadUcheckAdmin } from './interfaces/identidad-ucheck-admin.interface';
+import { relanzarDuplicado } from '../common/utils/error-prisma';
 
 @Injectable()
 export class VinculosUcheckService {
@@ -159,11 +160,7 @@ export class VinculosUcheckService {
         });
       });
     } catch (e: unknown) {
-      if (e && typeof e === 'object' && 'code' in e && e.code === 'P2002')
-        throw new ConflictException(
-          'Esta identidad ya está vinculada a otra cuenta',
-        );
-      throw e;
+      relanzarDuplicado(e, 'Esta identidad ya está vinculada a otra cuenta');
     }
     return this.consultar(actorId, usuarioId);
   }

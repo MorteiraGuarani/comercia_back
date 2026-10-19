@@ -71,6 +71,11 @@ services:
       # Vacío = sin proxies de confianza. Ver ENV.md antes de activarlo.
       TRUST_PROXY: ${TRUST_PROXY:-}
       HTTP_BODY_LIMIT_MB: ${HTTP_BODY_LIMIT_MB:-50}
+      HTTP_BODY_LIMIT_GENERAL_MB: ${HTTP_BODY_LIMIT_GENERAL_MB:-1}
+      # Login automático por número de SIM: inseguro, apagado salvo decisión explícita.
+      LOGIN_SIM_HABILITADO: ${LOGIN_SIM_HABILITADO:-false}
+      # Días que se guardan las fotos de tareas (0 = no se borran; mínimo 90).
+      FOTOS_RETENCION_DIAS: ${FOTOS_RETENCION_DIAS:-0}
       SWAGGER_ENABLED: ${SWAGGER_ENABLED:-true}
       # Fotos de visitas: persisten en el volumen uploads_data
       UPLOADS_DIR: /app/uploads

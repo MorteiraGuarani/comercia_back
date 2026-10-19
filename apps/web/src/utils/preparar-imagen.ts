@@ -1,5 +1,8 @@
 const MAX_ORIGEN_BYTES = 60 * 1024 * 1024;
 const MAX_ENVIO_BYTES = 5 * 1024 * 1024;
+// 1600 px alcanza para ver una góndola o un precio y deja la foto en unos
+// cientos de KB: menos datos móviles y menos espera al subir.
+const LADO_MAXIMO = 1600;
 
 /** Reduce fotos grandes antes de construir el multipart enviado a la API. */
 export async function prepararImagen(archivo: File): Promise<File> {
@@ -19,7 +22,7 @@ export async function prepararImagen(archivo: File): Promise<File> {
     if (archivo.size > 2 * 1024 * 1024 && typeof createImageBitmap === "function") {
       // Chrome/Android puede decodificar directamente a una resolución menor.
       try {
-        bitmap = await createImageBitmap(archivo, { resizeWidth: 1920, resizeQuality: "high" });
+        bitmap = await createImageBitmap(archivo, { resizeWidth: LADO_MAXIMO, resizeQuality: "high" });
         origen = bitmap;
         ancho = bitmap.width;
         alto = bitmap.height;
@@ -48,7 +51,7 @@ export async function prepararImagen(archivo: File): Promise<File> {
 
     const canvas = document.createElement("canvas");
     const ladoMayor = Math.max(ancho, alto);
-    const escala = Math.min(1, 1920 / ladoMayor);
+    const escala = Math.min(1, LADO_MAXIMO / ladoMayor);
     canvas.width = Math.max(1, Math.round(ancho * escala));
     canvas.height = Math.max(1, Math.round(alto * escala));
     const contexto = canvas.getContext("2d", { alpha: false });
@@ -59,16 +62,20 @@ export async function prepararImagen(archivo: File): Promise<File> {
     bitmap?.close();
     bitmap = null;
 
-    const exportar = (calidad: number) => new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("No se pudo comprimir la imagen.")), "image/jpeg", calidad);
+    const exportar = (tipo: string, calidad: number) => new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("No se pudo comprimir la imagen.")), tipo, calidad);
     });
-    let resultado = await exportar(0.8);
-    if (resultado.size > MAX_ENVIO_BYTES) resultado = await exportar(0.65);
+    // WebP pesa cerca de un tercio menos que JPEG con la misma nitidez. Safari
+    // no lo codifica en canvas (devuelve PNG): ahí se usa JPEG.
+    let resultado = await exportar("image/webp", 0.75);
+    if (resultado.type !== "image/webp") resultado = await exportar("image/jpeg", 0.75);
+    if (resultado.size > MAX_ENVIO_BYTES) resultado = await exportar(resultado.type, 0.6);
     if (resultado.size > MAX_ENVIO_BYTES) {
       throw new Error("La foto sigue superando 5 MB después de comprimirla.");
     }
     const nombre = archivo.name.replace(/\.[^.]+$/, "") || "foto";
-    return new File([resultado], `${nombre}.jpg`, { type: "image/jpeg", lastModified: Date.now() });
+    const extension = resultado.type === "image/webp" ? "webp" : "jpg";
+    return new File([resultado], `${nombre}.${extension}`, { type: resultado.type, lastModified: Date.now() });
   } catch (error) {
     if (error instanceof Error && /^(La foto|Seleccioná|No se pudo)/.test(error.message)) throw error;
     throw new Error("No se pudo abrir esta imagen. Probá con una foto JPG de la galería.");

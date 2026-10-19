@@ -36,7 +36,7 @@ import {
 
 const enfoque =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus";
-const btnAccion = `flex min-h-10 min-w-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-line bg-surface-raised px-3 text-xs font-semibold text-foreground transition-colors hover:border-brand-500 hover:bg-surface-soft disabled:cursor-not-allowed disabled:opacity-50 ${enfoque}`;
+const btnAccion = `flex min-h-11 min-w-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-line bg-surface-raised px-3 text-xs font-semibold text-foreground transition-colors hover:border-brand-500 hover:bg-surface-soft disabled:cursor-not-allowed disabled:opacity-50 ${enfoque}`;
 const sombra = "shadow-[0_2px_8px_rgba(var(--warm-shadow),0.06)]";
 
 interface AccionesTarea {
@@ -420,7 +420,7 @@ function ListaTareas({
                         type="button"
                         disabled={acciones.ocupadoId !== null}
                         onClick={() => acciones.onCompletar(t.id)}
-                        className={`flex min-h-10 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-lg bg-emerald-700 px-3 text-xs font-bold text-white transition-colors hover:bg-emerald-800 disabled:cursor-wait disabled:opacity-50 dark:bg-emerald-600 dark:hover:bg-emerald-500 ${enfoque}`}
+                        className={`flex min-h-11 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-lg bg-emerald-700 px-3 text-xs font-bold text-white transition-colors hover:bg-emerald-800 disabled:cursor-wait disabled:opacity-50 dark:bg-emerald-600 dark:hover:bg-emerald-500 ${enfoque}`}
                       >
                         <IconoCheck className="h-3.5 w-3.5" />
                         {acciones.ocupadoId === t.id ? "Guardando…" : "Completar"}

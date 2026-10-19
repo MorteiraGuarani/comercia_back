@@ -235,7 +235,7 @@ export function HoyEnCampo() {
                     type="button"
                     aria-pressed={filtro === clave}
                     onClick={() => setFiltro(clave)}
-                    className={`min-h-9 shrink-0 cursor-pointer whitespace-nowrap rounded-full border px-3 text-xs font-semibold transition-colors ${enfoque} ${
+                    className={`min-h-11 shrink-0 cursor-pointer whitespace-nowrap rounded-full border px-3 text-xs font-semibold transition-colors ${enfoque} ${
                       filtro === clave
                         ? "border-foreground bg-foreground text-background"
                         : "border-line bg-surface-raised text-muted hover:border-brand-500 hover:text-foreground"
@@ -613,7 +613,7 @@ function FilaPersona({
         <button
           type="button"
           onClick={onAbrir}
-          className={`min-h-9 min-w-0 cursor-pointer truncate rounded text-left text-sm font-semibold text-foreground hover:underline ${enfoque}`}
+          className={`min-h-11 min-w-0 cursor-pointer truncate rounded text-left text-sm font-semibold text-foreground hover:underline ${enfoque}`}
         >
           {c.nombre}
         </button>
@@ -691,7 +691,7 @@ function DetalleIndicador({
               {c.estadoPresentismo === "AUSENTE" && telefonoValido(c.telefono) ? (
                 <a
                   href={hrefTelefono(c.telefono)}
-                  className={`mt-1.5 inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-brand-700 px-3 text-xs font-semibold text-white hover:bg-brand-800 dark:bg-brand-500 dark:text-brand-950 dark:hover:brightness-110 ${enfoque}`}
+                  className={`mt-1.5 inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-brand-700 px-3 text-xs font-semibold text-white hover:bg-brand-800 dark:bg-brand-500 dark:text-brand-950 dark:hover:brightness-110 ${enfoque}`}
                 >
                   <IconoTelefono className="h-3.5 w-3.5" />
                   Llamar a {primerNombre(c.nombre)}

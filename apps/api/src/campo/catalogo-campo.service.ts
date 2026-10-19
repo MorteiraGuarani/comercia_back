@@ -282,6 +282,77 @@ export class CatalogoCampoService {
       ...(resumen ? { resumen } : {}),
     };
   }
+  /**
+   * Puntos del mapa de cobertura: solo los campos que muestra el marcador. Filtra por cliente y búsqueda en el servidor
+   * para que el mapa no tenga que bajar toda la red.
+   */
+  async localesMapa(usuarioId: number, query: ConsultaCampoDto) {
+    const u = await this.acceso.gestionar(usuarioId, 'locales');
+    const where: Prisma.LocalCampoWhereInput = {
+      empresaId: u.empresaId,
+      eliminadoEn: null,
+      ...(query.clienteId ? { clienteId: query.clienteId } : {}),
+      ...(query.buscar
+        ? {
+            OR: [
+              {
+                nombre: {
+                  contains: query.buscar,
+                  mode: 'insensitive' as const,
+                },
+              },
+              {
+                direccion: {
+                  contains: query.buscar,
+                  mode: 'insensitive' as const,
+                },
+              },
+            ],
+          }
+        : {}),
+    };
+    const { skip, take, page, limit } = rangoPaginacion(query);
+    const hoy = fechaCampo(relojCampo().fecha);
+    const colaboradores = await obtenerColaboradoresGestionados(this.prisma, u);
+    const [total, items] = await Promise.all([
+      this.prisma.localCampo.count({ where }),
+      this.prisma.localCampo.findMany({
+        where,
+        select: {
+          id: true,
+          clienteId: true,
+          nombre: true,
+          direccion: true,
+          telefono: true,
+          latitud: true,
+          longitud: true,
+          activo: true,
+          cliente: { select: { id: true, nombre: true, logoUrl: true } },
+          asignaciones: {
+            where: {
+              activo: true,
+              usuario: {
+                id: { in: colaboradores },
+                rol: rolDelEquipoCampo(u.equipoCampo),
+              },
+              fechaDesde: { lte: hoy },
+              OR: [{ fechaHasta: null }, { fechaHasta: { gte: hoy } }],
+            },
+            select: {
+              id: true,
+              usuario: { select: { id: true, nombre: true, apellido: true } },
+            },
+            orderBy: { fechaDesde: 'desc' },
+            take: 5,
+          },
+        },
+        orderBy: [{ nombre: 'asc' }, { id: 'asc' }],
+        skip,
+        take,
+      }),
+    ]);
+    return respuestaPaginada(items, total, page, limit);
+  }
   async guardarLocal(usuarioId: number, dto: LocalCampoDto, id?: number) {
     const u = await this.acceso.gestionar(usuarioId, 'locales');
     return this.prisma.$transaction(async (tx) => {

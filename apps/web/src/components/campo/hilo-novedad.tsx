@@ -111,9 +111,9 @@ export function HiloNovedad({ id, onActualizado }: { id: number; onActualizado?:
         )) : <p className="text-sm text-muted">Aún no hay respuestas.</p>}
         {respuestas && respuestas.totalPages > 1 && (
           <div className="flex items-center justify-between gap-2 text-xs">
-            <button type="button" disabled={page >= respuestas.totalPages} onClick={() => setPage((actual) => actual + 1)} className="min-h-10 rounded-lg border border-line px-3 disabled:opacity-50">Anteriores</button>
+            <button type="button" disabled={page >= respuestas.totalPages} onClick={() => setPage((actual) => actual + 1)} className="min-h-11 rounded-lg border border-line px-3 disabled:opacity-50">Anteriores</button>
             <span>Página {page} de {respuestas.totalPages}</span>
-            <button type="button" disabled={page <= 1} onClick={() => setPage((actual) => actual - 1)} className="min-h-10 rounded-lg border border-line px-3 disabled:opacity-50">Recientes</button>
+            <button type="button" disabled={page <= 1} onClick={() => setPage((actual) => actual - 1)} className="min-h-11 rounded-lg border border-line px-3 disabled:opacity-50">Recientes</button>
           </div>
         )}
       </section>
@@ -139,7 +139,7 @@ export function HiloNovedad({ id, onActualizado }: { id: number; onActualizado?:
               <textarea id={`cierre-novedad-${id}`} value={resolucion} maxLength={1000} onChange={(event) => setResolucion(event.target.value)} rows={2} className="w-full min-w-0 rounded-lg border border-line bg-surface-raised p-2 text-sm text-foreground" />
               <div className="grid grid-cols-2 gap-2 sm:flex">
                 <button type="button" onClick={() => setConfirmandoCierre(false)} className="min-h-11 cursor-pointer rounded-lg border border-line px-3 text-sm text-foreground hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600">Volver</button>
-                <button type="button" onClick={() => void cerrar()} disabled={guardando} className="min-h-11 cursor-pointer rounded-lg bg-brand-700 px-3 text-sm font-semibold text-white hover:bg-brand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-brand-200 dark:text-brand-950 dark:hover:bg-brand-300">Confirmar cierre</button>
+                <button type="button" onClick={() => void cerrar()} disabled={guardando} className="min-h-11 cursor-pointer rounded-lg bg-brand-700 px-3 text-sm font-semibold text-white hover:bg-brand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-brand-200 dark:text-brand-950 dark:hover:bg-brand-500">Confirmar cierre</button>
               </div>
             </div>
           )}

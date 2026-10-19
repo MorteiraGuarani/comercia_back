@@ -6,10 +6,10 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { usePanel } from "@/components/panel/contexto";
 
 const ClientesPanel = dynamic(() =>
-  import("@/components/campo/catalogo-panel").then((m) => m.ClientesPanel),
+  import("@/components/campo/clientes-panel").then((m) => m.ClientesPanel),
 );
 const LocalesPanel = dynamic(() =>
-  import("@/components/campo/catalogo-panel").then((m) => m.LocalesPanel),
+  import("@/components/campo/locales-panel").then((m) => m.LocalesPanel),
 );
 const TareasPanel = dynamic(() =>
   import("@/components/campo/tareas-panel").then((m) => m.TareasPanel),
@@ -123,13 +123,13 @@ export default function PaginaModulo({
 
   return (
     <div className="min-w-0 w-full px-4 py-5 sm:px-6 lg:px-8">
-      <p className="text-xs font-medium uppercase tracking-wide text-brand-700 dark:text-brand-400">
+      <p className="text-xs font-medium uppercase tracking-wide text-brand-700 dark:text-brand-200">
         {mod.nombre}
       </p>
       <h1 className="mt-1 text-xl font-bold tracking-tight">{pag.nombre}</h1>
       <div className="mt-8 grid place-items-center rounded-xl border border-dashed border-line bg-surface-raised p-12 text-center">
         <div className="max-w-sm">
-          <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-brand-100 text-brand-700 dark:bg-brand-950 dark:text-brand-300">
+          <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-brand-100 text-brand-700 dark:bg-brand-950 dark:text-brand-200">
             <svg
               viewBox="0 0 20 20"
               fill="currentColor"

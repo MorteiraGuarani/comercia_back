@@ -34,6 +34,7 @@ const SELECT_ROL_ADMIN = {
 } as const;
 
 import { aRolAdminDto } from './utils/rol-admin';
+import { relanzarDuplicado } from '../common/utils/error-prisma';
 
 @Injectable()
 export class RolesService {
@@ -198,17 +199,10 @@ export class RolesService {
       });
       return aRolAdminDto(rol);
     } catch (error: unknown) {
-      if (
-        typeof error === 'object' &&
-        error !== null &&
-        'code' in error &&
-        error.code === 'P2002'
-      ) {
-        throw new ConflictException(
-          'Ya existe un rol con esa descripción en esta empresa',
-        );
-      }
-      throw error;
+      relanzarDuplicado(
+        error,
+        'Ya existe un rol con esa descripción en esta empresa',
+      );
     }
   }
 
@@ -256,17 +250,10 @@ export class RolesService {
       });
       return aRolAdminDto(rol);
     } catch (error: unknown) {
-      if (
-        typeof error === 'object' &&
-        error !== null &&
-        'code' in error &&
-        error.code === 'P2002'
-      ) {
-        throw new ConflictException(
-          'Ya existe un rol con esa descripción en esta empresa',
-        );
-      }
-      throw error;
+      relanzarDuplicado(
+        error,
+        'Ya existe un rol con esa descripción en esta empresa',
+      );
     }
   }
 

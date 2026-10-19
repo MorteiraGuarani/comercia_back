@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -29,6 +28,7 @@ import type {
   UsuarioAdminDto,
 } from './interfaces/usuario-admin.interface';
 import { ListarSuperioresDto } from './dto/listar-superiores.dto';
+import { relanzarDuplicado } from '../common/utils/error-prisma';
 
 const SELECT_USUARIO_ADMIN = {
   id: true,
@@ -550,17 +550,10 @@ export class UsuariosService {
       });
       return aUsuarioDto(usuario);
     } catch (error: unknown) {
-      if (
-        typeof error === 'object' &&
-        error !== null &&
-        'code' in error &&
-        error.code === 'P2002'
-      ) {
-        throw new ConflictException(
-          'Ya existe un usuario registrado con ese correo',
-        );
-      }
-      throw error;
+      relanzarDuplicado(
+        error,
+        'Ya existe un usuario registrado con ese correo',
+      );
     }
   }
 

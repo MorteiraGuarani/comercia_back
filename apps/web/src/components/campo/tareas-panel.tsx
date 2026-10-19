@@ -13,11 +13,18 @@ import { usePanel } from "@/components/panel/contexto";
 import { destinatarioCampo } from "@/utils/equipo-campo";
 import { SelectorLocalesTarea } from "./selector-locales-tarea";
 import { HistorialTarea } from "./historial-tarea";
-import { HojaInstruccionTarea, TarjetaTareaCatalogo } from "./tarjeta-tarea-catalogo";
+import {
+  HojaInstruccionTarea,
+  TarjetaTareaCatalogo,
+} from "./tarjeta-tarea-catalogo";
 import type { RespuestaPaginada } from "@/types/paginacion";
 import { TOKENS } from "./tokens";
 import { StatusStamp } from "./ui/status-stamp";
-import { BuscadorCatalogo, ChipsFiltro, KpisFiltro } from "./ui/filtros-catalogo";
+import {
+  BuscadorCatalogo,
+  ChipsFiltro,
+  KpisFiltro,
+} from "./ui/filtros-catalogo";
 import { TopBar } from "./ui/top-bar";
 import {
   IconoAlerta,
@@ -33,6 +40,7 @@ import type {
   TareaCampo,
   RespuestaCatalogoTareasCampo,
 } from "@/types/campo";
+import { confirmar } from "@/components/confirmacion/confirmacion-controller";
 
 const CATEGORIAS_PRESET = [
   "Góndola",
@@ -147,9 +155,11 @@ export function TareasPanel() {
   async function eliminar(tarea: TareaCampo) {
     if (!puedeArchivar || tarea.archivadaEn) return;
     if (
-      !window.confirm(
-        `¿Archivar la tarea «${tarea.nombre}»? Se conservarán sus cumplimientos, versiones y evidencias.`,
-      )
+      !(await confirmar({
+        titulo: "Archivar tarea",
+        mensaje: `¿Archivar la tarea «${tarea.nombre}»? Se conservarán sus cumplimientos, versiones y evidencias.`,
+        textoConfirmar: "Archivar",
+      }))
     )
       return;
     await op.ejecutar("Archivando tarea", async () => {
@@ -200,9 +210,30 @@ export function TareasPanel() {
             lista.setPage(1);
           }}
           items={[
-            { clave: "todas", etiqueta: "Tareas", valor: resumen?.total ?? "—", detalle: "En el catálogo", icono: <IconoTareas />, tono: "marca" },
-            { clave: "obligatorias", etiqueta: "Obligatorias", valor: resumen?.obligatorias ?? "—", detalle: "De cumplimiento obligatorio", icono: <IconoAlerta />, tono: "rojo" },
-            { clave: "con_fotos", etiqueta: "Con fotos", valor: resumen?.conFotos ?? "—", detalle: "Requieren evidencia", icono: <IconoCamara />, tono: "celeste" },
+            {
+              clave: "todas",
+              etiqueta: "Tareas",
+              valor: resumen?.total ?? "—",
+              detalle: "En el catálogo",
+              icono: <IconoTareas />,
+              tono: "marca",
+            },
+            {
+              clave: "obligatorias",
+              etiqueta: "Obligatorias",
+              valor: resumen?.obligatorias ?? "—",
+              detalle: "De cumplimiento obligatorio",
+              icono: <IconoAlerta />,
+              tono: "rojo",
+            },
+            {
+              clave: "con_fotos",
+              etiqueta: "Con fotos",
+              valor: resumen?.conFotos ?? "—",
+              detalle: "Requieren evidencia",
+              icono: <IconoCamara />,
+              tono: "celeste",
+            },
           ]}
         />
 
@@ -217,7 +248,9 @@ export function TareasPanel() {
             type="button"
             aria-pressed={archivo === "archivadas"}
             onClick={() => {
-              setArchivo((actual) => (actual === "archivadas" ? "activas" : "archivadas"));
+              setArchivo((actual) =>
+                actual === "archivadas" ? "activas" : "archivadas",
+              );
               lista.setPage(1);
             }}
             title="Ver las tareas archivadas"
@@ -239,15 +272,19 @@ export function TareasPanel() {
           >
             <IconoArchivo className="mt-px h-4 w-4 shrink-0" />
             <span>
-              Estás viendo las tareas <b>archivadas</b>: ya no se asignan en las visitas, pero conservan su historial y
-              sus evidencias. Tocá «Archivadas» otra vez para volver a las vigentes.
+              Estás viendo las tareas <b>archivadas</b>: ya no se asignan en las
+              visitas, pero conservan su historial y sus evidencias. Tocá
+              «Archivadas» otra vez para volver a las vigentes.
             </span>
           </p>
         ) : null}
 
         <ChipsFiltro
           etiqueta="Filtrar por categoría"
-          opciones={["Todas", ...CATEGORIAS_PRESET].map((cat) => ({ clave: cat, etiqueta: cat }))}
+          opciones={["Todas", ...CATEGORIAS_PRESET].map((cat) => ({
+            clave: cat,
+            etiqueta: cat,
+          }))}
           seleccionado={categoriaFiltro}
           onSeleccionar={(cat) => {
             setCategoriaFiltro(cat);
@@ -281,7 +318,10 @@ export function TareasPanel() {
           </p>
         ) : (
           <>
-            <ul aria-label="Catálogo de tareas" className="grid gap-2.5 md:hidden">
+            <ul
+              aria-label="Catálogo de tareas"
+              className="grid gap-2.5 md:hidden"
+            >
               {lista.items.map((tarea) => (
                 <li key={tarea.id} className="min-w-0">
                   <TarjetaTareaCatalogo
@@ -331,10 +371,10 @@ export function TareasPanel() {
                           type="button"
                           onClick={() => setInstruccion(tarea)}
                           aria-label={`Ver instrucción de ${tarea.nombre}`}
-                          className="mt-1.5 mr-2 inline-flex min-h-9 cursor-pointer items-center gap-1 whitespace-nowrap rounded-lg bg-emerald-600 px-2.5 text-xs font-bold text-white transition-colors hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:bg-emerald-500 dark:text-emerald-950 dark:hover:bg-emerald-400"
+                          className="mt-1.5 mr-2 inline-flex min-h-11 cursor-pointer items-center gap-1 whitespace-nowrap rounded-lg bg-emerald-600 px-2.5 text-xs font-bold text-white transition-colors hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:bg-emerald-500 dark:text-emerald-950 dark:hover:bg-emerald-400"
                         >
                           <IconoOjo className="h-3.5 w-3.5" />
-                          Ver instrucción
+                          Instrucción
                         </button>
                         <button
                           type="button"
@@ -417,7 +457,10 @@ export function TareasPanel() {
       </main>
 
       {instruccion ? (
-        <HojaInstruccionTarea tarea={instruccion} cerrar={() => setInstruccion(null)} />
+        <HojaInstruccionTarea
+          tarea={instruccion}
+          cerrar={() => setInstruccion(null)}
+        />
       ) : null}
 
       {/* Modal de Creación / Edición */}

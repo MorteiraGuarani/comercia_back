@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -20,6 +19,7 @@ import type {
   EmpresaAdminFila,
 } from './interfaces/empresa-admin.interface';
 import { esEmpresaJerarquiaFila } from './utils/empresa-jerarquia';
+import { relanzarDuplicado } from '../common/utils/error-prisma';
 
 const SELECT_EMPRESA_ADMIN = {
   id: true,
@@ -117,15 +117,7 @@ export class AdminEmpresasService {
       });
       return aEmpresaAdminDto(empresa);
     } catch (error: unknown) {
-      if (
-        typeof error === 'object' &&
-        error !== null &&
-        'code' in error &&
-        error.code === 'P2002'
-      ) {
-        throw new ConflictException('Ya existe una empresa con ese nombre');
-      }
-      throw error;
+      relanzarDuplicado(error, 'Ya existe una empresa con ese nombre');
     }
   }
 
@@ -152,15 +144,7 @@ export class AdminEmpresasService {
       });
       return aEmpresaAdminDto(empresa);
     } catch (error: unknown) {
-      if (
-        typeof error === 'object' &&
-        error !== null &&
-        'code' in error &&
-        error.code === 'P2002'
-      ) {
-        throw new ConflictException('Ya existe una empresa con ese nombre');
-      }
-      throw error;
+      relanzarDuplicado(error, 'Ya existe una empresa con ese nombre');
     }
   }
 

@@ -19,7 +19,7 @@ describe('UcheckSsoService', () => {
       ok: true,
       status: 200,
       json: jest.fn().mockResolvedValue(identidad),
-    } as Response);
+    } as unknown as Response);
     const prisma = {
       identidadUcheck: {
         findUnique: jest.fn().mockResolvedValue(null),
@@ -73,7 +73,7 @@ describe('UcheckSsoService', () => {
       json: jest
         .fn()
         .mockResolvedValue({ ...identidad, correo: 'nuevo@empresa.com' }),
-    } as Response);
+    } as unknown as Response);
     const prisma = {
       identidadUcheck: {
         findUnique: jest.fn().mockResolvedValue({

@@ -17,7 +17,10 @@ import {
 // Tarjeta del catálogo de tareas y hoja "Ver instrucción". Cada categoría
 // tiene su color para reconocerla de un vistazo.
 
-const CATEGORIA_UI: Record<string, { franja: string; caja: string; texto: string; chip: string }> = {
+const CATEGORIA_UI: Record<
+  string,
+  { franja: string; caja: string; texto: string; chip: string }
+> = {
   Góndola: {
     franja: "bg-emerald-500 dark:bg-emerald-400",
     caja: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300",
@@ -68,14 +71,16 @@ const CATEGORIA_OTRA = {
   chip: "border-stone-200 bg-stone-50 text-stone-700 dark:border-stone-700 dark:bg-stone-800/70 dark:text-stone-200",
 };
 
-const PILL = "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold";
+const PILL =
+  "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold";
 const PILL_ROJO = `${PILL} border-red-200 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/50 dark:text-red-300`;
 const PILL_VERDE = `${PILL} border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-300`;
 const PILL_GRIS = `${PILL} border-stone-200 bg-stone-50 text-stone-700 dark:border-stone-700 dark:bg-stone-800/70 dark:text-stone-200`;
 const PILL_AMBAR = `${PILL} border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-300`;
 const PILL_CELESTE = `${PILL} border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-900 dark:bg-sky-950/50 dark:text-sky-300`;
 
-const enfoque = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus";
+const enfoque =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus";
 
 function categoriaDe(t: TareaCampo) {
   const nombre = t.categoria || "Góndola";
@@ -83,7 +88,11 @@ function categoriaDe(t: TareaCampo) {
 }
 
 function destinatarioTexto(t: TareaCampo) {
-  return t.destinatario === "AMBOS" ? "Ambos equipos" : t.destinatario === "REPOSITOR" ? "Repositor" : "Impulsador";
+  return t.destinatario === "AMBOS"
+    ? "Ambos equipos"
+    : t.destinatario === "REPOSITOR"
+      ? "Repositor"
+      : "Impulsador";
 }
 
 function alcanceTexto(t: TareaCampo) {
@@ -158,20 +167,27 @@ export function TarjetaTareaCatalogo({
             <IconoTareas className="h-5 w-5" />
           </span>
           <div className="min-w-0 flex-1">
-            <p className={`truncate text-[11px] font-bold uppercase tracking-wide ${categoria.ui.texto}`}>
+            <p
+              className={`truncate text-[11px] font-bold uppercase tracking-wide ${categoria.ui.texto}`}
+            >
               {categoria.nombre}
-              <span className="font-semibold normal-case tracking-normal text-muted"> · {destinatarioTexto(t)}</span>
+              <span className="font-semibold normal-case tracking-normal text-muted">
+                {" "}
+                · {destinatarioTexto(t)}
+              </span>
             </p>
-            <h3 className="break-words text-sm font-bold leading-snug text-foreground">{t.nombre}</h3>
+            <h3 className="break-words text-sm font-bold leading-snug text-foreground">
+              {t.nombre}
+            </h3>
           </div>
           <button
             type="button"
             onClick={onVerInstruccion}
             aria-label={`Ver instrucción de ${t.nombre}`}
-            className={`inline-flex min-h-10 shrink-0 cursor-pointer items-center gap-1 whitespace-nowrap rounded-lg bg-emerald-600 px-2.5 text-xs font-bold text-white shadow-sm transition-colors hover:bg-emerald-700 dark:bg-emerald-500 dark:text-emerald-950 dark:hover:bg-emerald-400 ${enfoque}`}
+            className={`inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-1 whitespace-nowrap rounded-lg bg-emerald-600 px-2.5 text-xs font-bold text-white shadow-sm transition-colors hover:bg-emerald-700 dark:bg-emerald-500 dark:text-emerald-950 dark:hover:bg-emerald-400 ${enfoque}`}
           >
             <IconoOjo className="h-3.5 w-3.5" />
-            Ver instrucción
+            Instrucción
           </button>
         </div>
 
@@ -181,7 +197,11 @@ export function TarjetaTareaCatalogo({
 
         <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted">
           <span className="inline-flex items-center gap-1">
-            {t.todosLocales ? <IconoGlobo className="h-3.5 w-3.5" /> : <IconoPin className="h-3.5 w-3.5" />}
+            {t.todosLocales ? (
+              <IconoGlobo className="h-3.5 w-3.5" />
+            ) : (
+              <IconoPin className="h-3.5 w-3.5" />
+            )}
             {alcanceTexto(t)}
           </span>
           <span className="inline-flex items-center gap-1">
@@ -194,14 +214,19 @@ export function TarjetaTareaCatalogo({
           <button
             type="button"
             onClick={onHistorial}
-            className={`min-h-10 cursor-pointer rounded-lg px-1.5 text-xs font-semibold text-muted transition-colors hover:text-foreground hover:underline ${enfoque}`}
+            className={`min-h-11 cursor-pointer rounded-lg px-1.5 text-xs font-semibold text-muted transition-colors hover:text-foreground hover:underline ${enfoque}`}
           >
             Historial · v{t.version}
           </button>
           {!t.archivadaEn && (puedeEditar || puedeArchivar) ? (
             <div className="flex items-center gap-1.5">
               {puedeEditar ? (
-                <BotonEditar onClick={onEditar} etiqueta={`Editar tarea ${t.nombre}`} modo="texto" className="min-h-10 text-xs" />
+                <BotonEditar
+                  onClick={onEditar}
+                  etiqueta={`Editar tarea ${t.nombre}`}
+                  modo="texto"
+                  className="min-h-11 text-xs"
+                />
               ) : null}
               {puedeArchivar ? (
                 <button
@@ -210,7 +235,7 @@ export function TarjetaTareaCatalogo({
                   disabled={ocupado}
                   aria-label={`Archivar ${t.nombre}`}
                   title="Archivar: deja de asignarse, conserva su historial"
-                  className={`inline-flex min-h-10 cursor-pointer items-center gap-1 whitespace-nowrap rounded-lg border border-line bg-surface-raised px-2.5 text-xs font-semibold text-muted transition-colors hover:border-red-400 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:text-red-300 ${enfoque}`}
+                  className={`inline-flex min-h-11 cursor-pointer items-center gap-1 whitespace-nowrap rounded-lg border border-line bg-surface-raised px-2.5 text-xs font-semibold text-muted transition-colors hover:border-red-400 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:text-red-300 ${enfoque}`}
                 >
                   <IconoArchivo className="h-3.5 w-3.5" />
                   Archivar
@@ -225,7 +250,13 @@ export function TarjetaTareaCatalogo({
 }
 
 /** Hoja inferior (en celular) con la instrucción completa y el alcance. */
-export function HojaInstruccionTarea({ tarea: t, cerrar }: { tarea: TareaCampo; cerrar: () => void }) {
+export function HojaInstruccionTarea({
+  tarea: t,
+  cerrar,
+}: {
+  tarea: TareaCampo;
+  cerrar: () => void;
+}) {
   const categoria = categoriaDe(t);
   const fotos = t.requiereFotos
     ? t.fotosObligatorias
@@ -236,16 +267,25 @@ export function HojaInstruccionTarea({ tarea: t, cerrar }: { tarea: TareaCampo; 
     <Modal titulo={t.nombre} abierto onCerrar={cerrar} hojaMovil ancho="lg">
       <div className="min-w-0 space-y-3">
         <div className="flex flex-wrap gap-1.5">
-          <span className={`${PILL} ${categoria.ui.chip}`}>{categoria.nombre}</span>
+          <span className={`${PILL} ${categoria.ui.chip}`}>
+            {categoria.nombre}
+          </span>
           <Insignias t={t} />
         </div>
 
-        <section aria-labelledby={`instruccion-${t.id}`} className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 dark:border-emerald-900 dark:bg-emerald-950/30">
-          <h3 id={`instruccion-${t.id}`} className="text-[11px] font-bold uppercase tracking-wide text-emerald-800 dark:text-emerald-300">
+        <section
+          aria-labelledby={`instruccion-${t.id}`}
+          className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 dark:border-emerald-900 dark:bg-emerald-950/30"
+        >
+          <h3
+            id={`instruccion-${t.id}`}
+            className="text-[11px] font-bold uppercase tracking-wide text-emerald-800 dark:text-emerald-300"
+          >
             Instrucción
           </h3>
           <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground">
-            {t.descripcion?.trim() || "Esta tarea no tiene instrucciones adicionales."}
+            {t.descripcion?.trim() ||
+              "Esta tarea no tiene instrucciones adicionales."}
           </p>
         </section>
 
@@ -256,16 +296,26 @@ export function HojaInstruccionTarea({ tarea: t, cerrar }: { tarea: TareaCampo; 
             ["Vigencia", vigenciaTexto(t)],
             ["Fotos", fotos],
           ].map(([k, v]) => (
-            <div key={k} className="min-w-0 rounded-xl border border-line bg-surface-raised px-3 py-2">
-              <dt className="text-[10px] font-semibold uppercase tracking-wide text-muted">{k}</dt>
-              <dd className="mt-0.5 break-words text-xs font-semibold text-foreground">{v}</dd>
+            <div
+              key={k}
+              className="min-w-0 rounded-xl border border-line bg-surface-raised px-3 py-2"
+            >
+              <dt className="text-[10px] font-semibold uppercase tracking-wide text-muted">
+                {k}
+              </dt>
+              <dd className="mt-0.5 break-words text-xs font-semibold text-foreground">
+                {v}
+              </dd>
             </div>
           ))}
         </dl>
 
         {!t.todosLocales && t.locales?.length ? (
           <section aria-labelledby={`locales-${t.id}`}>
-            <h3 id={`locales-${t.id}`} className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-muted">
+            <h3
+              id={`locales-${t.id}`}
+              className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-muted"
+            >
               Locales
             </h3>
             <ul className="flex flex-wrap gap-1.5">

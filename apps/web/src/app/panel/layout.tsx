@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, LazyMotion, m } from "motion/react";
 import { apiFetch } from "@/lib/api";
 import type { UsuarioSesion } from "@/types/usuario";
 import type { ModuloMenu } from "@/types/plataforma";
@@ -18,6 +18,9 @@ import { btnGhost } from "@/components/ui";
 import { EVENTO_PLATAFORMA_ACTUALIZADA } from "@/lib/eventos-plataforma";
 import { BotonSubir } from "@/components/boton-subir";
 import { etiquetaPaginaMenu } from "@/utils/nombres-menu";
+
+const cargarAnimaciones = () =>
+  import("@/lib/funciones-animacion").then((modulo) => modulo.default);
 
 export default function PanelLayout({
   children,
@@ -137,6 +140,7 @@ export default function PanelLayout({
   const masActivo = enlacesMas.some((enlace) => activo(enlace.href));
 
   return (
+    <LazyMotion features={cargarAnimaciones}>
     <PanelProvider value={valorPanel}>
       <div className="relative isolate flex min-h-dvh w-full max-w-full flex-col overflow-x-clip bg-background">
         <div
@@ -211,7 +215,7 @@ export default function PanelLayout({
 
               <AnimatePresence>
                 {menuAbierto && (
-                  <motion.div
+                  <m.div
                     initial={{ opacity: 0, scale: 0.95, y: -4 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.97, y: -4 }}
@@ -260,7 +264,7 @@ export default function PanelLayout({
                     >
                       <IconoSalir /> Cerrar sesión
                     </button>
-                  </motion.div>
+                  </m.div>
                 )}
               </AnimatePresence>
             </div>
@@ -271,7 +275,7 @@ export default function PanelLayout({
           {/* Menú lateral (escritorio) */}
           <AnimatePresence initial={false}>
             {sidebarVisible && (
-              <motion.aside
+              <m.aside
                 initial={{ x: -24, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 exit={{ x: -24, opacity: 0 }}
@@ -293,7 +297,7 @@ export default function PanelLayout({
                     </Link>
                   ))}
                 </nav>
-              </motion.aside>
+              </m.aside>
             )}
           </AnimatePresence>
 
@@ -307,7 +311,7 @@ export default function PanelLayout({
         <AnimatePresence>
           {masAbierto && tieneMasEnlaces ? (
             <>
-              <motion.button
+              <m.button
                 type="button"
                 aria-label="Cerrar más opciones"
                 initial={{ opacity: 0 }}
@@ -316,7 +320,7 @@ export default function PanelLayout({
                 onClick={() => setMasAbierto(false)}
                 className="fixed inset-0 z-30 bg-black/20 lg:hidden"
               />
-              <motion.div
+              <m.div
                 id="panel-mas-opciones"
                 role="menu"
                 aria-label="Más opciones"
@@ -350,7 +354,7 @@ export default function PanelLayout({
                     </Link>
                   );
                 })}
-              </motion.div>
+              </m.div>
             </>
           ) : null}
         </AnimatePresence>
@@ -481,6 +485,7 @@ export default function PanelLayout({
         />
       </div>
     </PanelProvider>
+    </LazyMotion>
   );
 }
 

@@ -1,4 +1,5 @@
 "use client";
+import dynamic from "next/dynamic";
 
 import React, { useEffect, useState, useMemo } from "react";
 import { apiFetch } from "@/lib/api";
@@ -24,7 +25,6 @@ import {
 } from "./ui/selector-fecha-filtro";
 import { Modal } from "@/components/modal";
 import { PantallaCarga } from "@/components/pantalla-carga";
-import { MapaLocal } from "./mapa-local";
 import { crearNovedadCampo } from "@/lib/api-adjuntos-campo";
 import { SelectorFotosCampo } from "./selector-fotos-campo";
 import type {
@@ -33,6 +33,13 @@ import type {
   VisitaCampo,
   TipoNovedad,
 } from "@/types/campo";
+import { mostrarToast } from "@/components/toast/toast-controller";
+
+// Leaflet solo se descarga al abrir un mapa.
+const MapaLocal = dynamic(
+  () => import("./mapa-local").then((modulo) => modulo.MapaLocal),
+  { ssr: false },
+);
 
 type LocalParaNovedad = Pick<LocalCampo, "id" | "nombre">;
 
@@ -254,8 +261,10 @@ export function RutaImpulsadorPanel() {
         setNovedadExito(false);
       }, 1400);
     } catch (e) {
-      alert(
-        "Error al reportar novedad: " + mensajeError(e, "Error inesperado"),
+      mostrarToast(
+        "error",
+        mensajeError(e, "Error inesperado"),
+        "No se pudo reportar la novedad",
       );
     } finally {
       setGuardandoNovedad(false);

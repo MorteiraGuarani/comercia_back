@@ -25,15 +25,6 @@ function preparar() {
       findMany: jest.fn().mockResolvedValue([]),
     },
     usuario: {
-      findUnique: jest.fn().mockResolvedValue({
-        id: 1,
-        empresaId: 10,
-        isActive: true,
-        rol: { equipoCampoId: 1 },
-      }),
-      findMany: jest.fn().mockResolvedValue([]),
-    },
-    usuario: {
       findUnique: jest.fn().mockResolvedValue(null),
       findMany: jest.fn().mockResolvedValue([]),
     },

@@ -27,6 +27,7 @@ import {
   IconoTienda,
 } from "./ui/iconos-campo";
 import type { ClienteCampo, RespuestaClientesCampo } from "@/types/campo";
+import { mostrarToast } from "@/components/toast/toast-controller";
 
 export function ClientesPanel() {
   const router = useRouter();
@@ -109,12 +110,8 @@ export function ClientesPanel() {
     try {
       setSubiendoLogo(true);
       const formData = new FormData();
-      if (file.type === "image/svg+xml") {
-        if (file.size > 5 * 1024 * 1024) throw new Error("El SVG supera 5 MB.");
-        formData.append("logo", file);
-      } else {
-        formData.append("logo", await prepararImagen(file));
-      }
+      // También los SVG: la API solo acepta JPG, PNG o WebP.
+      formData.append("logo", await prepararImagen(file));
 
       const res = await apiFetch<{ url: string }>("/campo/clientes/subir-logo", {
         method: "POST",
@@ -123,7 +120,7 @@ export function ClientesPanel() {
 
       setForm((prev) => (prev ? { ...prev, logoUrl: res.url } : null));
     } catch (err) {
-      alert("Error al subir imagen de logo: " + mensajeError(err, "Error inesperado"));
+      mostrarToast("error", mensajeError(err, "Error inesperado"), "No se pudo subir el logo");
     } finally {
       setSubiendoLogo(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -149,7 +146,7 @@ export function ClientesPanel() {
               onClick={abrirCrear}
               aria-label="Crear cliente"
               title="Crear cliente"
-              className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-white shadow-sm transition-all hover:brightness-110 active:scale-95 cursor-pointer"
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-white dark:text-[#3b1219] shadow-sm transition-all hover:brightness-110 active:scale-95 cursor-pointer"
               style={{ backgroundColor: TOKENS.carne }}
             >
               <IconoMas className="w-4 h-4" />
@@ -211,7 +208,7 @@ export function ClientesPanel() {
                     onClick={abrirCrear}
                     aria-label="Crear cliente"
                     title="Crear cliente"
-                    className="mt-3.5 inline-grid h-11 w-11 place-items-center rounded-lg text-white"
+                    className="mt-3.5 inline-grid h-11 w-11 place-items-center rounded-lg text-white dark:text-[#3b1219]"
                     style={{ backgroundColor: TOKENS.carne }}
                   >
                     <IconoMas className="w-3.5 h-3.5" />
@@ -262,7 +259,7 @@ export function ClientesPanel() {
                             <button
                               type="button"
                               onClick={() => verEnMapa(cliente.id)}
-                              className="inline-flex min-h-11 flex-1 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-sky-200 bg-sky-50 px-3 text-sm font-semibold text-sky-800 transition-colors hover:border-sky-400 hover:bg-sky-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:border-sky-900 dark:bg-sky-950/50 dark:text-sky-200 dark:hover:bg-sky-900"
+                              className="inline-flex min-h-11 flex-1 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-sky-200 bg-sky-50 px-3 text-sm font-semibold text-sky-800 transition-colors hover:border-sky-400 dark:hover:border-sky-700 hover:bg-sky-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:border-sky-900 dark:bg-sky-950/50 dark:text-sky-200 dark:hover:bg-sky-900"
                             >
                               <IconoMapa className="h-4 w-4" />
                               Mapa
@@ -277,7 +274,7 @@ export function ClientesPanel() {
                 <div className="hidden overflow-x-auto md:block">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="border-b bg-zinc-50/80 text-[11px] font-bold uppercase tracking-wider text-zinc-500" style={{ borderColor: TOKENS.line }}>
+                      <tr className="border-b bg-surface-soft text-[11px] font-bold uppercase tracking-wider text-muted" style={{ borderColor: TOKENS.line }}>
                         <th className="py-2.5 px-3.5">Acciones</th>
                         <th className="py-2.5 px-3.5">Cliente</th>
                         <th className="py-2.5 px-3.5">RUC</th>
@@ -285,13 +282,13 @@ export function ClientesPanel() {
                         <th className="py-2.5 px-3.5 text-center">Estado</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-zinc-100 text-xs">
+                    <tbody className="divide-y divide-line text-xs">
                       {itemsFiltrados.map((cliente) => {
                         const localesCount = cliente._count?.locales ?? 0;
                         return (
                           <tr
                             key={cliente.id}
-                            className="hover:bg-zinc-50/70 transition-colors group"
+                            className="hover:bg-surface-soft transition-colors group"
                           >
                             {/* Acciones */}
                             <td className="py-2.5 px-3.5 whitespace-nowrap">
@@ -301,7 +298,7 @@ export function ClientesPanel() {
                                   type="button"
                                   onClick={() => verEnMapa(cliente.id)}
                                   title="Ver locales de este cliente en el mapa de cobertura"
-                                  className="px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider text-[#2C4A6E] bg-sky-50 hover:bg-sky-100 transition-colors inline-flex items-center gap-1 cursor-pointer"
+                                  className="px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider text-[#2C4A6E] dark:text-[#a0bddf] bg-sky-50 dark:bg-sky-950/50 hover:bg-sky-100 dark:hover:bg-sky-900 transition-colors inline-flex items-center gap-1 cursor-pointer"
                                 >
                                   <IconoMapa className="w-3 h-3" />
                                   <span>Mapa</span>
@@ -325,11 +322,11 @@ export function ClientesPanel() {
                             {/* RUC */}
                             <td className="py-2.5 px-3.5 whitespace-nowrap">
                               {cliente.ruc ? (
-                                <span className="font-mono text-xs text-zinc-700 bg-zinc-100 px-2 py-0.5 rounded font-semibold">
+                                <span className="font-mono text-xs text-foreground bg-surface-soft px-2 py-0.5 rounded font-semibold">
                                   {cliente.ruc}
                                 </span>
                               ) : (
-                                <span className="text-zinc-400 italic text-[11px]">Sin RUC</span>
+                                <span className="text-muted italic text-[11px]">Sin RUC</span>
                               )}
                             </td>
 
@@ -401,13 +398,13 @@ export function ClientesPanel() {
             className="space-y-4 pt-1"
           >
             {/* Sección de Foto / Logo del Cliente */}
-            <div className="p-3 rounded-xl border bg-zinc-50 flex items-center gap-3.5" style={{ borderColor: TOKENS.line }}>
+            <div className="p-3 rounded-xl border bg-surface-soft flex items-center gap-3.5" style={{ borderColor: TOKENS.line }}>
               {/* Preview del Logo */}
-              <div className="relative w-14 h-14 rounded-xl overflow-hidden border border-zinc-200 shadow-xs bg-white shrink-0 flex items-center justify-center">
+              <div className="relative w-14 h-14 rounded-xl overflow-hidden border border-line shadow-xs bg-surface-raised shrink-0 flex items-center justify-center">
                 {form.logoUrl ? (
-                  <img src={form.logoUrl} alt="Logo preview" className="w-full h-full object-cover" />
+                  <img src={form.logoUrl} alt="Vista previa del logo" className="w-full h-full object-cover" />
                 ) : (
-                  <span className="font-bold text-base text-zinc-400">
+                  <span className="font-bold text-base text-muted">
                     {iniciales(form.nombre || "CL")}
                   </span>
                 )}
@@ -420,7 +417,7 @@ export function ClientesPanel() {
 
               {/* Botones para subir imagen */}
               <div className="flex-1 min-w-0">
-                <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-bold text-foreground uppercase tracking-wider mb-1">
                   Logo / Foto del Cliente
                 </label>
                 <div className="flex flex-wrap items-center gap-2">
@@ -448,13 +445,13 @@ export function ClientesPanel() {
                     <button
                       type="button"
                       onClick={() => setForm({ ...form, logoUrl: null })}
-                      className="px-2 py-1 rounded-lg text-xs font-semibold text-red-600 hover:bg-red-50 transition cursor-pointer"
+                      className="px-2 py-1 rounded-lg text-xs font-semibold text-red-600 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-950 transition cursor-pointer"
                     >
                       Quitar
                     </button>
                   )}
                 </div>
-                <p className="text-[11px] text-zinc-500 mt-1 font-medium">
+                <p className="text-[11px] text-muted mt-1 font-medium">
                   Las fotos se reducen antes de subir. SVG hasta 5 MB.
                 </p>
               </div>
@@ -462,7 +459,7 @@ export function ClientesPanel() {
 
             {/* Nombre Comercial */}
             <div>
-              <label className="block text-[11px] font-bold text-zinc-700 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-bold text-foreground uppercase tracking-wider mb-1">
                 Nombre de la Empresa / Cliente *
               </label>
               <input
@@ -471,14 +468,14 @@ export function ClientesPanel() {
                 value={form.nombre}
                 onChange={(e) => setForm({ ...form, nombre: e.target.value })}
                 placeholder="Ej. Frigorífico Guaraní, Superseis, etc."
-                className="w-full px-3 py-2 text-xs sm:text-sm rounded-lg border bg-white focus:outline-none focus:ring-2 focus:ring-[#1E2320] font-medium"
+                className="w-full px-3 py-2 text-xs sm:text-sm rounded-lg border bg-surface-raised focus:outline-none focus:ring-2 focus:ring-focus font-medium"
                 style={{ borderColor: TOKENS.line }}
               />
             </div>
 
             {/* RUC */}
             <div>
-              <label className="block text-[11px] font-bold text-zinc-700 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-bold text-foreground uppercase tracking-wider mb-1">
                 RUC / Identificación Fiscal
               </label>
               <input
@@ -486,7 +483,7 @@ export function ClientesPanel() {
                 value={form.ruc}
                 onChange={(e) => setForm({ ...form, ruc: e.target.value })}
                 placeholder="Ej. 80012345-6"
-                className="w-full px-3 py-2 font-mono text-xs sm:text-sm font-medium rounded-lg border bg-white focus:outline-none focus:ring-2 focus:ring-[#1E2320]"
+                className="w-full px-3 py-2 font-mono text-xs sm:text-sm font-medium rounded-lg border bg-surface-raised focus:outline-none focus:ring-2 focus:ring-focus"
                 style={{ borderColor: TOKENS.line }}
               />
             </div>
@@ -494,7 +491,7 @@ export function ClientesPanel() {
             {/* Contacto y Teléfono */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-[11px] font-bold text-zinc-700 uppercase tracking-wider mb-1">
+                <label className="block text-[11px] font-bold text-foreground uppercase tracking-wider mb-1">
                   Persona de Contacto
                 </label>
                 <input
@@ -502,13 +499,13 @@ export function ClientesPanel() {
                   value={form.contacto}
                   onChange={(e) => setForm({ ...form, contacto: e.target.value })}
                   placeholder="Ej. Juan Pérez"
-                  className="w-full px-3 py-2 text-xs sm:text-sm rounded-lg border bg-white focus:outline-none focus:ring-2 focus:ring-[#1E2320] font-medium"
+                  className="w-full px-3 py-2 text-xs sm:text-sm rounded-lg border bg-surface-raised focus:outline-none focus:ring-2 focus:ring-focus font-medium"
                   style={{ borderColor: TOKENS.line }}
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-zinc-700 uppercase tracking-wider mb-1">
+                <label className="block text-[11px] font-bold text-foreground uppercase tracking-wider mb-1">
                   Teléfono Comercial
                 </label>
                 <input
@@ -516,7 +513,7 @@ export function ClientesPanel() {
                   value={form.telefono}
                   onChange={(e) => setForm({ ...form, telefono: e.target.value })}
                   placeholder="Ej. +595 21 123 456"
-                  className="w-full px-3 py-2 font-mono text-xs sm:text-sm font-medium rounded-lg border bg-white focus:outline-none focus:ring-2 focus:ring-[#1E2320]"
+                  className="w-full px-3 py-2 font-mono text-xs sm:text-sm font-medium rounded-lg border bg-surface-raised focus:outline-none focus:ring-2 focus:ring-focus"
                   style={{ borderColor: TOKENS.line }}
                 />
               </div>
@@ -529,22 +526,22 @@ export function ClientesPanel() {
                 id="cliente-activo-check"
                 checked={form.activo}
                 onChange={(e) => setForm({ ...form, activo: e.target.checked })}
-                className="w-4 h-4 rounded border-zinc-300 text-[#1E2320] focus:ring-[#1E2320] cursor-pointer"
+                className="w-4 h-4 rounded border-zinc-300 text-foreground focus:ring-focus cursor-pointer"
               />
-              <label htmlFor="cliente-activo-check" className="text-xs font-semibold text-zinc-800 cursor-pointer">
+              <label htmlFor="cliente-activo-check" className="text-xs font-semibold text-foreground cursor-pointer">
                 Cuenta comercial activa (disponible para asignaciones de ruta)
               </label>
             </div>
 
             {/* Mensajes de error */}
-            {op.error && <p className="text-xs text-red-600 font-bold">{op.error}</p>}
+            {op.error && <p className="text-xs text-red-600 dark:text-red-300 font-bold">{op.error}</p>}
 
             {/* Botones de acción */}
             <div className="flex justify-end gap-2.5 pt-3 border-t" style={{ borderColor: TOKENS.line }}>
               <button
                 type="button"
                 onClick={() => setForm(null)}
-                className="px-4 py-2 rounded-lg border text-xs font-bold uppercase tracking-wider bg-white hover:bg-zinc-50 cursor-pointer"
+                className="px-4 py-2 rounded-lg border text-xs font-bold uppercase tracking-wider bg-surface-raised hover:bg-surface-soft cursor-pointer"
                 style={{ borderColor: TOKENS.line }}
               >
                 Cancelar
@@ -552,7 +549,7 @@ export function ClientesPanel() {
               <button
                 type="submit"
                 disabled={guardando}
-                className="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider text-white shadow-sm cursor-pointer disabled:opacity-50"
+                className="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider text-white dark:text-[#3b1219] shadow-sm cursor-pointer disabled:opacity-50"
                 style={{ backgroundColor: TOKENS.carne }}
               >
                 {guardando ? "Guardando..." : form.id ? "Guardar Cambios" : "Crear Cliente"}

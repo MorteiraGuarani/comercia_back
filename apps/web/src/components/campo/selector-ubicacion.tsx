@@ -269,10 +269,11 @@ export default function SelectorUbicacion({
       )}
 
       {error && (
-        <div className="p-2.5 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700 flex items-start justify-between gap-2">
+        <div className="p-2.5 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700 flex items-start justify-between gap-2 dark:bg-red-950/60 dark:border-red-900 dark:text-red-200">
           <span>{error}</span>
           <button
             type="button"
+            aria-label="Cerrar aviso"
             onClick={() => setError(null)}
             className="text-red-500 hover:text-red-800 p-0.5 rounded cursor-pointer"
           >

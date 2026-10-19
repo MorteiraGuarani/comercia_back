@@ -4,8 +4,8 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -20,6 +20,10 @@ import { puedeAdministrarUsuarios } from '../common/utils/permisos-usuario';
 import type { UsuarioSesion } from './interfaces/usuario-sesion.interface';
 import type { TokenPayload } from './interfaces/token-payload.interface';
 import type { AsignacionUsuario } from './interfaces/asignacion-usuario.interface';
+import {
+  camposDuplicados,
+  esErrorDuplicado,
+} from '../common/utils/error-prisma';
 
 const MENSAJES_DUPLICADO: Record<string, string> = {
   correo: 'Ya existe un usuario registrado con ese correo',
@@ -32,6 +36,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
+    private readonly config: ConfigService,
   ) {}
 
   async crearUsuario(
@@ -86,11 +91,8 @@ export class AuthService {
       })
       .catch((e: unknown) => {
         // Carrera entre el chequeo y el insert: el índice único manda (409, no 500)
-        if (
-          e instanceof Prisma.PrismaClientKnownRequestError &&
-          e.code === 'P2002'
-        ) {
-          const campos = (e.meta?.target as string[] | undefined) ?? [];
+        if (esErrorDuplicado(e)) {
+          const campos = camposDuplicados(e);
           const mensaje = campos
             .map((c) => MENSAJES_DUPLICADO[c])
             .find((m) => m !== undefined);
@@ -137,6 +139,16 @@ export class AuthService {
   async loginMovilConSim(
     dto: LoginSimDto,
   ): Promise<{ usuario: UsuarioSesion; token: string }> {
+    const credencialesInvalidas = new UnauthorizedException(
+      'No se pudo iniciar sesión automáticamente',
+    );
+    // El número lo informa el teléfono y la API no puede comprobar que la SIM
+    // esté presente: con esto encendido, saber el celular de alguien alcanza
+    // para entrar como esa persona. Apagado responde igual que un número
+    // desconocido, así la app vuelve al login con contraseña.
+    if (!this.config.get<boolean>('security.loginSimHabilitado')) {
+      throw credencialesInvalidas;
+    }
     const telefonos = [
       ...new Set(
         dto.telefonos
@@ -144,9 +156,6 @@ export class AuthService {
           .filter((telefono): telefono is string => telefono !== null),
       ),
     ];
-    const credencialesInvalidas = new UnauthorizedException(
-      'No se pudo iniciar sesión automáticamente',
-    );
     if (telefonos.length === 0) throw credencialesInvalidas;
 
     // No elegir arbitrariamente si dos SIMs pertenecen a usuarios distintos.

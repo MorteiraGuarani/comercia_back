@@ -156,7 +156,6 @@
   .header { padding: var(--space-lg) var(--desktop-gutter); }
   .header h1 { font-size: 2.5rem; }
   .header p { font-size: .875rem; }
-  .desktopTabs { padding-inline: var(--desktop-gutter); }
   .body { width: 100%; max-width: var(--container-7xl); grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; align-items: start; padding: var(--space-lg) calc(var(--spacing) * 8); gap: var(--space-lg); }
   .sectionHead h2 { font-size: 1.125rem; }
   .sectionHead > span { font-size: .8125rem; }

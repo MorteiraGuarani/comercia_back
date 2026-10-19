@@ -150,7 +150,7 @@ export function InventarioPanel() {
                     </span>
                     <button
                       type="button"
-                      className="min-h-10 shrink-0 cursor-pointer whitespace-nowrap rounded-lg border border-line bg-surface-raised px-3 text-xs font-semibold text-foreground transition-colors hover:border-red-500 hover:text-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:hover:text-red-300"
+                      className="min-h-11 shrink-0 cursor-pointer whitespace-nowrap rounded-lg border border-line bg-surface-raised px-3 text-xs font-semibold text-foreground transition-colors hover:border-red-500 hover:text-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:hover:text-red-300"
                       aria-label={`Quitar ${item.itemname} (${nombreListaPrecio(item)})`}
                       onClick={() => quitar(item)}
                     >

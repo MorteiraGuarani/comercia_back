@@ -10,6 +10,7 @@ import {
   sincronizarPendientes,
 } from "@/lib/pendientes-tareas";
 import type { AccionTareaPendiente } from "@/types/pendientes-tareas";
+import { confirmar } from "@/components/confirmacion/confirmacion-controller";
 
 export function PendientesTareas({
   onSincronizar,
@@ -115,9 +116,13 @@ export function PendientesTareas({
                 className="min-h-11 hover:underline"
                 onClick={async () => {
                   if (
-                    confirm(
-                      "¿Descartar esta acción pendiente? Se eliminará solo del dispositivo.",
-                    )
+                    await confirmar({
+                      titulo: "Descartar acción pendiente",
+                      mensaje:
+                        "¿Descartar esta acción pendiente? Se eliminará solo del dispositivo.",
+                      textoConfirmar: "Descartar",
+                      peligro: true,
+                    })
                   ) {
                     await descartarPendiente(usuario.id, p.id);
                     cargar();

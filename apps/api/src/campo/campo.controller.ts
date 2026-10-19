@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -20,7 +19,6 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
-import { join, extname } from 'path';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import type { RequestConUsuario } from '../auth/interfaces/request-con-usuario.interface';
 import { CatalogoCampoService } from './catalogo-campo.service';
@@ -61,14 +59,17 @@ import {
 import { ConsultaAvisosDto, CrearAvisoDto } from './dto/aviso.dto';
 import { ConsultaSupervisionDto } from './dto/supervision.dto';
 import { ConsultaTareasCampoDto } from './dto/consulta-tareas.dto';
+import { ConsultaTareasDiaDto } from './dto/consulta-tareas-dia.dto';
 import {
   multerConfigAdjuntosCampo,
   multerConfigFotosTareas,
   multerConfigLogoCliente,
-  directorioUploads,
   resolverRutaFoto,
 } from './utils/multer-config';
-import { createReadStream, existsSync } from 'fs';
+import { existsSync } from 'fs';
+import { enviarArchivo } from '../common/utils/enviar-archivo';
+import { tipoContenidoImagen } from '../common/utils/tipo-contenido-imagen';
+import { LogoClienteService } from './services/logo-cliente.service';
 
 @Controller('campo')
 @UseGuards(JwtAuthGuard)
@@ -85,6 +86,7 @@ export class CampoController {
     private readonly avisoService: AvisoService,
     private readonly supervisionService: SupervisionService,
     private readonly adjuntoCampoService: AdjuntoCampoService,
+    private readonly logoCliente: LogoClienteService,
   ) {}
 
   @Get('clientes') clientes(
@@ -116,36 +118,38 @@ export class CampoController {
 
   @Post('clientes/subir-logo')
   @UseInterceptors(FileInterceptor('logo', multerConfigLogoCliente))
-  subirLogoCliente(@UploadedFile() file?: Express.Multer.File) {
-    if (!file) {
-      throw new BadRequestException('No se envió archivo de imagen');
-    }
-    return { url: `/api/v1/campo/clientes/logos/${file.filename}` };
+  subirLogoCliente(
+    @Req() r: RequestConUsuario,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    return this.logoCliente.subir(r.usuarioId, file);
   }
 
   @Get('clientes/logos/:filename')
-  servirLogoCliente(@Param('filename') filename: string, @Res() res: Response) {
-    const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '');
-    const rutaPersistida = join(directorioUploads(), 'clientes', safeName);
-    const ruta = existsSync(rutaPersistida)
-      ? rutaPersistida
-      : join(process.cwd(), 'uploads', 'clientes', safeName);
-    if (!existsSync(ruta)) {
+  async servirLogoCliente(
+    @Req() r: RequestConUsuario,
+    @Param('filename') filename: string,
+    @Res() res: Response,
+  ) {
+    const ruta = await this.logoCliente.ruta(r.empresaId, filename);
+    if (!ruta) {
       return res.status(404).json({ message: 'Logo no encontrado' });
     }
-    const ext = extname(safeName).toLowerCase();
-    const mimeTypes: Record<string, string> = {
-      '.png': 'image/png',
-      '.jpg': 'image/jpeg',
-      '.jpeg': 'image/jpeg',
-      '.webp': 'image/webp',
-      '.svg': 'image/svg+xml',
-    };
-    res.setHeader('Content-Type', mimeTypes[ext] || 'application/octet-stream');
-    const stream = createReadStream(ruta);
-    stream.pipe(res);
+    // sandbox: un SVG anterior abierto directo no puede ejecutar scripts.
+    enviarArchivo(res, ruta, {
+      'Content-Type': tipoContenidoImagen(ruta),
+      'Content-Security-Policy':
+        "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+      'Cache-Control': 'private, max-age=86400',
+    });
   }
 
+  @Get('locales/mapa') localesMapa(
+    @Req() r: RequestConUsuario,
+    @Query() q: ConsultaCampoDto,
+  ) {
+    return this.catalogo.localesMapa(r.usuarioId, q);
+  }
   @Get('locales') locales(
     @Req() r: RequestConUsuario,
     @Query() q: ConsultaCampoDto,
@@ -371,6 +375,12 @@ export class CampoController {
   ) {
     return this.jornada.visitas(r.usuarioId, q);
   }
+  @Get('jornada/tareas') tareasDelDia(
+    @Req() r: RequestConUsuario,
+    @Query() q: ConsultaTareasDiaDto,
+  ) {
+    return this.jornada.tareasDelDia(r.usuarioId, q);
+  }
   @Get('jornada/asignaciones/:id/tareas') tareasJornada(
     @Req() r: RequestConUsuario,
     @Param('id', ParseIntPipe) id: number,
@@ -499,11 +509,10 @@ export class CampoController {
       return res.status(404).json({ message: 'Foto no encontrada' });
     }
 
-    res.setHeader('Content-Type', foto.mimeType);
-    res.setHeader('Content-Length', foto.tamanioBytes);
-
-    const stream = createReadStream(rutaFoto);
-    stream.pipe(res);
+    enviarArchivo(res, rutaFoto, {
+      'Content-Type': foto.mimeType,
+      'Content-Length': String(foto.tamanioBytes),
+    });
   }
 
   @Delete('jornada/visitas/:visitaId/tareas/:tareaId/fotos/:momento')
@@ -662,11 +671,12 @@ export class CampoController {
       throw new NotFoundException('El archivo adjunto no está disponible');
     }
 
-    res.setHeader('Content-Type', adjunto.mimeType);
-    res.setHeader('Content-Length', String(adjunto.tamanioBytes));
-    res.setHeader('Content-Disposition', 'inline');
-    res.setHeader('Cache-Control', 'private, max-age=300');
-    createReadStream(adjunto.rutaArchivo).pipe(res);
+    enviarArchivo(res, adjunto.rutaArchivo, {
+      'Content-Type': adjunto.mimeType,
+      'Content-Length': String(adjunto.tamanioBytes),
+      'Content-Disposition': 'inline',
+      'Cache-Control': 'private, max-age=300',
+    });
   }
 
   @Get('avisos/enviados')

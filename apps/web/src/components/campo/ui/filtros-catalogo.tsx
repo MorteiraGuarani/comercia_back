@@ -175,7 +175,7 @@ export function ChipsFiltro<T extends string>({
             type="button"
             aria-pressed={activo}
             onClick={() => onSeleccionar(o.clave)}
-            className={`min-h-9 shrink-0 cursor-pointer whitespace-nowrap rounded-full border px-3.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${
+            className={`min-h-11 shrink-0 cursor-pointer whitespace-nowrap rounded-full border px-3.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${
               activo
                 ? "border-foreground bg-foreground text-background"
                 : "border-line bg-surface-raised text-muted hover:border-brand-500 hover:text-foreground"

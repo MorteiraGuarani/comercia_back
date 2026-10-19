@@ -110,7 +110,7 @@ export function MapaLocal({
               gps.iniciar();
             }}
             disabled={gps.estado === "loading"}
-            className="absolute right-3 top-3 z-[1000] flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-line bg-surface-raised px-3 text-xs font-bold text-foreground shadow-md transition-colors hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-wait"
+            className="absolute right-3 top-3 z-[1000] flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-line bg-surface-raised px-3 text-xs font-bold text-foreground shadow-md transition-colors hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-wait"
           >
             {gps.estado === "loading" ? (
               <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-foreground border-t-transparent" />
@@ -140,7 +140,7 @@ export function MapaLocal({
                 type="button"
                 onClick={gps.iniciar}
                 disabled={gps.estado === "loading"}
-                className="min-h-9 cursor-pointer rounded font-semibold text-brand-700 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-wait dark:text-brand-200"
+                className="min-h-11 cursor-pointer rounded font-semibold text-brand-700 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-wait dark:text-brand-200"
               >
                 {gps.estado === "loading" ? "Buscando tu ubicación…" : "Ver a cuánto estás"}
               </button>

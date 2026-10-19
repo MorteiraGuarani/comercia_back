@@ -38,7 +38,7 @@ export function EmpresasPanel() {
 
   useEffect(() => {
     Promise.all([
-      apiFetch<RespuestaPaginada<Empresa>>("/empresas?page=1&limit=50"),
+      apiFetch<RespuestaPaginada<Empresa>>("/admin/empresas?page=1&limit=50"),
       apiFetch<Modulo[]>(`${BASE}/modulos`),
     ])
       .then(([e, m]) => {

@@ -195,6 +195,8 @@ describe('SupervisionService', () => {
             usuarioId: 2,
             fechaDesde: new Date('2026-09-01'),
             fechaHasta: null,
+            usuario: { superiorId: 1, isActive: true },
+            backups: [],
             horarios: [],
             local: { zonaHoraria: 'America/Asuncion', horarios: [] },
           },
@@ -205,6 +207,7 @@ describe('SupervisionService', () => {
           {
             id: 50,
             localId: 100,
+            usuarioId: 2,
             fecha: new Date('2026-09-17T00:00:00Z'),
             local: { zonaHoraria: 'America/Asuncion' },
             entrada: new Date('2026-09-17T08:30:00.000Z'),
@@ -215,12 +218,25 @@ describe('SupervisionService', () => {
       },
       tareaCampo: {
         findMany: jest.fn().mockResolvedValue([
-          { id: 1, esObligatoria: true },
-          { id: 2, esObligatoria: true },
+          { id: 1, esObligatoria: true, todosLocales: true, locales: [] },
+          {
+            id: 2,
+            esObligatoria: true,
+            todosLocales: false,
+            locales: [{ localId: 100 }],
+          },
+          {
+            id: 3,
+            esObligatoria: true,
+            todosLocales: false,
+            locales: [{ localId: 999 }],
+          },
         ]),
       },
       novedadCampo: {
-        count: jest.fn().mockResolvedValue(1),
+        groupBy: jest
+          .fn()
+          .mockResolvedValue([{ usuarioId: 2, _count: { _all: 1 } }]),
       },
     };
     const acceso = {
@@ -251,11 +267,16 @@ describe('SupervisionService', () => {
     expect(resumen.presentismo.totalEquipo).toBe(1);
     expect(resumen.colaboradores[0].asistencia).toBe('incompleto');
     expect(resumen.colaboradores[0].novedadesCount).toBe(1);
+    // La tarea 3 es de un local que no está en su ruta.
+    expect(resumen.colaboradores[0].tareas.total).toBe(2);
     expect(resumen.colaboradores[0].tareas.obligPendientes).toBe(1);
+    // Una consulta de visitas para todo el equipo, no una por colaborador.
+    expect(prisma.visitaCampo.findMany).toHaveBeenCalledTimes(1);
     prisma.visitaCampo.findMany.mockResolvedValue([
       {
         id: 51,
         localId: 100,
+        usuarioId: 2,
         fecha: new Date('2026-10-10'),
         local: { zonaHoraria: 'America/Asuncion' },
         entrada: new Date('2026-10-10T10:00:00-03:00'),

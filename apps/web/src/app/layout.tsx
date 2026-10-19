@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { ActualizadorDespliegue } from "@/components/actualizador-despliegue";
+import { RegistroServiceWorker } from "@/components/registro-service-worker";
 import { ToastProvider } from "@/components/toast/toast-provider";
+import { ConfirmacionHost } from "@/components/confirmacion/confirmacion-host";
 import "./globals.css";
 
 const manrope = localFont({
@@ -49,7 +51,9 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <script dangerouslySetInnerHTML={{ __html: scriptTema }} />
         <ActualizadorDespliegue />
+        <RegistroServiceWorker />
         <ToastProvider>{children}</ToastProvider>
+        <ConfirmacionHost />
       </body>
     </html>
   );

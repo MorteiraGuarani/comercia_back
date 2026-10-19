@@ -30,9 +30,9 @@ export default function AdminPage() {
   }
 
   const tabClase = (t: Tab) =>
-    `border-b-2 px-4 py-2.5 text-sm font-medium transition ${
+    `min-h-11 border-b-2 px-4 py-2.5 text-sm font-medium transition ${
       tab === t
-        ? "border-brand-700 text-brand-800 dark:border-brand-400 dark:text-brand-300"
+        ? "border-brand-700 text-brand-800 dark:border-brand-500 dark:text-brand-200"
         : "border-transparent text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"
     }`;
 

@@ -4,12 +4,12 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import type { IdentidadUcheckCanjeada } from './interfaces/identidad-ucheck.interface';
 import { AuthService } from './auth.service';
 import { destinoSsoSeguro } from './utils/destino-sso';
 import { esIdentidadUcheck } from './utils/identidad-ucheck';
+import { esErrorDuplicado } from '../common/utils/error-prisma';
 
 const TIEMPO_ESPERA_MS = 5_000;
 
@@ -136,10 +136,7 @@ export class UcheckSsoService {
       });
       return candidatos[0].id;
     } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002'
-      ) {
+      if (esErrorDuplicado(error)) {
         const vinculo = await this.prisma.identidadUcheck.findUnique({
           where: { ucheckUsuarioId: identidad.usuarioId },
           select: { usuarioId: true },

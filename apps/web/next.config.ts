@@ -31,6 +31,20 @@ const nextConfig: NextConfig = {
   // para que el standalone incluya las dependencias hoisted de la raíz.
   output: "standalone",
   outputFileTracingRoot: path.join(currentDirectory, "../../"),
+  // El service worker se revisa en cada carga: un despliegue nuevo lo
+  // reemplaza sin esperar a que venza ninguna caché.
+  async headers() {
+    return [
+      {
+        source: "/sw.js",
+        headers: [
+          { key: "Content-Type", value: "application/javascript; charset=utf-8" },
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self'" },
+        ],
+      },
+    ];
+  },
   // prod:web usa el mismo origen para mantener la sesión aunque cambie el puerto de Next.js.
   async rewrites() {
     return apiDesarrollo ? [{ source: "/api/v1/:path*", destination: `${apiDesarrollo.replace(/\/$/, "")}/api/v1/:path*` }] : [];

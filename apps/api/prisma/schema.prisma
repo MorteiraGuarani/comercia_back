@@ -315,6 +315,9 @@ model Usuario {
   updatedAt               DateTime                  @default(now()) @updatedAt @map("updated_at")
 
   @@index([localPrincipalId])
+  @@index([empresaId, isActive])
+  @@index([superiorId])
+  @@index([celular])
   @@map("usuarios")
 }
 
@@ -788,6 +791,7 @@ model NovedadCampo {
 
   @@index([empresaId, estado, creadoAt(sort: Desc)])
   @@index([usuarioId, estado])
+  @@index([usuarioId, creadoAt])
   @@index([localId, estado])
   @@index([tareaId])
   @@map("campo_novedades")

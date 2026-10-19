@@ -39,7 +39,7 @@ describe('RepositorCampoService', () => {
       acceso as unknown as CampoAccesoService,
       config as unknown as ConfigService,
     );
-    await expect(servicio.salida(3, 9, {})).rejects.toBeInstanceOf(
+    await expect(servicio.salida(3, 9, { nota: '' })).rejects.toBeInstanceOf(
       BadRequestException,
     );
     expect(prisma.tareaCampo.count).toHaveBeenCalledWith(

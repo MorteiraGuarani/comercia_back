@@ -27,6 +27,7 @@ import {
   inputBase,
   labelBase,
 } from "@/components/ui";
+import { confirmar } from "@/components/confirmacion/confirmacion-controller";
 
 interface FormUsuario {
   nombre: string;
@@ -795,7 +796,14 @@ function AsignacionesUsuario({
   }
 
   async function quitar(asignacion: UsuarioLocalAsignacion) {
-    if (!window.confirm(`¿Quitar ${asignacion.nombreLocal} de este usuario?`))
+    if (
+      !(await confirmar({
+        titulo: "Quitar local",
+        mensaje: `¿Quitar ${asignacion.nombreLocal} de este usuario?`,
+        textoConfirmar: "Quitar",
+        peligro: true,
+      }))
+    )
       return;
     setGuardando(true);
     setError(null);

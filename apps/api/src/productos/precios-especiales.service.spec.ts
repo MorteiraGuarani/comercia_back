@@ -171,7 +171,8 @@ describe('Precios especiales por empresa', () => {
     [PrecioEspecialParams, { empresaId: 20, id: '1e3' }, 'id'],
     [PrecioEspecialParams, { empresaId: 20, id: '1'.repeat(19) }, 'id'],
   ] as const)('rechaza %p con %j', async (dto, cuerpo, propiedad) => {
-    const errores = await validate(plainToInstance(dto, cuerpo));
+    const clase = dto as new () => object;
+    const errores = await validate(plainToInstance(clase, cuerpo));
     expect(errores.map((error) => error.property)).toContain(propiedad);
   });
 });

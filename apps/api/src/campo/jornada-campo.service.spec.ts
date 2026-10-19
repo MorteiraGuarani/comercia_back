@@ -155,6 +155,52 @@ describe('marcaciones directas de Comercia', () => {
     expect(prisma.visitaCampo.findFirst).not.toHaveBeenCalled();
   });
 
+  it('trae las tareas de varios locales en una consulta y omite asignaciones ajenas', async () => {
+    const { servicio, prisma } = contexto();
+    const tarea = (id: number, todosLocales: boolean, locales: number[]) => ({
+      id,
+      nombre: `Tarea ${id}`,
+      destinatario: 'IMPULSADOR',
+      descripcion: '',
+      requiereFotos: false,
+      fotosObligatorias: false,
+      categoria: null,
+      esObligatoria: false,
+      activo: true,
+      fechaDesde: new Date('2026-10-01T00:00:00Z'),
+      fechaHasta: null,
+      todosLocales,
+      locales: locales.map((localId) => ({ localId })),
+      cumplimientos: [],
+    });
+    const findManyTareas = jest
+      .fn()
+      .mockResolvedValue([
+        tarea(1, true, []),
+        tarea(2, false, [3]),
+        tarea(3, false, [9]),
+      ]);
+    Object.assign(prisma, {
+      asignacionCampo: {
+        findMany: jest.fn().mockResolvedValue([
+          { id: 2, localId: 3, usuarioId: 1, backups: [] },
+          { id: 5, localId: 9, usuarioId: 1, backups: [] },
+          { id: 6, localId: 4, usuarioId: 77, backups: [] },
+        ]),
+      },
+      tareaCampo: { findMany: findManyTareas },
+    });
+    const respuesta = await servicio.tareasDelDia(1, {
+      fecha: '2026-10-10',
+      asignaciones: [2, 5, 6],
+    });
+    expect(respuesta.items.map((i) => i.asignacionId)).toEqual([2, 5]);
+    expect(respuesta.items[0].items.map((t) => t.id)).toEqual([1, 2]);
+    expect(respuesta.items[1].items.map((t) => t.id)).toEqual([1, 3]);
+    expect(respuesta.items[0].items[0]).not.toHaveProperty('locales');
+    expect(findManyTareas).toHaveBeenCalledTimes(1);
+  });
+
   it('no completa una tarea sobre una jornada anterior sin salida', async () => {
     const { servicio, tx } = contexto();
     Object.assign(tx.visitaCampo, {

@@ -186,94 +186,215 @@ export class SupervisionService {
       pctVisitas: 0,
     };
 
-    for (const user of usuarios) {
+    // Una consulta por tipo de equipo (asignaciones y tareas) y una para todo
+    // el equipo (visitas y novedades), en vez de varias por colaborador.
+    const esTeamleaderUsuario = (user: (typeof usuarios)[number]) => {
       const rol = user.rol?.descripcion.toLowerCase().replace(/[^a-z]/g, '');
-      const esTeamleader =
-        rol === 'teamleader' || rol === 'teamleaderimpulsador';
-      // Asignaciones del colaborador para el período
-      const asignaciones = await this.prisma.asignacionCampo.findMany({
-        where: {
-          activo: true,
-          fechaDesde: { lte: fechaHasta },
-          local: {
-            activo: true,
-            ...localesOperativos(u.empresaId),
-          },
-          AND: [
-            { OR: [{ fechaHasta: null }, { fechaHasta: { gte: fechaDesde } }] },
-            {
-              OR: [
-                { usuarioId: user.id },
-                ...(esTeamleader
-                  ? [{ usuario: { superiorId: user.id, isActive: true } }]
-                  : []),
-                {
-                  backups: {
-                    some: {
-                      usuarioId: user.id,
-                      activo: true,
-                      fechaDesde: { lte: fechaHasta },
-                      fechaHasta: { gte: fechaDesde },
+      return rol === 'teamleader' || rol === 'teamleaderimpulsador';
+    };
+    const grupos = new Map<number, typeof usuarios>();
+    for (const user of usuarios) {
+      const equipoId = exigirEquipoCampo(user.rol?.equipoCampo).id;
+      grupos.set(equipoId, [...(grupos.get(equipoId) ?? []), user]);
+    }
+    const idsUsuarios = usuarios.map((user) => user.id);
+    const vigenteEnPeriodo = {
+      activo: true,
+      fechaDesde: { lte: fechaHasta },
+      fechaHasta: { gte: fechaDesde },
+    };
+    const [asignacionesPorGrupo, visitasEquipo, novedadesEquipo] =
+      await Promise.all([
+        Promise.all(
+          Array.from(grupos.values()).map((miembros) => {
+            const equipo = exigirEquipoCampo(miembros[0].rol?.equipoCampo);
+            const ids = miembros.map((m) => m.id);
+            const lideres = miembros
+              .filter(esTeamleaderUsuario)
+              .map((m) => m.id);
+            return this.prisma.asignacionCampo.findMany({
+              where: {
+                activo: true,
+                fechaDesde: { lte: fechaHasta },
+                local: {
+                  activo: true,
+                  ...localesOperativos(u.empresaId),
+                },
+                AND: [
+                  {
+                    OR: [
+                      { fechaHasta: null },
+                      { fechaHasta: { gte: fechaDesde } },
+                    ],
+                  },
+                  {
+                    OR: [
+                      { usuarioId: { in: ids } },
+                      ...(lideres.length
+                        ? [
+                            {
+                              usuario: {
+                                superiorId: { in: lideres },
+                                isActive: true,
+                              },
+                            },
+                          ]
+                        : []),
+                      {
+                        backups: {
+                          some: { usuarioId: { in: ids }, ...vigenteEnPeriodo },
+                        },
+                      },
+                    ],
+                  },
+                ],
+              },
+              select: {
+                id: true,
+                localId: true,
+                usuarioId: true,
+                fechaDesde: true,
+                fechaHasta: true,
+                usuario: { select: { superiorId: true, isActive: true } },
+                backups: {
+                  where: { usuarioId: { in: ids }, ...vigenteEnPeriodo },
+                  select: { usuarioId: true },
+                },
+                horarios: {
+                  where: {
+                    activo: true,
+                    equipoCampoId: equipo.id,
+                    destinatario: equipo.tipo,
+                  },
+                  take: 50,
+                  select: HORARIO_CAMPO_SELECT,
+                },
+                local: {
+                  select: {
+                    zonaHoraria: true,
+                    horarios: {
+                      where: {
+                        activo: true,
+                        asignacionId: null,
+                        equipoCampoId: equipo.id,
+                      },
+                      take: 50,
+                      select: HORARIO_CAMPO_SELECT,
                     },
                   },
                 },
+              },
+            });
+          }),
+        ),
+        // Visitas registradas en el período por el equipo
+        this.prisma.visitaCampo.findMany({
+          where: {
+            usuarioId: { in: idsUsuarios },
+            fecha: esRango ? { gte: fechaDesde, lte: fechaHasta } : fechaDesde,
+          },
+          include: {
+            local: { select: { zonaHoraria: true } },
+            horario: { select: { entrada: true, salida: true } },
+            eventosUcheck: {
+              where: { tipo: 'ENTRADA' },
+              take: 1,
+              select: { horaDesde: true, horaHasta: true },
+            },
+            cumplimientos: {
+              where: { NOT: { completadaAt: null } },
+              select: { tareaId: true },
+            },
+          },
+          orderBy: { entrada: 'asc' },
+        }),
+        // Novedades reportadas en el período
+        this.prisma.novedadCampo.groupBy({
+          by: ['usuarioId'],
+          where: {
+            usuarioId: { in: idsUsuarios },
+            creadoAt: {
+              gte: new Date(fechaDesdeStr + 'T00:00:00.000Z'),
+              lte: new Date(fechaHastaStr + 'T23:59:59.999Z'),
+            },
+          },
+          _count: { _all: true },
+        }),
+      ]);
+    const asignacionesEquipo = asignacionesPorGrupo.flat();
+    const novedadesPorUsuario = new Map(
+      novedadesEquipo.map((n) => [n.usuarioId, n._count._all]),
+    );
+    const datosPorUsuario = new Map(
+      usuarios.map((user) => {
+        const esTeamleader = esTeamleaderUsuario(user);
+        const asignaciones = asignacionesEquipo.filter(
+          (a) =>
+            a.usuarioId === user.id ||
+            (esTeamleader &&
+              a.usuario.isActive &&
+              a.usuario.superiorId === user.id) ||
+            a.backups.some((b) => b.usuarioId === user.id),
+        );
+        const visitasHoy = visitasEquipo.filter((v) => v.usuarioId === user.id);
+        const localIds = new Set([
+          ...asignaciones.map((a) => a.localId),
+          ...visitasHoy.map((v) => v.localId),
+        ]);
+        return [user.id, { esTeamleader, asignaciones, visitasHoy, localIds }];
+      }),
+    );
+    // Tareas aplicables por tipo de equipo; cada colaborador se queda con las
+    // de todos los locales o las de alguno de sus locales.
+    const tareasPorGrupo = new Map(
+      await Promise.all(
+        Array.from(grupos.entries()).map(async ([equipoId, miembros]) => {
+          const operativos = miembros.filter((m) => !esTeamleaderUsuario(m));
+          const equipo = exigirEquipoCampo(miembros[0].rol?.equipoCampo);
+          const localesGrupo = Array.from(
+            new Set(
+              operativos.flatMap((m) =>
+                Array.from(datosPorUsuario.get(m.id)?.localIds ?? []),
+              ),
+            ),
+          );
+          if (operativos.length === 0) return [equipoId, null] as const;
+          const tareas = await this.prisma.tareaCampo.findMany({
+            where: {
+              empresaId: u.empresaId,
+              activo: true,
+              equipoCampoId: equipo.id,
+              destinatario: equipo.tipo,
+              fechaDesde: { lte: fechaHasta },
+              OR: [{ fechaHasta: null }, { fechaHasta: { gte: fechaDesde } }],
+              AND: [
+                {
+                  OR: [
+                    { todosLocales: true },
+                    { locales: { some: { localId: { in: localesGrupo } } } },
+                  ],
+                },
               ],
             },
-          ],
-        },
-        select: {
-          id: true,
-          localId: true,
-          usuarioId: true,
-          fechaDesde: true,
-          fechaHasta: true,
-          horarios: {
-            where: {
-              activo: true,
-              equipoCampoId: exigirEquipoCampo(user.rol?.equipoCampo).id,
-              destinatario: destinatarioCampo(user.rol?.equipoCampo),
-            },
-            take: 50,
-            select: HORARIO_CAMPO_SELECT,
-          },
-          local: {
             select: {
-              zonaHoraria: true,
-              horarios: {
-                where: {
-                  activo: true,
-                  asignacionId: null,
-                  equipoCampoId: exigirEquipoCampo(user.rol?.equipoCampo).id,
-                },
-                take: 50,
-                select: HORARIO_CAMPO_SELECT,
+              id: true,
+              esObligatoria: true,
+              todosLocales: true,
+              locales: {
+                where: { localId: { in: localesGrupo } },
+                select: { localId: true },
               },
             },
-          },
-        },
-      });
+          });
+          return [equipoId, tareas] as const;
+        }),
+      ),
+    );
 
-      // Visitas registradas en el período por el usuario
-      const visitasHoy = await this.prisma.visitaCampo.findMany({
-        where: {
-          usuarioId: user.id,
-          fecha: esRango ? { gte: fechaDesde, lte: fechaHasta } : fechaDesde,
-        },
-        include: {
-          local: { select: { zonaHoraria: true } },
-          horario: { select: { entrada: true, salida: true } },
-          eventosUcheck: {
-            where: { tipo: 'ENTRADA' },
-            take: 1,
-            select: { horaDesde: true, horaHasta: true },
-          },
-          cumplimientos: {
-            where: { NOT: { completadaAt: null } },
-            select: { tareaId: true },
-          },
-        },
-        orderBy: { entrada: 'asc' },
-      });
+    for (const user of usuarios) {
+      const datos = datosPorUsuario.get(user.id);
+      if (!datos) continue;
+      const { esTeamleader, asignaciones, visitasHoy, localIds } = datos;
 
       // Calcular asistencias e In/Out
       const paradasPorLocal = new Map(
@@ -368,37 +489,15 @@ export class SupervisionService {
       totalRutaAusente += ausentesVisitas;
 
       // Métricas de tareas del colaborador
-      const localIds = Array.from(
-        new Set([
-          ...asignaciones.map((a) => a.localId),
-          ...visitasHoy.map((v) => v.localId),
-        ]),
-      );
-
       const tareasAplicables = esTeamleader
         ? []
-        : await this.prisma.tareaCampo.findMany({
-            where: {
-              empresaId: u.empresaId,
-              activo: true,
-              equipoCampoId: exigirEquipoCampo(user.rol?.equipoCampo).id,
-              destinatario: destinatarioCampo(user.rol?.equipoCampo),
-              fechaDesde: { lte: fechaHasta },
-              OR: [{ fechaHasta: null }, { fechaHasta: { gte: fechaDesde } }],
-              AND: [
-                {
-                  OR: [
-                    { todosLocales: true },
-                    { locales: { some: { localId: { in: localIds } } } },
-                  ],
-                },
-              ],
-            },
-            select: {
-              id: true,
-              esObligatoria: true,
-            },
-          });
+        : (
+            tareasPorGrupo.get(exigirEquipoCampo(user.rol?.equipoCampo).id) ??
+            []
+          ).filter(
+            (t) =>
+              t.todosLocales || t.locales.some((l) => localIds.has(l.localId)),
+          );
 
       const cumplimientosIds = new Set(
         visitasHoy.flatMap((v) => v.cumplimientos.map((c) => c.tareaId)),
@@ -419,16 +518,7 @@ export class SupervisionService {
       totalTareasCompletadasGlobal += completadasTareas;
       totalObligatoriasPendientesGlobal += obligPendientes;
 
-      // Novedades reportadas en el período
-      const novedadesCount = await this.prisma.novedadCampo.count({
-        where: {
-          usuarioId: user.id,
-          creadoAt: {
-            gte: new Date(fechaDesdeStr + 'T00:00:00.000Z'),
-            lte: new Date(fechaHastaStr + 'T23:59:59.999Z'),
-          },
-        },
-      });
+      const novedadesCount = novedadesPorUsuario.get(user.id) ?? 0;
 
       const iniciales =
         `${user.nombre[0] ?? ''}${user.apellido[0] ?? ''}`.toUpperCase();
@@ -555,115 +645,132 @@ export class SupervisionService {
       throw new NotFoundException('Colaborador no encontrado');
     }
 
-    const asignaciones = await this.prisma.asignacionCampo.findMany({
-      where: {
-        activo: true,
-        fechaDesde: { lte: fechaHasta },
-        local: {
+    // Independientes entre sí: van en paralelo.
+    const [asignaciones, visitas, novedades] = await Promise.all([
+      this.prisma.asignacionCampo.findMany({
+        where: {
           activo: true,
-          ...localesOperativos(u.empresaId),
-        },
-        AND: [
-          { OR: [{ fechaHasta: null }, { fechaHasta: { gte: fechaDesde } }] },
-          {
-            OR: [
-              { usuarioId: user.id },
-              {
-                backups: {
-                  some: {
-                    usuarioId: user.id,
-                    activo: true,
-                    fechaDesde: { lte: fechaHasta },
-                    fechaHasta: { gte: fechaDesde },
+          fechaDesde: { lte: fechaHasta },
+          local: {
+            activo: true,
+            ...localesOperativos(u.empresaId),
+          },
+          AND: [
+            { OR: [{ fechaHasta: null }, { fechaHasta: { gte: fechaDesde } }] },
+            {
+              OR: [
+                { usuarioId: user.id },
+                {
+                  backups: {
+                    some: {
+                      usuarioId: user.id,
+                      activo: true,
+                      fechaDesde: { lte: fechaHasta },
+                      fechaHasta: { gte: fechaDesde },
+                    },
                   },
                 },
-              },
-            ],
-          },
-        ],
-      },
-      include: {
-        horarios: {
-          where: {
-            activo: true,
-            equipoCampoId: exigirEquipoCampo(user.rol?.equipoCampo).id,
-            destinatario: destinatarioCampo(user.rol?.equipoCampo),
-          },
-          select: HORARIO_CAMPO_SELECT,
-          orderBy: { entrada: 'asc' },
-          take: 5,
+              ],
+            },
+          ],
         },
-        local: {
-          include: {
-            cliente: { select: { id: true, nombre: true } },
-            horarios: {
-              where: {
-                activo: true,
-                asignacionId: null,
-                equipoCampoId: exigirEquipoCampo(user.rol?.equipoCampo).id,
-                destinatario: destinatarioCampo(user.rol?.equipoCampo),
+        include: {
+          horarios: {
+            where: {
+              activo: true,
+              equipoCampoId: exigirEquipoCampo(user.rol?.equipoCampo).id,
+              destinatario: destinatarioCampo(user.rol?.equipoCampo),
+            },
+            select: HORARIO_CAMPO_SELECT,
+            orderBy: { entrada: 'asc' },
+            take: 5,
+          },
+          local: {
+            include: {
+              cliente: { select: { id: true, nombre: true } },
+              horarios: {
+                where: {
+                  activo: true,
+                  asignacionId: null,
+                  equipoCampoId: exigirEquipoCampo(user.rol?.equipoCampo).id,
+                  destinatario: destinatarioCampo(user.rol?.equipoCampo),
+                },
+                select: HORARIO_CAMPO_SELECT,
+                orderBy: { entrada: 'asc' },
+                take: 5,
               },
-              select: HORARIO_CAMPO_SELECT,
-              orderBy: { entrada: 'asc' },
-              take: 5,
             },
           },
         },
-      },
-    });
-
-    const visitas = await this.prisma.visitaCampo.findMany({
-      where: {
-        usuarioId: user.id,
-        fecha: { gte: fechaDesde, lte: fechaHasta },
-      },
-      include: {
-        horario: { select: { entrada: true, salida: true } },
-        eventosUcheck: {
-          where: { tipo: 'ENTRADA' },
-          take: 1,
-          select: { horaDesde: true, horaHasta: true },
+      }),
+      this.prisma.visitaCampo.findMany({
+        where: {
+          usuarioId: user.id,
+          fecha: { gte: fechaDesde, lte: fechaHasta },
         },
-        local: {
-          include: {
-            cliente: { select: { id: true, nombre: true } },
-            horarios: {
-              where: {
-                activo: true,
-                asignacionId: null,
-                equipoCampoId: exigirEquipoCampo(user.rol?.equipoCampo).id,
-                destinatario: destinatarioCampo(user.rol?.equipoCampo),
+        include: {
+          horario: { select: { entrada: true, salida: true } },
+          eventosUcheck: {
+            where: { tipo: 'ENTRADA' },
+            take: 1,
+            select: { horaDesde: true, horaHasta: true },
+          },
+          local: {
+            include: {
+              cliente: { select: { id: true, nombre: true } },
+              horarios: {
+                where: {
+                  activo: true,
+                  asignacionId: null,
+                  equipoCampoId: exigirEquipoCampo(user.rol?.equipoCampo).id,
+                  destinatario: destinatarioCampo(user.rol?.equipoCampo),
+                },
+                select: HORARIO_CAMPO_SELECT,
+                orderBy: { entrada: 'asc' },
+                take: 5,
               },
-              select: HORARIO_CAMPO_SELECT,
-              orderBy: { entrada: 'asc' },
-              take: 5,
+            },
+          },
+          cumplimientos: {
+            select: {
+              tareaId: true,
+              nombreTarea: true,
+              completadaAt: true,
+              fotos: {
+                select: { id: true, momento: true, creadoAt: true },
+                take: 2,
+              },
+              comentarios: {
+                select: {
+                  id: true,
+                  comentario: true,
+                  creadoAt: true,
+                  usuario: { select: { nombre: true, apellido: true } },
+                },
+                orderBy: { creadoAt: 'desc' },
+                take: 20,
+              },
             },
           },
         },
-        cumplimientos: {
-          select: {
-            tareaId: true,
-            nombreTarea: true,
-            completadaAt: true,
-            fotos: {
-              select: { id: true, momento: true, creadoAt: true },
-              take: 2,
-            },
-            comentarios: {
-              select: {
-                id: true,
-                comentario: true,
-                creadoAt: true,
-                usuario: { select: { nombre: true, apellido: true } },
-              },
-              orderBy: { creadoAt: 'desc' },
-              take: 20,
-            },
+        orderBy: { entrada: 'asc' },
+      }),
+      // Novedades del período (las 50 más recientes)
+      this.prisma.novedadCampo.findMany({
+        where: {
+          usuarioId: user.id,
+          creadoAt: {
+            gte: new Date(desde + 'T00:00:00.000Z'),
+            lte: new Date(hasta + 'T23:59:59.999Z'),
           },
         },
-      },
-      orderBy: { entrada: 'asc' },
-    });
+        include: {
+          local: { select: { id: true, nombre: true } },
+        },
+        orderBy: { creadoAt: 'desc' },
+        take: 50,
+      }),
+    ]);
 
     // Armar la ruta del día ordenada
     const paradasMap = new Map<number, ParadaRuta>();
@@ -833,21 +940,6 @@ export class SupervisionService {
         ...datos,
       }),
     );
-
-    // Novedades de hoy
-    const novedades = await this.prisma.novedadCampo.findMany({
-      where: {
-        usuarioId: user.id,
-        creadoAt: {
-          gte: new Date(desde + 'T00:00:00.000Z'),
-          lte: new Date(hasta + 'T23:59:59.999Z'),
-        },
-      },
-      include: {
-        local: { select: { id: true, nombre: true } },
-      },
-      orderBy: { creadoAt: 'desc' },
-    });
 
     const novedadesFormat = novedades.map((n) => ({
       id: `n${n.id}`,

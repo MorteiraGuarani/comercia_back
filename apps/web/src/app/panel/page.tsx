@@ -238,6 +238,7 @@ function InicioResumen({
         </div>
         <button
           type="button"
+          aria-label="Actualizar"
           disabled={cargando}
           aria-busy={cargando || undefined}
           onClick={() => setRevision((n) => n + 1)}

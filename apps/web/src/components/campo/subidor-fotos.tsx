@@ -14,6 +14,7 @@ import { PantallaCarga } from "@/components/pantalla-carga";
 import { prepararImagen } from "@/utils/preparar-imagen";
 import { CapturadorCamara } from "./capturador-camara";
 import { IconoCamara, IconoGaleria } from "./ui/iconos-campo";
+import { confirmar } from "@/components/confirmacion/confirmacion-controller";
 
 interface SubidorFotosProps {
   visitaId: number;
@@ -112,7 +113,16 @@ export function SubidorFotos({
 
   async function actualizar(momento: MomentoFoto, archivo?: File) {
     if (operacion) return;
-    if (!archivo && !confirm("¿Eliminar esta foto?")) return;
+    if (
+      !archivo &&
+      !(await confirmar({
+        titulo: "Eliminar foto",
+        mensaje: "¿Eliminar esta foto?",
+        textoConfirmar: "Eliminar",
+        peligro: true,
+      }))
+    )
+      return;
     setOperacion(archivo ? "Preparando foto" : "Eliminando foto");
     setError("");
     try {

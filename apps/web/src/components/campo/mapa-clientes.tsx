@@ -10,8 +10,12 @@ import { TOKENS } from "./tokens";
 import { montarCapaUsuario, type CapaUsuarioMapa } from "./ui/marcador-usuario-mapa";
 import { useGeolocalizacionMapa } from "./ui/use-geolocalizacion-mapa";
 import { CAPA_MAPA_CLARA, CAPA_MAPA_OSCURA, useTemaOscuroMapa } from "./ui/use-tema-mapa";
-import { IconoBuscar, IconoCruz, IconoCheck, IconoAlerta, IconoChevronAbajo, IconoPin } from "./ui/iconos-campo";
+import { IconoBuscar, IconoCruz, IconoCheck, IconoAlerta, IconoChevronAbajo } from "./ui/iconos-campo";
 import type { ClienteCampo, LocalCampo } from "@/types/campo";
+import type { RespuestaPaginada } from "@/types/paginacion";
+import { mostrarToast } from "@/components/toast/toast-controller";
+
+const MAX_PAGINAS_MAPA = 4;
 
 interface MapaClientesProps {
   clientes: ClienteCampo[];
@@ -101,46 +105,58 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // La API admite 50 por página; cargar todas para que la cobertura sea completa.
+  // Puntos livianos filtrados en la API por cliente y búsqueda. Se piden como
+  // máximo MAX_PAGINAS_MAPA páginas de 50: con más locales se avisa para acotar.
+  const [totalLocales, setTotalLocales] = useState(0);
+  const [totalRed, setTotalRed] = useState(0);
+  const clienteFiltroId = clienteSeleccionado?.id ?? null;
+  const textoServidor = busquedaTexto.trim();
   useEffect(() => {
     let montado = true;
-    const cargar = async () => {
+    const temporizador = window.setTimeout(async () => {
       try {
         setCargando(true);
         setError(null);
-        const primera = await apiFetch<{ items: LocalCampo[]; totalPages: number }>("/campo/locales?page=1&limit=50");
-        const todos = [...primera.items];
-        for (let inicio = 2; inicio <= primera.totalPages; inicio += 4) {
-          const paginas = await Promise.all(
-            Array.from({ length: Math.min(4, primera.totalPages - inicio + 1) }, (_, indice) =>
-              apiFetch<{ items: LocalCampo[] }>(`/campo/locales?page=${inicio + indice}&limit=50`),
-            ),
-          );
-          todos.push(...paginas.flatMap((pagina) => pagina.items));
-        }
-        if (montado) setLocales(todos);
+        const filtros = new URLSearchParams({ limit: "50" });
+        if (clienteFiltroId) filtros.set("clienteId", String(clienteFiltroId));
+        if (textoServidor) filtros.set("buscar", textoServidor);
+        const pagina = (n: number) =>
+          apiFetch<RespuestaPaginada<LocalCampo>>(`/campo/locales/mapa?${filtros}&page=${n}`);
+        const primera = await pagina(1);
+        const ultima = Math.min(primera.totalPages, MAX_PAGINAS_MAPA);
+        const resto = await Promise.all(
+          Array.from({ length: Math.max(0, ultima - 1) }, (_, i) => pagina(i + 2)),
+        );
+        if (!montado) return;
+        setLocales([...primera.items, ...resto.flatMap((r) => r.items)]);
+        setTotalLocales(primera.total);
+        if (!clienteFiltroId && !textoServidor) setTotalRed(primera.total);
       } catch (e) {
-        console.error("Error al cargar locales:", e);
         if (montado) setError(mensajeError(e, "Error al cargar locales en el mapa"));
       } finally {
         if (montado) setCargando(false);
       }
-    };
-    cargar();
+    }, textoServidor ? 400 : 0);
     return () => {
       montado = false;
+      window.clearTimeout(temporizador);
     };
-  }, []);
+  }, [clienteFiltroId, textoServidor]);
 
   // Conteo de locales por cliente
   const conteoLocalesPorCliente = useMemo(() => {
+    // El total de cada cliente lo informa la API; el mapa puede tener solo
+    // una parte de sus locales cargada.
     const mapa = new Map<number, number>();
-    locales.forEach((loc) => {
+    for (const cliente of clientes)
+      if (cliente._count) mapa.set(cliente.id, cliente._count.locales);
+    const conTotal = new Set(mapa.keys());
+    for (const loc of locales) {
       const cId = Number(loc.clienteId);
-      mapa.set(cId, (mapa.get(cId) || 0) + 1);
-    });
+      if (!conTotal.has(cId)) mapa.set(cId, (mapa.get(cId) || 0) + 1);
+    }
     return mapa;
-  }, [locales]);
+  }, [clientes, locales]);
 
   // Clientes filtrados para el dropdown autocompletable
   const clientesFiltradosDropdown = useMemo(() => {
@@ -365,7 +381,7 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
     }
     gps.iniciar();
     if (gps.estado === "error") {
-      alert("No se pudo obtener tu ubicación actual.");
+      mostrarToast("alerta", "Revisá que el navegador tenga permiso de ubicación.", "No se pudo obtener tu ubicación");
     }
   };
 
@@ -385,17 +401,17 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
 
       {/* Barra de Filtros del Mapa con Input Autocompletable */}
       <div
-        className="p-3.5 rounded-xl border flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between shadow-xs bg-white"
+        className="p-3.5 rounded-xl border flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between shadow-xs bg-surface-raised"
         style={{ borderColor: TOKENS.line }}
       >
         {/* Selector Autocompletable de Cliente con Dropdown Flotante */}
         <div className="relative flex-1" ref={dropdownRef}>
-          <label className="block text-[11px] font-bold text-[#1E2320] uppercase tracking-wider mb-1">
+          <label className="block text-[11px] font-bold text-foreground uppercase tracking-wider mb-1">
             Filtrar por Cliente Comercial:
           </label>
 
           <div className="relative">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-zinc-400 pointer-events-none">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted pointer-events-none">
               <IconoBuscar className="w-4 h-4" />
             </span>
 
@@ -421,7 +437,7 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
                 }
               }}
               placeholder="Escribe el nombre de un cliente (ej. Frigorífico, Superseis...)"
-              className="w-full pl-9 pr-14 py-2 text-xs sm:text-sm font-medium rounded-lg border bg-white text-zinc-900 focus:outline-none focus:ring-2 focus:ring-[#1E2320]"
+              className="w-full pl-9 pr-14 py-2 text-xs sm:text-sm font-medium rounded-lg border bg-surface-raised text-foreground focus:outline-none focus:ring-2 focus:ring-focus"
               style={{ borderColor: TOKENS.line }}
             />
 
@@ -429,8 +445,9 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
               {busquedaClienteInput && (
                 <button
                   type="button"
+                  aria-label="Mostrar todos los clientes"
                   onClick={limpiarFiltroCliente}
-                  className="p-0.5 rounded text-zinc-400 hover:text-zinc-800 cursor-pointer"
+                  className="p-0.5 rounded text-muted hover:text-foreground cursor-pointer"
                   title="Mostrar todos los clientes"
                 >
                   <IconoCruz className="w-3.5 h-3.5" />
@@ -438,8 +455,10 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
               )}
               <button
                 type="button"
+                aria-label="Ver lista de clientes"
+                aria-expanded={dropdownAbierto}
                 onClick={() => setDropdownAbierto((prev) => !prev)}
-                className="p-0.5 text-zinc-400 hover:text-zinc-700 cursor-pointer"
+                className="p-0.5 text-muted hover:text-foreground cursor-pointer"
                 title="Desplegar lista de clientes"
               >
                 <IconoChevronAbajo className="w-4 h-4" />
@@ -450,7 +469,7 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
           {/* Menú Flotante Dropdown de Coincidencias */}
           {dropdownAbierto && (
             <div
-              className="absolute left-0 right-0 mt-1.5 max-h-72 overflow-y-auto rounded-xl border shadow-xl z-20 bg-white p-1.5 divide-y divide-zinc-100"
+              className="absolute left-0 right-0 mt-1.5 max-h-72 overflow-y-auto rounded-xl border shadow-xl z-20 bg-surface-raised p-1.5 divide-y divide-line"
               style={{ borderColor: TOKENS.line }}
             >
               {/* Opción Todos los Clientes */}
@@ -459,18 +478,18 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
                 onClick={() => elegirCliente(null)}
                 className={`w-full text-left px-3 py-2 rounded-lg text-xs font-semibold transition-all flex items-center justify-between cursor-pointer ${
                   clienteSeleccionado === null
-                    ? "bg-[#1E2320] text-white"
-                    : "hover:bg-zinc-100 text-zinc-800"
+                    ? "bg-foreground text-background"
+                    : "hover:bg-surface-soft text-foreground"
                 }`}
               >
                 <div className="flex items-center gap-2.5">
-                  <span className="w-7 h-7 rounded-md bg-zinc-200 text-zinc-800 flex items-center justify-center font-bold text-[10px]">
+                  <span className="w-7 h-7 rounded-md bg-surface-soft text-foreground flex items-center justify-center font-bold text-[10px]">
                     ALL
                   </span>
                   <div>
                     <span className="block font-bold text-xs">Todos los Clientes</span>
-                    <span className={`text-[11px] ${clienteSeleccionado === null ? "text-zinc-300" : "text-zinc-500"}`}>
-                      {locales.length} puntos de venta totales en la red
+                    <span className={`text-[11px] ${clienteSeleccionado === null ? "text-background/70" : "text-muted"}`}>
+                      {totalRed || totalLocales} puntos de venta en la red
                     </span>
                   </div>
                 </div>
@@ -479,7 +498,7 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
 
               {/* Lista de clientes coincidentes */}
               {clientesFiltradosDropdown.length === 0 ? (
-                <div className="p-5 text-center text-sm sm:text-base text-zinc-500">
+                <div className="p-5 text-center text-sm sm:text-base text-muted">
                   No se encontraron clientes con &quot;{busquedaClienteInput}&quot;
                 </div>
               ) : (
@@ -493,8 +512,8 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
                       onClick={() => elegirCliente(c)}
                       className={`w-full text-left px-3 py-2 rounded-lg transition-all flex items-center justify-between cursor-pointer ${
                         esActivo
-                          ? "bg-[#1E2320] text-white"
-                          : "hover:bg-zinc-100 text-zinc-800"
+                          ? "bg-foreground text-background"
+                          : "hover:bg-surface-soft text-foreground"
                       }`}
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
@@ -502,26 +521,26 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
                           <img
                             src={c.logoUrl}
                             alt={c.nombre}
-                            className="w-7 h-7 rounded-md object-cover border border-white shrink-0 bg-white"
+                            className="w-7 h-7 rounded-md object-cover border border-line shrink-0 bg-surface-raised"
                           />
                         ) : (
-                          <div className="w-7 h-7 rounded-md bg-[#8B2635] text-white flex items-center justify-center font-bold text-xs shrink-0">
+                          <div className="w-7 h-7 rounded-md bg-[#8B2635] text-white dark:bg-[#e5a2ae] dark:text-[#3b1219] flex items-center justify-center font-bold text-xs shrink-0">
                             {c.nombre.slice(0, 2).toUpperCase()}
                           </div>
                         )}
                         <div className="min-w-0">
                           <p className="font-bold text-xs truncate leading-snug">{c.nombre}</p>
-                          <p className={`text-[11px] font-mono truncate ${esActivo ? "text-zinc-300" : "text-zinc-500"}`}>
+                          <p className={`text-[11px] font-mono truncate ${esActivo ? "text-background/70" : "text-muted"}`}>
                             {c.ruc ? `RUC: ${c.ruc} · ` : ""}
                             <span
                               className={`font-semibold px-1.5 py-0.2 rounded text-[10px] ${
                                 numLocales > 0
                                   ? esActivo
-                                    ? "bg-emerald-800 text-emerald-100"
-                                    : "bg-emerald-100 text-emerald-800"
+                                    ? "bg-emerald-800 text-emerald-100 dark:bg-emerald-200 dark:text-emerald-900"
+                                    : "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300"
                                   : esActivo
-                                    ? "bg-zinc-700 text-zinc-300"
-                                    : "bg-zinc-200 text-zinc-600"
+                                    ? "bg-background/20 text-background/80"
+                                    : "bg-surface-soft text-muted"
                               }`}
                             >
                               {numLocales} {numLocales === 1 ? "local" : "locales"}
@@ -540,11 +559,11 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
 
         {/* Buscador de Local o Dirección */}
         <div className="flex-1">
-          <label className="block text-[11px] font-bold text-[#1E2320] uppercase tracking-wider mb-1">
+          <label className="block text-[11px] font-bold text-foreground uppercase tracking-wider mb-1">
             Buscar Punto de Venta o Dirección:
           </label>
           <div className="relative">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-zinc-400 pointer-events-none">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted pointer-events-none">
               <IconoBuscar className="w-4 h-4" />
             </span>
             <input
@@ -552,14 +571,15 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
               value={busquedaTexto}
               onChange={(e) => setBusquedaTexto(e.target.value)}
               placeholder="Buscar por local, calle, ciudad..."
-              className="w-full pl-9 pr-8 py-2 text-xs sm:text-sm rounded-lg border bg-white focus:outline-none focus:ring-2 focus:ring-[#1E2320]"
+              className="w-full pl-9 pr-8 py-2 text-xs sm:text-sm rounded-lg border bg-surface-raised focus:outline-none focus:ring-2 focus:ring-focus"
               style={{ borderColor: TOKENS.line }}
             />
             {busquedaTexto && (
               <button
                 type="button"
+                aria-label="Borrar búsqueda"
                 onClick={() => setBusquedaTexto("")}
-                className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-zinc-400 hover:text-zinc-800 cursor-pointer"
+                className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-muted hover:text-foreground cursor-pointer"
               >
                 <IconoCruz className="w-3.5 h-3.5" />
               </button>
@@ -569,22 +589,27 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
 
         {/* Contador de Marcadores y Status */}
         <div className="flex items-center gap-2 self-start lg:self-end pb-0.5 shrink-0">
-          <span className="font-mono text-xs font-bold px-3 py-2 rounded-lg bg-zinc-100 border border-[#DAD5C9] text-zinc-800 shadow-xs">
+          <span className="font-mono text-xs font-bold px-3 py-2 rounded-lg bg-surface-soft border border-line text-foreground shadow-xs">
             {localesFiltrados.length} Puntos visibles
           </span>
+          {totalLocales > locales.length && (
+            <span role="status" className="text-xs font-medium text-amber-800 dark:text-amber-200">
+              Mostrando {locales.length} de {totalLocales}. Elegí un cliente o buscá para ver el resto.
+            </span>
+          )}
         </div>
       </div>
 
       {/* Aviso si el cliente seleccionado NO tiene locales */}
       {clienteSeleccionado && localesFiltrados.length === 0 && (
-        <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+        <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
           <div className="flex items-center gap-2.5">
-            <IconoAlerta className="w-5 h-5 text-amber-700 shrink-0" />
+            <IconoAlerta className="w-5 h-5 text-amber-700 dark:text-amber-200 shrink-0" />
             <div>
               <p className="font-bold text-xs sm:text-sm">
                 El cliente &quot;{clienteSeleccionado.nombre}&quot; no tiene locales registrados en el mapa todavía.
               </p>
-              <p className="text-[11px] text-amber-800 mt-0.5">
+              <p className="text-[11px] text-amber-800 dark:text-amber-200 mt-0.5">
                 Puedes registrar nuevos puntos de venta para este cliente desde la sección de <b>Locales & Rutas</b>.
               </p>
             </div>
@@ -592,7 +617,7 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
           <button
             type="button"
             onClick={limpiarFiltroCliente}
-            className="px-3.5 py-1.5 rounded-lg bg-amber-200/90 hover:bg-amber-300 font-bold text-xs uppercase tracking-wider transition cursor-pointer shrink-0"
+            className="px-3.5 py-1.5 rounded-lg bg-amber-200/90 hover:bg-amber-300 dark:hover:bg-amber-700 font-bold text-xs uppercase tracking-wider transition cursor-pointer shrink-0"
           >
             Ver todos los locales
           </button>
@@ -600,7 +625,7 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
       )}
 
       {/* Contenedor del Mapa Interactivo Amplio */}
-      <div className="campo-map relative rounded-2xl border border-[#DAD5C9] overflow-hidden shadow-md bg-zinc-100">
+      <div className="campo-map relative rounded-2xl border border-line overflow-hidden shadow-md bg-surface-soft">
         <div
           ref={contenedorRef}
           className="h-[720px] w-full z-0"
@@ -614,10 +639,10 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
             onClick={centrarEnMiUbicacion}
             disabled={gps.estado === "loading"}
             title="Centrar en mi ubicación GPS"
-            className="flex items-center gap-2.5 px-5 py-3 rounded-xl text-sm font-bold uppercase tracking-wider bg-white text-[#1E2320] border border-[#DAD5C9] shadow-xl hover:bg-zinc-50 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+            className="flex items-center gap-2.5 px-5 py-3 rounded-xl text-sm font-bold uppercase tracking-wider bg-surface-raised text-foreground border border-line shadow-xl hover:bg-surface-soft active:scale-95 transition-all cursor-pointer disabled:opacity-50"
           >
             {gps.estado === "loading" ? (
-              <span className="w-4 h-4 border-2 border-[#1E2320] border-t-transparent rounded-full animate-spin" />
+              <span className="w-4 h-4 border-2 border-foreground border-t-transparent rounded-full animate-spin" />
             ) : (
               <span className="campo-usuario campo-usuario--boton" aria-hidden="true">
                 <span className="campo-usuario__pulso" />
@@ -630,8 +655,8 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
 
         {cargando && (
           <div className="absolute inset-0 bg-white/70 backdrop-blur-xs flex items-center justify-center z-[1001]">
-            <div className="flex items-center gap-3 px-6 py-4 rounded-2xl bg-white shadow-2xl border border-zinc-200 text-base font-bold">
-              <span className="w-6 h-6 border-2 border-[#1E2320] border-t-transparent rounded-full animate-spin" />
+            <div className="flex items-center gap-3 px-6 py-4 rounded-2xl bg-surface-raised shadow-2xl border border-line text-base font-bold">
+              <span className="w-6 h-6 border-2 border-foreground border-t-transparent rounded-full animate-spin" />
               <span>Cargando locales en el mapa de cobertura...</span>
             </div>
           </div>

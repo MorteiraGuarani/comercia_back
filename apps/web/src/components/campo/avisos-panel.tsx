@@ -4,16 +4,14 @@ import React, { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { mensajeError } from "@/utils/error";
 import { TOKENS } from "./tokens";
-import { StatusStamp } from "./ui/status-stamp";
 import { TopBar } from "./ui/top-bar";
 import { PantallaCarga } from "@/components/pantalla-carga";
-import { IconoMegafono, IconoContacto, IconoCheck } from "./ui/iconos-campo";
 import { crearAvisoCampo } from "@/lib/api-adjuntos-campo";
 import { SelectorFotosCampo } from "./selector-fotos-campo";
-import { GaleriaAdjuntosCampo } from "./galeria-adjuntos-campo";
 import { SelectorPaginado } from "@/components/selector-paginado";
 import { Paginacion } from "@/components/paginacion";
-import { descripcionFrecuenciaAviso } from "@/utils/aviso";
+import { descripcionFrecuenciaAviso, formatearFechaAviso } from "@/utils/aviso";
+import { BandejaAvisosEnviados, BandejaAvisosRecibidos } from "./bandejas-avisos";
 import type { RespuestaPaginada } from "@/types/paginacion";
 import type {
   AvisoEnviadoItem,
@@ -23,6 +21,7 @@ import type {
   DestinatarioAviso,
   FrecuenciaAviso,
   ProgramacionAvisoItem,
+  PropsAvisosPanel,
 } from "@/types/campo";
 
 function itemsDeLista<T>(
@@ -33,16 +32,10 @@ function itemsDeLista<T>(
   return [];
 }
 
-interface AvisosPanelProps {
-  esImpulsador?: boolean;
-  /** Llega en true desde el "+" de la campana: abre la redacción al entrar. */
-  abrirRedactar?: boolean;
-}
-
 export function AvisosPanel({
   esImpulsador = false,
   abrirRedactar = false,
-}: AvisosPanelProps) {
+}: PropsAvisosPanel) {
   // Tabs: para lider: "recibidos" | "enviados" | "redactar". Para impulsador: "recibidos"
   const [tab, setTab] = useState<
     "recibidos" | "enviados" | "programados" | "redactar"
@@ -253,19 +246,7 @@ export function AvisosPanel({
     }
   };
 
-  const formatearFecha = (iso: string) => {
-    try {
-      const d = new Date(iso);
-      return d.toLocaleDateString("es-PY", {
-        day: "2-digit",
-        month: "short",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } catch {
-      return iso;
-    }
-  };
+  const formatearFecha = formatearFechaAviso;
 
   const noLeidosCount = recibidos.filter((r) => !r.leido).length;
 
@@ -921,255 +902,18 @@ export function AvisosPanel({
 
         {/* 2. BANDEJA DE AVISOS ENVIADOS (TEAM LEADER) */}
         {tab === "enviados" && !esImpulsador && (
-          <div className="space-y-4">
-            {enviados.length === 0 ? (
-              <div
-                className="rounded-xl border p-5 text-center sm:p-12"
-                style={{
-                  backgroundColor: TOKENS.canvas,
-                  borderColor: TOKENS.line,
-                }}
-              >
-                <p className="text-base font-bold text-foreground mb-1">
-                  No hay avisos enviados aún
-                </p>
-                <p className="text-xs text-muted mb-4">
-                  Envía el primer comunicado a tu equipo de impulsadores de
-                  campo.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setTab("redactar")}
-                  aria-label="Crear comunicado"
-                  title="Crear comunicado"
-                  className="inline-grid h-11 w-11 place-items-center rounded-lg text-white"
-                  style={{ backgroundColor: TOKENS.ink }}
-                >
-                  <span aria-hidden="true" className="text-xl">
-                    +
-                  </span>
-                </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 gap-3">
-                {enviados.map((aviso) => {
-                  const total = aviso.total ?? 1;
-                  const leidos = aviso.leidoPor ?? (aviso.leido ? 1 : 0);
-                  const todoLeido = total > 0 && leidos >= total;
-                  const parcialLeido = leidos > 0 && leidos < total;
-
-                  return (
-                    <div
-                      key={aviso.id}
-                      className="min-w-0 rounded-xl border p-3 transition-all hover:shadow-sm sm:p-4"
-                      style={{
-                        backgroundColor: TOKENS.canvas,
-                        borderColor: TOKENS.line,
-                      }}
-                    >
-                      <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
-                        <div className="flex min-w-0 flex-wrap items-center gap-2">
-                          <span
-                            className="inline-flex max-w-full min-w-0 items-center gap-1 rounded px-2 py-0.5 font-mono text-[10px] font-bold uppercase"
-                            style={{
-                              backgroundColor:
-                                aviso.tipo === "EQUIPO"
-                                  ? "var(--accent-soft)"
-                                  : TOKENS.bone,
-                              color:
-                                aviso.tipo === "EQUIPO"
-                                  ? TOKENS.frio
-                                  : TOKENS.carne,
-                            }}
-                          >
-                            {aviso.tipo === "EQUIPO" ? (
-                              <>
-                                <IconoMegafono className="w-3 h-3" />
-                                <span>TODO EL EQUIPO</span>
-                              </>
-                            ) : (
-                              <>
-                                <IconoContacto className="w-3 h-3" />
-                                <span className="min-w-0 truncate">
-                                  {aviso.tipo === "SELECCION"
-                                    ? `${aviso.total ?? 0} DESTINATARIOS`
-                                    : `DIRECTO A ${aviso.destinatario?.nombre ?? "COLABORADOR"}`}
-                                </span>
-                              </>
-                            )}
-                          </span>
-                          <span className="text-xs font-mono text-muted">
-                            {formatearFecha(aviso.creadoAt)}
-                          </span>
-                        </div>
-
-                        {/* Status Stamp de lectura */}
-                        <StatusStamp
-                          tone={
-                            todoLeido
-                              ? "fresco"
-                              : parcialLeido
-                                ? "alerta"
-                                : "critico"
-                          }
-                          size="sm"
-                        >
-                          {aviso.tipo !== "INDIVIDUAL"
-                            ? `${leidos}/${total} LEÍDOS`
-                            : aviso.leido
-                              ? "LEÍDO"
-                              : "PENDIENTE"}
-                        </StatusStamp>
-                      </div>
-
-                      <p className="mb-3 break-words whitespace-pre-wrap text-sm leading-relaxed text-foreground">
-                        {aviso.mensaje}
-                      </p>
-
-                      <GaleriaAdjuntosCampo adjuntos={aviso.adjuntos} />
-
-                      <div
-                        className="flex min-w-0 flex-wrap items-center justify-between gap-2 border-t pt-2 text-xs text-muted"
-                        style={{ borderColor: TOKENS.line }}
-                      >
-                        <span className="min-w-0 break-words font-mono text-[11px]">
-                          {aviso.tipo === "EQUIPO"
-                            ? `Alcance: ${total} colaboradores asignados`
-                            : aviso.tipo === "SELECCION"
-                              ? `Destinatarios: ${aviso.destinatarios?.map((persona) => `${persona.nombre} ${persona.apellido}`).join(", ") || `${total} colaboradores`}`
-                              : `Destinatario: ${aviso.destinatario?.nombre} ${aviso.destinatario?.apellido || ""}`}
-                        </span>
-
-                        {aviso.tipo === "INDIVIDUAL" && aviso.leidoAt && (
-                          <span className="min-w-0 break-words font-mono text-[11px] text-accent-ink">
-                            Leído el {formatearFecha(aviso.leidoAt)}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+          <BandejaAvisosEnviados
+            enviados={enviados}
+            onRedactar={() => setTab("redactar")}
+          />
         )}
 
         {/* 3. BANDEJA DE AVISOS RECIBIDOS (IMPULSADOR Y TEAM LEADER) */}
         {(tab === "recibidos" || esImpulsador) && (
-          <div className="space-y-4">
-            {recibidos.length === 0 ? (
-              <div
-                className="rounded-xl border p-5 text-center sm:p-12"
-                style={{
-                  backgroundColor: TOKENS.canvas,
-                  borderColor: TOKENS.line,
-                }}
-              >
-                <p className="text-base font-bold text-foreground mb-1">
-                  Bandeja de avisos al día
-                </p>
-                <p className="text-xs text-muted">
-                  No tienes comunicados pendientes en este momento.
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 gap-3">
-                {recibidos.map((aviso) => {
-                  const noLeido = !aviso.leido;
-
-                  return (
-                    <div
-                      key={aviso.id}
-                      className={`min-w-0 rounded-xl border p-3 transition-all sm:p-4 ${
-                        noLeido
-                          ? "bg-surface-raised shadow-sm ring-1 ring-[#C1752B]/40"
-                          : "opacity-90"
-                      }`}
-                      style={{
-                        backgroundColor: TOKENS.canvas,
-                        borderColor: noLeido ? TOKENS.alerta : TOKENS.line,
-                      }}
-                    >
-                      <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
-                        <div className="flex min-w-0 flex-wrap items-center gap-2">
-                          <span
-                            className="inline-flex max-w-full min-w-0 items-center gap-1 rounded px-2 py-0.5 font-mono text-[10px] font-bold uppercase"
-                            style={{
-                              backgroundColor:
-                                aviso.tipo === "EQUIPO"
-                                  ? "var(--accent-soft)"
-                                  : TOKENS.bone,
-                              color:
-                                aviso.tipo === "EQUIPO"
-                                  ? TOKENS.frio
-                                  : TOKENS.carne,
-                            }}
-                          >
-                            {aviso.tipo === "EQUIPO" ? (
-                              <>
-                                <IconoMegafono className="w-3 h-3" />
-                                <span>COMUNICADO GENERAL</span>
-                              </>
-                            ) : (
-                              <>
-                                <IconoContacto className="w-3 h-3" />
-                                <span>MENSAJE DIRECTO</span>
-                              </>
-                            )}
-                          </span>
-                          <span className="text-xs font-mono text-muted">
-                            {formatearFecha(aviso.creadoAt)}
-                          </span>
-                        </div>
-
-                        <StatusStamp
-                          tone={noLeido ? "alerta" : "fresco"}
-                          size="sm"
-                        >
-                          {noLeido ? "NO LEÍDO" : "LEÍDO"}
-                        </StatusStamp>
-                      </div>
-
-                      <div className="mb-2">
-                        <span className="text-xs font-bold text-muted">
-                          De: {aviso.emisor.nombre}{" "}
-                          {aviso.emisor.apellido || ""}
-                        </span>
-                      </div>
-
-                      <p className="mb-4 break-words whitespace-pre-wrap text-sm font-medium leading-relaxed text-foreground">
-                        {aviso.mensaje}
-                      </p>
-
-                      <GaleriaAdjuntosCampo adjuntos={aviso.adjuntos} />
-
-                      <div
-                        className="flex min-w-0 flex-wrap items-center justify-between gap-2 border-t pt-2.5"
-                        style={{ borderColor: TOKENS.line }}
-                      >
-                        <span className="min-w-0 break-words font-mono text-xs text-muted">
-                          {aviso.leido && aviso.leidoAt
-                            ? `Confirmado: ${formatearFecha(aviso.leidoAt)}`
-                            : "Pendiente de acuse de recibo"}
-                        </span>
-
-                        {noLeido && (
-                          <button
-                            type="button"
-                            onClick={() => handleMarcarLeido(aviso.id)}
-                            className="flex min-h-11 items-center gap-1.5 rounded-lg bg-brand-700 px-3 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-800 focus-visible:ring-2 focus-visible:ring-brand-600 dark:bg-brand-200 dark:text-brand-950 dark:hover:bg-brand-100"
-                          >
-                            <IconoCheck className="w-3.5 h-3.5" />
-                            <span>Marcar leído</span>
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+          <BandejaAvisosRecibidos
+            recibidos={recibidos}
+            onMarcarLeido={(id) => void handleMarcarLeido(id)}
+          />
         )}
       </main>
     </div>

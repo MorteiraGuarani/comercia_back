@@ -33,23 +33,23 @@ export function BadgeNotificaciones() {
 
   useEffect(() => {
     let activo = true;
-    void obtenerContadorNoLeidas()
-      .then((data) => {
-        if (activo) setNoLeidas(data.noLeidas);
-      })
-      .catch(() => undefined);
-
-    const interval = setInterval(() => {
+    // Con la pestaña oculta no consulta; al volver, actualiza enseguida.
+    const actualizar = () => {
+      if (document.hidden) return;
       void obtenerContadorNoLeidas()
         .then((data) => {
           if (activo) setNoLeidas(data.noLeidas);
         })
         .catch(() => undefined);
-    }, 30000);
+    };
+    actualizar();
+    const interval = setInterval(actualizar, 30000);
+    document.addEventListener("visibilitychange", actualizar);
 
     return () => {
       activo = false;
       clearInterval(interval);
+      document.removeEventListener("visibilitychange", actualizar);
     };
   }, []);
 
@@ -481,7 +481,7 @@ function PanelNotificaciones({
                   role="tab"
                   aria-selected={pestana === p.clave}
                   onClick={() => setPestana(p.clave)}
-                  className={`flex min-h-10 min-w-0 flex-1 cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-md px-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${
+                  className={`flex min-h-11 min-w-0 flex-1 cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-md px-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${
                     pestana === p.clave
                       ? "bg-surface-raised text-foreground shadow-sm"
                       : "text-muted hover:bg-surface-raised/60 hover:text-foreground"
@@ -581,7 +581,7 @@ function PanelNotificaciones({
         <div className="min-w-0">
           {cargando ? (
             <div className="py-12 text-center">
-              <div className="mx-auto h-7 w-7 animate-spin rounded-full border-2 border-brand-600 border-t-transparent dark:border-brand-400"></div>
+              <div className="mx-auto h-7 w-7 animate-spin rounded-full border-2 border-brand-600 border-t-transparent dark:border-brand-500"></div>
               <p className="mt-2 text-xs text-muted">Cargando avisos...</p>
             </div>
           ) : notificaciones.length === 0 ? (

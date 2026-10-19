@@ -4,6 +4,7 @@ import { apiFetch } from "@/lib/api";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import type { VinculoUcheckAdmin } from "@/types/vinculo-ucheck";
 import { btnGhost, btnPrimary, errorBox } from "@/components/ui";
+import { confirmar } from "@/components/confirmacion/confirmacion-controller";
 
 export function VinculoUcheck({ usuarioId }: { usuarioId: number }) {
   const [datos, setDatos] = useState<VinculoUcheckAdmin | null>(null);
@@ -114,11 +115,15 @@ export function VinculoUcheck({ usuarioId }: { usuarioId: number }) {
             type="button"
             disabled={!!operacion}
             className={btnGhost}
-            onClick={() => {
+            onClick={async () => {
               if (
-                confirm(
-                  "¿Desvincular Ucheck? Las visitas deben estar cerradas. Un administrador deberá volver a vincular la cuenta.",
-                )
+                await confirmar({
+                  titulo: "Desvincular Ucheck",
+                  mensaje:
+                    "¿Desvincular Ucheck? Las visitas deben estar cerradas. Un administrador deberá volver a vincular la cuenta.",
+                  textoConfirmar: "Desvincular",
+                  peligro: true,
+                })
               )
                 void cambiar(false);
             }}

@@ -27,7 +27,7 @@ Todas las rutas siguientes están **dentro de `/app/uploads`**:
 
 **PostgreSQL guarda referencias y metadatos; no guarda los bytes de las imágenes.** Por eso hacen falta tanto la base como el volumen de uploads para una restauración completa. Algunas fotos de tareas antiguas tienen una ruta relativa `uploads/tareas/...`; las nuevas pueden tener `/app/uploads/tareas/...`. La API resuelve ambos formatos, siempre que el archivo exista en el volumen.
 
-El navegador reduce las fotos grandes a un máximo de 1920 píxeles en su lado mayor y las envía como JPEG de hasta 5 MB. La API acepta JPG, PNG o WebP de hasta 5 MB para fotos y adjuntos; los logos también pueden ser SVG. Las novedades y los avisos admiten hasta cinco adjuntos. Véanse [`preparar-imagen.ts`](../apps/web/src/utils/preparar-imagen.ts) y [`multer-config.ts`](../apps/api/src/campo/utils/multer-config.ts).
+El navegador reduce las fotos a un máximo de 1600 píxeles en su lado mayor y las envía como WebP (JPEG en Safari, que no codifica WebP) de hasta 5 MB. La API acepta JPG, PNG o WebP de hasta 5 MB para fotos, adjuntos y logos, y comprueba la firma del archivo, no solo el tipo declarado. Los logos ya no pueden ser SVG; los SVG subidos antes se siguen mostrando con una política que bloquea scripts. Las novedades y los avisos admiten hasta cinco adjuntos. Véanse [`preparar-imagen.ts`](../apps/web/src/utils/preparar-imagen.ts) y [`multer-config.ts`](../apps/api/src/campo/utils/multer-config.ts).
 
 La aplicación entrega las imágenes mediante la API, no mediante una carpeta pública: `/api/v1/campo/fotos/:id`, `/api/v1/campo/adjuntos/:id` y `/api/v1/campo/clientes/logos/:filename`. El módulo `campo` exige sesión; fotos de tareas y adjuntos verifican además el acceso al recurso.
 
@@ -72,6 +72,8 @@ sha256sum -c comercia-AAAAmmdd-HHMMSS.sha256
 gzip -t comercia-AAAAmmdd-HHMMSS.sql.gz
 tar -tzf comercia-AAAAmmdd-HHMMSS.uploads.tar.gz > /dev/null
 ```
+
+Las fotos de tareas se pueden borrar solas pasado un tiempo con `FOTOS_RETENCION_DIAS` (ver [ENV.md](../ENV.md)); por defecto está en `0` y no se borra nada.
 
 Una copia en **otra carpeta del mismo disco** protege frente a borrar el volumen o recrear un contenedor, pero no frente a avería o pérdida del servidor entero. Entre una subida y la siguiente ejecución de backups todavía puede haber pérdida. No existe garantía de «nunca perder» datos sin una réplica continua y otro destino independiente. Para una foto que ya falta en todas las copias, se necesita el original: la ruta en PostgreSQL no permite reconstruir los bytes. Una restauración completa debe usar la base y el archivo de uploads de la misma pareja, primero en un entorno de prueba.
 

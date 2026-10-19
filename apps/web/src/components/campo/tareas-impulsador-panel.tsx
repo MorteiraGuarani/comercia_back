@@ -1,7 +1,8 @@
 "use client";
+import dynamic from "next/dynamic";
 import { RUTA } from "@/utils/estado-jornada";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { enviarAccionTarea } from "@/lib/pendientes-tareas";
 import { usePanel } from "@/components/panel/contexto";
@@ -29,14 +30,23 @@ import { IconoAlerta, IconoCamara, IconoMensaje } from "./ui/iconos-campo";
 import { crearNovedadCampo } from "@/lib/api-adjuntos-campo";
 import { SelectorFotosCampo } from "./selector-fotos-campo";
 import { VisitaRepositor } from "./visita-repositor";
-import { MapaLocal } from "./mapa-local";
 import type {
   AgendaCampo,
   LocalCampo,
   TareaJornadaCampo,
+  TareasDeAsignacion,
   VisitaCampo,
   TipoNovedad,
 } from "@/types/campo";
+
+// Leaflet solo se descarga al abrir un mapa.
+const MapaLocal = dynamic(
+  () => import("./mapa-local").then((modulo) => modulo.MapaLocal),
+  { ssr: false },
+);
+
+// La API acepta hasta 50 asignaciones por pedido.
+const ASIGNACIONES_POR_PEDIDO = 50;
 
 export function TareasImpulsadorPanel({
   esRepositor = false,
@@ -119,34 +129,80 @@ export function TareasImpulsadorPanel({
   ]);
   const cargando = jornada.cargando || consulta !== consultaTerminada;
   const cargarDatos = useCallback(() => setRevision((n) => n + 1), []);
+  // Páginas ya cargadas: al paginar un local solo se pide ese local, no toda
+  // la ruta. Se vacía al cambiar la fecha o al recargar.
+  const cacheTareas = useRef<{
+    base: string;
+    abierta: VisitaCampo | null;
+    paginas: Map<string, RespuestaPaginada<TareaJornadaCampo>>;
+  } | null>(null);
   useEffect(() => {
     if (jornada.cargando) return;
     let vigente = true;
     async function cargar() {
       try {
-        const dataAbierta = await apiFetch<VisitaCampo | null>(
-          "/campo/jornada/abierta",
-        );
+        const base = `${revision}|${qsFecha}|${idsAgenda}`;
+        let cache = cacheTareas.current;
+        if (cache?.base !== base) {
+          const abiertaNueva = await apiFetch<VisitaCampo | null>(
+            "/campo/jornada/abierta",
+          );
+          cache = { base, abierta: abiertaNueva, paginas: new Map() };
+          cacheTareas.current = cache;
+        }
+        const { abierta: dataAbierta, paginas } = cache;
+        const limiteDefecto = esRepositor ? 50 : 7;
+        const pagina = (ag: AgendaCampo) => paginasTareas[ag.id] ?? 1;
+        const limite = (ag: AgendaCampo) => limitesTareas[ag.id] ?? limiteDefecto;
+        const clave = (ag: AgendaCampo) => `${ag.id}|${pagina(ag)}|${limite(ag)}`;
         // Con visita abierta el repositor solo trabaja ese local; sin visita
         // puede leer las tareas de todos sus locales del día.
-        const tareas = await Promise.all(
-          agendas
-            .filter(
-              (ag) =>
-                !esRepositor ||
-                !dataAbierta ||
-                ag.id === dataAbierta.asignacionId,
-            )
-            .map(async (ag) => {
-              const datos = await apiFetch<RespuestaPaginada<TareaJornadaCampo>>(
-                `/campo/jornada/asignaciones/${ag.id}/tareas?${qsFecha}&page=${paginasTareas[ag.id] ?? 1}&limit=${limitesTareas[ag.id] ?? (esRepositor ? 50 : 7)}`,
-              );
-              return [ag.id, datos] as const;
-            }),
+        const visibles = agendas.filter(
+          (ag) =>
+            !esRepositor || !dataAbierta || ag.id === dataAbierta.asignacionId,
         );
+        const faltantes = visibles.filter((ag) => !paginas.has(clave(ag)));
+        // La primera página de cada local va en un solo pedido; las páginas
+        // que eligió el usuario se piden por local.
+        const enLote = faltantes.filter(
+          (ag) => pagina(ag) === 1 && limite(ag) === limiteDefecto,
+        );
+        const sueltas = faltantes.filter((ag) => !enLote.includes(ag));
+        const lotes: AgendaCampo[][] = [];
+        for (let i = 0; i < enLote.length; i += ASIGNACIONES_POR_PEDIDO)
+          lotes.push(enLote.slice(i, i + ASIGNACIONES_POR_PEDIDO));
+        const [respuestasLote, respuestasSueltas] = await Promise.all([
+          Promise.all(
+            lotes.map((lote) =>
+              apiFetch<{ items: TareasDeAsignacion[] }>(
+                `/campo/jornada/tareas?${qsFecha}&asignaciones=${lote.map((ag) => ag.id).join(",")}&page=1&limit=${limiteDefecto}`,
+              ),
+            ),
+          ),
+          Promise.all(
+            sueltas.map(async (ag) => {
+              const datos = await apiFetch<RespuestaPaginada<TareaJornadaCampo>>(
+                `/campo/jornada/asignaciones/${ag.id}/tareas?${qsFecha}&page=${pagina(ag)}&limit=${limite(ag)}`,
+              );
+              return [ag, datos] as const;
+            }),
+          ),
+        ]);
+        for (const { asignacionId, ...datos } of respuestasLote.flatMap(
+          (r) => r.items,
+        ))
+          paginas.set(`${asignacionId}|1|${limiteDefecto}`, datos);
+        for (const [ag, datos] of respuestasSueltas) paginas.set(clave(ag), datos);
         if (!vigente) return;
         setAbierta(dataAbierta);
-        setTareasPorLocal(Object.fromEntries(tareas));
+        setTareasPorLocal(
+          Object.fromEntries(
+            visibles.flatMap((ag) => {
+              const datos = paginas.get(clave(ag));
+              return datos ? [[ag.id, datos] as const] : [];
+            }),
+          ),
+        );
         setError(jornada.error ?? "");
       } catch (e) {
         if (vigente)
@@ -166,6 +222,7 @@ export function TareasImpulsadorPanel({
     idsAgenda,
     paginasTareas,
     limitesTareas,
+    revision,
     consulta,
     agendas,
     esRepositor,

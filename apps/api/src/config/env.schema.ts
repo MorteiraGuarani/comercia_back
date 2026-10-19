@@ -25,7 +25,29 @@ const rawEnvSchema = z
     // Proxies de confianza para leer la IP real (sintaxis de Express "trust
     // proxy"). Vacío: se usa la IP de la conexión.
     TRUST_PROXY: z.string().default(''),
+    // Solo para la carga masiva del catálogo de productos; el resto de la API
+    // usa HTTP_BODY_LIMIT_GENERAL_MB.
     HTTP_BODY_LIMIT_MB: z.coerce.number().int().min(1).max(256).default(50),
+    HTTP_BODY_LIMIT_GENERAL_MB: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .max(50)
+      .default(1),
+    // El número de la SIM lo informa el propio teléfono y no prueba identidad:
+    // queda apagado salvo que se active a conciencia (ver ENV.md).
+    LOGIN_SIM_HABILITADO: booleanFromString.default(false),
+    // Días que se guardan las fotos de tareas; 0 = no se borra nada. Si se
+    // activa, mínimo 90 para que un valor mal puesto no borre fotos recientes.
+    FOTOS_RETENCION_DIAS: z.coerce
+      .number()
+      .int()
+      .min(0)
+      .max(3650)
+      .refine((dias) => dias === 0 || dias >= 90, {
+        message: 'debe ser 0 (apagado) o al menos 90',
+      })
+      .default(0),
     SWAGGER_ENABLED: booleanFromString.default(true),
     COOKIE_SECRET: z.string().min(32).optional(),
     UCHECK_INTEGRATION_SECRET: z.string().min(32).optional(),
