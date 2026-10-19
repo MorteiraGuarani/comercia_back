@@ -15,18 +15,18 @@ import { BotonEliminarCampo } from "./boton-eliminar-campo";
 import { ConfirmarEliminacionCampo } from "./confirmar-eliminacion-campo";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { TOKENS } from "./tokens";
-import { StatusStamp } from "./ui/status-stamp";
-import { StatChip } from "./ui/stat-chip";
+import { BuscadorCatalogo, KpisFiltro } from "./ui/filtros-catalogo";
+import { LogoCliente } from "./ui/logo-cliente";
 import { TopBar } from "./ui/top-bar";
 import {
   IconoCliente,
   IconoMapa,
-  IconoBuscar,
+  IconoCheck,
   IconoCruz,
   IconoMas,
   IconoTienda,
 } from "./ui/iconos-campo";
-import type { ClienteCampo } from "@/types/campo";
+import type { ClienteCampo, RespuestaClientesCampo } from "@/types/campo";
 
 export function ClientesPanel() {
   const router = useRouter();
@@ -38,6 +38,7 @@ export function ClientesPanel() {
     const params = new URLSearchParams();
     if (busqueda.trim()) params.set("buscar", busqueda.trim());
     params.set("estado", filtroEstado);
+    params.set("conResumen", "1");
     const qs = params.toString();
     return `/campo/clientes${qs ? `?${qs}` : ""}`;
   }, [busqueda, filtroEstado]);
@@ -53,8 +54,8 @@ export function ClientesPanel() {
 
   const itemsFiltrados = lista.items;
 
-  const totalActivos = useMemo(() => lista.items.filter((c) => c.activo).length, [lista.items]);
-  const totalInactivos = useMemo(() => lista.items.filter((c) => !c.activo).length, [lista.items]);
+  // Contadores reales de la API (no solo de la página visible).
+  const resumen = (lista.datos as RespuestaClientesCampo | null)?.resumen;
 
   const abrirCrear = () => {
     setForm({
@@ -158,102 +159,49 @@ export function ClientesPanel() {
       />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
-        {/* KPI Chips Bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5">
-          <StatChip
-            label="Total Clientes"
-            value={totalRegistros}
-            sub="Cuentas registradas"
-            color="ink"
-          />
-          <StatChip
-            label="Clientes Activos"
-            value={totalActivos}
-            sub="Con operaciones activas"
-            color="fresco"
-          />
-          <StatChip
-            label="Cuentas Inactivas"
-            value={totalInactivos}
-            sub="Pausadas u obsoletas"
-            color="alerta"
-          />
-        </div>
+        {/* Indicadores que filtran: reemplazan las pestañas de estado */}
+        <KpisFiltro
+          etiqueta="Filtrar clientes"
+          seleccionado={filtroEstado}
+          onSeleccionar={(clave) => {
+            setFiltroEstado(clave);
+            lista.setPage(1);
+          }}
+          items={[
+            { clave: "todos", etiqueta: "Clientes", valor: resumen?.total ?? "—", detalle: "Cuentas registradas", icono: <IconoCliente />, tono: "marca" },
+            { clave: "activos", etiqueta: "Activos", valor: resumen?.activos ?? "—", detalle: "Con operación vigente", icono: <IconoCheck />, tono: "verde" },
+            { clave: "inactivos", etiqueta: "Inactivos", valor: resumen?.inactivos ?? "—", detalle: "Pausados u obsoletos", icono: <IconoCruz />, tono: "gris" },
+          ]}
+        />
 
-        {/* VISTA 2: TABLA DE CLIENTES COMPACTA */}
-            {/* Buscador & Filtros de Estado */}
-            <div
-              className="grid grid-cols-2 items-stretch gap-2 rounded-xl border p-3.5 shadow-xs bg-white md:flex md:items-center md:gap-3 md:justify-between"
-              style={{ borderColor: TOKENS.line }}
-            >
-              {/* Input de Búsqueda */}
-              <div className="relative min-w-0 md:flex-1">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-zinc-400 pointer-events-none">
-                  <IconoBuscar className="w-4 h-4" />
-                </span>
-                <input
-                  type="text"
-                  value={busqueda}
-                  onChange={(e) => {
-                    setBusqueda(e.target.value);
-                    lista.setPage(1);
-                  }}
-                  placeholder="Buscar cliente por nombre comercial, contacto o RUC..."
-                  className="w-full pl-9 pr-8 py-2 text-xs sm:text-sm rounded-lg border bg-white focus:outline-none focus:ring-2 focus:ring-[#1E2320]"
-                  style={{ borderColor: TOKENS.line }}
-                />
-                {busqueda && (
-                  <button
-                    type="button"
-                    onClick={() => setBusqueda("")}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-zinc-400 hover:text-zinc-700 cursor-pointer"
-                  >
-                    <IconoCruz className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-
-              {/* Segmented Filter */}
-              <div
-                className="flex min-w-0 items-center gap-1 overflow-x-auto rounded-lg border bg-[#ECE9E2]/60 p-1 md:shrink-0"
-                style={{ borderColor: TOKENS.line }}
-              >
-                {(["todos", "activos", "inactivos"] as const).map((filtro) => {
-                  const activo = filtroEstado === filtro;
-                  return (
-                    <button
-                      key={filtro}
-                      type="button"
-                      onClick={() => { setFiltroEstado(filtro); lista.setPage(1); }}
-                        className={`whitespace-nowrap rounded-md px-2 py-1.5 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer sm:px-3 ${
-                        activo ? "bg-[#1E2320] text-white shadow-xs" : "text-[#726C60] hover:text-[#1E2320]"
-                      }`}
-                    >
-                      {filtro}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+        <BuscadorCatalogo
+          valor={busqueda}
+          onCambio={(valor) => {
+            setBusqueda(valor);
+            lista.setPage(1);
+          }}
+          placeholder="Buscar por nombre, contacto o RUC"
+          etiqueta="Buscar cliente"
+        />
 
             {/* Tabla de Clientes */}
             <div
               data-inicio-listado
-              className="scroll-mt-20 rounded-xl border bg-white shadow-xs overflow-hidden"
+              className="scroll-mt-20 rounded-xl border border-line bg-surface-raised shadow-xs overflow-hidden"
               style={{ borderColor: TOKENS.line }}
             >
               {lista.cargando && !lista.items.length ? (
-                <div className="py-16 text-center text-zinc-500">
-                  <div className="w-6 h-6 mx-auto border-2 border-[#1E2320] border-t-transparent rounded-full animate-spin mb-2.5" />
+                <div className="py-16 text-center text-muted">
+                  <div className="w-6 h-6 mx-auto border-2 border-foreground border-t-transparent rounded-full animate-spin mb-2.5" />
                   <p className="text-xs font-mono">Cargando catálogo de clientes...</p>
                 </div>
               ) : itemsFiltrados.length === 0 ? (
                 <div className="py-12 px-4 text-center">
-                  <div className="w-10 h-10 mx-auto rounded-full bg-zinc-100 flex items-center justify-center text-zinc-400 mb-2.5">
+                  <div className="w-10 h-10 mx-auto rounded-full bg-surface-soft flex items-center justify-center text-muted mb-2.5">
                     <IconoCliente className="w-5 h-5" />
                   </div>
-                  <p className="text-sm font-bold text-[#1E2320]">No se encontraron clientes</p>
-                  <p className="text-xs text-zinc-500 mt-1 max-w-sm mx-auto">
+                  <p className="text-sm font-bold text-foreground">No se encontraron clientes</p>
+                  <p className="text-xs text-muted mt-1 max-w-sm mx-auto">
                     {busqueda
                       ? "Prueba cambiando los términos de búsqueda."
                       : "Comienza registrando tu primera cuenta comercial o cliente."}
@@ -271,24 +219,61 @@ export function ClientesPanel() {
                 </div>
               ) : (
                 <>
-                <div className="grid gap-2 p-3 md:hidden">
+                <ul aria-label="Clientes" className="grid gap-2.5 p-2.5 md:hidden">
                   {itemsFiltrados.map((cliente) => (
-                    <article key={cliente.id} className="min-w-0 rounded-xl border border-line bg-surface-raised p-3 text-sm">
-                      <div className="flex min-w-0 items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <h3 className="break-words font-semibold text-foreground">{cliente.nombre}</h3>
-                          <p className="text-xs text-muted">{cliente.ruc || "Sin RUC"} · {cliente._count?.locales ?? 0} locales</p>
+                    <li key={cliente.id} className="min-w-0">
+                      <article className="relative overflow-hidden rounded-xl border border-line bg-surface-raised shadow-[0_2px_8px_rgba(var(--warm-shadow),0.06)]">
+                        <span
+                          aria-hidden="true"
+                          className={`absolute inset-y-0 left-0 w-1 ${cliente.activo ? "bg-emerald-600 dark:bg-emerald-400" : "bg-stone-400 dark:bg-stone-500"}`}
+                        />
+                        <div className="p-3 pl-4">
+                          <div className="flex min-w-0 items-start gap-3">
+                            <LogoCliente nombre={cliente.nombre} logoUrl={cliente.logoUrl} className="h-14 w-14" />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex min-w-0 items-start justify-between gap-2">
+                                <h3 className="min-w-0 break-words text-sm font-bold leading-snug text-foreground">{cliente.nombre}</h3>
+                                <span
+                                  className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold ${
+                                    cliente.activo
+                                      ? "border-emerald-300 bg-emerald-100 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
+                                      : "border-stone-300 bg-stone-100 text-stone-700 dark:border-stone-700 dark:bg-stone-800/70 dark:text-stone-200"
+                                  }`}
+                                >
+                                  {cliente.activo ? "Activo" : "Inactivo"}
+                                </span>
+                              </div>
+                              {cliente.contacto || cliente.telefono ? (
+                                <p className="truncate text-xs text-muted">{[cliente.contacto, cliente.telefono].filter(Boolean).join(" · ")}</p>
+                              ) : null}
+                              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                                <span className="inline-flex items-center gap-1 rounded-full border border-brand-200 bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-800 dark:border-brand-800 dark:bg-brand-950/50 dark:text-brand-100">
+                                  <IconoTienda className="h-3 w-3" />
+                                  {cliente._count?.locales ?? 0} {(cliente._count?.locales ?? 0) === 1 ? "local" : "locales"}
+                                </span>
+                                <span className="inline-flex items-center rounded-full border border-line bg-surface-soft px-2 py-0.5 font-mono text-[11px] text-foreground">
+                                  {cliente.ruc || "Sin RUC"}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="mt-3 flex items-center gap-2 border-t border-line/70 pt-2.5">
+                            <BotonEditar onClick={() => setForm(cliente)} etiqueta={`Editar cliente ${cliente.nombre}`} modo="texto" className="flex-1" />
+                            <button
+                              type="button"
+                              onClick={() => verEnMapa(cliente.id)}
+                              className="inline-flex min-h-11 flex-1 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-sky-200 bg-sky-50 px-3 text-sm font-semibold text-sky-800 transition-colors hover:border-sky-400 hover:bg-sky-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:border-sky-900 dark:bg-sky-950/50 dark:text-sky-200 dark:hover:bg-sky-900"
+                            >
+                              <IconoMapa className="h-4 w-4" />
+                              Mapa
+                            </button>
+                            <BotonEliminarCampo onClick={() => abrirEliminar(cliente)} etiqueta={`Eliminar cliente ${cliente.nombre}`} disabled={!!op.mensaje} />
+                          </div>
                         </div>
-                        <StatusStamp tone={cliente.activo ? "fresco" : "sub"} size="sm">{cliente.activo ? "ACTIVO" : "INACTIVO"}</StatusStamp>
-                      </div>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        <BotonEditar onClick={() => setForm(cliente)} etiqueta={`Editar cliente ${cliente.nombre}`} modo="texto" className="flex-1" />
-                        <button type="button" onClick={() => verEnMapa(cliente.id)} className="min-h-11 flex-1 rounded-lg border border-line px-3 text-xs font-semibold text-foreground">Ver mapa</button>
-                        <BotonEliminarCampo onClick={() => abrirEliminar(cliente)} etiqueta={`Eliminar cliente ${cliente.nombre}`} modo="texto" disabled={!!op.mensaje} />
-                      </div>
-                    </article>
+                      </article>
+                    </li>
                   ))}
-                </div>
+                </ul>
                 <div className="hidden overflow-x-auto md:block">
                   <table className="w-full text-left border-collapse">
                     <thead>
@@ -328,19 +313,9 @@ export function ClientesPanel() {
                             {/* Cliente */}
                             <td className="py-2.5 px-3.5">
                               <div className="flex items-center gap-2.5 min-w-0 max-w-[260px]">
-                                {cliente.logoUrl ? (
-                                  <img
-                                    src={cliente.logoUrl}
-                                    alt={cliente.nombre}
-                                    className="w-8 h-8 rounded-lg object-cover border border-zinc-200 shrink-0 bg-zinc-50"
-                                  />
-                                ) : (
-                                  <div className="w-8 h-8 rounded-lg bg-[#1E2320] text-white font-bold text-xs flex items-center justify-center shrink-0">
-                                    {iniciales(cliente.nombre)}
-                                  </div>
-                                )}
+                                <LogoCliente nombre={cliente.nombre} logoUrl={cliente.logoUrl} className="h-11 w-11" />
                                 <div className="min-w-0">
-                                  <p className="font-bold text-zinc-900 truncate leading-tight">
+                                  <p className="truncate text-sm font-bold leading-tight text-foreground">
                                     {cliente.nombre}
                                   </p>
                                 </div>
@@ -368,9 +343,9 @@ export function ClientesPanel() {
 
                             {/* Estado */}
                             <td className="py-2.5 px-3.5 text-center whitespace-nowrap">
-                              <StatusStamp tone={cliente.activo ? "fresco" : "sub"} size="sm">
-                                {cliente.activo ? "ACTIVO" : "INACTIVO"}
-                              </StatusStamp>
+                              <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-bold ${cliente.activo ? "border-emerald-300 bg-emerald-100 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300" : "border-stone-300 bg-stone-100 text-stone-700 dark:border-stone-700 dark:bg-stone-800/70 dark:text-stone-200"}`}>
+                                {cliente.activo ? "Activo" : "Inactivo"}
+                              </span>
                             </td>
 
                           </tr>

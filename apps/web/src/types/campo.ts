@@ -11,6 +11,19 @@ export interface RespuestaCatalogoTareasCampo extends RespuestaPaginada<TareaCam
   };
 }
 
+/** Contadores de los paneles de catálogo (`?conResumen=1`). */
+export interface ResumenEstadoCatalogo {
+  total: number;
+  activos: number;
+  inactivos: number;
+}
+export interface RespuestaClientesCampo extends RespuestaPaginada<ClienteCampo> {
+  resumen?: ResumenEstadoCatalogo;
+}
+export interface RespuestaLocalesCampo extends RespuestaPaginada<LocalCampo> {
+  resumen?: ResumenEstadoCatalogo & { sinCliente: number };
+}
+
 export interface ClienteCampo {
   id: number;
   nombre: string;

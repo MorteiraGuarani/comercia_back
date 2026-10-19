@@ -8,6 +8,9 @@ import { Paginacion } from "@/components/paginacion";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { btnGhost, errorBox, inputBase, labelBase } from "@/components/ui";
 
+const INPUT_COMPACTO =
+  "h-11 w-full min-w-0 rounded-xl border border-line bg-surface-raised px-3 text-base text-foreground outline-none transition-colors placeholder:text-muted hover:border-brand-500 focus:border-brand-600 focus:ring-2 focus:ring-brand-600/30 sm:text-sm";
+
 // Montar con key={url} cuando cambie el alcance para reiniciar la paginación.
 export function SelectorPaginado<TId extends number | string = number>({
   url,
@@ -21,6 +24,7 @@ export function SelectorPaginado<TId extends number | string = number>({
   excluirId,
   buscable = false,
   placeholder = "Seleccioná o escribí para buscar",
+  compacto = false,
 }: {
   url: string;
   etiqueta: string;
@@ -33,6 +37,9 @@ export function SelectorPaginado<TId extends number | string = number>({
   excluirId?: NoInfer<TId>;
   buscable?: boolean;
   placeholder?: string;
+  /** Para barras de filtros: etiqueta solo para lectores de pantalla, alto de
+   *  44 px y desplegable más ancho alineado a la derecha. Solo con buscable. */
+  compacto?: boolean;
 }) {
   const [datos, setDatos] = useState<RespuestaPaginada<
     OpcionSelector<TId>
@@ -145,8 +152,8 @@ export function SelectorPaginado<TId extends number | string = number>({
         mensaje={`Cargando ${etiqueta.toLowerCase()}`}
       />
       {buscable ? (
-        <label className={labelBase}>
-          {etiqueta}
+        <label className={compacto ? "block min-w-0" : labelBase}>
+          {compacto ? <span className="sr-only">{etiqueta}</span> : etiqueta}
           <input
             ref={inputRef}
             type="text"
@@ -161,7 +168,7 @@ export function SelectorPaginado<TId extends number | string = number>({
             }
             autoComplete="off"
             required={required}
-            className={inputBase}
+            className={compacto ? INPUT_COMPACTO : inputBase}
             value={abierto && editando ? buscar : nombreSeleccionado}
             maxLength={120}
             placeholder={placeholder}
@@ -245,7 +252,9 @@ export function SelectorPaginado<TId extends number | string = number>({
         <div
           className={
             buscable
-              ? "absolute left-0 right-0 top-full z-20 mt-1 rounded-xl border border-control-line bg-surface-raised p-2 shadow-lg"
+              ? compacto
+                ? "absolute right-0 top-full z-20 mt-1 w-[min(20rem,calc(100vw-2rem))] rounded-xl border border-control-line bg-surface-raised p-2 shadow-lg"
+                : "absolute left-0 right-0 top-full z-20 mt-1 rounded-xl border border-control-line bg-surface-raised p-2 shadow-lg"
               : ""
           }
         >

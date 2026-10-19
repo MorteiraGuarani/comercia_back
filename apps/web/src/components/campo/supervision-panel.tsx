@@ -6,13 +6,11 @@ import { apiFetch } from "@/lib/api";
 import { mensajeError } from "@/utils/error";
 import { queryFechasCampo } from "@/utils/fechas";
 import { useFechaCampo } from "@/hooks/use-fecha-campo";
-import { TOKENS } from "./tokens";
-import { StatusStamp } from "./ui/status-stamp";
-import { BigProgress } from "./ui/big-progress";
 import { SegTabs } from "./ui/seg-tabs";
 import { TopBar } from "./ui/top-bar";
-import { BottomNav } from "./ui/bottom-nav";
-import { IconoRefrescar } from "./ui/iconos-campo";
+import { BarraSegmentos, RAYADO_EN_CURSO } from "./ui/barra-segmentos";
+import { PRESENTISMO_UI, RUTA_PILL } from "./ui/tablero-campo";
+import { IconoAlerta, IconoCheck, IconoRefrescar, IconoTelefono } from "./ui/iconos-campo";
 import { AvancePresentismo, EquipoPresentismo, ResumenPresentismo } from "./presentismo-equipo";
 import styles from "./presentismo.module.css";
 import MarcacionesColaborador from './marcaciones-colaborador';
@@ -96,29 +94,6 @@ const ListChecksIcon = ({
     <line x1="11" y1="13" x2="21" y2="13" />
     <polyline points="3 19.5 4.5 21 7.5 18" />
     <line x1="11" y1="19.5" x2="21" y2="19.5" />
-  </svg>
-);
-
-const AlertOctagonIcon = ({
-  size = 16,
-  color = "currentColor",
-}: {
-  size?: number;
-  color?: string;
-}) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke={color}
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2" />
-    <line x1="12" y1="8" x2="12" y2="12" />
-    <line x1="12" y1="16" x2="12.01" y2="16" />
   </svg>
 );
 
@@ -239,10 +214,16 @@ export function SupervisionPanel({
   ];
 
   if (colaboradorId) {
+    const c = detalleColab?.colaborador;
+    const ruta = detalleColab?.ruta ?? [];
+    const visitados = ruta.filter((p) => p.estado === "completado").length;
+    const tareasHechas = (detalleColab?.tareasCategorias ?? []).reduce((s, cat) => s + cat.completadas, 0);
+    const tareasTotal = (detalleColab?.tareasCategorias ?? []).reduce((s, cat) => s + cat.total, 0);
+    const telefono = c?.telefono && c.telefono !== "—" ? c.telefono : "";
     return (
       <div className="campo-screen min-h-[calc(100vh-5rem)] w-full bg-background text-foreground">
         <TopBar
-          title={detalleColab?.colaborador.nombre ?? "Colaborador"}
+          title={c?.nombre ?? "Colaborador"}
           subtitle="Ruta, tareas, comentarios y fotos del período seleccionado"
           onBack={() => {
             peticionDetalle.current++;
@@ -250,148 +231,157 @@ export function SupervisionPanel({
             setDetalleColab(null);
           }}
         />
-        <main className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
-          {!detalleColab ? (
+        <main className="mx-auto w-full max-w-5xl space-y-4 px-4 py-4 sm:px-6 sm:py-5 lg:px-8">
+          {!detalleColab || !c ? (
             <PantallaCarga visible mensaje="Cargando ficha del colaborador…" />
           ) : (
-          <div className="space-y-4">
-            {/* Header del colaborador */}
-            <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="ft-body text-xs sm:text-sm text-muted font-medium">
-                  {detalleColab.colaborador.zona}
-                </p>
-                {detalleColab.colaborador.telefono && <a href={`tel:${detalleColab.colaborador.telefono.replace(/[^+\d]/g, "")}`}
-                  className="mt-1 inline-flex min-h-11 items-center whitespace-nowrap text-sm text-accent-ink hover:underline"
-                  aria-label={`Llamar a ${detalleColab.colaborador.nombre}`}>Llamar · {detalleColab.colaborador.telefono}</a>}
-              </div>
-              <StatusStamp
-                tone={PRESENTISMO[detalleColab.colaborador.estadoPresentismo].tone}
-              >
-                {PRESENTISMO[detalleColab.colaborador.estadoPresentismo].etiqueta}
-              </StatusStamp>
-            </div>
-
-            {/* Fila de Inicio / Fin de jornada */}
-            <div
-              className="rounded-xl p-3 flex flex-wrap items-center justify-between gap-2 text-xs sm:text-sm"
-              style={{
-                background: TOKENS.canvas,
-                border: `1px solid ${TOKENS.line}`,
-              }}
-            >
-              <div className="flex items-center gap-1.5">
-                <span className="text-muted">Inicio:</span>
-                <span className="ft-mono font-bold text-foreground">
-                  {detalleColab.colaborador.inicioJornada ?? "—"}
+          <>
+            {/* Cabecera de la ficha: estado, contacto y números del período */}
+            <section className="rounded-2xl border border-line bg-surface-raised p-4 shadow-[0_2px_8px_rgba(var(--warm-shadow),0.06)]">
+              <div className="flex min-w-0 items-center gap-3">
+                <span
+                  aria-hidden="true"
+                  className={`grid h-14 w-14 shrink-0 place-items-center rounded-full border-[3px] bg-surface-soft text-base font-bold text-foreground ${PRESENTISMO_UI[c.estadoPresentismo].anillo}`}
+                >
+                  {c.iniciales}
                 </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-xs text-muted">{c.zona}</p>
+                  <span className={`mt-0.5 inline-flex rounded-md px-2 py-0.5 text-[11px] font-bold ${PRESENTISMO_UI[c.estadoPresentismo].pill}`}>
+                    {PRESENTISMO[c.estadoPresentismo].etiqueta}
+                  </span>
+                </div>
+                {telefono ? (
+                  <a
+                    href={`tel:${telefono.replace(/[^+\d]/g, "")}`}
+                    aria-label={`Llamar a ${c.nombre}`}
+                    className="inline-flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-brand-700 px-3 text-sm font-semibold text-white transition-colors hover:bg-brand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:bg-brand-500 dark:text-brand-950 dark:hover:brightness-110"
+                  >
+                    <IconoTelefono className="h-4 w-4" />
+                    Llamar
+                  </a>
+                ) : null}
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-muted">Fin:</span>
-                <span className="ft-mono font-bold text-foreground">
-                  {detalleColab.colaborador.finJornada ??
-                    (detalleColab.colaborador.asistencia === "en_curso"
-                      ? "en curso"
-                      : "—")}
-                </span>
-              </div>
-            </div>
+              <dl className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {[
+                  ["Entrada", c.inicioJornada ?? "—"],
+                  ["Salida", c.finJornada ?? (c.asistencia === "en_curso" ? "En curso" : "—")],
+                  ["Locales", `${visitados} de ${ruta.length}`],
+                  ["Tareas", `${tareasHechas} de ${tareasTotal}`],
+                ].map(([k, v]) => (
+                  <div key={k} className="min-w-0 rounded-xl bg-surface-soft px-3 py-2">
+                    <dt className="text-[10px] font-semibold uppercase tracking-wide text-muted">{k}</dt>
+                    <dd className="ft-display mt-0.5 truncate text-lg font-bold tabular-nums text-foreground">{v}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
 
-            {/* Pestañas de detalle: Ruta / Tareas / Novedades */}
+            {/* Pestañas de detalle */}
             <SegTabs
               active={subTabColab}
               onChange={setSubTabColab}
               tabs={[
-                {
-                  key: "ruta",
-                  label: 'Locales',
-                },
-                {
-                  key: "tareas",
-                  label: 'Tareas',
-                },
-                { key: 'marcaciones', label: 'Marcaciones' },
+                { key: "ruta", label: "Locales", icon: NavigationIcon },
+                { key: "tareas", label: "Tareas", icon: ListChecksIcon },
+                { key: "marcaciones", label: "Marcaciones" },
               ]}
             />
 
-            {subTabColab === 'marcaciones' ? <MarcacionesColaborador key={`${colaboradorId}:${fechasPeriodo}`} colaboradorId={colaboradorId} periodo={periodoVigente} /> : null}
+            {subTabColab === "marcaciones" ? (
+              <MarcacionesColaborador key={`${colaboradorId}:${fechasPeriodo}`} colaboradorId={colaboradorId} periodo={periodoVigente} />
+            ) : null}
 
-            {/* Contenido sub-tab: Ruta del Colaborador */}
             {subTabColab === "ruta" && (
-              <div className="space-y-2">
-                {detalleColab.ruta.length === 0 ? (
-                  <p className="text-xs text-muted text-center py-6">
-                    Sin paradas asignadas
-                  </p>
-                ) : (
-                  detalleColab.ruta.map((p, i) => (
-                    <div
+              ruta.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-line p-6 text-center text-sm text-muted">Sin locales asignados en el período.</p>
+              ) : (
+                <ol className="space-y-2" aria-label="Locales del período">
+                  {ruta.map((p, i) => (
+                    <li
                       key={p.localId}
-                      className="rounded-xl p-3 flex min-w-0 flex-wrap items-center justify-between gap-3 text-xs"
-                      style={{
-                        background: TOKENS.canvas,
-                        border: `1px solid ${TOKENS.line}`,
-                      }}
+                      className="flex min-w-0 items-center gap-3 rounded-xl border border-line bg-surface-raised p-3 shadow-[0_2px_8px_rgba(var(--warm-shadow),0.04)]"
                     >
-                      <div className="flex min-w-0 items-center gap-2.5">
-                        <span className="w-5 h-5 rounded-full bg-zinc-200 text-foreground ft-mono font-bold text-[11px] flex items-center justify-center shrink-0">
-                          {i + 1}
-                        </span>
-                        <div className="min-w-0">
-                          <p className="ft-body break-words font-semibold text-foreground text-sm">
-                            {p.local}
-                          </p>
-                          <p className="ft-mono break-words text-[11px] text-muted">
-                            Ventana: {p.ventana ?? "Sin franja"} · {p.cliente}
-                          </p>
-                        </div>
+                      <span aria-hidden="true" className={`ft-display grid h-8 w-8 shrink-0 place-items-center rounded-full text-sm font-bold ${RUTA_PILL[p.estado]}`}>
+                        {i + 1}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="break-words text-sm font-semibold text-foreground">{p.local}</p>
+                        <p className="break-words text-[11px] text-muted">
+                          {[
+                            p.cliente,
+                            p.ventana ? `Franja ${p.ventana}` : "Sin franja",
+                            p.checkin ? `Entrada ${p.checkin}` : null,
+                            p.checkout ? `Salida ${p.checkout}` : null,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </p>
                       </div>
-                      <StatusStamp
-                        tone={RUTA[p.estado].tone}
-                      >
-                        {RUTA[p.estado].etiqueta} · {PRESENTISMO[p.estadoPresentismo].etiqueta}
-                      </StatusStamp>
-                    </div>
-                  ))
-                )}
-              </div>
+                      <div className="flex shrink-0 flex-col items-end gap-1">
+                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${RUTA_PILL[p.estado]}`}>{RUTA[p.estado].etiqueta}</span>
+                        {p.estadoPresentismo !== "SIN_REGISTRO" ? (
+                          <span className={`rounded-md px-1.5 text-[10px] font-bold ${PRESENTISMO_UI[p.estadoPresentismo].pill}`}>
+                            {PRESENTISMO[p.estadoPresentismo].etiqueta}
+                          </span>
+                        ) : null}
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              )
             )}
 
-            {/* Contenido sub-tab: Tareas del Colaborador */}
             {subTabColab === "tareas" && (
               <div className="space-y-3">
                 {detalleColab.tareasCategorias.length === 0 && (detalleColab.evidencias ?? []).length === 0 ? (
-                  <p className="text-xs text-muted text-center py-6">
-                    Sin tareas registradas
-                  </p>
+                  <p className="rounded-xl border border-dashed border-line p-6 text-center text-sm text-muted">Sin tareas registradas en el período.</p>
                 ) : (
-                  detalleColab.tareasCategorias.map((cat) => (
-                    <div
-                      key={cat.categoria}
-                      className="rounded-xl p-3 text-xs"
-                      style={{
-                        background: TOKENS.canvas,
-                        border: `1px solid ${TOKENS.line}`,
-                      }}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="ft-body font-bold text-foreground text-sm">
-                          {cat.categoria}
-                        </span>
-                        <span className="ft-mono text-xs font-semibold text-muted">
-                          {cat.completadas} / {cat.total}
-                        </span>
-                      </div>
-                      <BigProgress
-                        pct={
-                          cat.total
-                            ? Math.round((cat.completadas / cat.total) * 100)
-                            : 0
-                        }
-                        color={TOKENS.fresco}
-                      />
-                    </div>
-                  ))
+                  detalleColab.tareasCategorias.map((cat) => {
+                    const avance = cat.total ? Math.round((cat.completadas / cat.total) * 100) : 0;
+                    return (
+                      <section key={cat.categoria} className="rounded-xl border border-line bg-surface-raised p-3 shadow-[0_2px_8px_rgba(var(--warm-shadow),0.04)]">
+                        <div className="mb-1.5 flex items-center justify-between gap-2">
+                          <h3 className="truncate text-sm font-bold text-foreground">{cat.categoria}</h3>
+                          <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted">
+                            {cat.obligPendiente ? (
+                              <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-800 dark:bg-red-950/60 dark:text-red-300">Obligatoria pendiente</span>
+                            ) : null}
+                            <b className="tabular-nums text-foreground">{cat.completadas}</b>/{cat.total}
+                          </span>
+                        </div>
+                        <BarraSegmentos
+                          total={cat.total}
+                          segmentos={[
+                            {
+                              valor: cat.completadas,
+                              clase: avance < 50 ? "bg-amber-500 dark:bg-amber-400" : "bg-emerald-600 dark:bg-emerald-500",
+                              etiqueta: "hechas",
+                            },
+                          ]}
+                        />
+                        {cat.tareas.length ? (
+                          <ul className="mt-2 flex flex-wrap gap-1.5">
+                            {cat.tareas.map((t) => (
+                              <li
+                                key={t.id}
+                                className={`inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${
+                                  t.completada
+                                    ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-300"
+                                    : t.esObligatoria
+                                      ? "border-red-200 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/50 dark:text-red-300"
+                                      : "border-line bg-surface-soft text-muted"
+                                }`}
+                              >
+                                {t.completada ? <IconoCheck className="h-3 w-3 shrink-0" /> : null}
+                                <span className="truncate">{t.nombre}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : null}
+                      </section>
+                    );
+                  })
                 )}
                 {(detalleColab.evidencias ?? []).length > 0 && (
                   <div className="space-y-3 border-t border-line pt-3">
@@ -403,7 +393,15 @@ export function SupervisionPanel({
                             <h4 className="break-words text-sm font-semibold text-foreground">{evidencia.nombreTarea}</h4>
                             <p className="break-words text-xs text-muted">{evidencia.local} · {evidencia.cliente}</p>
                           </div>
-                          <StatusStamp tone={evidencia.completadaAt ? "fresco" : "sub"} size="sm">{evidencia.completadaAt ? "COMPLETADA" : "EN CURSO"}</StatusStamp>
+                          <span
+                            className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                              evidencia.completadaAt
+                                ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
+                                : "bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300"
+                            }`}
+                          >
+                            {evidencia.completadaAt ? "Completada" : "En curso"}
+                          </span>
                         </div>
                         <p className="text-xs text-muted">Visita: {new Date(evidencia.entrada).toLocaleString("es-PY")} · Salida: {evidencia.salida ? new Date(evidencia.salida).toLocaleTimeString("es-PY") : evidencia.estado === "EN_CURSO" ? "en curso" : "sin salida registrada"} · {PRESENTISMO[evidencia.estadoPresentismo].etiqueta}</p>
                         {evidencia.completadaAt && <p className="text-xs text-muted">Completada: {new Date(evidencia.completadaAt).toLocaleString("es-PY")}</p>}
@@ -428,13 +426,13 @@ export function SupervisionPanel({
                 )}
               </div>
             )}
-          </div>
-
+          </>
           )}
         </main>
       </div>
     );
   }
+
   return (
     <div className={`campo-screen ${styles.screen}`}>
       <header className={styles.header}>
@@ -447,46 +445,23 @@ export function SupervisionPanel({
         </div>
       </header>
 
-      {/* Selector de pestañas superiores (Desktop & Tablet) */}
-      <div className={`${styles.desktopTabs} hidden gap-1 overflow-x-auto border-b border-line bg-surface-raised px-4 py-1 sm:flex sm:px-8`}>
-        {navItems.map((it) => {
-          const isActive = tab === it.key;
-          const Icon = it.icon;
-          return (
-            <button
-              key={it.key}
-              onClick={() => setTab(it.key)}
-              aria-pressed={isActive}
-              className={`ft-body flex min-h-11 items-center gap-2 whitespace-nowrap border-b-2 px-3 text-sm font-medium transition-colors hover:bg-surface-soft ${
-                isActive
-                  ? "border-accent-ink text-foreground"
-                  : "border-transparent text-muted"
-              }`}
-            >
-              <span aria-hidden="true"><Icon size={16} color="currentColor" /></span>
-              <span>{it.label}</span>
-            </button>
-          );
-        })}
-      </div>
+      {/* Pestañas arriba en todos los tamaños: la barra inferior propia quedaba
+          tapada por la navegación de la app en el celular. */}
+      <SegTabs
+        active={tab}
+        onChange={setTab}
+        tabs={navItems}
+        className="bg-surface-raised px-2 sm:px-6"
+      />
 
-      {/* Contenedor Principal Amplio (sin marco móvil, full-width responsive) */}
-      <div
-        className="flex min-w-0 w-full flex-col"
-        style={{ background: TOKENS.bone }}
-      >
+      <div className="flex min-w-0 w-full flex-col bg-background">
         {cargando && !resumen ? (
           <div className="flex-1 flex flex-col items-center justify-center p-12">
-            <PantallaCarga
-              visible
-              mensaje="Cargando información operativa del equipo..."
-            />
+            <PantallaCarga visible mensaje="Cargando información operativa del equipo..." />
           </div>
         ) : error ? (
           <div className="mx-auto my-4 w-[calc(100%-2rem)] max-w-2xl rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200" role="alert">
-            <p className="font-bold text-base">
-              No se pudieron cargar los datos de supervisión
-            </p>
+            <p className="font-bold text-base">No se pudieron cargar los datos de supervisión</p>
             <p className="mt-1 text-xs sm:text-sm">{error}</p>
             <button
               onClick={cargarResumen}
@@ -496,8 +471,8 @@ export function SupervisionPanel({
             </button>
           </div>
         ) : (
-          <div className="flex-1 overflow-y-auto flex flex-col">
-            {/* ==================== TAB 1: RESUMEN OPERATIVO ==================== */}
+          <div className="flex flex-1 flex-col">
+            {/* ==================== EQUIPO ==================== */}
             {tab === "resumen" && resumen && (
               <div className={styles.body}>
                 <ResumenPresentismo resumen={resumen} onFiltrar={valor => {
@@ -512,122 +487,107 @@ export function SupervisionPanel({
               </div>
             )}
 
-            {/* ==================== TAB 2: RUTAS DEL EQUIPO ==================== */}
+            {/* ==================== LOCALES ==================== */}
             {tab === "rutas" && resumen && (
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 flex-1 w-full">
-                <TopBar
-                  title="Avance de Rutas de Locales"
-                  subtitle="Monitoreo en tiempo real de visitas a locales asignados, paradas completadas y en curso"
+              <div className="mx-auto w-full max-w-7xl flex-1 space-y-4 px-4 py-4 sm:px-6 sm:py-6 lg:px-8">
+                <ResumenAvance
+                  titulo="Visitas a locales del equipo"
+                  porcentaje={resumen.rutas.pct}
+                  total={resumen.rutas.total}
+                  segmentos={[
+                    { valor: resumen.rutas.completadas, clase: "bg-emerald-600 dark:bg-emerald-500", etiqueta: "hechas" },
+                    { valor: resumen.rutas.enCurso, clase: RAYADO_EN_CURSO, etiqueta: "en curso" },
+                    { valor: resumen.rutas.incompletas, clase: "bg-orange-500 dark:bg-orange-400", etiqueta: "sin salida" },
+                    { valor: resumen.rutas.ausentes, clase: "bg-red-600 dark:bg-red-500", etiqueta: "sin visitar" },
+                  ]}
+                  conteos={[
+                    { etiqueta: "Hechas", valor: resumen.rutas.completadas, clase: "text-emerald-700 dark:text-emerald-300" },
+                    { etiqueta: "En curso", valor: resumen.rutas.enCurso, clase: "text-sky-700 dark:text-sky-300" },
+                    { etiqueta: "Pendientes", valor: resumen.rutas.pendientes },
+                    { etiqueta: "Sin visitar", valor: resumen.rutas.ausentes + resumen.rutas.incompletas, clase: "text-red-700 dark:text-red-300" },
+                  ]}
                 />
-
-                {/* Resumen Global de Rutas */}
-                <div
-                  className="rounded-2xl p-5 shadow-sm"
-                  style={{
-                    background: TOKENS.canvas,
-                    border: `1px solid ${TOKENS.line}`,
-                  }}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <p
-                      className="ft-body text-xs sm:text-sm font-semibold"
-                      style={{ color: TOKENS.sub }}
-                    >
-                      Cumplimiento global de visitas del equipo
-                    </p>
-                    <p
-                      className="ft-display text-3xl font-bold"
-                      style={{ color: TOKENS.frio }}
-                    >
-                      {resumen.rutas.pct}%
-                    </p>
-                  </div>
-                  <BigProgress pct={resumen.rutas.pct} color={TOKENS.frio} />
-
-                  <div className="flex flex-wrap gap-4 mt-3 pt-3 border-t border-[#DAD5C9]/60 ft-mono text-xs text-muted">
-                    <span>
-                      Total asignado:{" "}
-                      <b className="text-foreground">{resumen.rutas.total}</b>
-                    </span>
-                    <span>
-                      <b style={{ color: TOKENS.fresco }}>
-                        {resumen.rutas.completadas}
-                      </b>{" "}
-                      completadas
-                    </span>
-                    <span>
-                      <b style={{ color: TOKENS.frio }}>
-                        {resumen.rutas.enCurso}
-                      </b>{" "}
-                      en curso
-                    </span>
-                    <span>
-                      <b className="text-amber-700">
-                        {resumen.rutas.pendientes}
-                      </b>{" "}
-                      pendientes
-                    </span>
-                  </div>
-                </div>
-
-                {/* Desglose por Colaborador */}
                 <EquipoPresentismo key={resumen.fecha} colaboradores={resumen.colaboradores} metric="ruta"
                   filtro={filtroEquipo} onFiltro={setFiltroEquipo} onOpen={id => void abrirColaborador(id, "ruta")} />
               </div>
             )}
 
-            {/* ==================== TAB 3: TAREAS DEL EQUIPO ==================== */}
+            {/* ==================== TAREAS ==================== */}
             {tab === "tareas" && resumen && (
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 flex-1 w-full">
-                <TopBar
-                  title="Cumplimiento de Tareas"
-                  subtitle="Seguimiento de tareas operativas, góndola, precios, limpieza y obligatorias por colaborador"
+              <div className="mx-auto w-full max-w-7xl flex-1 space-y-4 px-4 py-4 sm:px-6 sm:py-6 lg:px-8">
+                <ResumenAvance
+                  titulo="Tareas del equipo"
+                  porcentaje={resumen.tareas.pct}
+                  total={resumen.tareas.total}
+                  segmentos={[{ valor: resumen.tareas.completadas, clase: "bg-brand-600 dark:bg-brand-500", etiqueta: "hechas" }]}
+                  conteos={[
+                    { etiqueta: "Hechas", valor: resumen.tareas.completadas, clase: "text-brand-700 dark:text-brand-200" },
+                    { etiqueta: "Pendientes", valor: Math.max(0, resumen.tareas.total - resumen.tareas.completadas) },
+                    { etiqueta: "Obligatorias", valor: resumen.tareas.obligatoriasPendientes, clase: "text-red-700 dark:text-red-300" },
+                  ]}
+                  aviso={
+                    resumen.tareas.obligatoriasPendientes > 0
+                      ? `${resumen.tareas.obligatoriasPendientes} tareas obligatorias pendientes en el equipo`
+                      : undefined
+                  }
                 />
-
-                {/* Resumen Global de Tareas */}
-                <div
-                  className="rounded-2xl p-6 sm:p-7 shadow-sm bg-surface-raised"
-                  style={{ border: `1px solid ${TOKENS.line}` }}
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="ft-body text-sm sm:text-base font-bold text-foreground">
-                      Cumplimiento global de tareas del equipo
-                    </p>
-                    <p
-                      className="ft-display text-4xl font-black"
-                      style={{ color: TOKENS.fresco }}
-                    >
-                      {resumen.tareas.pct}%
-                    </p>
-                  </div>
-                  <BigProgress pct={resumen.tareas.pct} color={TOKENS.fresco} />
-
-                  {resumen.tareas.obligatoriasPendientes > 0 && (
-                    <p className="ft-body text-sm font-extrabold mt-4 pt-4 border-t border-[#DAD5C9]/60 flex items-center gap-2 text-red-600">
-                      <AlertOctagonIcon size={16} color={TOKENS.critico} />
-                      {resumen.tareas.obligatoriasPendientes} tareas
-                      obligatorias pendientes de ejecución en el equipo
-                    </p>
-                  )}
-                </div>
-
-                {/* Desglose por Colaborador */}
                 <EquipoPresentismo key={resumen.fecha} colaboradores={resumen.colaboradores} metric="tareas"
                   filtro={filtroEquipo} onFiltro={setFiltroEquipo} onOpen={id => void abrirColaborador(id, "tareas")} />
               </div>
             )}
           </div>
         )}
-
-        {/* Bottom Navigation para móviles */}
-        <BottomNav
-          items={navItems}
-          active={tab}
-          onChange={setTab}
-          className="fixed inset-x-0 bottom-0 z-20 sm:hidden"
-        />
       </div>
       <PantallaCarga visible={cargando && !!resumen} mensaje="Actualizando presentismo…" />
     </div>
+  );
+}
+
+/** Resumen de avance de una pestaña: porcentaje, barra apilada y contadores. */
+function ResumenAvance({
+  titulo,
+  porcentaje,
+  total,
+  segmentos,
+  conteos,
+  aviso,
+}: {
+  titulo: string;
+  porcentaje: number;
+  total: number;
+  segmentos: Parameters<typeof BarraSegmentos>[0]["segmentos"];
+  conteos: { etiqueta: string; valor: number; clase?: string }[];
+  aviso?: string;
+}) {
+  return (
+    <section className="rounded-2xl border border-line bg-surface-raised p-4 shadow-[0_2px_8px_rgba(var(--warm-shadow),0.06)] sm:p-5">
+      <div className="flex items-end justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[11px] font-bold uppercase tracking-wide text-muted">{titulo}</p>
+          <p className="text-xs text-muted">{total} en el período</p>
+        </div>
+        <p className="ft-display shrink-0 text-4xl font-bold leading-none tabular-nums text-foreground">
+          {porcentaje}
+          <small className="text-lg font-semibold text-muted">%</small>
+        </p>
+      </div>
+      <div className="mt-3">
+        <BarraSegmentos total={total} segmentos={segmentos} alto="h-2.5" />
+      </div>
+      <div className={`mt-3 grid gap-1.5 ${conteos.length === 4 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>
+        {conteos.map((i) => (
+          <div key={i.etiqueta} className="min-w-0 rounded-lg bg-surface-soft px-2.5 py-1.5">
+            <b className={`ft-display block text-xl leading-tight tabular-nums ${i.clase ?? "text-foreground"}`}>{i.valor}</b>
+            <span className="block truncate text-[11px] text-muted">{i.etiqueta}</span>
+          </div>
+        ))}
+      </div>
+      {aviso ? (
+        <p className="mt-3 flex items-center gap-2 border-t border-line pt-3 text-sm font-semibold text-red-700 dark:text-red-300">
+          <IconoAlerta className="h-4 w-4 shrink-0" />
+          {aviso}
+        </p>
+      ) : null}
+    </section>
   );
 }

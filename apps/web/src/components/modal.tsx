@@ -14,6 +14,7 @@ export function Modal({
   children,
   pie,
   ancho = "md",
+  hojaMovil = false,
 }: {
   titulo: string;
   abierto: boolean;
@@ -22,6 +23,9 @@ export function Modal({
   pie?: ReactNode;
   // "lg"/"xl" para formularios anchos; "md" es el default historico
   ancho?: "md" | "lg" | "xl";
+  // En celular se abre como hoja que sube desde abajo y queda pegada al borde.
+  // Desde `sm` se ve centrado como cualquier modal.
+  hojaMovil?: boolean;
 }) {
   // El portal sale de las capas de la cabecera, mapas y navegación inferior.
   // El snapshot del servidor mantiene el primer render de hidratación vacío.
@@ -85,7 +89,11 @@ export function Modal({
   return createPortal(
     <div
       ref={capaRef}
-      className="campo-screen fixed inset-x-0 top-[var(--modal-top,0px)] z-[2000] flex h-[var(--modal-alto,100dvh)] min-w-0 items-center justify-center pb-[max(1rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-[max(1rem,env(safe-area-inset-top))]"
+      className={`campo-screen fixed inset-x-0 top-[var(--modal-top,0px)] z-[2000] flex h-[var(--modal-alto,100dvh)] min-w-0 justify-center pt-[max(1rem,env(safe-area-inset-top))] ${
+        hojaMovil
+          ? "items-end sm:items-center sm:pb-[max(1rem,env(safe-area-inset-bottom))] sm:pl-[max(1rem,env(safe-area-inset-left))] sm:pr-[max(1rem,env(safe-area-inset-right))]"
+          : "items-center pb-[max(1rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))]"
+      }`}
     >
       {/* Fondo oscurecido: NO cierra el modal a propósito */}
       <div
@@ -98,10 +106,17 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-label={titulo}
-        className={`relative flex min-h-0 min-w-0 w-full ${anchoClase} max-h-full flex-col overflow-hidden rounded-[1.4rem] border border-line bg-surface-raised p-4 text-foreground shadow-[0_28px_80px_rgba(0,0,0,0.3)] outline-none sm:p-6 dark:border-line dark:bg-surface-raised dark:text-foreground`}
+        className={`relative flex min-h-0 min-w-0 w-full ${anchoClase} flex-col overflow-hidden border border-line bg-surface-raised p-4 text-foreground shadow-[0_28px_80px_rgba(0,0,0,0.3)] outline-none sm:max-h-full sm:rounded-[1.4rem] sm:p-6 dark:border-line dark:bg-surface-raised dark:text-foreground ${
+          hojaMovil
+            ? "max-h-[88%] rounded-t-[1.4rem] border-b-0 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 max-sm:motion-safe:animate-hoja-subir sm:border-b"
+            : "max-h-full rounded-[1.4rem]"
+        }`}
       >
+        {hojaMovil ? (
+          <div aria-hidden className="mx-auto mb-1 h-1.5 w-10 shrink-0 rounded-full bg-line sm:hidden" />
+        ) : null}
         <header className="flex shrink-0 items-start justify-between gap-2 sm:gap-4">
-          <h2 className="min-w-0 flex-1 break-words text-lg font-extrabold tracking-[-0.025em]">{titulo}</h2>
+          <h2 className={`min-w-0 flex-1 break-words font-extrabold tracking-[-0.025em] ${hojaMovil ? "self-center text-base sm:text-lg" : "text-lg"}`}>{titulo}</h2>
           <button
             type="button"
             onClick={onCerrar}
@@ -113,7 +128,7 @@ export function Modal({
             </svg>
           </button>
         </header>
-        <div className="mt-4 min-h-0 min-w-0 w-full overflow-y-auto overscroll-contain">{children}</div>
+        <div className={`${hojaMovil ? "mt-2 sm:mt-4" : "mt-4"} min-h-0 min-w-0 w-full overflow-y-auto overscroll-contain`}>{children}</div>
         {pie ? <footer className="mt-3 shrink-0 border-t border-line dark:border-line">{pie}</footer> : null}
       </div>
     </div>,

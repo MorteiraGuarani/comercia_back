@@ -11,20 +11,27 @@ import { BotonEliminarCampo } from "./boton-eliminar-campo";
 import { ConfirmarEliminacionCampo } from "./confirmar-eliminacion-campo";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { TOKENS } from "./tokens";
-import { StatusStamp } from "./ui/status-stamp";
-import { StatChip } from "./ui/stat-chip";
+import { BuscadorCatalogo, KpisFiltro } from "./ui/filtros-catalogo";
 import { TopBar } from "./ui/top-bar";
 import { PlanLocal } from "./plan-local";
 import { SelectorClienteCombobox } from "./selector-cliente-combobox";
+import { TarjetaPdv } from "./tarjeta-pdv";
+import { FotoLocal } from "./ui/foto-local";
 import {
   IconoTienda,
   IconoMapa,
   IconoPlanificacion,
-  IconoBuscar,
+  IconoCheck,
+  IconoCliente,
   IconoCruz,
   IconoMas,
 } from "./ui/iconos-campo";
-import type { ClienteCampo, DatosLocalCampo, LocalCampo } from "@/types/campo";
+import type {
+  ClienteCampo,
+  DatosLocalCampo,
+  LocalCampo,
+  RespuestaLocalesCampo,
+} from "@/types/campo";
 
 const SelectorUbicacion = dynamic(() => import("./selector-ubicacion"), {
   ssr: false,
@@ -69,6 +76,7 @@ export function LocalesPanel() {
     if (clienteFiltro) params.set("clienteId", String(clienteFiltro));
     if (sinCliente) params.set("sinCliente", "true");
     params.set("estado", filtroEstado);
+    params.set("conResumen", "1");
     const qs = params.toString();
     return `/campo/locales${qs ? `?${qs}` : ""}`;
   }, [busqueda, clienteFiltro, sinCliente, filtroEstado]);
@@ -100,8 +108,8 @@ export function LocalesPanel() {
 
   const itemsFiltrados = lista.items;
 
-  const totalActivos = useMemo(() => lista.items.filter((l) => l.activo).length, [lista.items]);
-  const totalInactivos = useMemo(() => lista.items.filter((l) => !l.activo).length, [lista.items]);
+  // Contadores reales de la API (no solo de la página visible).
+  const resumen = (lista.datos as RespuestaLocalesCampo | null)?.resumen;
 
   const abrirCrear = () => {
     const clienteDefault =
@@ -157,77 +165,47 @@ export function LocalesPanel() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
         {mostrarMapaCobertura && <MapaClientes key={revisionMapa} clientes={clientes} clienteSeleccionadoId={typeof clienteFiltro === "number" ? clienteFiltro : null} />}
-        {/* KPI: compacto y cerrado por defecto en móvil */}
-        <details className="rounded-xl border border-line bg-surface-raised sm:hidden">
-          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-foreground [&::-webkit-details-marker]:hidden">
-            <span>Resumen de locales</span>
-            <span className="text-xs font-mono text-muted">{totalRegistros} puntos de venta</span>
-          </summary>
-          <div className="grid grid-cols-3 gap-2 border-t border-line p-2">
-            <StatChip label="Total" value={totalRegistros} color="ink" />
-            <StatChip label="Activos" value={totalActivos} color="fresco" />
-            <StatChip label="Inactivos" value={totalInactivos} color="alerta" />
-          </div>
-        </details>
-        <div className="hidden grid-cols-3 gap-3.5 sm:grid">
-          <StatChip
-            label="Total Puntos de Venta"
-            value={totalRegistros}
-            sub="Red comercial"
-            color="ink"
-          />
-          <StatChip
-            label="Locales Activos"
-            value={totalActivos}
-            sub="Con visitas programadas"
-            color="fresco"
-          />
-          <StatChip
-            label="Locales Inactivos"
-            value={totalInactivos}
-            sub="Pausados o en baja"
-            color="alerta"
-          />
-        </div>
+        {/* Indicadores que filtran: reemplazan las pestañas de estado y "sin cliente" */}
+        <KpisFiltro
+          etiqueta="Filtrar puntos de venta"
+          seleccionado={sinCliente ? "sin_cliente" : filtroEstado}
+          onSeleccionar={(clave) => {
+            if (clave === "sin_cliente") {
+              setSinCliente(true);
+              setFiltroEstado("todos");
+              setClienteFiltro("");
+              setClienteSeleccionadoFiltro(null);
+            } else {
+              setSinCliente(false);
+              setFiltroEstado(clave);
+            }
+            lista.setPage(1);
+          }}
+          items={[
+            { clave: "todos", etiqueta: "Locales", valor: resumen?.total ?? "—", detalle: "Red de puntos de venta", icono: <IconoTienda />, tono: "marca" },
+            { clave: "activos", etiqueta: "Activos", valor: resumen?.activos ?? "—", detalle: "Con visitas programadas", icono: <IconoCheck />, tono: "verde" },
+            { clave: "inactivos", etiqueta: "Inactivos", valor: resumen?.inactivos ?? "—", detalle: "Pausados o en baja", icono: <IconoCruz />, tono: "gris" },
+            { clave: "sin_cliente", etiqueta: "Sin cliente", valor: resumen?.sinCliente ?? "—", detalle: "Falta asociar cliente", icono: <IconoCliente />, tono: "ambar" },
+          ]}
+        />
 
-        {/* Buscador & Filtros de Estado */}
-        <div
-          className="grid grid-cols-2 items-stretch gap-2 rounded-xl border p-3.5 shadow-xs bg-white md:flex md:items-center md:gap-3 md:justify-between"
-          style={{ borderColor: TOKENS.line }}
-        >
-          {/* Input de Búsqueda */}
-          <div className="relative min-w-0 md:flex-1">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-zinc-400 pointer-events-none">
-              <IconoBuscar className="w-4 h-4" />
-            </span>
-            <input
-              type="text"
-              value={busqueda}
-              onChange={(e) => {
-                setBusqueda(e.target.value);
-                lista.setPage(1);
-              }}
-              placeholder="Buscar local por nombre comercial o dirección..."
-              className="w-full pl-9 pr-8 py-2 text-xs sm:text-sm rounded-lg border bg-white focus:outline-none focus:ring-2 focus:ring-[#1E2320]"
-              style={{ borderColor: TOKENS.line }}
-            />
-            {busqueda && (
-              <button
-                type="button"
-                onClick={() => setBusqueda("")}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-zinc-400 hover:text-zinc-700 cursor-pointer"
-              >
-                <IconoCruz className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-
-          {/* Filtro por Cliente */}
-          <div className="min-w-0 md:w-64">
+        {/* Buscador y cliente */}
+        <div className="grid min-w-0 grid-cols-2 gap-2 md:grid-cols-[minmax(0,1fr)_18rem] md:gap-3">
+          <BuscadorCatalogo
+            valor={busqueda}
+            onCambio={(valor) => {
+              setBusqueda(valor);
+              lista.setPage(1);
+            }}
+            placeholder="Buscar local…"
+            etiqueta="Buscar punto de venta"
+          />
+          <div className="min-w-0">
             <SelectorClienteCombobox
               valorId={clienteFiltro || null}
               clienteSeleccionado={clienteSeleccionadoFiltro ?? clientes.find((cliente) => cliente.id === clienteFiltro)}
-              placeholder="Todos los clientes"
+              placeholder="Cliente: todos"
+              compacto
               alSeleccionar={(cliente) => {
                 setClienteFiltro(cliente.id);
                 setClienteSeleccionadoFiltro(cliente);
@@ -236,58 +214,27 @@ export function LocalesPanel() {
               }}
               alLimpiar={() => { setClienteFiltro(""); setClienteSeleccionadoFiltro(null); lista.setPage(1); }}
             />
-            <label className="mt-1 flex min-h-11 cursor-pointer items-center gap-2 rounded-lg px-1 text-xs text-foreground hover:bg-surface-soft focus-within:ring-2 focus-within:ring-brand-600 dark:text-foreground dark:hover:bg-surface-soft">
-              <input type="checkbox" checked={sinCliente} onChange={(evento) => {
-                setSinCliente(evento.target.checked);
-                setClienteFiltro("");
-                setClienteSeleccionadoFiltro(null);
-                lista.setPage(1);
-              }} className="h-4 w-4 accent-[var(--campo-carne)]" />
-              Solo locales sin cliente
-            </label>
-          </div>
-
-          {/* Segmented Filter */}
-          <div
-            className="col-span-2 flex min-w-0 items-center gap-1 overflow-x-auto rounded-lg border bg-[#ECE9E2]/60 p-1 md:col-span-1 md:shrink-0"
-            style={{ borderColor: TOKENS.line }}
-          >
-            {(["todos", "activos", "inactivos"] as const).map((filtro) => {
-              const activo = filtroEstado === filtro;
-              return (
-                <button
-                  key={filtro}
-                  type="button"
-                  onClick={() => { setFiltroEstado(filtro); lista.setPage(1); }}
-                  className={`px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                    activo ? "bg-[#1E2320] text-white shadow-xs" : "text-[#726C60] hover:text-[#1E2320]"
-                  }`}
-                >
-                  {filtro}
-                </button>
-              );
-            })}
           </div>
         </div>
 
         {/* Tabla Compacta de Locales */}
         <div
           data-inicio-listado
-          className="scroll-mt-20 rounded-xl border bg-white shadow-xs overflow-hidden"
+          className="scroll-mt-20 rounded-xl border border-line bg-surface-raised shadow-xs overflow-hidden"
           style={{ borderColor: TOKENS.line }}
         >
           {lista.cargando && !lista.items.length ? (
-            <div className="py-16 text-center text-zinc-500">
-              <div className="w-6 h-6 mx-auto border-2 border-[#1E2320] border-t-transparent rounded-full animate-spin mb-2.5" />
+            <div className="py-16 text-center text-muted">
+              <div className="w-6 h-6 mx-auto border-2 border-foreground border-t-transparent rounded-full animate-spin mb-2.5" />
               <p className="text-xs font-mono">Cargando puntos de venta...</p>
             </div>
           ) : itemsFiltrados.length === 0 ? (
             <div className="py-12 px-4 text-center">
-              <div className="w-10 h-10 mx-auto rounded-full bg-zinc-100 flex items-center justify-center text-zinc-400 mb-2.5">
+              <div className="w-10 h-10 mx-auto rounded-full bg-surface-soft flex items-center justify-center text-muted mb-2.5">
                 <IconoTienda className="w-5 h-5" />
               </div>
-              <p className="text-sm font-bold text-[#1E2320]">No se encontraron locales</p>
-              <p className="text-xs text-zinc-500 mt-1 max-w-sm mx-auto">
+              <p className="text-sm font-bold text-foreground">No se encontraron locales</p>
+              <p className="text-xs text-muted mt-1 max-w-sm mx-auto">
                 {busqueda || clienteFiltro
                   ? "Prueba cambiando los filtros de búsqueda o cliente seleccionado."
                   : "Agrega tu primer punto de venta para asignar visitas y tareas."}
@@ -305,23 +252,16 @@ export function LocalesPanel() {
             </div>
           ) : (
             <>
-            <ul className="grid gap-2 p-3 md:hidden" aria-label="Puntos de venta">
+            <ul className="grid gap-2.5 p-2.5 md:hidden" aria-label="Puntos de venta">
               {itemsFiltrados.map((local) => (
-                <li key={local.id} className="min-w-0 rounded-xl border border-line bg-surface-raised p-3 text-sm">
-                  <div className="flex min-w-0 items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <h3 className="break-words font-semibold text-foreground">{local.nombre}</h3>
-                      <p className="mt-1 break-words text-xs text-muted dark:text-muted">{local.cliente?.nombre ?? "Sin cliente"}</p>
-                      <p className="mt-1 break-words text-xs text-muted">{local.direccion || "Sin dirección"}</p>
-                    </div>
-                    <StatusStamp tone={local.activo ? "fresco" : "sub"} size="sm">{local.activo ? "ACTIVO" : "INACTIVO"}</StatusStamp>
-                  </div>
-                  <p className="mt-2 break-words text-xs text-foreground">Asignado: {local.asignaciones?.length ? local.asignaciones.map((asignacion) => `${asignacion.usuario.rol?.descripcion ?? "Impulsador"} ${asignacion.usuario.nombre} ${asignacion.usuario.apellido}`).join(", ") : "Sin asignar"}</p>
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <BotonEditar onClick={() => setForm(local)} etiqueta={`Editar local ${local.nombre}`} modo="texto" />
-                    <button type="button" onClick={() => setPlan(local)} className="min-h-11 min-w-11 cursor-pointer rounded-lg border border-line px-3 text-xs font-semibold text-foreground hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600">Ruta</button>
-                    <BotonEliminarCampo onClick={() => abrirEliminar(local)} etiqueta={`Eliminar local ${local.nombre}`} modo="texto" disabled={!!op.mensaje} />
-                  </div>
+                <li key={local.id} className="min-w-0">
+                  <TarjetaPdv
+                    local={local}
+                    ocupado={!!op.mensaje}
+                    onEditar={() => setForm(local)}
+                    onRuta={() => setPlan(local)}
+                    onEliminar={() => abrirEliminar(local)}
+                  />
                 </li>
               ))}
             </ul>
@@ -352,20 +292,33 @@ export function LocalesPanel() {
                           <BotonEliminarCampo onClick={() => abrirEliminar(local)} etiqueta={`Eliminar local ${local.nombre}`} disabled={!!op.mensaje} />
                         </div>
                       </td>
-                      <td className="min-w-[180px] px-3.5 py-2.5">
-                        <p className="font-semibold text-foreground">{local.nombre}</p>
-                        <p className="mt-1 break-words text-[11px] text-muted dark:text-muted">{local.cliente?.nombre ?? "Sin cliente"}</p>
-                        <p className="mt-1 break-words text-[11px] text-muted">{local.direccion || "Sin dirección"}</p>
+                      <td className="min-w-[240px] px-3.5 py-2.5">
+                        <div className="flex min-w-0 items-center gap-3">
+                        <FotoLocal nombre={local.nombre} cliente={local.cliente} className="w-16 shrink-0" />
+                        <div className="min-w-0">
+                        <p className="text-sm font-bold text-foreground">{local.nombre}</p>
+                        <p className={`mt-0.5 break-words text-[11px] font-semibold ${local.cliente ? "text-brand-700 dark:text-brand-200" : "text-amber-700 dark:text-amber-300"}`}>{local.cliente?.nombre ?? "Sin cliente"}</p>
+                        <p className="mt-0.5 break-words text-[11px] text-muted">{local.direccion || "Sin dirección"}</p>
+                        </div>
+                        </div>
                       </td>
-                      <td className="max-w-[220px] break-words px-3.5 py-2.5 text-foreground">
-                        {local.asignaciones?.length
-                          ? local.asignaciones.map((asignacion) => `${asignacion.usuario.rol?.descripcion ?? "Impulsador"} ${asignacion.usuario.nombre} ${asignacion.usuario.apellido}`).join(", ")
-                          : <span className="text-muted">Sin asignar</span>}
+                      <td className="max-w-[260px] px-3.5 py-2.5">
+                        <div className="flex flex-wrap gap-1">
+                          {local.asignaciones?.length ? (
+                            local.asignaciones.map((asignacion) => (
+                              <span key={asignacion.id} title={asignacion.usuario.rol?.descripcion ?? undefined} className="inline-flex max-w-full items-center rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[11px] font-semibold text-sky-900 dark:border-sky-900 dark:bg-sky-950/50 dark:text-sky-200">
+                                <span className="truncate">{asignacion.usuario.nombre} {asignacion.usuario.apellido}</span>
+                              </span>
+                            ))
+                          ) : (
+                            <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-300">Sin asignar</span>
+                          )}
+                        </div>
                       </td>
                       <td className="whitespace-nowrap px-3.5 py-2.5 text-center">
-                        <StatusStamp tone={local.activo ? "fresco" : "sub"} size="sm">
-                          {local.activo ? "ACTIVO" : "INACTIVO"}
-                        </StatusStamp>
+                        <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-bold ${local.activo ? "border-emerald-300 bg-emerald-100 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300" : "border-stone-300 bg-stone-100 text-stone-700 dark:border-stone-700 dark:bg-stone-800/70 dark:text-stone-200"}`}>
+                          {local.activo ? "Activo" : "Inactivo"}
+                        </span>
                       </td>
                     </tr>
                   ))}

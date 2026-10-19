@@ -46,6 +46,17 @@ export class ConsultaCampoDto extends PaginacionDto {
   )
   @IsBoolean()
   sinCliente?: boolean;
+  /** Pide los contadores del panel (total, activos...). Los selectores no lo usan. */
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    value === 'true' || value === '1'
+      ? true
+      : value === 'false' || value === '0'
+        ? false
+        : value,
+  )
+  @IsBoolean()
+  conResumen?: boolean;
   @IsOptional()
   @IsIn(['todos', 'activos', 'inactivos'])
   estado?: 'todos' | 'activos' | 'inactivos';

@@ -35,13 +35,26 @@ function itemsDeLista<T>(
 
 interface AvisosPanelProps {
   esImpulsador?: boolean;
+  /** Llega en true desde el "+" de la campana: abre la redacción al entrar. */
+  abrirRedactar?: boolean;
 }
 
-export function AvisosPanel({ esImpulsador = false }: AvisosPanelProps) {
+export function AvisosPanel({
+  esImpulsador = false,
+  abrirRedactar = false,
+}: AvisosPanelProps) {
   // Tabs: para lider: "recibidos" | "enviados" | "redactar". Para impulsador: "recibidos"
   const [tab, setTab] = useState<
     "recibidos" | "enviados" | "programados" | "redactar"
   >(esImpulsador ? "recibidos" : "enviados");
+  // Abre la redacción una vez por pedido; se rearma cuando la URL se limpia.
+  const [redaccionPedida, setRedaccionPedida] = useState(false);
+  if (abrirRedactar && !esImpulsador && !redaccionPedida) {
+    setRedaccionPedida(true);
+    setTab("redactar");
+  } else if (!abrirRedactar && redaccionPedida) {
+    setRedaccionPedida(false);
+  }
 
   const [recibidos, setRecibidos] = useState<AvisoRecibidoItem[]>([]);
   const [enviados, setEnviados] = useState<AvisoEnviadoItem[]>([]);

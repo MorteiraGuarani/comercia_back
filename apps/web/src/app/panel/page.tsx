@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePanel } from "@/components/panel/contexto";
+import { HoyEnCampo } from "@/components/campo/hoy-en-campo";
+import { MiDiaCampo } from "@/components/campo/mi-dia-campo";
 import {
   IconoFlechaDer,
   IconoRefrescar,
@@ -17,6 +19,22 @@ export default function PanelInicioPage() {
   const { usuario, modulos } = usePanel();
   const tieneGestionCampo = modulos.some((m) => m.ruta === "gestion-campo");
   const tieneMiJornada = modulos.some((m) => m.ruta === "mi-jornada");
+  // Equipos de campo (repositores o impulsadores): el líder ve "Hoy en campo"
+  // con su equipo y el personal de campo ve "Tu día" con lo suyo.
+  const equipoActivo = usuario.rol?.equipoCampo?.activo === true;
+  const esLiderCampo =
+    equipoActivo &&
+    modulos.some(
+      (m) => m.ruta === "gestion-campo" && m.paginas.some((p) => p.ruta === "visitas"),
+    );
+  const esPersonalCampo = equipoActivo && !tieneGestionCampo && tieneMiJornada;
+
+  if (esLiderCampo || esPersonalCampo)
+    return (
+      <div className="mx-auto w-full min-w-0 max-w-6xl p-4 text-foreground sm:p-6 lg:p-8">
+        {esLiderCampo ? <HoyEnCampo /> : <MiDiaCampo />}
+      </div>
+    );
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-7xl space-y-8 p-4 text-foreground sm:p-6 lg:p-8">

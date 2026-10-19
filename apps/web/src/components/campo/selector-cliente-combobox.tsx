@@ -16,6 +16,8 @@ interface Props {
   placeholder?: string;
   requerido?: boolean;
   disabled?: boolean;
+  /** Versión para barras de filtros (sin etiqueta visible, 44 px). */
+  compacto?: boolean;
 }
 export function SelectorClienteCombobox({
   valorId,
@@ -25,6 +27,7 @@ export function SelectorClienteCombobox({
   placeholder = "Seleccioná un cliente",
   requerido = false,
   disabled = false,
+  compacto = false,
 }: Props) {
   return (
     <fieldset disabled={disabled} className="min-w-0 border-0 p-0">
@@ -32,6 +35,8 @@ export function SelectorClienteCombobox({
         url="/campo/clientes"
         etiqueta="Cliente"
         buscable
+        compacto={compacto}
+        placeholder={compacto ? placeholder : undefined}
         value={valorId ?? ""}
         seleccionActual={clienteSeleccionado?.nombre}
         vacio={placeholder}

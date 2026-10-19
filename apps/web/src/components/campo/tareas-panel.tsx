@@ -13,18 +13,20 @@ import { usePanel } from "@/components/panel/contexto";
 import { destinatarioCampo } from "@/utils/equipo-campo";
 import { SelectorLocalesTarea } from "./selector-locales-tarea";
 import { HistorialTarea } from "./historial-tarea";
+import { HojaInstruccionTarea, TarjetaTareaCatalogo } from "./tarjeta-tarea-catalogo";
 import type { RespuestaPaginada } from "@/types/paginacion";
 import { TOKENS } from "./tokens";
 import { StatusStamp } from "./ui/status-stamp";
-import { StatChip } from "./ui/stat-chip";
+import { BuscadorCatalogo, ChipsFiltro, KpisFiltro } from "./ui/filtros-catalogo";
 import { TopBar } from "./ui/top-bar";
 import {
-  IconoBuscar,
-  IconoCruz,
-  IconoEliminar,
+  IconoAlerta,
+  IconoArchivo,
+  IconoOjo,
   IconoCamara,
   IconoGlobo,
   IconoPin,
+  IconoTareas,
 } from "./ui/iconos-campo";
 import type {
   FormTareaCampo,
@@ -80,6 +82,7 @@ export function TareasPanel() {
   const [id, setId] = useState(0);
   const [versionEsperada, setVersionEsperada] = useState(1);
   const [historial, setHistorial] = useState<TareaCampo | null>(null);
+  const [instruccion, setInstruccion] = useState<TareaCampo | null>(null);
   const [form, setForm] = useState<FormTareaCampo | null>(null);
   const [categoriaPersonalizada, setCategoriaPersonalizada] = useState(false);
   const formularioAbierto = !!form && (id ? puedeEditar : puedeCrear);
@@ -188,127 +191,69 @@ export function TareasPanel() {
         data-inicio-listado
         className="max-w-7xl min-w-0 mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-3 sm:space-y-5 scroll-mt-20"
       >
-        <label className="block text-sm text-foreground">
-          Estado del catálogo
-          <select
-            value={archivo}
-            onChange={(e) => {
-              setArchivo(e.target.value as typeof archivo);
+        {/* Indicadores que filtran por tipo (reemplazan Todas / Obligatorias / Con fotos) */}
+        <KpisFiltro
+          etiqueta="Filtrar tareas por tipo"
+          seleccionado={filtroTipo}
+          onSeleccionar={(clave) => {
+            setFiltroTipo(clave);
+            lista.setPage(1);
+          }}
+          items={[
+            { clave: "todas", etiqueta: "Tareas", valor: resumen?.total ?? "—", detalle: "En el catálogo", icono: <IconoTareas />, tono: "marca" },
+            { clave: "obligatorias", etiqueta: "Obligatorias", valor: resumen?.obligatorias ?? "—", detalle: "De cumplimiento obligatorio", icono: <IconoAlerta />, tono: "rojo" },
+            { clave: "con_fotos", etiqueta: "Con fotos", valor: resumen?.conFotos ?? "—", detalle: "Requieren evidencia", icono: <IconoCamara />, tono: "celeste" },
+          ]}
+        />
+
+        <div className="flex min-w-0 gap-2">
+          <BuscadorCatalogo
+            valor={busqueda}
+            onCambio={setBusqueda}
+            placeholder="Buscar por título o descripción"
+            etiqueta="Buscar tarea"
+          />
+          <button
+            type="button"
+            aria-pressed={archivo === "archivadas"}
+            onClick={() => {
+              setArchivo((actual) => (actual === "archivadas" ? "activas" : "archivadas"));
               lista.setPage(1);
             }}
-            className="mt-1 min-h-11 rounded-lg border border-line bg-surface-raised px-3 text-foreground"
+            title="Ver las tareas archivadas"
+            className={`inline-flex h-11 shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-xl border px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${
+              archivo === "archivadas"
+                ? "border-foreground bg-foreground text-background"
+                : "border-line bg-surface-raised text-muted hover:border-brand-500 hover:text-foreground"
+            }`}
           >
-            <option value="activas">Sin archivar</option>
-            <option value="archivadas">Archivadas</option>
-            <option value="todas">Todas</option>
-          </select>
-        </label>
-        {/* Filtros por Categoría */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
-          {["Todas", ...CATEGORIAS_PRESET].map((cat) => {
-            const activo = categoriaFiltro === cat;
-            return (
-              <button
-                key={cat}
-                type="button"
-                onClick={() => {
-                  setCategoriaFiltro(cat);
-                  lista.setPage(1);
-                }}
-                aria-pressed={activo}
-                className={`min-h-11 px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all cursor-pointer ${
-                  activo
-                    ? "bg-foreground text-background"
-                    : "bg-surface-raised text-muted hover:text-foreground border"
-                }`}
-                style={{ borderColor: activo ? "transparent" : TOKENS.line }}
-              >
-                {cat}
-              </button>
-            );
-          })}
+            <IconoArchivo className="h-4 w-4" />
+            Archivadas
+          </button>
         </div>
 
-        {/* KPI Chips: una tira compacta en móvil */}
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 sm:grid sm:grid-cols-3 sm:overflow-visible">
-          <StatChip
-            label="Total tareas"
-            value={resumen?.total ?? "—"}
-            color="ink"
-          />
-          <StatChip
-            label="Obligatorias"
-            value={resumen?.obligatorias ?? "—"}
-            color="carne"
-          />
-          <StatChip
-            label="Con fotos"
-            value={resumen?.conFotos ?? "—"}
-            color="fresco"
-          />
-        </div>
-
-        {/* Buscador y Filtro Secundario */}
-        <div
-          className="p-3.5 rounded-xl border flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between shadow-xs bg-surface-raised"
-          style={{ borderColor: TOKENS.line }}
-        >
-          <div className="relative flex-1">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted pointer-events-none">
-              <IconoBuscar className="w-4 h-4" />
+        {archivo === "archivadas" ? (
+          <p
+            role="status"
+            className="flex items-start gap-2 rounded-xl border border-stone-200 bg-stone-50 p-3 text-xs text-stone-700 dark:border-stone-700 dark:bg-stone-900/50 dark:text-stone-200"
+          >
+            <IconoArchivo className="mt-px h-4 w-4 shrink-0" />
+            <span>
+              Estás viendo las tareas <b>archivadas</b>: ya no se asignan en las visitas, pero conservan su historial y
+              sus evidencias. Tocá «Archivadas» otra vez para volver a las vigentes.
             </span>
-            <input
-              type="text"
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-              placeholder="Buscar tarea por título o descripción..."
-              className="w-full pl-9 pr-8 py-2 text-xs sm:text-sm rounded-lg border bg-surface-raised focus:outline-none focus:ring-2 focus:ring-[#1E2320]"
-              style={{ borderColor: TOKENS.line }}
-            />
-            {busqueda && (
-              <button
-                type="button"
-                onClick={() => setBusqueda("")}
-                className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-muted hover:text-foreground cursor-pointer"
-              >
-                <IconoCruz className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
+          </p>
+        ) : null}
 
-          <div
-            className="flex items-center gap-2 p-1.5 rounded-xl border bg-surface-soft"
-            style={{ borderColor: TOKENS.line }}
-          >
-            {(
-              [
-                { id: "todas", label: "Todas" },
-                { id: "obligatorias", label: "Obligatorias" },
-                { id: "con_fotos", label: "Con Fotos" },
-              ] as const
-            ).map((f) => {
-              const activo = filtroTipo === f.id;
-              return (
-                <button
-                  key={f.id}
-                  type="button"
-                  onClick={() => {
-                    setFiltroTipo(f.id);
-                    lista.setPage(1);
-                  }}
-                  aria-pressed={activo}
-                  className={`min-w-0 flex-1 min-h-11 px-2 rounded-md text-xs sm:text-sm font-semibold transition-colors ${
-                    activo
-                      ? "bg-foreground text-background"
-                      : "text-muted hover:text-foreground"
-                  }`}
-                >
-                  {f.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <ChipsFiltro
+          etiqueta="Filtrar por categoría"
+          opciones={["Todas", ...CATEGORIAS_PRESET].map((cat) => ({ clave: cat, etiqueta: cat }))}
+          seleccionado={categoriaFiltro}
+          onSeleccionar={(cat) => {
+            setCategoriaFiltro(cat);
+            lista.setPage(1);
+          }}
+        />
 
         {lista.error && (
           <p
@@ -336,100 +281,19 @@ export function TareasPanel() {
           </p>
         ) : (
           <>
-            <ul
-              aria-label="Catálogo de tareas"
-              className="divide-y divide-line rounded-lg border border-line bg-surface-raised md:hidden"
-            >
+            <ul aria-label="Catálogo de tareas" className="grid gap-2.5 md:hidden">
               {lista.items.map((tarea) => (
-                <li key={tarea.id} className="p-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-xs text-muted">
-                        {tarea.categoria || "Góndola"} ·{" "}
-                        {tarea.destinatario === "AMBOS"
-                          ? "Ambos"
-                          : tarea.destinatario === "REPOSITOR"
-                            ? "Repositor"
-                            : "Impulsador"}
-                      </p>
-                      <h3 className="mt-1 text-sm font-semibold text-foreground">
-                        {tarea.nombre}
-                      </h3>
-                    </div>
-                    {puedeAdministrar && !tarea.archivadaEn ? (
-                      <div className="flex shrink-0 gap-1">
-                        {puedeEditar ? (
-                          <BotonEditar
-                            onClick={() => abrir(tarea)}
-                            etiqueta={`Editar tarea ${tarea.nombre}`}
-                            modo="texto"
-                          />
-                        ) : null}
-                        {puedeArchivar ? (
-                          <button
-                            type="button"
-                            onClick={() => void eliminar(tarea)}
-                            disabled={!!op.mensaje}
-                            aria-label={"Archivar " + tarea.nombre}
-                            className="grid h-11 w-11 place-items-center rounded-md border border-red-200 text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950"
-                          >
-                            <IconoEliminar className="h-4 w-4" />
-                          </button>
-                        ) : null}
-                      </div>
-                    ) : null}
-                  </div>
-                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted">
-                    <StatusStamp
-                      tone={
-                        !tarea.activo
-                          ? "sub"
-                          : tarea.esObligatoria
-                            ? "carne"
-                            : "fresco"
-                      }
-                    >
-                      {tarea.archivadaEn
-                        ? "Archivada"
-                        : !tarea.activo
-                          ? "Inactiva"
-                          : tarea.esObligatoria
-                            ? "Obligatoria"
-                            : "Activa"}
-                    </StatusStamp>
-                    <span>
-                      {tarea.requiereFotos
-                        ? tarea.fotosObligatorias
-                          ? "Fotos obligatorias"
-                          : "Fotos opcionales"
-                        : "Sin fotos"}
-                    </span>
-                  </div>
-                  <details className="mt-1 text-sm text-muted">
-                    <summary className="flex min-h-11 cursor-pointer items-center rounded-md text-xs hover:text-foreground">
-                      Ver instrucciones y alcance
-                    </summary>
-                    <p className="whitespace-pre-wrap">
-                      {tarea.descripcion || "Sin instrucciones adicionales."}
-                    </p>
-                    <p className="mt-2">
-                      {tarea.todosLocales
-                        ? "Todos los locales"
-                        : (tarea.locales?.length ?? 0) +
-                          " locales seleccionados"}
-                    </p>
-                    <p className="mt-1 text-xs">
-                      {tarea.fechaDesde.slice(0, 10)} ·{" "}
-                      {tarea.fechaHasta?.slice(0, 10) ?? "Sin fecha de fin"}
-                    </p>
-                  </details>
-                  <button
-                    type="button"
-                    className="min-h-11 rounded-lg px-2 text-xs text-foreground hover:bg-surface-soft"
-                    onClick={() => setHistorial(tarea)}
-                  >
-                    Historial · versión {tarea.version}
-                  </button>
+                <li key={tarea.id} className="min-w-0">
+                  <TarjetaTareaCatalogo
+                    tarea={tarea}
+                    puedeEditar={puedeAdministrar && puedeEditar}
+                    puedeArchivar={puedeAdministrar && puedeArchivar}
+                    ocupado={!!op.mensaje}
+                    onVerInstruccion={() => setInstruccion(tarea)}
+                    onEditar={() => abrir(tarea)}
+                    onArchivar={() => void eliminar(tarea)}
+                    onHistorial={() => setHistorial(tarea)}
+                  />
                 </li>
               ))}
             </ul>
@@ -463,20 +327,15 @@ export function TareasPanel() {
                         <p className="font-semibold text-foreground">
                           {tarea.nombre}
                         </p>
-                        <details className="mt-1 text-sm text-muted">
-                          <summary className="flex min-h-11 cursor-pointer items-center rounded-md text-xs hover:text-foreground focus-visible:outline-2 focus-visible:outline-focus">
-                            Ver instrucciones y vigencia
-                          </summary>
-                          <p className="whitespace-pre-wrap break-words">
-                            {tarea.descripcion ||
-                              "Sin instrucciones adicionales."}
-                          </p>
-                          <p className="mt-2 text-xs">
-                            {tarea.fechaDesde.slice(0, 10)} ·{" "}
-                            {tarea.fechaHasta?.slice(0, 10) ??
-                              "Sin fecha de fin"}
-                          </p>
-                        </details>
+                        <button
+                          type="button"
+                          onClick={() => setInstruccion(tarea)}
+                          aria-label={`Ver instrucción de ${tarea.nombre}`}
+                          className="mt-1.5 mr-2 inline-flex min-h-9 cursor-pointer items-center gap-1 whitespace-nowrap rounded-lg bg-emerald-600 px-2.5 text-xs font-bold text-white transition-colors hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:bg-emerald-500 dark:text-emerald-950 dark:hover:bg-emerald-400"
+                        >
+                          <IconoOjo className="h-3.5 w-3.5" />
+                          Ver instrucción
+                        </button>
                         <button
                           type="button"
                           className="min-h-11 rounded-lg px-2 text-xs text-foreground hover:bg-surface-soft"
@@ -530,8 +389,10 @@ export function TareasPanel() {
                                 type="button"
                                 onClick={() => void eliminar(tarea)}
                                 disabled={!!op.mensaje}
-                                className="min-h-11 rounded-md border border-red-200 px-3 text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950"
+                                title="Archivar: deja de asignarse, conserva su historial"
+                                className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-md border border-line px-3 text-muted hover:border-red-400 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:text-red-300"
                               >
+                                <IconoArchivo className="h-4 w-4" />
                                 Archivar
                               </button>
                             ) : null}
@@ -554,6 +415,10 @@ export function TareasPanel() {
           onLimitChange={lista.setLimit}
         />
       </main>
+
+      {instruccion ? (
+        <HojaInstruccionTarea tarea={instruccion} cerrar={() => setInstruccion(null)} />
+      ) : null}
 
       {/* Modal de Creación / Edición */}
       {historial ? (

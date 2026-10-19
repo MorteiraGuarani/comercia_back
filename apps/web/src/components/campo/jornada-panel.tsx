@@ -1,19 +1,45 @@
 "use client";
 import { ColorHorario } from "@/components/color-horario";
 import { EstadoTelefono } from "./estado-telefono";
-import { PRESENTISMO, RUTA } from "@/utils/estado-jornada";
+import {
+  ETIQUETA_FILTRO,
+  ORDEN_RUTA,
+  PRESENTISMO,
+  RUTA,
+} from "@/utils/estado-jornada";
+import type { FiltroRuta } from "@/types/estado-jornada";
 import { StatusStamp } from "./ui/status-stamp";
-import { ResumenRuta } from "./ui/resumen-ruta";
+import { SaludoRuta } from "./ui/saludo-ruta";
+import { KpisRuta } from "./ui/kpis-ruta";
+import { TarjetaAgendaRepositor } from "./tarjeta-agenda-repositor";
+import {
+  IconoCalendario,
+  IconoCheck,
+  IconoCruz,
+  IconoMapa,
+  IconoRefrescar,
+  IconoRuta,
+} from "./ui/iconos-campo";
+import { formatoDistancia, metrosEntre } from "@/utils/distancia";
+import {
+  metrosRecorrido,
+  ordenarParadasPorRuta,
+  urlGoogleMapsRuta,
+  type CoordenadaCampo,
+} from "@/utils/ruta-recomendada";
+import { mensajeError } from "@/utils/error";
 import type { MarcacionPendiente } from "@/types/seguimiento";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
+import { usePanel } from "@/components/panel/contexto";
 import { useListaCampo, useOperacionCampo } from "@/hooks/use-lista-campo";
 import { useFechaCampo } from "@/hooks/use-fecha-campo";
 import {
   fechaEnZonaIso,
   formatoFechaHora,
   queryFechasCampo,
+  textoRangoFechas,
 } from "@/utils/fechas";
 import {
   SelectorFechaFiltro,
@@ -34,10 +60,8 @@ import type {
 } from "@/types/campo";
 
 export function JornadaPanel({
-  tareas = false,
   esRepositor = false,
 }: {
-  tareas?: boolean;
   esRepositor?: boolean;
 }) {
   const hoyStr = useFechaCampo();
@@ -51,34 +75,42 @@ export function JornadaPanel({
   const qsFecha = periodo.clave === "hoy" ? `fecha=${hoyStr}` : queryFechasCampo(periodo) || `fecha=${hoyStr}`;
   return (
     <div className="min-w-0 w-full px-4 py-3 sm:px-6 sm:py-5 lg:px-8">
-      <header className="mb-2 flex min-w-0 flex-wrap items-center justify-between gap-2 sm:mb-3">
-        <div className="min-w-0">
-          <h1 className="text-xl font-bold">{tareas ? "Mis tareas del día" : "Mis locales"}</h1>
-          <p className="mt-1 hidden text-xs text-muted sm:block">{esRepositor ? "Marcá entrada con UCheck activo y completá las tareas antes de salir." : "Tu agenda y reemplazos."}</p>
-        </div>
-        <SelectorFechaFiltro valorActual={periodo} onChange={setPeriodo} />
-      </header>
-      <AgendaDelDia key={qsFecha} qsFecha={qsFecha} esRepositor={esRepositor} />
+      <AgendaDelDia
+        key={qsFecha}
+        qsFecha={qsFecha}
+        esRepositor={esRepositor}
+        periodo={periodo}
+        onPeriodo={setPeriodo}
+      />
     </div>
   );
 }
 function AgendaDelDia({
   qsFecha,
   esRepositor,
+  periodo,
+  onPeriodo,
 }: {
   qsFecha: string;
   esRepositor: boolean;
+  periodo: PeriodoFiltro;
+  onPeriodo: (periodo: PeriodoFiltro) => void;
 }) {
   const router = useRouter();
+  const { usuario, modulos } = usePanel();
   const hoyStr = useFechaCampo();
   const lista = useListaCampo<AgendaCampo>(`/campo/jornada?${qsFecha}`);
+  const [expandida, setExpandida] = useState<number | null | undefined>();
   const [visitaAbierta, setAbierta] = useState<VisitaCampo | null>(null);
   const abierta = visitaAbierta?.fecha.slice(0, 10) === hoyStr ? visitaAbierta : null;
   const [revision, setRevision] = useState(0);
   const [error, setError] = useState("");
   const [mapa, setMapa] = useState<LocalCampo | null>(null);
   const [tareas, setTareas] = useState<AgendaCampo | null>(null);
+  // Sube al cerrar el modal de tareas para refrescar el "2/5" de la tarjeta.
+  const [revisionTareas, setRevisionTareas] = useState(0);
   const [busqueda, setBusqueda] = useState("");
+  const [filtro, setFiltro] = useState<FiltroRuta>("todos");
   const [marca, setMarca] = useState<{
     asignacionId: number;
     horarioId?: number;
@@ -86,6 +118,15 @@ function AgendaDelDia({
     nombre: string;
     radioMetros: number;
   } | null>(null);
+  // Ruta recomendada (solo sugerencia): orden de los pendientes y punto de partida.
+  const [ruta, setRuta] = useState<{
+    origen: CoordenadaCampo;
+    ids: number[];
+    metros: number;
+    sinGps: boolean;
+  } | null>(null);
+  const [calculandoRuta, setCalculandoRuta] = useState(false);
+  const [avisoRuta, setAvisoRuta] = useState("");
 
   useEffect(() => {
     let vigente = true;
@@ -108,32 +149,197 @@ function AgendaDelDia({
 
   const hoy = new URLSearchParams(qsFecha).get("fecha") === hoyStr;
 
-  // Filtrado de items por búsqueda
+  // En curso arriba, después pendientes y al final lo visitado (orden estable).
+  // Con ruta calculada, los pendientes siguen el orden sugerido.
+  const itemsOrdenados = useMemo(() => {
+    const peso = new Map(ruta?.ids.map((id, i) => [id, i]) ?? []);
+    const enRuta = (a: AgendaCampo) =>
+      a.estado === "pendiente" ? (peso.get(a.id) ?? 10_000) : 0;
+    return lista.items
+      .map((a, i) => ({ a, i }))
+      .sort(
+        (x, y) =>
+          ORDEN_RUTA[x.a.estado] - ORDEN_RUTA[y.a.estado] ||
+          enRuta(x.a) - enRuta(y.a) ||
+          x.i - y.i,
+      )
+      .map(({ a }) => a);
+  }, [lista.items, ruta]);
+  // Número de parada de cada pendiente.
+  const numeroParada = useMemo(
+    () =>
+      new Map(
+        itemsOrdenados
+          .filter((a) => a.estado === "pendiente")
+          .map((a, i) => [a.id, i + 1]),
+      ),
+    [itemsOrdenados],
+  );
+
+  function posicionGps(): Promise<CoordenadaCampo | null> {
+    return new Promise((resolve) => {
+      if (!navigator.geolocation) {
+        resolve(null);
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (p) =>
+          resolve({ latitud: p.coords.latitude, longitud: p.coords.longitude }),
+        () => resolve(null),
+        { enableHighAccuracy: true, timeout: 10_000, maximumAge: 30_000 },
+      );
+    });
+  }
+
+  async function calcularRuta() {
+    if (calculandoRuta) return;
+    setCalculandoRuta(true);
+    setAvisoRuta("");
+    try {
+      const candidatos = lista.items.filter(
+        (a) =>
+          a.estado === "pendiente" &&
+          Number.isFinite(a.local.latitud) &&
+          Number.isFinite(a.local.longitud),
+      );
+      if (!candidatos.length) {
+        setRuta(null);
+        setAvisoRuta("No hay locales pendientes con ubicación para armar la ruta.");
+        return;
+      }
+      const gps = await posicionGps();
+      // Sin GPS se parte del local de la visita en curso o del primer pendiente.
+      const localActual = lista.items.find(
+        (a) => a.id === abierta?.asignacionId,
+      )?.local;
+      const inicio = gps ?? localActual ?? candidatos[0].local;
+      const origen = { latitud: inicio.latitud, longitud: inicio.longitud };
+      const orden = ordenarParadasPorRuta(
+        origen,
+        candidatos.map((a) => {
+          // Ventana del primer horario que todavía no tiene visita.
+          const h =
+            a.local.horarios.find(
+              (x) => !a.visitas.some((v) => v.horarioId === x.id),
+            ) ?? a.local.horarios[0];
+          return {
+            id: a.id,
+            latitud: a.local.latitud,
+            longitud: a.local.longitud,
+            entrada: h?.entrada ?? "08:00",
+            salida: h?.salida ?? "18:00",
+          };
+        }),
+      );
+      const paradas = orden.map(({ latitud, longitud }) => ({ latitud, longitud }));
+      setRuta({
+        origen,
+        ids: orden.map((p) => p.id),
+        metros: metrosRecorrido(origen, paradas),
+        sinGps: !gps,
+      });
+    } catch (e) {
+      setAvisoRuta(mensajeError(e, "No se pudo calcular la ruta."));
+    } finally {
+      setCalculandoRuta(false);
+    }
+  }
+
+  // Lo que queda de la ruta: las paradas sugeridas que siguen pendientes.
+  const paradasRestantes = ruta
+    ? ruta.ids.flatMap((id) => {
+        const a = lista.items.find((x) => x.id === id);
+        return a?.estado === "pendiente" ? [a] : [];
+      })
+    : [];
+  const urlMapsRuta = ruta
+    ? urlGoogleMapsRuta(
+        ruta.origen,
+        paradasRestantes.map((a) => ({
+          latitud: a.local.latitud,
+          longitud: a.local.longitud,
+        })),
+      )
+    : "";
+
+  // Filtrado por el KPI elegido y por búsqueda
   const itemsFiltrados = useMemo(() => {
-    if (!busqueda.trim()) return lista.items;
+    const porEstado =
+      filtro === "todos"
+        ? itemsOrdenados
+        : itemsOrdenados.filter((a) => a.estado === filtro);
+    if (!busqueda.trim()) return porEstado;
     const q = busqueda.toLowerCase();
-    return lista.items.filter(
+    return porEstado.filter(
       (a) =>
         a.local.nombre.toLowerCase().includes(q) ||
         (a.local.cliente?.nombre ?? "Sin cliente").toLowerCase().includes(q) ||
         a.local.direccion.toLowerCase().includes(q),
     );
-  }, [lista.items, busqueda]);
+  }, [itemsOrdenados, busqueda, filtro]);
 
-  // Métricas del día (StatChips estilo HTML)
+  // Se abre sola la tarjeta en curso hasta que el usuario elige otra.
+  const idExpandida =
+    expandida === undefined
+      ? (abierta && itemsOrdenados.some((a) => a.id === abierta.asignacionId)
+          ? abierta.asignacionId
+          : (itemsOrdenados.find((a) => a.estado === "en_curso")?.id ?? null))
+      : expandida;
+
+  const paginasJornada =
+    modulos.find((m) => m.ruta === "mi-jornada")?.paginas ?? [];
+  const rutaTareas = paginasJornada.some((p) => p.ruta === "tareas")
+    ? "/panel/mi-jornada/tareas"
+    : null;
+  const rutaInventario = paginasJornada.some((p) => p.ruta === "inventario")
+    ? "/panel/mi-jornada/inventario"
+    : null;
+
+  // Métricas del día
   const visitadas = lista.items.filter((a) =>
     a.estado === "completado",
   ).length;
   const enCurso = lista.items.filter(a => a.estado === "en_curso").length;
   const pendientes = lista.items.filter(a => a.estado === "pendiente").length;
+  const total = lista.datos?.total;
+  const porPagina = (lista.datos?.totalPages ?? 1) > 1;
+  const locales = (n: number) => `${n} ${n === 1 ? "local" : "locales"}`;
+  const resumen =
+    total === undefined
+      ? "Cargando tu ruta…"
+      : hoy && total > 0 && visitadas === total
+        ? `Completaste ${total === 1 ? "el local" : `los ${total} locales`} de tu ruta`
+        : hoy
+          ? `Hoy tenés ${locales(total)} en tu ruta`
+          : `${periodo.etiqueta}: ${locales(total)} en tu ruta`;
+  const inicioPeriodo = periodo.fechaInicio ?? periodo.fecha ?? hoyStr;
+  const finPeriodo = periodo.fechaFin ?? periodo.fecha ?? inicioPeriodo;
 
   return (
     <>
       {error ? <p className={errorBox}>{error}</p> : null}
 
-      <div className="mb-2 sm:mb-3">
-        <ResumenRuta total={lista.datos?.total ?? "—"} visitadas={visitadas} enCurso={enCurso} pendientes={pendientes}
-          incompletas={lista.items.filter(a => a.estado === "incompleto").length} ausentes={lista.items.filter(a => a.estado === "ausente").length} porPagina />
+      <SaludoRuta
+        nombre={usuario.nombre.trim().split(/\s+/)[0] ?? ""}
+        fechaTexto={textoRangoFechas(inicioPeriodo, finPeriodo)}
+        resumen={resumen}
+      >
+        <SelectorFechaFiltro valorActual={periodo} onChange={onPeriodo} />
+      </SaludoRuta>
+
+      <div className="mb-2 mt-2 sm:mb-3 sm:mt-3">
+        <KpisRuta
+          total={total ?? "—"}
+          visitadas={visitadas}
+          enCurso={enCurso}
+          pendientes={pendientes}
+          incompletas={lista.items.filter(a => a.estado === "incompleto").length}
+          ausentes={lista.items.filter(a => a.estado === "ausente").length}
+          sufijo={hoy ? "hoy" : "en el período"}
+          porPagina={porPagina}
+          filtro={filtro}
+          onFiltro={setFiltro}
+        />
       </div>
 
       {/* Banner de visita en curso */}
@@ -237,6 +443,110 @@ function AgendaDelDia({
         )}
       </div>
 
+      <div className="mb-2 flex min-h-11 min-w-0 items-center justify-between gap-2 px-0.5">
+        <h2 className="flex min-w-0 items-center gap-1.5 text-[13px] font-bold text-foreground sm:text-sm">
+          <IconoCalendario className="h-4 w-4 shrink-0 text-brand-700 dark:text-brand-200" />
+          <span className="truncate">
+            {hoy ? "Agenda del día" : `Agenda · ${periodo.etiqueta}`}
+            {filtro !== "todos" ? ` · ${ETIQUETA_FILTRO[filtro]}` : ""}
+          </span>
+        </h2>
+        <div className="flex shrink-0 items-center gap-2">
+          {lista.datos && (busqueda.trim() || filtro !== "todos") ? (
+            <span className="text-[11px] text-muted sm:text-xs">
+              {itemsFiltrados.length} de {lista.items.length}
+            </span>
+          ) : null}
+          {hoy && !ruta ? (
+            <button
+              type="button"
+              onClick={() => void calcularRuta()}
+              disabled={calculandoRuta || lista.cargando}
+              className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border border-brand-200 bg-brand-50 px-3 text-xs font-semibold text-brand-800 transition-colors hover:border-brand-500 hover:bg-brand-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50 dark:border-brand-800 dark:bg-brand-950/50 dark:text-brand-100 dark:hover:border-brand-500 dark:hover:bg-brand-900"
+            >
+              <IconoRuta className="h-4 w-4 shrink-0" />
+              Calcular ruta
+            </button>
+          ) : null}
+        </div>
+      </div>
+
+      {ruta ? (
+        <section
+          aria-label="Ruta sugerida"
+          className="mb-2 rounded-xl border border-brand-200 bg-brand-50 p-3 dark:border-brand-800 dark:bg-brand-950/50 sm:mb-3"
+        >
+          <div className="flex min-w-0 items-start gap-2.5">
+            <span
+              aria-hidden="true"
+              className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-700 text-white dark:bg-brand-500 dark:text-brand-950"
+            >
+              <IconoRuta className="h-4 w-4" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[13px] font-semibold text-foreground sm:text-sm">
+                Ruta sugerida · {ruta.ids.length}{" "}
+                {ruta.ids.length === 1 ? "parada" : "paradas"} ·{" "}
+                {formatoDistancia(ruta.metros)} aprox.
+              </p>
+              <p className="mt-0.5 text-[11px] leading-snug text-muted sm:text-xs">
+                {paradasRestantes[0] ? (
+                  <>
+                    Seguí por{" "}
+                    <b className="text-foreground">{paradasRestantes[0].local.nombre}</b>
+                    {`, a ${formatoDistancia(metrosEntre(ruta.origen, paradasRestantes[0].local))}. `}
+                  </>
+                ) : (
+                  "Ya pasaste por todas las paradas sugeridas. "
+                )}
+                {ruta.sinGps
+                  ? "Sin GPS: ordenamos por horarios y distancia entre locales. "
+                  : "Según tu ubicación, los horarios y la distancia. "}
+                Es una recomendación: podés ir en el orden que prefieras.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setRuta(null)}
+              aria-label="Quitar ruta sugerida"
+              title="Quitar ruta sugerida"
+              className="-mr-1.5 -mt-1.5 grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-lg text-muted transition-colors hover:bg-brand-100 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:hover:bg-brand-900"
+            >
+              <IconoCruz className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="mt-2.5 flex gap-2">
+            {urlMapsRuta ? (
+              <a
+                href={urlMapsRuta}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex min-h-11 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg bg-brand-700 px-3 text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-brand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:bg-brand-500 dark:text-brand-950 dark:hover:brightness-110 sm:text-sm"
+              >
+                <IconoMapa className="h-4 w-4 shrink-0" />
+                Abrir en Maps
+              </a>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => void calcularRuta()}
+              disabled={calculandoRuta}
+              className="flex min-h-11 flex-1 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-brand-200 bg-surface-raised px-3 text-[13px] font-semibold text-foreground transition-colors hover:border-brand-500 hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50 dark:border-brand-800 sm:text-sm"
+            >
+              <IconoRefrescar className="h-4 w-4 shrink-0" />
+              Recalcular
+            </button>
+          </div>
+        </section>
+      ) : avisoRuta ? (
+        <p
+          role="status"
+          className="mb-2 rounded-lg border border-line bg-surface-soft px-3 py-2 text-xs text-foreground sm:mb-3"
+        >
+          {avisoRuta}
+        </p>
+      ) : null}
+
       <TablaCampo
         lista={{ ...lista, items: itemsFiltrados }}
         etiqueta="Agenda"
@@ -316,230 +626,43 @@ function AgendaDelDia({
             },
           },
         ]}
-        tarjetaMovil={(a) => {
-          const estaEnCurso = a.estado === "en_curso";
-          const tieneVisitaCerrada = a.estado === "completado";
-          const horarios = a.local.horarios;
-          const ventanaTexto = horarios.length
-            ? horarios.map((h) => `${h.entrada}–${h.salida}`).join(" · ")
-            : "Sin horario fijado";
-
-          const statusTone = estaEnCurso
-            ? "bg-sky-100 text-sky-800 border-sky-300 dark:bg-sky-950/60 dark:text-sky-300 dark:border-sky-800"
-            : tieneVisitaCerrada
-              ? "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800"
-              : "bg-surface-soft text-muted border-line";
-
-          const statusLabel = RUTA[a.estado].etiqueta;
-
-          return (
-            <div
-              className={`rounded-xl border p-4 shadow-[0_2px_8px_rgba(var(--warm-shadow),0.06)] transition-[border-color,box-shadow] ${
-                estaEnCurso
-                  ? "border-sky-500/60 bg-surface-raised ring-2 ring-sky-500/20"
-                  : "border-line bg-surface-raised hover:border-brand-500/40"
-              }`}
-            >
-              <div className="flex items-start gap-3">
-                {/* Ícono de tienda con avatar circular */}
-                <div
-                  className={`grid h-10 w-10 shrink-0 place-items-center rounded-full border ${
-                    estaEnCurso
-                      ? "bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300 border-sky-300"
-                      : tieneVisitaCerrada
-                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-300"
-                        : "bg-surface-soft text-foreground border-line"
-                  }`}
-                >
-                  <svg
-                    className="h-5 w-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    strokeWidth="1.8"
-                    aria-hidden="true"
-                  >
-                    <path d="M4 10 5 4h14l1 6" />
-                    <rect x="4" y="10" width="16" height="10" rx="1" />
-                    <line x1="9" y1="20" x2="9" y2="14" />
-                    <line x1="15" y1="14" x2="15" y2="20" />
-                  </svg>
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <h4 className="truncate font-semibold text-base text-foreground">
-                      {a.local.nombre}
-                    </h4>
-                    <span
-                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold border tracking-wider ${statusTone}`}
-                    >
-                      {statusLabel}
-                    </span>
-                  </div>
-
-                  <p className="mt-0.5 text-xs font-semibold text-brand-700 dark:text-brand-400 truncate">
-                    {a.local.cliente?.nombre ?? "Sin cliente"}
-                  </p>
-
-                  <p className="mt-1 flex items-center gap-1 text-xs text-muted truncate">
-                    <svg
-                      className="h-3.5 w-3.5 shrink-0"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      strokeWidth="2"
-                      aria-hidden="true"
-                    >
-                      <path d="M12 21c-4-4.6-7-8.3-7-11.5A7 7 0 0 1 19 9.5C19 12.7 16 16.4 12 21z" />
-                      <circle cx="12" cy="9.5" r="2.3" />
-                    </svg>
-                    <span className="truncate">
-                      {a.local.direccion || "Sin dirección"}
-                    </span>
-                  </p>
-
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <StatusStamp tone={PRESENTISMO[a.estadoPresentismo].tone}>{PRESENTISMO[a.estadoPresentismo].etiqueta}</StatusStamp>
-                    <span className="inline-flex items-center gap-1 rounded-md bg-surface-soft px-2 py-0.5 font-mono text-[11px] text-foreground">
-                      <svg
-                        className="h-3 w-3 text-muted shrink-0"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        strokeWidth="2"
-                        aria-hidden="true"
-                      >
-                        <circle cx="12" cy="12" r="10" />
-                        <polyline points="12 6 12 12 16 14" />
-                      </svg>
-                      {ventanaTexto}
-                    </span>
-                    <span className="text-[11px] text-muted">
-                      {a.esBackup ? `Backup de ${a.titular}` : "Titular"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Botones de acción móvil (touch-friendly >= 44px) */}
-              <div className="mt-3.5 flex flex-wrap items-center gap-2 border-t border-line/60 pt-3">
-                {hoy && !abierta ? (
-                  (a.local.horarios.length ? a.local.horarios : [null]).map(
-                    (h) => {
-                      const realizada = a.visitas.some(
-                        (v) => v.horarioId === (h?.id ?? null),
-                      );
-                      return (
-                        <button
-                          key={h?.id ?? 0}
-                          type="button"
-                          disabled={realizada}
-                          onClick={() =>
-                            setMarca({
-                              asignacionId: a.id,
-                              horarioId: h?.id,
-                              nombre: a.local.nombre,
-                              radioMetros: a.local.radioMetros,
-                            })
-                          }
-                          className={`min-h-11 flex-1 rounded-lg px-3 py-2 text-xs font-semibold shadow-sm transition-colors flex items-center justify-center gap-1.5 ${
-                            realizada
-                              ? "border border-line bg-surface-soft text-muted opacity-60 cursor-not-allowed"
-                              : "bg-brand-600 text-white hover:bg-brand-700 dark:bg-brand-500 dark:hover:bg-brand-600"
-                          }`}
-                        >
-                          <svg
-                            className="h-3.5 w-3.5"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                            strokeWidth="2"
-                            aria-hidden="true"
-                          >
-                            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
-                            <polyline points="10 17 15 12 10 7" />
-                            <line x1="15" y1="12" x2="3" y2="12" />
-                          </svg>
-                          {realizada
-                            ? "Registrada"
-                            : `Marcar entrada${h ? ` (${h.entrada})` : ""}`}
-                        </button>
-                      );
-                    },
-                  )
-                ) : estaEnCurso ? (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setMarca({
-                        asignacionId: abierta!.asignacionId,
-                        visitaId: abierta!.id,
-                        nombre: abierta!.local.nombre,
-                        radioMetros: abierta!.local.radioMetros,
-                      })
-                    }
-                    className="min-h-11 flex-1 rounded-lg bg-red-600 text-white hover:bg-red-700 px-3 py-2 text-xs font-bold shadow-sm transition-colors flex items-center justify-center gap-1.5"
-                  >
-                    <svg
-                      className="h-3.5 w-3.5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      strokeWidth="2"
-                      aria-hidden="true"
-                    >
-                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                      <polyline points="16 17 21 12 16 7" />
-                      <line x1="21" y1="12" x2="9" y2="12" />
-                    </svg>
-                    Marcar salida
-                  </button>
-                ) : null}
-
-                <button
-                  type="button"
-                  onClick={() => setTareas(a)}
-                  className="min-h-11 rounded-lg border border-line bg-surface-soft px-3 py-2 text-xs font-semibold text-foreground hover:bg-surface-raised transition-colors flex items-center justify-center gap-1.5"
-                >
-                  <svg
-                    className="h-3.5 w-3.5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    strokeWidth="2"
-                    aria-hidden="true"
-                  >
-                    <polyline points="9 11 12 14 22 4" />
-                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-                  </svg>
-                  Tareas
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setMapa(a.local)}
-                  className="min-h-11 rounded-lg border border-line bg-surface-soft px-3 py-2 text-xs font-semibold text-foreground hover:bg-surface-raised transition-colors flex items-center justify-center gap-1.5"
-                  title="Ver mapa"
-                >
-                  <svg
-                    className="h-3.5 w-3.5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    strokeWidth="2"
-                    aria-hidden="true"
-                  >
-                    <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
-                    <line x1="8" y1="2" x2="8" y2="18" />
-                    <line x1="16" y1="6" x2="16" y2="22" />
-                  </svg>
-                  Mapa
-                </button>
-              </div>
-            </div>
-          );
-        }}
+        tarjetaMovil={(a) => (
+          <TarjetaAgendaRepositor
+            agenda={a}
+            orden={numeroParada.get(a.id) ?? 0}
+            distancia={
+              ruta && a.estado === "pendiente"
+                ? formatoDistancia(metrosEntre(ruta.origen, a.local))
+                : undefined
+            }
+            abierta={idExpandida === a.id}
+            alternar={() => setExpandida(idExpandida === a.id ? null : a.id)}
+            hoy={hoy}
+            qsFecha={qsFecha}
+            revisionTareas={revisionTareas}
+            visitaAbierta={abierta}
+            rutaTareas={rutaTareas}
+            rutaInventario={rutaInventario}
+            onEntrada={(horarioId) =>
+              setMarca({
+                asignacionId: a.id,
+                horarioId,
+                nombre: a.local.nombre,
+                radioMetros: a.local.radioMetros,
+              })
+            }
+            onSalida={(v) =>
+              setMarca({
+                asignacionId: v.asignacionId,
+                visitaId: v.id,
+                nombre: v.local.nombre,
+                radioMetros: v.local.radioMetros,
+              })
+            }
+            onTareas={() => setTareas(a)}
+            onMapa={() => setMapa(a.local)}
+          />
+        )}
         acciones={(a) => (
           <>
             <button className={btnGhost} onClick={() => setMapa(a.local)}>
@@ -548,51 +671,48 @@ function AgendaDelDia({
             <button className={btnGhost} onClick={() => setTareas(a)}>
               Tareas
             </button>
+            {/* Un solo botón, sin hora: el del próximo horario sin visita. */}
             {hoy && !abierta
-              ? (a.local.horarios.length ? a.local.horarios : [null]).map(
-                  (h) => {
-                    const realizada = a.visitas.some(
-                      (v) => v.horarioId === (h?.id ?? null),
-                    );
-                    return (
-                      <button
-                        key={h?.id ?? 0}
-                        className={btnPrimary}
-                        disabled={realizada}
-                        onClick={() =>
-                          setMarca({
-                            asignacionId: a.id,
-                            horarioId: h?.id,
-                            nombre: a.local.nombre,
-                            radioMetros: a.local.radioMetros,
-                          })
-                        }
-                      >
-                        {realizada
-                          ? "Registrada"
-                          : `Marcar entrada${h ? ` ${h.entrada}` : ""}`}
-                      </button>
-                    );
-                  },
-                )
+              ? (a.local.horarios.length ? a.local.horarios : [null])
+                  .filter(
+                    (h) => !a.visitas.some((v) => v.horarioId === (h?.id ?? null)),
+                  )
+                  .slice(0, 1)
+                  .map((h) => (
+                    <button
+                      key={h?.id ?? 0}
+                      className={btnPrimary}
+                      onClick={() =>
+                        setMarca({
+                          asignacionId: a.id,
+                          horarioId: h?.id,
+                          nombre: a.local.nombre,
+                          radioMetros: a.local.radioMetros,
+                        })
+                      }
+                    >
+                      Marcar entrada
+                    </button>
+                  ))
               : null}
           </>
         )}
       />
-      <div className="mt-7">
-        <VisitasPanel
-          key={`visitas-${revision}`}
-          fechaInicial={hoyStr}
-          propia
-        />
-      </div>
+      <PantallaCarga
+        visible={calculandoRuta}
+        mensaje="Calculando mejor ruta"
+        detalle="Usamos tu GPS, los horarios y la distancia entre locales."
+      />
       {mapa ? <MapaLocal local={mapa} cerrar={() => setMapa(null)} /> : null}
       {tareas ? (
         <TareasDeLocal
           agenda={tareas}
           qsFecha={qsFecha}
           abierta={abierta}
-          cerrar={() => setTareas(null)}
+          cerrar={() => {
+            setTareas(null);
+            setRevisionTareas((n) => n + 1);
+          }}
         />
       ) : null}
       {marca ? (
@@ -828,17 +948,31 @@ function TareasDeLocal({
   );
   const op = useOperacionCampo();
   const visita = abierta?.asignacionId === agenda.id ? abierta : null;
+  const hecha = (t: TareaJornadaCampo) =>
+    visita
+      ? t.visitasCompletadas.includes(visita.id)
+      : t.visitasCompletadas.length > 0;
+  function completar(t: TareaJornadaCampo) {
+    if (!visita) return;
+    void op.ejecutar("Completando tarea", async () => {
+      await apiFetch(`/campo/jornada/visitas/${visita.id}/tareas/${t.id}`, {
+        method: "POST",
+      });
+      lista.refrescar();
+    });
+  }
   return (
     <Modal
       titulo={`Tareas · ${agenda.local.nombre}`}
       abierto
       onCerrar={cerrar}
       ancho="lg"
+      hojaMovil
     >
-      <p className="mb-4 text-sm text-muted">
+      <p className="mb-3 text-xs text-muted sm:mb-4 sm:text-sm">
         {visita
           ? "Marcá las tareas realizadas en esta visita."
-          : "Registrá entrada para completar tareas."}
+          : "Podés revisar las tareas. Para completarlas, marcá entrada en este local."}
       </p>
       <TablaCampo
         lista={lista}
@@ -850,28 +984,60 @@ function TareasDeLocal({
             titulo: "Estado",
             valor: (t) =>
               visita
-                ? t.visitasCompletadas.includes(visita.id)
+                ? hecha(t)
                   ? "Completada"
                   : "Pendiente"
                 : `${t.visitasCompletadas.length} realizadas hoy`,
           },
         ]}
+        tarjetaMovil={(t) => (
+          <div className="flex min-w-0 items-center gap-3 rounded-xl border border-line bg-surface-raised px-3 py-2.5">
+            <span
+              aria-hidden="true"
+              className={`grid h-6 w-6 shrink-0 place-items-center rounded-md border-2 ${
+                hecha(t)
+                  ? "border-emerald-600 bg-emerald-600 text-white dark:border-emerald-500 dark:bg-emerald-500 dark:text-emerald-950"
+                  : "border-line bg-surface-raised"
+              }`}
+            >
+              {hecha(t) ? <IconoCheck className="h-3.5 w-3.5" /> : null}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p
+                className={`text-[13px] font-semibold leading-snug ${hecha(t) ? "text-muted line-through" : "text-foreground"}`}
+              >
+                {t.nombre}
+              </p>
+              {t.descripcion ? (
+                <p className="line-clamp-2 text-[11px] text-muted">{t.descripcion}</p>
+              ) : null}
+              {!visita || t.esObligatoria || t.requiereFotos ? (
+                <p className="mt-0.5 flex flex-wrap gap-x-2 text-[10px] font-semibold uppercase tracking-wide text-muted">
+                  {t.esObligatoria ? <span className="text-amber-700 dark:text-amber-300">Obligatoria</span> : null}
+                  {t.requiereFotos ? <span>Con foto</span> : null}
+                  {!visita ? <span>{t.visitasCompletadas.length} realizadas hoy</span> : null}
+                </p>
+              ) : null}
+            </div>
+            {visita && !hecha(t) ? (
+              <button
+                type="button"
+                onClick={() => completar(t)}
+                disabled={!!op.mensaje}
+                aria-label={`Completar ${t.nombre}`}
+                className="min-h-11 shrink-0 cursor-pointer whitespace-nowrap rounded-lg bg-brand-700 px-3 text-xs font-semibold text-white transition-colors hover:bg-brand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50 dark:bg-brand-500 dark:text-brand-950 dark:hover:brightness-110"
+              >
+                Completar
+              </button>
+            ) : null}
+          </div>
+        )}
         acciones={(t) =>
           visita ? (
             <button
               className={btnPrimary}
-              disabled={
-                t.visitasCompletadas.includes(visita.id) || !!op.mensaje
-              }
-              onClick={() =>
-                void op.ejecutar("Completando tarea", async () => {
-                  await apiFetch(
-                    `/campo/jornada/visitas/${visita.id}/tareas/${t.id}`,
-                    { method: "POST" },
-                  );
-                  lista.refrescar();
-                })
-              }
+              disabled={hecha(t) || !!op.mensaje}
+              onClick={() => completar(t)}
             >
               Completar
             </button>

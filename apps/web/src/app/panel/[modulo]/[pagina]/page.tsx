@@ -1,7 +1,8 @@
 "use client";
 
-import { use } from "react";
+import { use, useEffect } from "react";
 import dynamic from "next/dynamic";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { usePanel } from "@/components/panel/contexto";
 
 const ClientesPanel = dynamic(() =>
@@ -54,6 +55,17 @@ export default function PaginaModulo({
 }) {
   const { modulo, pagina } = use(params);
   const { modulos, usuario } = usePanel();
+  // El "+" de la campana abre el alta directamente (?crear=1 / ?redactar=1).
+  // El panel abre el formulario al recibirlo y acá se limpia la URL para que
+  // un nuevo "+" vuelva a abrirlo.
+  const router = useRouter();
+  const pathname = usePathname();
+  const busqueda = useSearchParams();
+  const abrirAlta = busqueda.get("crear") === "1";
+  const abrirRedactar = busqueda.get("redactar") === "1";
+  useEffect(() => {
+    if (abrirAlta || abrirRedactar) router.replace(pathname, { scroll: false });
+  }, [abrirAlta, abrirRedactar, pathname, router]);
   const mod = modulos.find((item) => item.ruta === modulo);
   const pag = mod?.paginas.find((item) => item.ruta === pagina);
 
@@ -71,7 +83,8 @@ export default function PaginaModulo({
   if (modulo === "gestion-campo") {
     if (pagina === "visitas") return <SupervisionPanel />;
     if (pagina === "novedades") return <NovedadesPanel esImpulsador={false} />;
-    if (pagina === "avisos") return <AvisosPanel esImpulsador={false} />;
+    if (pagina === "avisos")
+      return <AvisosPanel esImpulsador={false} abrirRedactar={abrirRedactar} />;
     if (pagina === "clientes") return <ClientesPanel />;
     if (pagina === "locales") return <LocalesPanel />;
     if (pagina === "tareas") return <TareasPanel />;
@@ -95,7 +108,8 @@ export default function PaginaModulo({
           }
         />
       );
-    if (pagina === "novedades") return <NovedadesPanel esImpulsador={true} />;
+    if (pagina === "novedades")
+      return <NovedadesPanel esImpulsador={true} abrirAlta={abrirAlta} />;
     if (pagina === "avisos") return <AvisosPanel esImpulsador={true} />;
     if (pagina === "inventario") return <InventarioPanel />;
     if (pagina === "agenda")

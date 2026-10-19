@@ -18,7 +18,8 @@ export function useListaCampo<T>(url: string, revision = 0, limiteInicial = 25) 
     )
       .then((res) => {
         if (vigente) {
-          if (page > res.totalPages) setPage(res.totalPages);
+          if (page > Math.max(1, res.totalPages))
+            setPage(Math.max(1, res.totalPages));
           setDatos(res);
           setError(null);
         }

@@ -23,8 +23,11 @@ import type {
 
 export function NovedadesPanel({
   esImpulsador = false,
+  abrirAlta = false,
 }: {
   esImpulsador?: boolean;
+  /** Llega en true desde el "+" de la campana: abre el alta al entrar. */
+  abrirAlta?: boolean;
 }) {
   const [novedades, setNovedades] = useState<NovedadCampoItem[]>([]);
   const [counts, setCounts] = useState({
@@ -54,6 +57,15 @@ export function NovedadesPanel({
   const [guardando, setGuardando] = useState(false);
 
   const [novedadAbiertaId, setNovedadAbiertaId] = useState<number | null>(null);
+  // Abre el alta una vez por pedido; se rearma cuando la URL se limpia.
+  const [altaPedida, setAltaPedida] = useState(false);
+  if (abrirAlta && esImpulsador && !altaPedida) {
+    setAltaPedida(true);
+    setErrorFormulario("");
+    setCreando(true);
+  } else if (!abrirAlta && altaPedida) {
+    setAltaPedida(false);
+  }
 
   const consulta = `${filtro}|${page}|${limit}|${revision}`;
   const cargando = consulta !== consultaTerminada;

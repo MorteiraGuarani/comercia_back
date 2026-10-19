@@ -157,6 +157,41 @@ describe('Borrado de clientes y locales', () => {
     );
   });
 
+  it('devuelve los contadores del panel de locales solo cuando se piden', async () => {
+    const { prisma, servicio } = preparar();
+    const sinResumen = await servicio.locales(1, { page: 1, limit: 7 });
+    expect(sinResumen).not.toHaveProperty('resumen');
+    expect(prisma.localCampo.count).toHaveBeenCalledTimes(1);
+
+    prisma.localCampo.count
+      .mockReset()
+      .mockResolvedValueOnce(5)
+      .mockResolvedValueOnce(12)
+      .mockResolvedValueOnce(9)
+      .mockResolvedValueOnce(3);
+    const conResumen = await servicio.locales(1, {
+      conResumen: true,
+      clienteId: 4,
+      estado: 'inactivos',
+      page: 1,
+      limit: 7,
+    });
+    expect(conResumen).toMatchObject({
+      total: 5,
+      resumen: { total: 12, activos: 9, inactivos: 3, sinCliente: 3 },
+    });
+    // Los contadores ignoran el estado elegido y "sin cliente" usa toda la empresa.
+    expect(prisma.localCampo.count).toHaveBeenNthCalledWith(2, {
+      where: { empresaId: 10, eliminadoEn: null, clienteId: 4 },
+    });
+    expect(prisma.localCampo.count).toHaveBeenNthCalledWith(3, {
+      where: { empresaId: 10, eliminadoEn: null, clienteId: 4, activo: true },
+    });
+    expect(prisma.localCampo.count).toHaveBeenNthCalledWith(4, {
+      where: { empresaId: 10, eliminadoEn: null, clienteId: null },
+    });
+  });
+
   it('permite guardar sin cliente y asociar despues un unico cliente de la misma empresa', async () => {
     const { tx, servicio } = preparar();
     const dto = Object.assign(new LocalCampoDto(), {

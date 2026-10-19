@@ -136,7 +136,30 @@ export function InventarioPanel() {
             </p>
           ) : (
             <>
-              <div className="mt-3 w-full min-w-0 overflow-x-auto">
+              {/* Celular: lista compacta; desde md, la tabla. */}
+              <ul aria-label="Artículos elegidos" className="mt-2 divide-y divide-line md:hidden">
+                {elegidos.items.map((item) => (
+                  <li key={item.id} className="flex min-w-0 items-center gap-3 py-2.5">
+                    <span className="min-w-0 flex-1">
+                      <span className="block break-words text-[13px] font-semibold text-foreground">
+                        {item.itemname}
+                      </span>
+                      <span className="mt-0.5 block break-words text-[11px] text-muted [font-variant-numeric:tabular-nums]">
+                        <span className="font-mono">{item.itemcode}</span> · {detalleListaPrecio(item)}
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      className="min-h-10 shrink-0 cursor-pointer whitespace-nowrap rounded-lg border border-line bg-surface-raised px-3 text-xs font-semibold text-foreground transition-colors hover:border-red-500 hover:text-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:hover:text-red-300"
+                      aria-label={`Quitar ${item.itemname} (${nombreListaPrecio(item)})`}
+                      onClick={() => quitar(item)}
+                    >
+                      Quitar
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-3 hidden w-full min-w-0 overflow-x-auto md:block">
                 <table className="w-full text-left text-sm text-foreground">
                   <thead className="border-b border-line bg-surface-soft text-xs uppercase text-muted">
                     <tr>

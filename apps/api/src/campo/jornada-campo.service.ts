@@ -483,18 +483,9 @@ export class JornadaCampoService {
     )
       throw new NotFoundException('Asignación no disponible para esta fecha');
     const { skip, take, page, limit } = rangoPaginacion(query);
-    if (exigirEquipoCampo(u.equipoCampo).tipo === 'REPOSITOR') {
-      const abierta = await this.prisma.visitaCampo.findFirst({
-        where: {
-          usuarioId: u.id,
-          asignacionId,
-          fecha: fechaCampo(relojCampo().fecha),
-          salida: null,
-        },
-        select: { id: true },
-      });
-      if (!abierta) return respuestaPaginada([], 0, page, limit);
-    }
+    // El repositor puede consultar las tareas del local antes de marcar
+    // entrada; iniciarlas y completarlas sigue exigiendo su visita abierta
+    // (ver iniciarTarea y completar).
     const where: Prisma.TareaCampoWhereInput = {
       empresaId: u.empresaId,
       equipoCampoId: exigirEquipoCampo(u.equipoCampo).id,

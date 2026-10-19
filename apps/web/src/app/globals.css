@@ -121,6 +121,17 @@
   --color-brand-800: #284c3b;
   --color-brand-900: #203d30;
   --color-brand-950: #12231b;
+
+  /* Hoja inferior (Modal con hojaMovil): sube desde el borde de la pantalla. */
+  --animate-hoja-subir: hoja-subir 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+  @keyframes hoja-subir {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
 }
 
 /* Regla de UX de Comercia: todo lo clickeable muestra la manito

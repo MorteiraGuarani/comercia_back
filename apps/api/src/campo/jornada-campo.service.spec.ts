@@ -65,7 +65,7 @@ function contexto() {
     capturadaEn: new Date().toISOString(),
     nota: '',
   };
-  return { servicio, prisma, tx, marca };
+  return { servicio, prisma, tx, marca, acceso };
 }
 
 describe('marcaciones directas de Comercia', () => {
@@ -108,6 +108,53 @@ describe('marcaciones directas de Comercia', () => {
     ).rejects.toThrow('Visita abierta no disponible');
     expect(prisma.visitaCampo.updateMany).not.toHaveBeenCalled();
   });
+  it('el repositor ve las tareas del local antes de marcar entrada', async () => {
+    const { servicio, prisma, acceso } = contexto();
+    acceso.ejecutar.mockResolvedValue({
+      id: 1,
+      empresaId: 10,
+      equipoCampo: {
+        id: 2,
+        nombre: 'Repositores',
+        tipo: 'REPOSITOR',
+        activo: true,
+      },
+    });
+    Object.assign(prisma, {
+      asignacionCampo: {
+        findFirst: jest
+          .fn()
+          .mockResolvedValue({ id: 2, localId: 3, usuarioId: 1, backups: [] }),
+      },
+      tareaCampo: {
+        count: jest.fn().mockResolvedValue(1),
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: 7,
+            nombre: 'Reponer góndola',
+            destinatario: 'REPOSITOR',
+            descripcion: 'Frente completo',
+            requiereFotos: false,
+            fotosObligatorias: false,
+            categoria: 'Góndola',
+            esObligatoria: true,
+            cumplimientos: [],
+          },
+        ]),
+      },
+    });
+    const respuesta = await servicio.tareas(1, 2, { fecha: '2026-10-10' });
+    expect(respuesta.total).toBe(1);
+    expect(respuesta.items[0]).toMatchObject({
+      id: 7,
+      nombre: 'Reponer góndola',
+      iniciadaAt: null,
+      visitasCompletadas: [],
+    });
+    // Ya no depende de tener una visita abierta para listar.
+    expect(prisma.visitaCampo.findFirst).not.toHaveBeenCalled();
+  });
+
   it('no completa una tarea sobre una jornada anterior sin salida', async () => {
     const { servicio, tx } = contexto();
     Object.assign(tx.visitaCampo, {

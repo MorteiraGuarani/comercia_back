@@ -4,6 +4,7 @@ export function etiquetaPaginaMenu(
   nombre: string,
 ) {
   if (moduloRuta === "mi-jornada" && paginaRuta === "locales") return "Mi Ruta";
+  if (moduloRuta === "mi-jornada" && paginaRuta === "tareas") return "Mis tareas";
   if (moduloRuta === "gestion-campo" && paginaRuta === "locales") return "PDV y rutas";
   if (moduloRuta === "gestion-campo" && paginaRuta === "visitas") return "Presentismo";
   if (paginaRuta === "novedades") return "Novedades";

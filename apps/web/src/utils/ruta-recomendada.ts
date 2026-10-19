@@ -77,6 +77,20 @@ export function ordenarParadasPorRuta(
   return orden;
 }
 
+/** Metros en línea recta desde el origen pasando por las paradas en orden. */
+export function metrosRecorrido(
+  origen: CoordenadaCampo,
+  paradas: CoordenadaCampo[],
+): number {
+  let total = 0;
+  let posicion = origen;
+  for (const parada of paradas) {
+    total += metrosEntre(posicion, parada);
+    posicion = parada;
+  }
+  return total;
+}
+
 export function urlGoogleMapsRuta(
   origen: CoordenadaCampo,
   paradas: CoordenadaCampo[],

@@ -49,12 +49,10 @@ export class CatalogoCampoService {
         if (!(error instanceof ForbiddenException)) throw error;
         return this.acceso.gestionar(usuarioId, 'locales');
       });
-    const where = {
+    // Sin el filtro de estado: los contadores del panel lo usan como base.
+    const base = {
       empresaId: usuario.empresaId,
       eliminadoEn: null,
-      ...(query.estado && query.estado !== 'todos'
-        ? { activo: query.estado === 'activos' }
-        : {}),
       ...(query.buscar
         ? {
             OR: [
@@ -75,8 +73,14 @@ export class CatalogoCampoService {
           }
         : {}),
     };
+    const where = {
+      ...base,
+      ...(query.estado && query.estado !== 'todos'
+        ? { activo: query.estado === 'activos' }
+        : {}),
+    };
     const { skip, take, page, limit } = rangoPaginacion(query);
-    const [total, items] = await Promise.all([
+    const [total, items, resumen] = await Promise.all([
       this.prisma.clienteCampo.count({ where }),
       this.prisma.clienteCampo.findMany({
         where,
@@ -85,8 +89,23 @@ export class CatalogoCampoService {
         skip,
         take,
       }),
+      query.conResumen
+        ? Promise.all([
+            this.prisma.clienteCampo.count({ where: base }),
+            this.prisma.clienteCampo.count({
+              where: { ...base, activo: true },
+            }),
+          ]).then(([todos, activos]) => ({
+            total: todos,
+            activos,
+            inactivos: todos - activos,
+          }))
+        : null,
     ]);
-    return respuestaPaginada(items, total, page, limit);
+    return {
+      ...respuestaPaginada(items, total, page, limit),
+      ...(resumen ? { resumen } : {}),
+    };
   }
   async guardarCliente(usuarioId: number, dto: ClienteCampoDto, id?: number) {
     const u = await this.acceso.gestionar(usuarioId, 'clientes');
@@ -155,17 +174,9 @@ export class CatalogoCampoService {
         if (!(error instanceof ForbiddenException)) throw error;
         return this.acceso.gestionar(usuarioId, 'tareas');
       });
-    const where = {
+    const busqueda = {
       empresaId: u.empresaId,
       eliminadoEn: null,
-      ...(query.estado && query.estado !== 'todos'
-        ? { activo: query.estado === 'activos' }
-        : {}),
-      ...(query.sinCliente
-        ? { clienteId: null }
-        : query.clienteId
-          ? { clienteId: query.clienteId }
-          : {}),
       ...(query.buscar
         ? {
             OR: [
@@ -191,10 +202,30 @@ export class CatalogoCampoService {
           }
         : {}),
     };
+    const porCliente = query.sinCliente
+      ? { clienteId: null }
+      : query.clienteId
+        ? { clienteId: query.clienteId }
+        : {};
+    const where = {
+      ...busqueda,
+      ...porCliente,
+      ...(query.estado && query.estado !== 'todos'
+        ? { activo: query.estado === 'activos' }
+        : {}),
+    };
+    // Contadores del panel: respetan búsqueda y cliente elegido, no el estado
+    // ni 'sin cliente' (son alternativas del mismo filtro).
+    const baseResumen = {
+      ...busqueda,
+      ...(query.clienteId && !query.sinCliente
+        ? { clienteId: query.clienteId }
+        : {}),
+    };
     const { skip, take, page, limit } = rangoPaginacion(query);
     const hoy = fechaCampo(relojCampo().fecha);
     const colaboradores = await obtenerColaboradoresGestionados(this.prisma, u);
-    const [total, items] = await Promise.all([
+    const [total, items, resumen] = await Promise.all([
       this.prisma.localCampo.count({ where }),
       this.prisma.localCampo.findMany({
         where,
@@ -229,8 +260,27 @@ export class CatalogoCampoService {
         skip,
         take,
       }),
+      query.conResumen
+        ? Promise.all([
+            this.prisma.localCampo.count({ where: baseResumen }),
+            this.prisma.localCampo.count({
+              where: { ...baseResumen, activo: true },
+            }),
+            this.prisma.localCampo.count({
+              where: { ...busqueda, clienteId: null },
+            }),
+          ]).then(([todos, activos, sinCliente]) => ({
+            total: todos,
+            activos,
+            inactivos: todos - activos,
+            sinCliente,
+          }))
+        : null,
     ]);
-    return respuestaPaginada(items, total, page, limit);
+    return {
+      ...respuestaPaginada(items, total, page, limit),
+      ...(resumen ? { resumen } : {}),
+    };
   }
   async guardarLocal(usuarioId: number, dto: LocalCampoDto, id?: number) {
     const u = await this.acceso.gestionar(usuarioId, 'locales');

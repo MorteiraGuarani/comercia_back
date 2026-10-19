@@ -1,6 +1,11 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { usePanel } from "@/components/panel/contexto";
+import { IconoMas } from "@/components/icono-mas";
+import { ListaAvisosCampana, ListaNovedadesCampana } from "./campana-pestanas";
 import {
   listarNotificaciones,
   marcarNotificacionLeida,
@@ -274,6 +279,46 @@ function PanelNotificaciones({
   const [filtro, setFiltro] = useState<"todas" | "no_leidas">("todas");
   const [marcandoTodas, setMarcandoTodas] = useState(false);
   const [referenciaSeleccionada, setReferenciaSeleccionada] = useState<{ tipo: "novedad" | "aviso"; id: number } | null>(null);
+  const [pestana, setPestana] = useState<"notificaciones" | "avisos" | "novedades">("notificaciones");
+
+  // Avisos y novedades salieron del menú: la campana es su acceso. Cada pestaña
+  // aparece solo si el rol tiene la página; el líder redacta avisos y el
+  // personal de campo reporta novedades.
+  const { modulos } = usePanel();
+  const router = useRouter();
+  const tiene = (modulo: string, pagina: string) =>
+    modulos.some((m) => m.ruta === modulo && m.paginas.some((p) => p.ruta === pagina));
+  const avisosLider = tiene("gestion-campo", "avisos");
+  const avisosCampo = tiene("mi-jornada", "avisos");
+  const novedadesLider = tiene("gestion-campo", "novedades");
+  const novedadesCampo = tiene("mi-jornada", "novedades");
+  const rutaAvisos = avisosLider
+    ? "/panel/gestion-campo/avisos"
+    : avisosCampo
+      ? "/panel/mi-jornada/avisos"
+      : null;
+  const rutaNovedades = novedadesLider
+    ? "/panel/gestion-campo/novedades"
+    : novedadesCampo
+      ? "/panel/mi-jornada/novedades"
+      : null;
+  const pestanas = [
+    { clave: "notificaciones" as const, etiqueta: "Notificaciones" },
+    ...(rutaAvisos ? [{ clave: "avisos" as const, etiqueta: "Avisos" }] : []),
+    ...(rutaNovedades ? [{ clave: "novedades" as const, etiqueta: "Novedades" }] : []),
+  ];
+  const crear =
+    pestana === "avisos" && avisosLider
+      ? { href: "/panel/gestion-campo/avisos?redactar=1", etiqueta: "Crear aviso" }
+      : pestana === "novedades" && novedadesCampo
+        ? { href: "/panel/mi-jornada/novedades?crear=1", etiqueta: "Crear novedad" }
+        : null;
+  const historial =
+    pestana === "avisos" && rutaAvisos
+      ? { href: rutaAvisos, etiqueta: "Ver historial de avisos" }
+      : pestana === "novedades" && rutaNovedades
+        ? { href: rutaNovedades, etiqueta: "Ver historial de novedades" }
+        : null;
 
   const cargarNotificaciones = useCallback(async () => {
     setCargando(true);
@@ -380,34 +425,108 @@ function PanelNotificaciones({
 
   return (
     <Modal
-      titulo="Avisos y Notificaciones"
+      titulo="Notificaciones"
       abierto
       onCerrar={onCerrar}
       ancho="lg"
-      pie={!referenciaSeleccionada && totalItems > 0 ? (
-        <Paginacion
-          page={page}
-          totalPages={totalPages}
-          total={totalItems}
-          limit={limit}
-          onPageChange={setPage}
-          onLimitChange={(cantidad) => {
-            setLimit(cantidad);
-            setPage(1);
-          }}
-          desplazarAlInicio={false}
-        />
-      ) : undefined}
+      hojaMovil
+      pie={
+        referenciaSeleccionada ? undefined : pestana === "notificaciones" ? (
+          totalItems > 0 ? (
+            <Paginacion
+              page={page}
+              totalPages={totalPages}
+              total={totalItems}
+              limit={limit}
+              onPageChange={setPage}
+              onLimitChange={(cantidad) => {
+                setLimit(cantidad);
+                setPage(1);
+              }}
+              desplazarAlInicio={false}
+            />
+          ) : undefined
+        ) : historial ? (
+          <Link
+            href={historial.href}
+            onClick={onCerrar}
+            className="mt-3 flex min-h-11 w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-line bg-surface-raised px-3 text-sm font-semibold text-foreground transition-colors hover:border-brand-500 hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+          >
+            {historial.etiqueta}
+            <span aria-hidden="true">→</span>
+          </Link>
+        ) : undefined
+      }
     >
       {referenciaSeleccionada ? (
         <div className="min-w-0 space-y-4">
-          <button type="button" onClick={() => setReferenciaSeleccionada(null)} className="min-h-11 cursor-pointer whitespace-nowrap rounded-lg border border-line px-3 text-sm font-semibold text-foreground transition-colors hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:border-line dark:text-foreground dark:hover:bg-surface-soft">← Volver a notificaciones</button>
+          <button type="button" onClick={() => setReferenciaSeleccionada(null)} className="min-h-11 cursor-pointer whitespace-nowrap rounded-lg border border-line px-3 text-sm font-semibold text-foreground transition-colors hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:border-line dark:text-foreground dark:hover:bg-surface-soft">← Volver</button>
           {referenciaSeleccionada.tipo === "novedad"
             ? <HiloNovedad id={referenciaSeleccionada.id} onActualizado={() => void cargarNotificaciones()} />
             : <DetalleAviso id={referenciaSeleccionada.id} />}
         </div>
       ) : (
-      <div className="flex min-w-0 flex-col space-y-4">
+      <div className="flex min-w-0 flex-col space-y-3">
+        {pestanas.length > 1 ? (
+          <div className="flex min-w-0 items-center gap-2">
+            <div
+              role="tablist"
+              aria-label="Secciones"
+              className="flex min-w-0 flex-1 gap-1 rounded-lg bg-surface-soft p-1"
+            >
+              {pestanas.map((p) => (
+                <button
+                  key={p.clave}
+                  type="button"
+                  role="tab"
+                  aria-selected={pestana === p.clave}
+                  onClick={() => setPestana(p.clave)}
+                  className={`flex min-h-10 min-w-0 flex-1 cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-md px-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${
+                    pestana === p.clave
+                      ? "bg-surface-raised text-foreground shadow-sm"
+                      : "text-muted hover:bg-surface-raised/60 hover:text-foreground"
+                  }`}
+                >
+                  <span className="truncate">{p.etiqueta}</span>
+                  {p.clave === "notificaciones" && noLeidas > 0 ? (
+                    <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[9px] font-bold text-white">
+                      {noLeidas > 99 ? "99+" : noLeidas}
+                    </span>
+                  ) : null}
+                </button>
+              ))}
+            </div>
+            {crear ? (
+              <Link
+                href={crear.href}
+                onClick={onCerrar}
+                aria-label={crear.etiqueta}
+                title={crear.etiqueta}
+                className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-brand-700 text-white shadow-sm transition-colors hover:bg-brand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:bg-brand-500 dark:text-brand-950 dark:hover:brightness-110"
+              >
+                <IconoMas className="h-5 w-5" />
+              </Link>
+            ) : null}
+          </div>
+        ) : null}
+
+        {pestana === "avisos" ? (
+          <ListaAvisosCampana
+            esLider={avisosLider}
+            onAbrir={(id) => setReferenciaSeleccionada({ tipo: "aviso", id })}
+            onIrAlHistorial={() => {
+              if (!rutaAvisos) return;
+              onCerrar();
+              router.push(rutaAvisos);
+            }}
+          />
+        ) : pestana === "novedades" ? (
+          <ListaNovedadesCampana
+            esLider={novedadesLider}
+            onAbrir={(id) => setReferenciaSeleccionada({ tipo: "novedad", id })}
+          />
+        ) : (
+        <div className="flex min-w-0 flex-col space-y-4">
         {/* Barra superior de filtros y acción "Marcar leídas" */}
         <div className="flex min-w-0 flex-col items-stretch gap-2 border-b border-line pb-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between dark:border-line">
           <div className="flex min-w-0 items-center gap-1.5 rounded-lg bg-surface-soft p-1 dark:bg-surface-soft">
@@ -452,7 +571,7 @@ function PanelNotificaciones({
             type="button"
             onClick={handleMarcarTodasLeidas}
             disabled={marcandoTodas || noLeidas === 0}
-            className="min-h-11 cursor-pointer whitespace-nowrap rounded-lg px-2 text-xs font-semibold text-brand-700 transition-colors hover:bg-surface-soft hover:text-brand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 disabled:cursor-not-allowed disabled:opacity-50 dark:text-brand-400 dark:hover:bg-surface-soft dark:hover:text-brand-300"
+            className="min-h-11 cursor-pointer whitespace-nowrap rounded-lg px-2 text-xs font-semibold text-brand-700 transition-colors hover:bg-surface-soft hover:text-brand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 disabled:cursor-not-allowed disabled:opacity-50 dark:text-brand-200 dark:hover:bg-surface-soft dark:hover:text-brand-100"
           >
             {marcandoTodas ? "Marcando..." : "Marcar todas como leídas"}
           </button>
@@ -595,6 +714,8 @@ function PanelNotificaciones({
           )}
         </div>
 
+      </div>
+        )}
       </div>
       )}
     </Modal>

@@ -2,7 +2,6 @@
 import { RUTA } from "@/utils/estado-jornada";
 
 import React, { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { apiFetch } from "@/lib/api";
 import { enviarAccionTarea } from "@/lib/pendientes-tareas";
 import { usePanel } from "@/components/panel/contexto";
@@ -29,8 +28,11 @@ import type { RespuestaPaginada } from "@/types/paginacion";
 import { IconoAlerta, IconoCamara, IconoMensaje } from "./ui/iconos-campo";
 import { crearNovedadCampo } from "@/lib/api-adjuntos-campo";
 import { SelectorFotosCampo } from "./selector-fotos-campo";
+import { VisitaRepositor } from "./visita-repositor";
+import { MapaLocal } from "./mapa-local";
 import type {
   AgendaCampo,
+  LocalCampo,
   TareaJornadaCampo,
   VisitaCampo,
   TipoNovedad,
@@ -41,7 +43,13 @@ export function TareasImpulsadorPanel({
 }: {
   esRepositor?: boolean;
 }) {
-  const { usuario } = usePanel();
+  const { usuario, modulos } = usePanel();
+  const rutaInventario = modulos.some(
+    (m) => m.ruta === "mi-jornada" && m.paginas.some((p) => p.ruta === "inventario"),
+  )
+    ? "/panel/mi-jornada/inventario"
+    : null;
+  const [mapaLocal, setMapaLocal] = useState<LocalCampo | null>(null);
   const hoyStr = useFechaCampo();
   const [periodo, setPeriodo] = useState<PeriodoFiltro>({
     clave: "hoy",
@@ -119,13 +127,22 @@ export function TareasImpulsadorPanel({
         const dataAbierta = await apiFetch<VisitaCampo | null>(
           "/campo/jornada/abierta",
         );
+        // Con visita abierta el repositor solo trabaja ese local; sin visita
+        // puede leer las tareas de todos sus locales del día.
         const tareas = await Promise.all(
-          agendas.map(async (ag) => {
-            const datos = await apiFetch<RespuestaPaginada<TareaJornadaCampo>>(
-              `/campo/jornada/asignaciones/${ag.id}/tareas?${qsFecha}&page=${paginasTareas[ag.id] ?? 1}&limit=${limitesTareas[ag.id] ?? 7}`,
-            );
-            return [ag.id, datos] as const;
-          }),
+          agendas
+            .filter(
+              (ag) =>
+                !esRepositor ||
+                !dataAbierta ||
+                ag.id === dataAbierta.asignacionId,
+            )
+            .map(async (ag) => {
+              const datos = await apiFetch<RespuestaPaginada<TareaJornadaCampo>>(
+                `/campo/jornada/asignaciones/${ag.id}/tareas?${qsFecha}&page=${paginasTareas[ag.id] ?? 1}&limit=${limitesTareas[ag.id] ?? (esRepositor ? 50 : 7)}`,
+              );
+              return [ag.id, datos] as const;
+            }),
         );
         if (!vigente) return;
         setAbierta(dataAbierta);
@@ -151,6 +168,7 @@ export function TareasImpulsadorPanel({
     limitesTareas,
     consulta,
     agendas,
+    esRepositor,
   ]);
 
   // Completar tarea
@@ -242,6 +260,11 @@ export function TareasImpulsadorPanel({
     }
   };
 
+  // Visita abierta de hoy (vista del repositor)
+  const agendaVisita = abierta
+    ? (agendas.find((ag) => ag.id === abierta.asignacionId) ?? null)
+    : null;
+
   // Métricas globales
   const todasLasTareas = Object.values(tareasPorLocal).flatMap(
     (datos) => datos.items,
@@ -288,8 +311,84 @@ export function TareasImpulsadorPanel({
       <div className="px-4 pt-3 sm:px-6">
         <PendientesTareas onSincronizar={cargarDatos} />
       </div>
+      {esRepositor ? (
+        <div className="w-full min-w-0 px-4 py-3 sm:px-6 sm:py-5">
+          {errorAccion || error ? (
+            <p
+              role="alert"
+              className="mx-auto mb-3 max-w-2xl rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-200"
+            >
+              {errorAccion || error}
+            </p>
+          ) : null}
+          <VisitaRepositor
+            agenda={agendaVisita}
+            visita={agendaVisita ? abierta : null}
+            tareas={agendaVisita ? (tareasPorLocal[agendaVisita.id] ?? null) : null}
+            agendas={agendas}
+            tareasPorLocal={tareasPorLocal}
+            cargando={cargando}
+            ocupadoId={completandoId}
+            rutaMiRuta="/panel/mi-jornada/locales"
+            rutaInventario={rutaInventario}
+            onIniciar={(tareaId) =>
+              agendaVisita && void iniciarTarea(agendaVisita.local.id, tareaId)
+            }
+            onCompletar={(tareaId) =>
+              agendaVisita && void completarTarea(agendaVisita.local.id, tareaId)
+            }
+            onFotos={(t) =>
+              abierta &&
+              setFotoModal({
+                visitaId: abierta.id,
+                tareaId: t.id,
+                nombreTarea: t.nombre,
+                obligatorio: t.fotosObligatorias,
+              })
+            }
+            onComentarios={(t) =>
+              abierta &&
+              setComentarioModal({
+                visitaId: abierta.id,
+                tareaId: t.id,
+                nombreTarea: t.nombre,
+              })
+            }
+            onNovedad={(t) => {
+              if (!agendaVisita) return;
+              setNovedadExito(false);
+              setErrorNovedad("");
+              setNovedadTarea({
+                localId: agendaVisita.local.id,
+                tareaId: t.id,
+                nombreTarea: t.nombre,
+              });
+            }}
+            onMapa={(ag) => setMapaLocal(ag.local)}
+            paginacion={
+              agendaVisita &&
+              (tareasPorLocal[agendaVisita.id]?.totalPages ?? 1) > 1 ? (
+                <Paginacion
+                  page={tareasPorLocal[agendaVisita.id]?.page ?? 1}
+                  limit={limitesTareas[agendaVisita.id] ?? 50}
+                  total={tareasPorLocal[agendaVisita.id]?.total ?? 0}
+                  totalPages={tareasPorLocal[agendaVisita.id]?.totalPages ?? 1}
+                  onPageChange={(n) =>
+                    setPaginasTareas((p) => ({ ...p, [agendaVisita.id]: n }))
+                  }
+                  onLimitChange={(n) => {
+                    setLimitesTareas((p) => ({ ...p, [agendaVisita.id]: n }));
+                    setPaginasTareas((p) => ({ ...p, [agendaVisita.id]: 1 }));
+                  }}
+                />
+              ) : null
+            }
+          />
+        </div>
+      ) : (
+        <>
       <TopBar
-        title="Mis Tareas del Día"
+        title="Mis tareas"
         subtitle="Cumplimiento y registro de actividades operativas"
         right={
           <SelectorFechaFiltro
@@ -301,18 +400,6 @@ export function TareasImpulsadorPanel({
           />
         }
       />
-      {esRepositor ? (
-        <div className="mx-auto w-full max-w-6xl px-4 pt-4 sm:px-6">
-          <Link
-            href="/panel/mi-jornada/locales"
-            className="inline-flex min-h-11 items-center rounded-lg border border-line bg-surface-raised px-4 text-sm font-semibold text-foreground hover:bg-surface-soft focus-visible:ring-2 focus-visible:ring-focus"
-          >
-            {abierta
-              ? "Volver a la ruta para marcar salida"
-              : "Ir a la ruta para marcar entrada"}
-          </Link>
-        </div>
-      ) : null}
 
       <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto w-full min-w-0 space-y-3 sm:space-y-6 flex-1 overflow-y-auto">
         {/* StatChips de Tareas */}
@@ -342,7 +429,7 @@ export function TareasImpulsadorPanel({
         )}
         {cargando ? (
           <div className="py-12 text-center text-xs text-muted">
-            Cargando tareas del día…
+            Cargando tus tareas…
           </div>
         ) : error ? (
           <div
@@ -578,6 +665,8 @@ export function TareasImpulsadorPanel({
           </p>
         ) : null}
       </div>
+        </>
+      )}
       <PantallaCarga
         visible={!!completandoId || guardandoNovedad}
         mensaje={
@@ -588,6 +677,10 @@ export function TareasImpulsadorPanel({
               : "Completando tarea"
         }
       />
+
+      {mapaLocal ? (
+        <MapaLocal local={mapaLocal} cerrar={() => setMapaLocal(null)} />
+      ) : null}
 
       {/* Modal de Fotos */}
       {fotoModal && (

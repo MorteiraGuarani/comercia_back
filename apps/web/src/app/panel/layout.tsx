@@ -106,10 +106,15 @@ export default function PanelLayout({
   const itemMenu =
     "flex min-h-11 w-full cursor-pointer items-center gap-2.5 px-3 py-2.5 text-left text-sm transition hover:bg-surface-soft focus-visible:bg-surface-soft focus-visible:outline-none";
 
+  // Avisos y novedades se abren desde la campana de notificaciones (pestañas,
+  // alta e historial), así no ocupan lugar en el menú.
+  const soloEnCampana = (moduloRuta: string, paginaRuta: string) =>
+    (moduloRuta === "gestion-campo" || moduloRuta === "mi-jornada") &&
+    (paginaRuta === "avisos" || paginaRuta === "novedades");
   const enlaces = [
     { href: "/panel", nombre: "Inicio", icono: "inicio" },
     ...modulos.flatMap((m) =>
-      m.paginas.map((p) => ({
+      m.paginas.filter((p) => !soloEnCampana(m.ruta, p.ruta)).map((p) => ({
         href: `/panel/${m.ruta}/${p.ruta}`,
         nombre: etiquetaPaginaMenu(m.ruta, p.ruta, p.nombre),
         icono: resolverIconoPagina({
@@ -127,10 +132,7 @@ export default function PanelLayout({
   const enlacesIniciales = tieneMasEnlaces
     ? enlaces.slice(0, 4)
     : enlaces.slice(0, 5);
-  const enlaceNovedades = enlaces.find((enlace) => enlace.href === "/panel/gestion-campo/novedades");
-  const enlacesBarra = tieneMasEnlaces && enlaceNovedades && !enlacesIniciales.includes(enlaceNovedades)
-    ? [enlacesIniciales[0], ...enlacesIniciales.slice(2), enlaceNovedades]
-    : enlacesIniciales;
+  const enlacesBarra = enlacesIniciales;
   const enlacesMas = tieneMasEnlaces ? enlaces.filter((enlace) => !enlacesBarra.includes(enlace)) : [];
   const masActivo = enlacesMas.some((enlace) => activo(enlace.href));
 
