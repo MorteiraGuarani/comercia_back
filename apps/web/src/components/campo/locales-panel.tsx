@@ -601,11 +601,9 @@ export function LocalesPanel() {
                   latitud={form.latitud}
                   longitud={form.longitud}
                   onChange={(lat, lng) =>
-                    setForm({
-                      ...form,
-                      latitud: lat,
-                      longitud: lng,
-                    })
+                    setForm((actual) =>
+                      actual ? { ...actual, latitud: lat, longitud: lng } : actual,
+                    )
                   }
                 />
               </div>

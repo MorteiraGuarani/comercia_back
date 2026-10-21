@@ -9,6 +9,7 @@ import { PantallaCarga } from "@/components/pantalla-carga";
 import { btnGhost, errorBox } from "@/components/ui";
 import { BotonesFormulario, CampoTexto } from "./form-campo";
 import type { MarcaCampo } from "@/types/campo";
+import { obtenerPosicionPrecisa } from "@/lib/gps-preciso";
 
 // Modal para marcar entrada o salida en un local de la ruta.
 
@@ -35,31 +36,16 @@ export function ModalMarca({
   const [coords, setCoords] = useState<Omit<MarcaCampo, "nota"> | null>(null);
   const [nota, setNota] = useState("");
   const [pendiente, setPendiente] = useState<MarcacionPendiente | null>(null);
-  function obtenerGps(): Promise<Omit<MarcaCampo, "nota">> {
-    return new Promise((resolve, reject) => {
-      if (!navigator.geolocation) {
-        reject(
-          new Error("GPS no disponible. Activá la ubicación para marcar."),
-        );
-        return;
-      }
-      navigator.geolocation.getCurrentPosition(
-        (p) =>
-          resolve({
-            latitud: p.coords.latitude,
-            longitud: p.coords.longitude,
-            precisionMetros: p.coords.accuracy,
-            capturadaEn: new Date(p.timestamp).toISOString(),
-          }),
-        () =>
-          reject(
-            new Error(
-              "No se pudo obtener GPS. Activá la ubicación y reintentá.",
-            ),
-          ),
-        { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 },
-      );
-    });
+  // La API exige ±50 m o mejor (o el radio del local): se escucha el GPS
+  // hasta 10 s y se manda la lectura más precisa, no la primera.
+  async function obtenerGps(): Promise<Omit<MarcaCampo, "nota">> {
+    const p = await obtenerPosicionPrecisa({ objetivoMetros: 15, maxMs: 10_000 });
+    return {
+      latitud: p.coords.latitude,
+      longitud: p.coords.longitude,
+      precisionMetros: p.coords.accuracy,
+      capturadaEn: new Date(p.timestamp).toISOString(),
+    };
   }
   async function ubicar() {
     await op.ejecutar("Obteniendo ubicación", async () => {

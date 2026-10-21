@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 
-export const CAPA_MAPA_CLARA = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
-export const CAPA_MAPA_OSCURA = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
+export const CAPA_MAPA = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+// CARTO ahora pide clave de API ("API KEY REQUIRED" en cada cuadro). En modo
+// oscuro se usa el mismo mapa de OpenStreetMap con un filtro (globals.css).
+export const CLASE_CAPA_OSCURA = "capa-mapa-oscura";
 
 export function useTemaOscuroMapa() {
   const [oscuro, setOscuro] = useState(false);

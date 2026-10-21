@@ -521,3 +521,9 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .campo-usuario__pulso { animation: none; opacity: 0.4; }
 }
+
+/* Mapa en modo oscuro: los cuadros de OpenStreetMap invertidos (no requiere
+   clave de API, a diferencia de las capas oscuras de terceros). */
+.capa-mapa-oscura {
+  filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9) saturate(0.85);
+}

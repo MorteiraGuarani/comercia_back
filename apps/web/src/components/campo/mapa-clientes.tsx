@@ -8,9 +8,10 @@ import { mensajeError } from "@/utils/error";
 import { escaparHtml } from "@/utils/html";
 import { TOKENS } from "./tokens";
 import { LogoCliente } from "./ui/logo-cliente";
+import { BuscadorLugarMapa } from "./ui/buscador-lugar-mapa";
 import { montarCapaUsuario, type CapaUsuarioMapa } from "./ui/marcador-usuario-mapa";
 import { useGeolocalizacionMapa } from "./ui/use-geolocalizacion-mapa";
-import { CAPA_MAPA_CLARA, CAPA_MAPA_OSCURA, useTemaOscuroMapa } from "./ui/use-tema-mapa";
+import { CAPA_MAPA, CLASE_CAPA_OSCURA, useTemaOscuroMapa } from "./ui/use-tema-mapa";
 import { IconoBuscar, IconoCruz, IconoCheck, IconoAlerta, IconoChevronAbajo } from "./ui/iconos-campo";
 import type { ClienteCampo, LocalCampo } from "@/types/campo";
 import type { RespuestaPaginada } from "@/types/paginacion";
@@ -183,7 +184,8 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
 
     mapaRef.current = map;
 
-    L.tileLayer(temaOscuro ? CAPA_MAPA_OSCURA : CAPA_MAPA_CLARA, {
+    L.tileLayer(CAPA_MAPA, {
+      className: temaOscuro ? CLASE_CAPA_OSCURA : "",
       maxZoom: 19,
       attribution:
         '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a>',
@@ -619,6 +621,19 @@ export function MapaClientes({ clientes, clienteSeleccionadoId }: MapaClientesPr
           </button>
         </div>
       )}
+
+      <BuscadorLugarMapa
+        cerca={() => {
+          const centro = mapaRef.current?.getCenter();
+          return centro ? { latitud: centro.lat, longitud: centro.lng } : undefined;
+        }}
+        onElegir={(lugar) =>
+          mapaRef.current?.flyTo([lugar.latitud, lugar.longitud], 17, {
+            animate: true,
+            duration: 0.8,
+          })
+        }
+      />
 
       {/* Contenedor del Mapa Interactivo Amplio */}
       <div className="campo-map relative rounded-2xl border border-line overflow-hidden shadow-md bg-surface-soft">

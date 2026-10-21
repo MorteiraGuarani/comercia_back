@@ -7,7 +7,7 @@ import { formatoDistancia, metrosEntre } from "@/utils/distancia";
 import type { LocalCampo } from "@/types/campo";
 import { montarCapaUsuario, type CapaUsuarioMapa } from "./ui/marcador-usuario-mapa";
 import { useGeolocalizacionMapa } from "./ui/use-geolocalizacion-mapa";
-import { CAPA_MAPA_CLARA, CAPA_MAPA_OSCURA, useTemaOscuroMapa } from "./ui/use-tema-mapa";
+import { CAPA_MAPA, CLASE_CAPA_OSCURA, useTemaOscuroMapa } from "./ui/use-tema-mapa";
 
 export function MapaLocal({
   local,
@@ -38,7 +38,8 @@ export function MapaLocal({
     }).setView([lat, lng], 16);
     mapaRef.current = mapa;
 
-    L.tileLayer(temaOscuro ? CAPA_MAPA_OSCURA : CAPA_MAPA_CLARA, {
+    L.tileLayer(CAPA_MAPA, {
+      className: temaOscuro ? CLASE_CAPA_OSCURA : "",
       maxZoom: 19,
       attribution:
         '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> · &copy; CARTO',

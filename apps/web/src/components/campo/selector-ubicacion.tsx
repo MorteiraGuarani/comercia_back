@@ -5,7 +5,9 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { TOKENS } from "./tokens";
 import { montarCapaUsuario, type CapaUsuarioMapa } from "./ui/marcador-usuario-mapa";
-import { CAPA_MAPA_CLARA, CAPA_MAPA_OSCURA, useTemaOscuroMapa } from "./ui/use-tema-mapa";
+import { CAPA_MAPA, CLASE_CAPA_OSCURA, useTemaOscuroMapa } from "./ui/use-tema-mapa";
+import { obtenerPosicionPrecisa } from "@/lib/gps-preciso";
+import { BuscadorLugarMapa } from "./ui/buscador-lugar-mapa";
 
 export default function SelectorUbicacion({
   latitud,
@@ -48,7 +50,8 @@ export default function SelectorUbicacion({
 
     mapa.current = instancia;
 
-    const tiles = L.tileLayer(temaOscuro ? CAPA_MAPA_OSCURA : CAPA_MAPA_CLARA, {
+    const tiles = L.tileLayer(CAPA_MAPA, {
+      className: temaOscuro ? CLASE_CAPA_OSCURA : "",
       maxZoom: 19,
       attribution:
         '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a>',
@@ -60,13 +63,15 @@ export default function SelectorUbicacion({
 
     // Marcador con pin SVG editorial de alta visibilidad
     const pinHtml = `
-      <div style="position:relative;width:32px;height:32px;display:flex;align-items:center;justify-content:center;transform:translate(-50%,-100%);">
+      <div style="position:relative;width:32px;height:32px;display:flex;align-items:center;justify-content:center;">
         <div style="width:28px;height:28px;border-radius:50% 50% 50% 0;background:#8B2635;transform:rotate(-45deg);border:2.5px solid white;box-shadow:0 3px 8px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;">
           <div style="width:8px;height:8px;border-radius:50%;background:white;"></div>
         </div>
       </div>
     `;
 
+    // La punta del pin está abajo al centro: iconAnchor la pone sobre la
+    // coordenada. (Antes un translate extra la corría 16 px y 32 px.)
     const customIcon = L.divIcon({
       className: "custom-map-pin",
       html: pinHtml,
@@ -125,31 +130,40 @@ export default function SelectorUbicacion({
     marcador.current?.setLatLng([latitud, longitud]);
   }, [latitud, longitud]);
 
-  // Función para obtener la ubicación GPS actual del dispositivo
+  // Escucha el GPS unos segundos y deja el pin en la lectura más precisa:
+  // la primera suele venir del Wi-Fi o la antena, con cientos de metros de error.
   const obtenerUbicacionActual = () => {
-    if (!("geolocation" in navigator)) {
-      setError("Tu navegador no soporta geolocalización GPS.");
-      return;
-    }
-
     setObteniendoGps(true);
     setError(null);
-    setGpsMensaje("Detectando satélites GPS...");
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const cLat = Number(pos.coords.latitude.toFixed(6));
-        const cLng = Number(pos.coords.longitude.toFixed(6));
+    setGpsMensaje("Buscando señal GPS…");
+    const ubicar = (pos: GeolocationPosition) => {
+      const cLat = Number(pos.coords.latitude.toFixed(6));
+      const cLng = Number(pos.coords.longitude.toFixed(6));
+      cambiar.current(cLat, cLng);
+      marcador.current?.setLatLng([cLat, cLng]);
+      if (!mapa.current) return;
+      mapa.current.flyTo([cLat, cLng], 18, { animate: true, duration: 0.6 });
+      if (!capaUsuario.current) {
+        capaUsuario.current = montarCapaUsuario(mapa.current, L, cLat, cLng, pos.coords.accuracy);
+      } else {
+        capaUsuario.current.actualizar(cLat, cLng, pos.coords.accuracy);
+      }
+    };
+    obtenerPosicionPrecisa({
+      objetivoMetros: 10,
+      maxMs: 12_000,
+      alMejorar: (pos) => {
+        ubicar(pos);
+        setGpsMensaje(`Afinando la ubicación… ±${Math.round(pos.coords.accuracy)} m`);
+      },
+    })
+      .then((pos) => {
         const precision = Math.round(pos.coords.accuracy);
-
-        onChange(cLat, cLng);
-        marcador.current?.setLatLng([cLat, cLng]);
-        mapa.current?.flyTo([cLat, cLng], 17, { animate: true, duration: 1 });
-        if (mapa.current && !capaUsuario.current) {
-          capaUsuario.current = montarCapaUsuario(mapa.current, L, cLat, cLng, pos.coords.accuracy);
-        } else {
-          capaUsuario.current?.actualizar(cLat, cLng, pos.coords.accuracy);
-        }
+        setGpsMensaje(
+          precision > 30
+            ? `Ubicación aproximada (±${precision} m). Ajustá el pin a mano sobre la entrada del local.`
+            : `Ubicación detectada (±${precision} m). El punto azul sos vos.`,
+        );
         if (watchGps.current == null) {
           watchGps.current = navigator.geolocation.watchPosition(
             (siguiente) => {
@@ -163,29 +177,12 @@ export default function SelectorUbicacion({
             { enableHighAccuracy: true, maximumAge: 4000 },
           );
         }
-
-        setGpsMensaje(`Ubicación detectada (precisión ±${precision}m). El punto azul sos vos.`);
-        setObteniendoGps(false);
-      },
-      (err) => {
-        setObteniendoGps(false);
+      })
+      .catch((e: unknown) => {
         setGpsMensaje(null);
-        if (err.code === err.PERMISSION_DENIED) {
-          setError("Permiso de ubicación denegado en tu navegador.");
-        } else if (err.code === err.POSITION_UNAVAILABLE) {
-          setError("Información de ubicación no disponible.");
-        } else if (err.code === err.TIMEOUT) {
-          setError("Tiempo de espera agotado al obtener ubicación GPS.");
-        } else {
-          setError(`Error de geolocalización: ${err.message}`);
-        }
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 12000,
-        maximumAge: 0,
-      }
-    );
+        setError(e instanceof Error ? e.message : "No se pudo obtener tu ubicación.");
+      })
+      .finally(() => setObteniendoGps(false));
   };
 
   const reenfocarMarcador = () => {
@@ -207,6 +204,22 @@ export default function SelectorUbicacion({
           <span>Lng: {Number.isFinite(longitud) ? longitud.toFixed(5) : "—"}</span>
         </div>
       </div>
+
+      <BuscadorLugarMapa
+        cerca={() => {
+          const centro = mapa.current?.getCenter();
+          return centro ? { latitud: centro.lat, longitud: centro.lng } : undefined;
+        }}
+        onElegir={(lugar) => {
+          const lat = Number(lugar.latitud.toFixed(6));
+          const lng = Number(lugar.longitud.toFixed(6));
+          cambiar.current(lat, lng);
+          marcador.current?.setLatLng([lat, lng]);
+          mapa.current?.flyTo([lat, lng], 18, { animate: true, duration: 0.8 });
+          setError(null);
+          setGpsMensaje(`Pin en ${lugar.nombre}. Ajustalo sobre la entrada del local si hace falta.`);
+        }}
+      />
 
       {/* Contenedor del mapa con controles superpuestos */}
       <div className="campo-map relative rounded-xl border border-[#DAD5C9] overflow-hidden shadow-inner bg-zinc-100">
