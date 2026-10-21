@@ -2,9 +2,7 @@
 export const NOMBRES_TABLAS_SOCIOS = [
   'tbl_ocrd',
   'tbl_crd1',
-  'tbl_jcanal',
   'tbl_jcanales',
-  'tbl_jsubcanal',
   'tbl_jsubcanales',
   'tbl_oagp',
   'tbl_oslp',

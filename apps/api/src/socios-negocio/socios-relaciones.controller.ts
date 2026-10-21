@@ -31,7 +31,7 @@ export class SociosRelacionesController {
   @ApiOperation({
     summary: 'Resolver los catálogos relacionados con el socio',
     description:
-      'Público sin login ni token. El socio se identifica por CardCode exacto, nunca por id técnico. Todas las referencias se resuelven dentro de empresaId. GroupCode→tbl_ocrg; GroupNum→tbl_octg; ListNum→tbl_opln; AgentCode→tbl_oagp; SlpCode→tbl_oslp. U_jCANAL y U_jSUBCANAL conservan texto y, cuando representan un entero int4, se buscan en Code de tbl_jcanal/tbl_jsubcanal. Las tablas en plural son catálogos independientes, sin mezcla automática. Una referencia nula o todavía no cargada devuelve null; no se crean filas ficticias para -1. Las direcciones se consultan por separado con paginación.',
+      'Público sin login ni token. El socio se identifica por CardCode exacto, nunca por id técnico. Todas las referencias se resuelven dentro de empresaId. GroupCode→tbl_ocrg; GroupNum→tbl_octg; ListNum→tbl_opln; AgentCode→tbl_oagp; SlpCode→tbl_oslp. U_jCANAL y U_jSUBCANAL conservan texto y, cuando representan un entero int4, se buscan en Code de tbl_jcanales/tbl_jsubcanales. Solo existen los catálogos plurales de canales y subcanales. Una referencia nula o todavía no cargada devuelve null; no se crean filas ficticias para -1. Las direcciones se consultan por separado con paginación.',
   })
   @ApiOkResponse({
     example: Object.fromEntries(
@@ -42,8 +42,8 @@ export class SociosRelacionesController {
         TABLAS_SOCIOS.tbl_opln,
         TABLAS_SOCIOS.tbl_oagp,
         TABLAS_SOCIOS.tbl_oslp,
-        TABLAS_SOCIOS.tbl_jcanal,
-        TABLAS_SOCIOS.tbl_jsubcanal,
+        TABLAS_SOCIOS.tbl_jcanales,
+        TABLAS_SOCIOS.tbl_jsubcanales,
       ].map((tabla) => [tabla.nombre, ejemploRespuestaSocios(tabla)]),
     ),
     schema: {
@@ -55,8 +55,8 @@ export class SociosRelacionesController {
         'tbl_opln',
         'tbl_oagp',
         'tbl_oslp',
-        'tbl_jcanal',
-        'tbl_jsubcanal',
+        'tbl_jcanales',
+        'tbl_jsubcanales',
       ],
       properties: Object.fromEntries(
         [
@@ -66,8 +66,8 @@ export class SociosRelacionesController {
           TABLAS_SOCIOS.tbl_opln,
           TABLAS_SOCIOS.tbl_oagp,
           TABLAS_SOCIOS.tbl_oslp,
-          TABLAS_SOCIOS.tbl_jcanal,
-          TABLAS_SOCIOS.tbl_jsubcanal,
+          TABLAS_SOCIOS.tbl_jcanales,
+          TABLAS_SOCIOS.tbl_jsubcanales,
         ].map((tabla) => [
           tabla.nombre,
           {

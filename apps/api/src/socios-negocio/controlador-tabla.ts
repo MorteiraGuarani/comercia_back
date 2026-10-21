@@ -9,6 +9,7 @@ import {
   Put,
   Query,
   ValidationPipe,
+  applyDecorators,
 } from '@nestjs/common';
 import type { Type } from '@nestjs/common';
 import {
@@ -21,11 +22,20 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiParam,
+  ApiQuery,
   ApiResponse,
   ApiTags,
   getSchemaPath,
   PartialType,
 } from '@nestjs/swagger';
+import {
+  CodigoCatalogoParams,
+  DireccionParams,
+  SelectorDireccionDto,
+  ConsultaDireccionesDto,
+  SinConsultaDto,
+} from './dto/registro-params.dto';
+import type { ConsultaDireccion } from './interfaces/consulta-direccion.interface';
 import { SocioParams } from './dto/socio-params.dto';
 import { ResumenLoteDto } from '../common/dto/resumen-lote.dto';
 import {
@@ -49,26 +59,99 @@ export function crearControladorSocios(
   tabla: TablaSociosDefinicion,
 ): Type<object> {
   const esSocio = tabla.nombre === 'tbl_ocrd';
-  const ruta = esSocio ? ':CardCode' : ':id';
-  const Parametros = esSocio ? SocioParams : RegistroSociosParams;
+  const esDireccion = tabla.nombre === 'tbl_crd1';
+  const esCodigo =
+    tabla.nombre === 'tbl_jcanales' || tabla.nombre === 'tbl_jsubcanales';
+  const ruta =
+    esSocio || esDireccion ? ':CardCode' : esCodigo ? ':Code' : ':id';
+  const Parametros = esSocio
+    ? SocioParams
+    : esDireccion
+      ? DireccionParams
+      : esCodigo
+        ? CodigoCatalogoParams
+        : RegistroSociosParams;
+  const consulta = (listado: boolean) =>
+    new ValidationPipe({
+      expectedType: esDireccion
+        ? listado
+          ? ConsultaDireccionesDto
+          : SelectorDireccionDto
+        : SinConsultaDto,
+      transform: true,
+      whitelist: true,
+      forbidNonWhitelisted: true,
+    });
+  const documentarDireccion = (listado = false) =>
+    applyDecorators(
+      ...(esDireccion
+        ? [
+            ApiQuery({
+              name: 'direccion',
+              required: false,
+              type: String,
+              example: JSON.stringify({
+                Address: 'Sucursal de ejemplo',
+                Street: 'Calle de ejemplo 123',
+                AdresType: 'S',
+              }),
+              description:
+                'Selector JSON opcional con Address, Street y AdresType originales, incluyendo null donde corresponda. Usar encodeURIComponent. En PUT/DELETE identifica una sola dirección; sin selector se opera solo si CardCode tiene exactamente una fila, en otro caso 409 sin cambios. No acepta id técnico.',
+            }),
+            ...(listado
+              ? [
+                  ApiQuery({
+                    name: 'page',
+                    required: false,
+                    schema: { type: 'integer', minimum: 1, default: 1 },
+                  }),
+                  ApiQuery({
+                    name: 'limit',
+                    required: false,
+                    schema: {
+                      type: 'integer',
+                      minimum: 1,
+                      maximum: 50,
+                      default: 7,
+                    },
+                  }),
+                  ApiQuery({ name: 'buscar', required: false, type: String }),
+                ]
+              : []),
+          ]
+        : []),
+    );
+  const identidad =
+    esSocio || esDireccion ? 'CardCode' : esCodigo ? 'Code' : 'id';
+  const detalleClave =
+    esSocio || esDireccion || esCodigo
+      ? `La ruta usa ${identidad} original y empresaId, sin búsqueda alternativa por id técnico. Codificar caracteres especiales en la URL. Si cambia la clave, enviar la nueva en el cuerpo y conservar la original en la ruta.`
+      : 'id es el identificador técnico de esta fila de catálogo.';
+
   const validar = new ValidationPipe({
     expectedType: Parametros,
     transform: true,
     whitelist: true,
     forbidNonWhitelisted: true,
   });
-  const codigo = (p: SocioParams | RegistroSociosParams) =>
-    'CardCode' in p ? p.CardCode : p.id;
+  const codigo = (
+    p:
+      | SocioParams
+      | RegistroSociosParams
+      | CodigoCatalogoParams
+      | DireccionParams,
+  ) => ('CardCode' in p ? p.CardCode : 'Code' in p ? p.Code : p.id);
   const documentarCodigo = () =>
     ApiParam({
-      name: esSocio ? 'CardCode' : 'id',
-      schema: esSocio
-        ? { type: 'string', minLength: 1, maxLength: 15 }
-        : { type: 'string', pattern: '^[1-9][0-9]{0,18}$', maxLength: 19 },
-      example: esSocio ? 'C00001' : '1',
-      description: esSocio
-        ? 'CardCode original exacto del socio en esta empresa; conserva ceros iniciales. Codificar caracteres especiales en la URL. Nunca se interpreta como id técnico.'
-        : 'ID técnico de la fila de catálogo o dirección.',
+      name: identidad,
+      schema:
+        esSocio || esDireccion
+          ? { type: 'string', minLength: 1, maxLength: esDireccion ? 200 : 15 }
+          : esCodigo
+            ? { type: 'integer', minimum: -2147483648, maximum: 2147483647 }
+            : { type: 'string', pattern: '^[1-9][0-9]{0,18}$', maxLength: 19 },
+      example: esSocio || esDireccion ? 'C00001' : esCodigo ? 1 : '1',
+      description: detalleClave,
     });
   const respuesta = esquemaRespuestaSocios(tabla);
   const ejemplo = ejemploRespuestaSocios(tabla);
@@ -128,7 +211,7 @@ export function crearControladorSocios(
     description: 'Límite de solicitudes alcanzado; reintentar más tarde.',
     schema: errores,
   })
-  // Excepción pública expresa para las once tablas de socios de negocio.
+  // Excepción pública expresa para las nueve tablas de socios de negocio.
   class ControladorTablaSocios {
     constructor(
       @Inject(SociosNegocioService) readonly servicio: SociosNegocioService,
@@ -150,12 +233,28 @@ export function crearControladorSocios(
     @Get(ruta)
     @documentarCodigo()
     @ApiOperation({
-      summary: `Consultar una fila de ${tabla.nombre}`,
-      description: `${acceso} ${esSocio ? 'La ruta usa exclusivamente CardCode, nunca el id técnico de PostgreSQL. Usar el código original en la ruta si se cambia CardCode en el cuerpo; codificar caracteres especiales en la URL.' : 'id es el identificador técnico de esta fila de catálogo o dirección.'}`,
+      summary: esDireccion
+        ? 'Listar direcciones por CardCode'
+        : `Consultar una fila de ${tabla.nombre} por ${identidad}`,
+      description: `${acceso} ${detalleClave} ${esDireccion ? 'Devuelve todas las direcciones de ese CardCode con paginación 7/50; direccion permite filtrar una clave de dirección completa.' : ''}`,
     })
-    @ApiOkResponse({ schema: respuesta, example: ejemplo })
-    obtener(@Param(validar) p: SocioParams | RegistroSociosParams) {
-      return this.servicio.obtener(tabla, p.empresaId, codigo(p));
+    @documentarDireccion(true)
+    @ApiOkResponse({
+      schema: esDireccion ? esquemaPaginaSocios(tabla) : respuesta,
+      example: esDireccion
+        ? { items: [ejemplo], total: 1, page: 1, limit: 7, totalPages: 1 }
+        : ejemplo,
+    })
+    obtener(
+      @Param(validar)
+      p:
+        | SocioParams
+        | RegistroSociosParams
+        | CodigoCatalogoParams
+        | DireccionParams,
+      @Query(consulta(true)) q: ConsultaDireccion,
+    ) {
+      return this.servicio.obtener(tabla, p.empresaId, codigo(p), q);
     }
 
     @Post()
@@ -211,10 +310,11 @@ export function crearControladorSocios(
     }
 
     @Put(ruta)
+    @documentarDireccion()
     @documentarCodigo()
     @ApiOperation({
       summary: `Editar una fila de ${tabla.nombre}`,
-      description: `${acceso} ${esSocio ? 'Identifica el socio por CardCode original y empresaId, sin alternativa por id técnico.' : ''} Actualiza los campos enviados y conserva los omitidos; null vacía un campo nullable. Usa los mismos nombres y restricciones de creación. id y empresa_id no se aceptan en el cuerpo. No permite duplicar la clave ni cambiar un código mientras tenga referencias.`,
+      description: `${acceso} ${detalleClave} Actualiza los campos enviados y conserva los omitidos; null vacía un campo nullable. Usa los mismos nombres y restricciones de creación. id y empresa_id no se aceptan en el cuerpo. No permite duplicar la clave ni cambiar un código mientras tenga referencias.`,
     })
     @ApiBody({
       type: EdicionDto,
@@ -227,17 +327,30 @@ export function crearControladorSocios(
     })
     @ApiOkResponse({ schema: respuesta, example: ejemplo })
     editar(
-      @Param(validar) p: SocioParams | RegistroSociosParams,
+      @Param(validar)
+      p:
+        | SocioParams
+        | RegistroSociosParams
+        | CodigoCatalogoParams
+        | DireccionParams,
       @Body(new CrearSociosPipe(EdicionDto, false)) d: EntradaSocio,
+      @Query(consulta(false)) q: ConsultaDireccion,
     ) {
-      return this.servicio.editar(tabla, p.empresaId, codigo(p), d);
+      return this.servicio.editar(
+        tabla,
+        p.empresaId,
+        codigo(p),
+        d,
+        q.direccion,
+      );
     }
 
     @Delete(ruta)
+    @documentarDireccion()
     @documentarCodigo()
     @ApiOperation({
       summary: `Eliminar una fila de ${tabla.nombre}`,
-      description: `${acceso} ${esSocio ? 'Identifica el socio por CardCode exacto y empresaId, sin alternativa por id técnico.' : ''} Elimina únicamente la fila de esa empresa. Un socio con direcciones o un catálogo canónico usado por socios devuelve 409; quitar o reasignar sus referencias antes de eliminar.`,
+      description: `${acceso} ${detalleClave} Elimina únicamente la fila de esa empresa. Un socio con direcciones o un catálogo canónico usado por socios devuelve 409; quitar o reasignar sus referencias antes de eliminar.`,
     })
     @ApiOkResponse({
       schema: {
@@ -247,8 +360,16 @@ export function crearControladorSocios(
       },
       example: { ok: true },
     })
-    eliminar(@Param(validar) p: SocioParams | RegistroSociosParams) {
-      return this.servicio.eliminar(tabla, p.empresaId, codigo(p));
+    eliminar(
+      @Param(validar)
+      p:
+        | SocioParams
+        | RegistroSociosParams
+        | CodigoCatalogoParams
+        | DireccionParams,
+      @Query(consulta(false)) q: ConsultaDireccion,
+    ) {
+      return this.servicio.eliminar(tabla, p.empresaId, codigo(p), q.direccion);
     }
   }
   Object.defineProperty(ControladorTablaSocios, 'name', {

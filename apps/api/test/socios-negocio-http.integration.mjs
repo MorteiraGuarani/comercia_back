@@ -38,9 +38,23 @@ const service = {
       totalPages: 1,
     };
   },
-  obtener: async (t, e, id) => {
-    calls.push({ method: 'obtener', tabla: t.nombre, empresa: e, id });
-    return ejemploRespuestaSocios(t);
+  obtener: async (t, e, id, q) => {
+    calls.push({
+      method: 'obtener',
+      tabla: t.nombre,
+      empresa: e,
+      id,
+      query: q,
+    });
+    return t.nombre === 'tbl_crd1'
+      ? {
+          items: [ejemploRespuestaSocios(t)],
+          total: 1,
+          page: q.page ?? 1,
+          limit: q.limit ?? 7,
+          totalPages: 1,
+        }
+      : ejemploRespuestaSocios(t);
   },
   crear: async (t, e, d) => {
     calls.push({ method: 'crear', tabla: t.nombre, empresa: e, data: d });
@@ -54,12 +68,25 @@ const service = {
         }
       : ejemploRespuestaSocios(t);
   },
-  editar: async (t, e, id, d) => {
-    calls.push({ method: 'editar', tabla: t.nombre, empresa: e, id, data: d });
+  editar: async (t, e, id, d, selector) => {
+    calls.push({
+      method: 'editar',
+      tabla: t.nombre,
+      empresa: e,
+      id,
+      data: d,
+      selector,
+    });
     return ejemploRespuestaSocios(t);
   },
-  eliminar: async (t, e, id) => {
-    calls.push({ method: 'eliminar', tabla: t.nombre, empresa: e, id });
+  eliminar: async (t, e, id, selector) => {
+    calls.push({
+      method: 'eliminar',
+      tabla: t.nombre,
+      empresa: e,
+      id,
+      selector,
+    });
     return { ok: true };
   },
   relaciones: async () => ({
@@ -71,8 +98,8 @@ const service = {
         'tbl_opln',
         'tbl_oagp',
         'tbl_oslp',
-        'tbl_jcanal',
-        'tbl_jsubcanal',
+        'tbl_jcanales',
+        'tbl_jsubcanales',
       ].map((t) => [t, null]),
     ),
   }),
@@ -123,12 +150,18 @@ try {
         ).length,
       0,
     ),
-    57,
+    47,
   );
   for (const t of Object.values(TABLAS_SOCIOS)) {
     const route = '/api/v1/admin/socios-negocio/empresas/1/' + t.nombre;
-    const locator = t.nombre === 'tbl_ocrd' ? '{CardCode}' : '{id}';
-    const code = t.nombre === 'tbl_ocrd' ? 'C0001' : '1';
+    const locator =
+      t.nombre === 'tbl_ocrd' || t.nombre === 'tbl_crd1'
+        ? '{CardCode}'
+        : t.identidad
+          ? '{Code}'
+          : '{id}';
+    const code =
+      t.nombre === 'tbl_ocrd' || t.nombre === 'tbl_crd1' ? 'C0001' : '1';
     const path = route.replace('/empresas/1/', '/empresas/{empresaId}/');
     for (const [p, method] of [
       [path, 'get'],
@@ -223,8 +256,63 @@ try {
       .get(route + '?page=1e20')
       .expect(400);
     await request(http)
-      .get(route + '/9223372036854775808')
+      .get(
+        route +
+          '/' +
+          (t.nombre === 'tbl_crd1' ? 'x'.repeat(201) : '9223372036854775808'),
+      )
       .expect(400);
+  }
+  for (const deleted of ['tbl_jcanal', 'tbl_jsubcanal']) {
+    assert.ok(
+      !Object.keys(doc.paths).some((p) => p.split('/').includes(deleted)),
+    );
+    await request(http)
+      .get('/api/v1/admin/socios-negocio/empresas/1/' + deleted)
+      .expect(404);
+  }
+  const addressRoute = '/api/v1/admin/socios-negocio/empresas/1/tbl_crd1/00001';
+  const selector = JSON.stringify({
+    Address: null,
+    Street: 'null',
+    AdresType: 'S',
+  });
+  await request(http)
+    .get(addressRoute + '?page=2&limit=10')
+    .expect(200);
+  assert.equal(calls.at(-1).id, '00001');
+  assert.equal(calls.at(-1).query.page, 2);
+  await request(http)
+    .put(addressRoute + '?direccion=' + encodeURIComponent(selector))
+    .send({ Street: 'Nueva' })
+    .expect(200);
+  assert.equal(calls.at(-1).selector, selector);
+  await request(http)
+    .delete(addressRoute + '?direccion=' + encodeURIComponent(selector))
+    .expect(200);
+  assert.equal(calls.at(-1).selector, selector);
+  for (const invalid of [
+    '{}',
+    'null',
+    '{"Address":"X","Street":null,"AdresType":"S","id":"1"}',
+    'INVALIDO',
+  ]) {
+    const before = calls.length;
+    await request(http)
+      .delete(addressRoute + '?direccion=' + encodeURIComponent(invalid))
+      .expect(400);
+    assert.equal(calls.length, before);
+  }
+  for (const table of ['tbl_jcanales', 'tbl_jsubcanales']) {
+    const route = '/api/v1/admin/socios-negocio/empresas/1/' + table;
+    await request(http)
+      .get(route + '/0007')
+      .expect(200);
+    assert.equal(calls.at(-1).id, 7);
+    for (const invalid of ['1e3', '1.5', '2147483648', 'no-codigo'])
+      await request(http)
+        .get(route + '/' + invalid)
+        .expect(400);
   }
   const socios = '/api/v1/admin/socios-negocio/empresas/1/tbl_ocrd';
   await request(http)
@@ -267,7 +355,7 @@ try {
     .send([{ CardCode: 'C0001' }])
     .expect(400);
   await request(http)
-    .post('/api/v1/admin/socios-negocio/empresas/1/tbl_jcanal')
+    .post('/api/v1/admin/socios-negocio/empresas/1/tbl_jcanales')
     .send({ Code: null })
     .expect(400);
   await request(http)
@@ -292,7 +380,7 @@ try {
     .expect(413);
   assert.ok(calls.every((c) => c.empresa === 1));
   console.log(
-    'OK: 57 operaciones públicas, once DTOs y ejemplos, validación atómica, nombres exactos y bulk >1 MiB con límites acotados',
+    'OK: 47 operaciones públicas, nueve DTOs y ejemplos, validación atómica, nombres exactos y bulk >1 MiB con límites acotados',
   );
 } finally {
   await app.close();

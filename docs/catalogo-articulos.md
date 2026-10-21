@@ -48,9 +48,11 @@ El id técnico se conserva como metadato de lectura y en la base, sin uso en est
 
 Los socios principales usan `/{CardCode}` después de
 `/api/v1/admin/socios-negocio/empresas/{empresaId}/tbl_ocrd`, también en
-`/{CardCode}/relaciones` y `/{CardCode}/direcciones`. Los catálogos auxiliares y
-las filas individuales de direcciones mantienen su contrato: CardCode puede tener
-varias direcciones y no identifica por sí solo una de ellas.
+`/{CardCode}/relaciones` y `/{CardCode}/direcciones`. `tbl_crd1/{CardCode}` lista
+direcciones paginadas; PUT/DELETE permiten elegir una con el selector JSON
+`direccion` (Address/Street/AdresType originales). Si hay varias y no se indica
+selector, devuelven 409 sin cambios. Canales y subcanales usan únicamente las
+tablas plurales y rutas por `Code`. Véase [socios de negocio](socios-negocio.md).
 
 `SPP1Lnum` no incluye ListNum: puede coincidir con líneas de distintas listas. No
 se inventa una lista ni se agrega esa columna a tbl_spp2. La estructura nueva de

@@ -26,6 +26,8 @@ import {
   claveSocios,
   codigoCanalSocio,
 } from './utils/registro-socio';
+import { filtroRegistroSocios } from './utils/filtro-registro';
+import type { ConsultaDireccion } from './interfaces/consulta-direccion.interface';
 import { errorSocios } from './utils/error-socios';
 
 @Injectable()
@@ -112,22 +114,29 @@ export class SociosNegocioService {
   private async fila(
     tabla: TablaSociosDefinicion,
     empresaId: number,
-    id: string,
+    id: string | number,
   ) {
     const fila = await this.modelo(this.prisma, tabla).findFirst({
-      where: {
-        empresaId,
-        ...(tabla.nombre === 'tbl_ocrd'
-          ? { CardCode: id }
-          : { id: BigInt(id) }),
-      },
+      where: filtroRegistroSocios(tabla, empresaId, id),
       select: seleccionSocios(tabla),
     });
     if (!fila)
       throw new NotFoundException('Registro no disponible en esta empresa');
     return fila;
   }
-  async obtener(tabla: TablaSociosDefinicion, empresaId: number, id: string) {
+  async obtener(
+    tabla: TablaSociosDefinicion,
+    empresaId: number,
+    id: string | number,
+    query: ConsultaDireccion = {},
+  ) {
+    if (tabla.nombre === 'tbl_crd1')
+      return this.listar(
+        tabla,
+        empresaId,
+        query,
+        filtroRegistroSocios(tabla, empresaId, id, query.direccion),
+      );
     await this.empresa(empresaId);
     return respuestaSocios(tabla, await this.fila(tabla, empresaId, id));
   }
@@ -242,8 +251,8 @@ export class SociosNegocioService {
       tbl_opln: 'ListNum',
       tbl_oagp: 'AgentCode',
       tbl_oslp: 'SlpCode',
-      tbl_jcanal: 'U_jCANAL',
-      tbl_jsubcanal: 'U_jSUBCANAL',
+      tbl_jcanales: 'U_jCANAL',
+      tbl_jsubcanales: 'U_jSUBCANAL',
     };
     const referencia = referencias[tabla.nombre];
     if (referencia === 'U_jCANAL' || referencia === 'U_jSUBCANAL') {
@@ -276,30 +285,51 @@ export class SociosNegocioService {
         'El código está relacionado con socios de negocio; reasignarlos primero',
       );
   }
+  private async registroParaModificar(
+    tx: Prisma.TransactionClient,
+    tabla: TablaSociosDefinicion,
+    empresaId: number,
+    referencia: string | number,
+    direccion?: string,
+  ) {
+    const modelo = this.modelo(tx, tabla);
+    const where = filtroRegistroSocios(tabla, empresaId, referencia, direccion);
+    const filas =
+      tabla.nombre === 'tbl_crd1'
+        ? await modelo.findMany({
+            where,
+            select: seleccionSocios(tabla),
+            take: 2,
+            orderBy: { id: 'asc' },
+          })
+        : [await modelo.findFirst({ where, select: seleccionSocios(tabla) })];
+    if (!filas[0])
+      throw new NotFoundException('Registro no disponible en esta empresa');
+    if (filas.length > 1)
+      throw new ConflictException(
+        'CardCode tiene varias direcciones; indicar direccion con Address, Street y AdresType originales',
+      );
+    return filas[0];
+  }
   async editar(
     tabla: TablaSociosDefinicion,
     empresaId: number,
-    id: string,
+    id: string | number,
     datos: EntradaSocio,
+    direccion?: string,
   ) {
     try {
       return await this.prisma.$transaction(
         async (tx) => {
           await this.bloquearEmpresa(tx, empresaId);
           const modelo = this.modelo(tx, tabla);
-          const actual = await modelo.findFirst({
-            where: {
-              empresaId,
-              ...(tabla.nombre === 'tbl_ocrd'
-                ? { CardCode: id }
-                : { id: BigInt(id) }),
-            },
-            select: seleccionSocios(tabla),
-          });
-          if (!actual)
-            throw new NotFoundException(
-              'Registro no disponible en esta empresa',
-            );
+          const actual = await this.registroParaModificar(
+            tx,
+            tabla,
+            empresaId,
+            id,
+            direccion,
+          );
           if (
             tabla.clave.some(
               (campo) =>
@@ -312,10 +342,7 @@ export class SociosNegocioService {
             await modelo.update({
               where: {
                 id: actual.id,
-                empresaId,
-                ...(tabla.nombre === 'tbl_ocrd'
-                  ? { CardCode: id }
-                  : { id: BigInt(id) }),
+                ...filtroRegistroSocios(tabla, empresaId, id, direccion),
               },
               data: datos,
               select: seleccionSocios(tabla),
@@ -328,28 +355,30 @@ export class SociosNegocioService {
       errorSocios(error);
     }
   }
-  async eliminar(tabla: TablaSociosDefinicion, empresaId: number, id: string) {
+  async eliminar(
+    tabla: TablaSociosDefinicion,
+    empresaId: number,
+    id: string | number,
+    direccion?: string,
+  ) {
     try {
       return await this.prisma.$transaction(
         async (tx) => {
           await this.bloquearEmpresa(tx, empresaId);
           const modelo = this.modelo(tx, tabla);
-          const actual = await modelo.findFirst({
-            where: {
-              empresaId,
-              ...(tabla.nombre === 'tbl_ocrd'
-                ? { CardCode: id }
-                : { id: BigInt(id) }),
-            },
-            select: seleccionSocios(tabla),
-          });
-          if (!actual)
-            throw new NotFoundException(
-              'Registro no disponible en esta empresa',
-            );
+          const actual = await this.registroParaModificar(
+            tx,
+            tabla,
+            empresaId,
+            id,
+            direccion,
+          );
           await this.protegerReferencias(tx, tabla, empresaId, actual);
           await modelo.delete({
-            where: { id: actual.id, empresaId },
+            where: {
+              id: actual.id,
+              ...filtroRegistroSocios(tabla, empresaId, id, direccion),
+            },
             select: { id: true },
           });
           return { ok: true };
@@ -382,8 +411,8 @@ export class SociosNegocioService {
       tbl_opln,
       tbl_oagp,
       tbl_oslp,
-      tbl_jcanal,
-      tbl_jsubcanal,
+      tbl_jcanales,
+      tbl_jsubcanales,
     ] = await Promise.all([
       resolver(TABLAS_SOCIOS.tbl_ocrg, 'GroupCode', socio.GroupCode),
       resolver(TABLAS_SOCIOS.tbl_octg, 'GroupNum', socio.GroupNum),
@@ -391,12 +420,12 @@ export class SociosNegocioService {
       resolver(TABLAS_SOCIOS.tbl_oagp, 'AgentCode', socio.AgentCode),
       resolver(TABLAS_SOCIOS.tbl_oslp, 'SlpCode', socio.SlpCode),
       resolver(
-        TABLAS_SOCIOS.tbl_jcanal,
+        TABLAS_SOCIOS.tbl_jcanales,
         'Code',
         codigoCanalSocio(socio.U_jCANAL),
       ),
       resolver(
-        TABLAS_SOCIOS.tbl_jsubcanal,
+        TABLAS_SOCIOS.tbl_jsubcanales,
         'Code',
         codigoCanalSocio(socio.U_jSUBCANAL),
       ),
@@ -408,8 +437,8 @@ export class SociosNegocioService {
       tbl_opln,
       tbl_oagp,
       tbl_oslp,
-      tbl_jcanal,
-      tbl_jsubcanal,
+      tbl_jcanales,
+      tbl_jsubcanales,
     };
   }
   async direcciones(

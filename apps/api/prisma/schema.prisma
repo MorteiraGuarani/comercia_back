@@ -26,9 +26,7 @@ model ConfiguracionTolerancia {
 model Empresa {
   socioNegocioFilas SocioNegocio[]
   socioNegocioDireccionFilas SocioNegocioDireccion[]
-  socioNegocioCanalFilas SocioNegocioCanal[]
   socioNegocioCanalesFilas SocioNegocioCanales[]
-  socioNegocioSubcanalFilas SocioNegocioSubcanal[]
   socioNegocioSubcanalesFilas SocioNegocioSubcanales[]
   socioNegocioSupervisorFilas SocioNegocioSupervisor[]
   socioNegocioVendedorFilas SocioNegocioVendedor[]
@@ -116,16 +114,6 @@ model SocioNegocioDireccion {
   @@map("tbl_crd1")
 }
 
-model SocioNegocioCanal {
-  id BigInt @id @default(autoincrement())
-  empresaId Int @map("empresa_id")
-  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
-  Code Int @default(autoincrement())
-  Name String? @db.VarChar(100)
-  @@unique([empresaId, Code], map: "uq_tbl_jcanal_empresa_clave")
-  @@index([empresaId, Name], map: "idx_tbl_jcanal_name")
-  @@map("tbl_jcanal")
-}
 
 model SocioNegocioCanales {
   id BigInt @id @default(autoincrement())
@@ -138,16 +126,6 @@ model SocioNegocioCanales {
   @@map("tbl_jcanales")
 }
 
-model SocioNegocioSubcanal {
-  id BigInt @id @default(autoincrement())
-  empresaId Int @map("empresa_id")
-  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
-  Code Int @default(autoincrement())
-  Name String? @db.VarChar(100)
-  @@unique([empresaId, Code], map: "uq_tbl_jsubcanal_empresa_clave")
-  @@index([empresaId, Name], map: "idx_tbl_jsubcanal_name")
-  @@map("tbl_jsubcanal")
-}
 
 model SocioNegocioSubcanales {
   id BigInt @id @default(autoincrement())

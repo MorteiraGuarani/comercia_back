@@ -75,12 +75,12 @@ export const CAMPOS_SOCIOS = {
   },
   U_jCANAL: {
     description:
-      'Valor original como texto. Si representa un entero int4, se resuelve contra tbl_jcanal.Code de la empresa; por ejemplo, "001" referencia Code=1.',
+      'Valor original como texto. Si representa un entero int4, se resuelve contra tbl_jcanales.Code de la empresa; por ejemplo, "001" referencia Code=1.',
     example: '1',
   },
   U_jSUBCANAL: {
     description:
-      'Valor original como texto. Si representa un entero int4, se resuelve contra tbl_jsubcanal.Code de la empresa.',
+      'Valor original como texto. Si representa un entero int4, se resuelve contra tbl_jsubcanales.Code de la empresa.',
     example: '1',
   },
   Address: {
@@ -98,7 +98,7 @@ export const CAMPOS_SOCIOS = {
   },
   Code: {
     description:
-      'Código original del catálogo. Al crear puede enviarse o asignarse automáticamente por empresa; al editar, omitirlo conserva el actual. Las tablas en plural son independientes de las singulares.',
+      'Código original del catálogo. Al crear puede enviarse o asignarse automáticamente por empresa; al editar, omitirlo conserva el actual. Las rutas de canales y subcanales usan Code, nunca id técnico.',
     example: 1,
   },
   Name: {

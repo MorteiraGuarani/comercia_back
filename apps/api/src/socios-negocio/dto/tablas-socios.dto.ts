@@ -52,21 +52,7 @@ export class SocioNegocioDireccionDto {
   AdresType?: string | null;
 }
 
-export class SocioNegocioCanalDto {
-  @CodigoIdentidadSocio()
-  Code?: number;
-  @TextoSocio(100, true, undefined)
-  Name?: string | null;
-}
-
 export class SocioNegocioCanalesDto {
-  @CodigoIdentidadSocio()
-  Code?: number;
-  @TextoSocio(100, true, undefined)
-  Name?: string | null;
-}
-
-export class SocioNegocioSubcanalDto {
   @CodigoIdentidadSocio()
   Code?: number;
   @TextoSocio(100, true, undefined)

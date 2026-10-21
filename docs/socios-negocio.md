@@ -1,178 +1,127 @@
 # Socios de negocio
 
-API de Comercia para las once tablas del catálogo de socios. Todas las operaciones
-son públicas: no requieren login, cookie, token ni API key. Cada ruta incluye una
-empresa existente y todas las lecturas, escrituras y relaciones se limitan a ella.
-La lista pública de empresas está en `GET /api/v1/admin/catalogo/empresas`.
+API pública de Comercia para nueve tablas, sin login, cookie, token ni API key.
+Cada ruta incluye una empresa existente y todas las operaciones se limitan a ella.
+Swagger público: `/api/docs`, especificación `/api/docs-json`. Documenta las 47
+operaciones, campos, restricciones, ejemplos individuales/bulk, respuestas y errores.
 
-Swagger está en `/api/docs` cuando `SWAGGER_ENABLED=true`; la especificación está en
-`/api/docs-json`. Hay un grupo por tabla, 57 operaciones documentadas, descripciones
-de todos los campos, restricciones, ejemplos individuales y bulk y respuestas.
+Se conservan las tablas y mayúsculas originales, sus tipos, longitudes, defaults y
+campos nullable. `id` BIGINT permanece como metadato técnico; `empresa_id` separa
+los datos. La empresa se toma de la ruta; `id`, `empresa_id` y `empresaId` no se
+aceptan en el JSON de creación/edición.
 
-## Tablas y claves
+## Rutas y claves
 
-Se conservan los nombres y mayúsculas originales de tablas y columnas, sus tipos,
-longitudes, campos nullable y valores predeterminados. Se agregan `id` BIGINT como
-clave técnica y `empresa_id` para separar los datos, igual que productos. La API
-devuelve `id` como texto para conservar precisión; la empresa se toma de la ruta y
-no se acepta `id`, `empresa_id` ni `empresaId` en el JSON.
+Base: `/api/v1/admin/socios-negocio/empresas/{empresaId}`.
 
-| Tabla | Contenido | Clave de duplicado dentro de una empresa |
+| Tabla | GET/PUT/DELETE individual | Clave de duplicado en la empresa |
 | --- | --- | --- |
-| `tbl_ocrd` | Socios de negocio | `CardCode` |
-| `tbl_crd1` | Direcciones | `CardCode`, `Address`, `Street`, `AdresType` |
-| `tbl_jcanal` | Canal canónico | `Code` |
-| `tbl_jcanales` | Catálogo independiente de canales | `Code` |
-| `tbl_jsubcanal` | Subcanal canónico | `Code` |
-| `tbl_jsubcanales` | Catálogo independiente de subcanales | `Code` |
-| `tbl_oagp` | Supervisores | `AgentCode` |
-| `tbl_oslp` | Vendedores | `SlpCode` |
-| `tbl_ocrg` | Grupos de clientes | `GroupCode` |
-| `tbl_octg` | Condiciones de pago | `GroupNum` |
-| `tbl_opln` | Listas de precios | `ListNum` |
+| tbl_ocrd | `/tbl_ocrd/{CardCode}` | CardCode |
+| tbl_crd1 | `/tbl_crd1/{CardCode}`; GET devuelve lista paginada | CardCode + Address + Street + AdresType |
+| tbl_jcanales | `/tbl_jcanales/{Code}` | Code |
+| tbl_jsubcanales | `/tbl_jsubcanales/{Code}` | Code |
+| tbl_oagp | `/tbl_oagp/{id}` | AgentCode |
+| tbl_oslp | `/tbl_oslp/{id}` | SlpCode |
+| tbl_ocrg | `/tbl_ocrg/{id}` | GroupCode |
+| tbl_octg | `/tbl_octg/{id}` | GroupNum |
+| tbl_opln | `/tbl_opln/{id}` | ListNum |
 
-En `tbl_crd1`, la clave compuesta permite omitir filas idénticas al reintentar un
-lote y conservar direcciones distintas aunque no tengan `Address`. Para corregir
-una dirección existente se usa su `id` con PUT; un bulk no sobrescribe calles.
-En claves nullable, dos valores NULL se consideran duplicados dentro de la empresa.
+Los códigos de socios/direcciones son texto exacto y conservan ceros iniciales.
+`Code` de canales/subcanales es un entero int4. Estas rutas nunca buscan por id
+técnico como alternativa. Para renombrar una clave, usar su valor original en la
+URL y el nuevo en el cuerpo. Codificar caracteres especiales de la URL.
 
-## Rutas
+GET de colección lista con `buscar`, `page` y `limit`; los resultados tienen
+`{items,total,page,limit,totalPages}`, con 7 filas por defecto y máximo 50.
+POST de colección admite un objeto o un arreglo bulk. PUT cambia los campos
+enviados y conserva los omitidos. DELETE respeta las referencias conocidas.
 
-Base: `/api/v1/admin/socios-negocio/empresas/{empresaId}/{tabla}`.
+## Direcciones por CardCode
 
-| Método | Ruta relativa | Comportamiento |
-| --- | --- | --- |
-| GET | `/` | Lista con `buscar`, `page`, `limit` |
-| GET | `/{id}` | Consulta una fila por su ID técnico |
-| POST | `/` | Crea un objeto o carga un arreglo bulk |
-| PUT | `/{id}` | Cambia los campos enviados; conserva los omitidos |
-| DELETE | `/{id}` | Elimina la fila si no tiene referencias conocidas |
-| GET | `tbl_ocrd/{id}/relaciones` desde la ruta de empresa | Resuelve los catálogos del socio |
-| GET | `tbl_ocrd/{id}/direcciones` desde la ruta de empresa | Lista sus direcciones con paginación |
+`GET /tbl_crd1/0001?page=1&limit=7` devuelve todas las direcciones de ese código
+en la empresa, incluso cuando el socio principal todavía no haya sido importado.
+La ruta conserva hasta 200 caracteres de CardCode, como la tabla original.
 
-Los listados devuelven `{items,total,page,limit,totalPages}`. El límite es 7 por
-defecto y 50 como máximo. `buscar` filtra campos de texto y, donde corresponde, la
-clave numérica del catálogo. No hay listados sin límite.
-
-## Carga individual y bulk
-
-Ejemplo de alta de socio, sin encabezado de autorización:
-
-```http
-POST /api/v1/admin/socios-negocio/empresas/1/tbl_ocrd
-Content-Type: application/json
-
-{
-  "CardCode": "C0001",
-  "CardName": "Comercial del Centro",
-  "GroupCode": 1,
-  "GroupNum": 1,
-  "LicTradNum": "80012345-6",
-  "ListNum": 1,
-  "SlpCode": 1,
-  "AgentCode": "SUP01",
-  "QryLunes": "Y",
-  "U_Latitud": "-25.2867",
-  "U_Longitud": "-57.6470",
-  "U_jCANAL": "1",
-  "U_jSUBCANAL": "1"
-}
-```
-
-Un objeto devuelve la fila creada con 201. Si su clave ya existe en esa empresa,
-devuelve 409. Para bulk se envía un arreglo al mismo endpoint:
+PUT y DELETE operan sobre una dirección. Si el código tiene exactamente una,
+no hace falta selector. Si tiene varias, devuelven 409 sin modificar ni borrar
+ninguna hasta que se indique el parámetro `direccion` con la clave completa
+original, codificada como JSON:
 
 ```json
-[
-  { "CardCode": "C0001", "CardName": "Comercial del Centro" },
-  { "CardCode": "C0002", "CardName": "Distribuidora del Sur" },
-  { "CardCode": "C0002", "CardName": "Duplicado que se omite" }
-]
+{"Address":"Casa central","Street":"Av. Mariscal López 123","AdresType":"S"}
 ```
 
-Si C0001 ya existe y C0002 es nuevo, responde 201 con:
+Ejemplo en JavaScript:
+
+```js
+const selector = encodeURIComponent(JSON.stringify({
+  Address: null, Street: 'Calle anterior', AdresType: 'S'
+}));
+// El cuerpo PUT contiene los valores nuevos; el selector conserva los originales.
+const url = `/api/v1/admin/socios-negocio/empresas/1/tbl_crd1/0001?direccion=${selector}`;
+```
+
+Los tres campos deben estar presentes y admitir texto de hasta 200 caracteres
+o null. NULL se distingue del texto literal `"null"`. No se permiten claves
+desconocidas. Un selector sin coincidencias devuelve 404. GET también admite
+este selector para filtrar una dirección dentro de su lista paginada.
+Las filas históricas con CardCode NULL siguen visibles en la colección; la ruta
+por código requiere un CardCode textual. Las columnas originales no cambian.
+
+## Bulk y validación
+
+Un objeto devuelve la fila con 201 o 409 si la clave ya existe. Un arreglo admite
+entre 1 y 50.000 filas y hasta 50 MiB por defecto (`HTTP_BODY_LIMIT_MB`). Se valida
+todo antes de escribir. Conserva la primera aparición y omite claves existentes
+sin actualizarlas. Los bloques de 1.000 filas se escriben en una transacción;
+cualquier fallo revierte el lote. Respuesta de ejemplo:
 
 ```json
-{
-  "recibidos": 3,
-  "insertados": 1,
-  "existentes": 1,
-  "duplicadosEnLote": 1,
-  "omitidos": 2
-}
+{"recibidos":3,"insertados":1,"existentes":1,"duplicadosEnLote":1,"omitidos":2}
 ```
 
-Se valida el lote completo antes de escribir. Se conserva la primera aparición de
-cada clave y se omiten las existentes sin actualizarlas. Los bloques de 1.000 filas
-se escriben en una única transacción: un fallo revierte la carga completa.
+Una fila inválida devuelve 400 con `index` desde cero y `details`. Un cuerpo grande
+devuelve 413; se conserva el límite global de solicitudes (429). El límite ampliado
+solo corresponde a POST de colección de las nueve tablas. No se aceptan campos
+desconocidos. Los enteros del JSON deben ser números; coordenadas y códigos de canal
+de tbl_ocrd se envían como texto. `null` conserva NULL en columnas nullable.
 
-El máximo es 50.000 filas por solicitud. El JSON puede ocupar hasta 50 MiB por
-defecto, según `HTTP_BODY_LIMIT_MB`. Ese límite ampliado solo corresponde al POST
-de colección de las once tablas; PUT y otras rutas conservan el límite general.
-
-Los números deben enviarse como números JSON, y las coordenadas y códigos de canal
-de `tbl_ocrd` como texto. No se admiten campos desconocidos. Una fila inválida causa
-400 e incluye `index` comenzando en cero y `details`. Un cuerpo demasiado grande
-causa 413; se mantiene el límite global de solicitudes con respuesta 429.
-
-Al omitir valores al crear un socio, `GroupNum` y `SlpCode` toman -1 y los cinco
-indicadores de días toman `N`. En direcciones, `AdresType` toma `S`. En campos
-nullable, enviar `null` guarda NULL; no aplica el valor predeterminado.
-
-En las cuatro tablas de canales, `Code` admite un entero explícito o puede omitirse
-al crear. La API asigna el siguiente código positivo después del máximo de esa
-empresa, reservando también los códigos explícitos del mismo lote. Esta asignación
-se serializa por empresa. Filas sin `Code` representan nuevas filas: repetirlas
-vuelve a insertar; para una sincronización idempotente se debe enviar `Code`.
+Al omitir campos al crear, GroupNum/SlpCode toman -1, los indicadores de días toman
+N y AdresType toma S. En las dos tablas plurales, Code puede omitirse al crear:
+la API asigna el siguiente positivo por empresa, reservando los códigos explícitos
+del mismo lote y serializando las escrituras. Para bulk idempotente enviar Code.
 
 ## Relaciones
 
-Todas se resuelven con la misma empresa del socio:
+`GET /tbl_ocrd/{CardCode}/relaciones` resuelve catálogos en la misma empresa:
 
-| Campo en `tbl_ocrd` | Destino |
+| Campo | Catálogo |
 | --- | --- |
-| `CardCode` | `tbl_crd1.CardCode` para sus direcciones |
-| `GroupCode` | `tbl_ocrg.GroupCode` |
-| `GroupNum` | `tbl_octg.GroupNum` |
-| `ListNum` | `tbl_opln.ListNum` |
-| `SlpCode` | `tbl_oslp.SlpCode` |
-| `AgentCode` | `tbl_oagp.AgentCode` |
-| `U_jCANAL` | `tbl_jcanal.Code` si el texto representa un entero int4 |
-| `U_jSUBCANAL` | `tbl_jsubcanal.Code` si el texto representa un entero int4 |
+| GroupCode | tbl_ocrg.GroupCode |
+| GroupNum | tbl_octg.GroupNum |
+| ListNum | tbl_opln.ListNum |
+| SlpCode | tbl_oslp.SlpCode |
+| AgentCode | tbl_oagp.AgentCode |
+| U_jCANAL | tbl_jcanales.Code |
+| U_jSUBCANAL | tbl_jsubcanales.Code |
 
-`"001"` referencia Code=1 conservando el texto original. Los valores no numéricos
-se conservan y no resuelven un catálogo. `tbl_jcanales` y `tbl_jsubcanales` son
-catálogos independientes; no se presupone una relación entre singular y plural.
+Los campos U_jCANAL/U_jSUBCANAL conservan su texto: `"001"` resuelve Code=1 si
+representa un int4. Valores no numéricos o referencias ausentes devuelven null.
+No se inventan registros para -1. Las referencias son lógicas para permitir
+importaciones parciales; empresa_id tiene FK obligatoria. Los catálogos usados
+y socios con direcciones no pueden eliminarse ni cambiar su clave (409).
+`GET /tbl_ocrd/{CardCode}/direcciones` lista las direcciones del socio con paginación.
 
-Las referencias de negocio son lógicas, sin claves foráneas entre las once tablas,
-para permitir cargas parciales o en cualquier orden. Una referencia no cargada o
-nula aparece como `null` en `/relaciones`. No se crean registros ficticios para -1;
-si existe un catálogo con ese código se devuelve normalmente. La empresa sí tiene
-clave foránea obligatoria. La API impide eliminar o cambiar la clave de catálogos
-canónicos usados, o de socios que todavía tienen direcciones, devolviendo 409.
+## Migración
 
-## Migración y verificación
+`20261021200000_canales_plurales` importa los códigos singulares en las tablas
+plurales dentro de cada empresa, preserva nombres existentes compatibles y
+completa nombres NULL. Si encuentra nombres distintos no nulos para la misma
+empresa/Code, aborta antes de eliminar tablas. Luego ejecuta DROP TABLE de
+tbl_jcanal y tbl_jsubcanal, sin CASCADE. Las referencias textuales de socios
+permanecen intactas y pasan a resolver los plurales. Se mantienen las migraciones
+históricas para reproducir la evolución de la base.
 
-La migración `20261021170000_socios_negocio` crea las once tablas. Requiere PostgreSQL
-15 o superior por los índices `NULLS NOT DISTINCT`, necesarios para la idempotencia
-de claves nullable. Esta propiedad se conserva en el SQL de migración y se verifica
-con una prueba aislada. No ejecutar los CREATE TABLE originales adicionalmente.
-
-Para aplicar migraciones en el entorno elegido se usa el procedimiento habitual
-`npm run prisma:deploy --workspace=api`. Esta implementación no aplica cambios en
-la base de producción por sí sola.
-
-Desde la raíz del repositorio:
-
-```bash
-npm run prisma:generate --workspace=api
-npm run build --workspace=api
-npm run test --workspace=api -- --runInBand socios-negocio.service.spec.ts
-npm run test:socios --workspace=api
-```
-
-Las pruebas de migración usan PostgreSQL aislado con PGlite, y las HTTP arrancan una
-API temporal con repositorios simulados: no requieren navegador ni la base del
-usuario. Verifican las 57 operaciones, Swagger, ejemplos, validación y tamaño de
-cuerpo. Las pruebas del servicio verifican separación por empresa, referencias,
-códigos automáticos y resumen bulk. El pipeline de despliegue ejecuta estas pruebas.
+Verificación sin navegador: compilación, pruebas del servicio y
+`npm run test:socios --workspace=api`. Incluye PostgreSQL aislado, preservación
+de datos en la migración, conflictos, empresa, NULL, bulk, Swagger y HTTP.

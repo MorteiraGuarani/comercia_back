@@ -78,6 +78,68 @@ function preparar() {
 }
 
 describe('Socios de negocio públicos y separados por empresa', () => {
+  it('no elige una dirección arbitraria y selecciona por clave original incluyendo NULL', async () => {
+    const { modelos, service } = preparar();
+    const tabla = TABLAS_SOCIOS.tbl_crd1;
+    const primera = {
+      id: 11n,
+      CardCode: '0001',
+      Address: null,
+      Street: 'null',
+      AdresType: 'S',
+    };
+    const segunda = { ...primera, id: 12n, Street: 'Otra calle' };
+    modelos.socioNegocioDireccion.findMany.mockResolvedValue([
+      primera,
+      segunda,
+    ]);
+    await expect(
+      service.editar(tabla, 20, '0001', { Street: 'Nueva' }),
+    ).rejects.toBeInstanceOf(ConflictException);
+    await expect(service.eliminar(tabla, 20, '0001')).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+    expect(modelos.socioNegocioDireccion.update).not.toHaveBeenCalled();
+    expect(modelos.socioNegocioDireccion.delete).not.toHaveBeenCalled();
+    modelos.socioNegocioDireccion.findMany.mockResolvedValue([primera]);
+    const selector = JSON.stringify({
+      Address: null,
+      Street: 'null',
+      AdresType: 'S',
+    });
+    await service.editar(tabla, 20, '0001', { Street: 'Nueva' }, selector);
+    expect(modelos.socioNegocioDireccion.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          empresaId: 20,
+          id: 11n,
+          CardCode: '0001',
+          Address: null,
+          Street: 'null',
+          AdresType: 'S',
+        },
+        data: { Street: 'Nueva' },
+      }),
+    );
+    await service.eliminar(tabla, 20, '0001', selector);
+    expect(modelos.socioNegocioDireccion.delete).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          empresaId: 20,
+          id: 11n,
+          CardCode: '0001',
+          Address: null,
+          Street: 'null',
+          AdresType: 'S',
+        },
+      }),
+    );
+    modelos.socioNegocioDireccion.findMany.mockResolvedValue([]);
+    await expect(
+      service.eliminar(tabla, 20, 'OTRO', selector),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
   it.each(Object.values(TABLAS_SOCIOS))(
     '$nombre: pagina, proyecta y restringe todas las operaciones a la empresa sin sesión',
     async (tabla) => {
@@ -92,21 +154,31 @@ describe('Socios de negocio públicos y separados por empresa', () => {
       expect(repositorio.findMany).toHaveBeenCalledWith(
         expect.objectContaining({ where: { empresaId: 20 }, skip: 0, take: 7 }),
       );
+      const valor =
+        tabla.nombre === 'tbl_ocrd' || tabla.nombre === 'tbl_crd1'
+          ? '000123'
+          : tabla.identidad
+            ? 7
+            : '9007199254740993';
       const referencia =
-        tabla.nombre === 'tbl_ocrd'
-          ? { CardCode: '9007199254740993' }
-          : { id: 9007199254740993n };
-      await service.obtener(tabla, 20, '9007199254740993');
-      expect(repositorio.findFirst).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { empresaId: 20, ...referencia },
-        }),
+        tabla.nombre === 'tbl_ocrd' || tabla.nombre === 'tbl_crd1'
+          ? { CardCode: valor }
+          : tabla.identidad
+            ? { Code: 7 }
+            : { id: 9007199254740993n };
+      await service.obtener(tabla, 20, valor);
+      const lectura =
+        tabla.nombre === 'tbl_crd1'
+          ? repositorio.findMany
+          : repositorio.findFirst;
+      expect(lectura).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { empresaId: 20, ...referencia } }),
       );
       await service.crear(tabla, 20, tabla.ejemplo);
       expect(repositorio.create).toHaveBeenCalledWith(
         expect.objectContaining({ data: { ...tabla.ejemplo, empresaId: 20 } }),
       );
-      await service.editar(tabla, 20, '9007199254740993', {});
+      await service.editar(tabla, 20, valor, {});
       expect(repositorio.update).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { empresaId: 20, id: 9007199254740993n, ...referencia },
@@ -117,11 +189,11 @@ describe('Socios de negocio públicos y separados por empresa', () => {
       db.$queryRaw
         .mockResolvedValueOnce([{ id: 20 }])
         .mockResolvedValueOnce([]);
-      await expect(
-        service.eliminar(tabla, 20, '9007199254740993'),
-      ).resolves.toEqual({ ok: true });
+      await expect(service.eliminar(tabla, 20, valor)).resolves.toEqual({
+        ok: true,
+      });
       expect(repositorio.delete).toHaveBeenCalledWith({
-        where: { empresaId: 20, id: 9007199254740993n },
+        where: { empresaId: 20, id: 9007199254740993n, ...referencia },
         select: { id: true },
       });
     },
@@ -196,12 +268,7 @@ describe('Socios de negocio públicos y separados por empresa', () => {
     expect(db.$transaction).toHaveBeenCalledTimes(1);
   });
 
-  it.each([
-    TABLAS_SOCIOS.tbl_jcanal,
-    TABLAS_SOCIOS.tbl_jcanales,
-    TABLAS_SOCIOS.tbl_jsubcanal,
-    TABLAS_SOCIOS.tbl_jsubcanales,
-  ])(
+  it.each([TABLAS_SOCIOS.tbl_jcanales, TABLAS_SOCIOS.tbl_jsubcanales])(
     '$nombre: asigna Code por empresa reservando los códigos explícitos del lote',
     async (tabla) => {
       const { modelos, db, service } = preparar();
@@ -282,12 +349,12 @@ describe('Socios de negocio públicos y separados por empresa', () => {
   it('protege canales referenciados mediante texto numérico con ceros iniciales', async () => {
     const { db, modelos, service } = preparar();
     await expect(
-      service.eliminar(TABLAS_SOCIOS.tbl_jcanal, 20, '1'),
+      service.eliminar(TABLAS_SOCIOS.tbl_jcanales, 20, '1'),
     ).rejects.toBeInstanceOf(ConflictException);
     const consulta = db.$queryRaw.mock.calls[1][0] as Prisma.Sql;
     expect(consulta.sql).toContain('"U_jCANAL"::numeric');
     expect(consulta.values).toEqual([20, 1]);
-    expect(modelos.socioNegocioCanal.delete).not.toHaveBeenCalled();
+    expect(modelos.socioNegocioCanales.delete).not.toHaveBeenCalled();
   });
 
   it('resuelve relaciones dentro de la empresa, conserva texto y devuelve null para referencias ausentes', async () => {
@@ -311,15 +378,14 @@ describe('Socios de negocio públicos y separados por empresa', () => {
     expect(resultado.tbl_ocrd.U_jCANAL).toBe('0001');
     expect(resultado.tbl_ocrg).toBeNull();
     expect(resultado.tbl_octg).toBeNull();
-    expect(resultado.tbl_jsubcanal).toBeNull();
-    expect(modelos.socioNegocioCanal.findFirst).toHaveBeenCalledWith(
+    expect(resultado.tbl_jsubcanales).toBeNull();
+    expect(modelos.socioNegocioCanales.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({ where: { empresaId: 20, Code: 1 } }),
     );
     expect(modelos.socioNegocioVendedor.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({ where: { empresaId: 20, SlpCode: -1 } }),
     );
-    expect(modelos.socioNegocioCanales.findFirst).not.toHaveBeenCalled();
-    expect(modelos.socioNegocioSubcanal.findFirst).not.toHaveBeenCalled();
+    expect(modelos.socioNegocioSubcanales.findFirst).not.toHaveBeenCalled();
     await service.direcciones(20, 'A', { page: 2, limit: 10 });
     expect(modelos.socioNegocioDireccion.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -345,12 +411,12 @@ describe('Socios de negocio públicos y separados por empresa', () => {
 
   it('no desborda el int4 al asignar Code', async () => {
     const { modelos, service } = preparar();
-    modelos.socioNegocioCanal.aggregate.mockResolvedValue({
+    modelos.socioNegocioCanales.aggregate.mockResolvedValue({
       _max: { Code: 2147483647 },
     });
     await expect(
-      service.crear(TABLAS_SOCIOS.tbl_jcanal, 20, { Name: 'Nuevo' }),
+      service.crear(TABLAS_SOCIOS.tbl_jcanales, 20, { Name: 'Nuevo' }),
     ).rejects.toBeInstanceOf(BadRequestException);
-    expect(modelos.socioNegocioCanal.create).not.toHaveBeenCalled();
+    expect(modelos.socioNegocioCanales.create).not.toHaveBeenCalled();
   });
 });

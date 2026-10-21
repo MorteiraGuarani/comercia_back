@@ -16,7 +16,7 @@ export function esquemaRespuestaSocios(
             type: 'string',
             example: '1',
             description:
-              'ID técnico interno, conservado como texto. En tbl_ocrd las rutas usan exclusivamente CardCode y empresaId.',
+              'ID técnico interno como texto. Socios y direcciones se consultan por CardCode; canales/subcanales por Code, siempre dentro de empresaId.',
             readOnly: true,
           },
         },
