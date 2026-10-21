@@ -48,12 +48,6 @@ function preparar() {
       },
     }),
   };
-  // Las altas y ediciones pasan por administrar(), que valida igual que gestionar().
-  Object.assign(acceso, {
-    administrar: jest.fn((usuarioId: number, pagina: string): unknown =>
-      acceso.gestionar(usuarioId, pagina),
-    ),
-  });
   return {
     tx,
     prisma,

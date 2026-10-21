@@ -24,7 +24,7 @@ export class LogoClienteService {
     file?: Express.Multer.File,
   ): Promise<{ url: string }> {
     if (!file) throw new BadRequestException('No se envió archivo de imagen');
-    const usuario = await this.acceso.administrar(usuarioId, 'clientes');
+    const usuario = await this.acceso.gestionar(usuarioId, 'clientes');
     validarArchivoImagen(file);
     const nombre = `logo_${usuario.empresaId}_${uuidv4()}${extensionLogo(file.mimetype)}`;
     const directorio = directorioLogosClientes();

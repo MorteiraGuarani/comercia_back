@@ -109,7 +109,7 @@ export class PlanificacionCampoService {
     id?: number,
     asignacionId?: number,
   ) {
-    const u = await this.acceso.administrar(usuarioId, 'locales');
+    const u = await this.acceso.gestionar(usuarioId, 'locales');
     await this.acceso.local(u.empresaId, localId);
     const destinatario = destinatarioCampo(u.equipoCampo);
     const equipoCampoId = exigirEquipoCampo(u.equipoCampo).id;
@@ -183,7 +183,7 @@ export class PlanificacionCampoService {
     });
   }
   async eliminarHorario(usuarioId: number, localId: number, id: number) {
-    const u = await this.acceso.administrar(usuarioId, 'locales');
+    const u = await this.acceso.gestionar(usuarioId, 'locales');
     await this.acceso.local(u.empresaId, localId);
     const resultado = await this.prisma.horarioCampo.updateMany({
       where: {
@@ -229,7 +229,7 @@ export class PlanificacionCampoService {
     dto: HorarioCampoDto,
     id?: number,
   ) {
-    const { a } = await this.asignacionDelEquipo(usuarioId, asignacionId, true);
+    const { a } = await this.asignacionDelEquipo(usuarioId, asignacionId);
     return this.guardarHorario(usuarioId, a.localId, dto, id, asignacionId);
   }
   async eliminarHorarioAsignacion(
@@ -237,7 +237,7 @@ export class PlanificacionCampoService {
     asignacionId: number,
     id: number,
   ) {
-    const { u } = await this.asignacionDelEquipo(usuarioId, asignacionId, true);
+    const { u } = await this.asignacionDelEquipo(usuarioId, asignacionId);
     const resultado = await this.prisma.horarioCampo.updateMany({
       where: {
         id,
@@ -281,7 +281,7 @@ export class PlanificacionCampoService {
     return respuestaPaginada(items, total, page, limit);
   }
   async asignar(usuarioId: number, localId: number, dto: AsignacionCampoDto) {
-    const u = await this.acceso.administrar(usuarioId, 'locales');
+    const u = await this.acceso.gestionar(usuarioId, 'locales');
     await this.acceso.local(u.empresaId, localId);
     await this.acceso.subordinado(u.empresaId, u.id, dto.usuarioId);
     const fechas = vigenciaCampo(dto.fechaDesde, dto.fechaHasta);
@@ -309,14 +309,8 @@ export class PlanificacionCampoService {
       });
     });
   }
-  private async asignacionDelEquipo(
-    usuarioId: number,
-    id: number,
-    edicion = false,
-  ) {
-    const u = edicion
-      ? await this.acceso.administrar(usuarioId, 'locales')
-      : await this.acceso.gestionar(usuarioId, 'locales');
+  private async asignacionDelEquipo(usuarioId: number, id: number) {
+    const u = await this.acceso.gestionar(usuarioId, 'locales');
     const colaboradores = await obtenerColaboradoresGestionados(this.prisma, u);
     const a = await this.prisma.asignacionCampo.findFirst({
       where: {
@@ -344,7 +338,6 @@ export class PlanificacionCampoService {
     const { u, a, colaboradores } = await this.asignacionDelEquipo(
       usuarioId,
       id,
-      true,
     );
     return this.prisma.$transaction(
       async (tx) => {
@@ -399,7 +392,7 @@ export class PlanificacionCampoService {
     );
   }
   async quitarAsignacion(usuarioId: number, id: number) {
-    const { u, a } = await this.asignacionDelEquipo(usuarioId, id, true);
+    const { u, a } = await this.asignacionDelEquipo(usuarioId, id);
     return this.prisma.$transaction(
       async (tx) => {
         await tx.asignacionCampo.update({
@@ -448,11 +441,7 @@ export class PlanificacionCampoService {
     asignacionId: number,
     dto: BackupCampoDto,
   ) {
-    const { u, a } = await this.asignacionDelEquipo(
-      usuarioId,
-      asignacionId,
-      true,
-    );
+    const { u, a } = await this.asignacionDelEquipo(usuarioId, asignacionId);
     await this.acceso.subordinado(u.empresaId, u.id, dto.usuarioId);
     const fechas = vigenciaCampo(dto.fechaDesde, dto.fechaHasta);
     if (
@@ -491,7 +480,7 @@ export class PlanificacionCampoService {
     });
   }
   async quitarBackup(usuarioId: number, asignacionId: number, id: number) {
-    await this.asignacionDelEquipo(usuarioId, asignacionId, true);
+    await this.asignacionDelEquipo(usuarioId, asignacionId);
     const resultado = await this.prisma.backupCampo.updateMany({
       where: { id, asignacionId },
       data: { activo: false },

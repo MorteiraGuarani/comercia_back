@@ -5,11 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AccesoPlataformaService } from '../plataforma/acceso-plataforma.service';
-import {
-  esRolLiderCampo,
-  exigirEquipoCampo,
-  EQUIPO_CAMPO_SELECT,
-} from './utils/equipo-campo';
+import { exigirEquipoCampo, EQUIPO_CAMPO_SELECT } from './utils/equipo-campo';
 import { obtenerColaboradoresGestionados } from './utils/autorizacion';
 
 @Injectable()
@@ -26,15 +22,6 @@ export class CampoAccesoService {
       pagina,
     );
     exigirEquipoCampo(usuario.equipoCampo);
-    return usuario;
-  }
-  /** Altas, ediciones y bajas del catálogo: los líderes de campo solo consultan. */
-  async administrar(usuarioId: number, pagina: string) {
-    const usuario = await this.gestionar(usuarioId, pagina);
-    if (esRolLiderCampo(usuario.rolDescripcion))
-      throw new ForbiddenException(
-        'Tu rol puede consultar esta sección, pero no modificarla',
-      );
     return usuario;
   }
   async ejecutar(usuarioId: number) {

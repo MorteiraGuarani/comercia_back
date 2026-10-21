@@ -1,6 +1,5 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
 import { CampoAccesoService } from './campo-acceso.service';
-import { esRolLiderCampo } from './utils/equipo-campo';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { AccesoPlataformaService } from '../plataforma/acceso-plataforma.service';
 jest.mock('../prisma/prisma.service', () => ({ PrismaService: class {} }));
@@ -46,45 +45,6 @@ describe('Alcance de campo', () => {
     );
     return { prisma, plataforma, service };
   }
-  it('reconoce a TeamLeaders y Supervisores de cualquier equipo', () => {
-    for (const rol of [
-      'TeamLeader',
-      'Team Leader Impulsador',
-      'Supervisor',
-      'Supervisor Impulsador',
-      'Supervisor Repositor',
-    ])
-      expect(esRolLiderCampo(rol)).toBe(true);
-    for (const rol of ['Repositor', 'Impulsador', 'Administrador', null])
-      expect(esRolLiderCampo(rol)).toBe(false);
-  });
-
-  it('los líderes consultan el catálogo pero no lo modifican', async () => {
-    const { plataforma, service } = preparar();
-    const exigir = jest.fn().mockResolvedValue({
-      id: 20,
-      empresaId: 10,
-      rolDescripcion: 'Supervisor Repositor',
-      equipoCampo: { ...equipoCampo, tipo: 'REPOSITOR' },
-    });
-    Object.assign(plataforma, { exigirAccesoPagina: exigir });
-    await expect(service.gestionar(20, 'locales')).resolves.toMatchObject({
-      id: 20,
-    });
-    await expect(service.administrar(20, 'locales')).rejects.toBeInstanceOf(
-      ForbiddenException,
-    );
-    exigir.mockResolvedValue({
-      id: 5,
-      empresaId: 10,
-      rolDescripcion: 'Administrador de campo',
-      equipoCampo,
-    });
-    await expect(service.administrar(5, 'locales')).resolves.toMatchObject({
-      id: 5,
-    });
-  });
-
   it('rechaza usuarios fuera de la cadena del líder', async () => {
     const { prisma, plataforma, service } = preparar();
     await expect(service.subordinado(10, 20, 40)).rejects.toBeInstanceOf(

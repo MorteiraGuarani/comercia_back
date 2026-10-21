@@ -15,18 +15,6 @@ export function exigirEquipoCampo(
   return equipo;
 }
 
-/**
- * TeamLeader y Supervisor (de impulsadores o de repositores): siguen a su
- * equipo y consultan el catálogo, pero no lo modifican.
- */
-export function esRolLiderCampo(descripcion?: string | null): boolean {
-  const rol = (descripcion ?? '')
-    .normalize('NFD')
-    .toLowerCase()
-    .replace(/[^a-z]/g, '');
-  return rol.startsWith('teamleader') || rol.startsWith('supervisor');
-}
-
 export function destinatarioCampo(
   equipo?: EquipoCampoDto | null,
 ): DestinatarioTareaCampo {

@@ -14,8 +14,6 @@ import { TOKENS } from "./tokens";
 import { BuscadorCatalogo, KpisFiltro } from "./ui/filtros-catalogo";
 import { TopBar } from "./ui/top-bar";
 import { PlanLocal } from "./plan-local";
-import { usePanel } from "@/components/panel/contexto";
-import { esRolLiderCampo } from "@/utils/rol-campo";
 import { SelectorClienteCombobox } from "./selector-cliente-combobox";
 import { TarjetaPdv } from "./tarjeta-pdv";
 import { FotoLocal } from "./ui/foto-local";
@@ -57,9 +55,6 @@ const MapaClientes = dynamic(
 
 export function LocalesPanel() {
   const [mostrarMapaCobertura, setMostrarMapaCobertura] = useState(false);
-  const { usuario } = usePanel();
-  // TeamLeader y Supervisor ven los locales y su planificación sin editarlos.
-  const soloLectura = esRolLiderCampo(usuario.rol?.descripcion);
   const [busqueda, setBusqueda] = useState("");
   const [clienteFiltro, setClienteFiltro] = useState<number | "">("");
   const [clienteSeleccionadoFiltro, setClienteSeleccionadoFiltro] =
@@ -185,18 +180,16 @@ export function LocalesPanel() {
             >
               <IconoMapa className="h-5 w-5" />
             </button>
-            {soloLectura ? null : (
-              <button
-                type="button"
-                onClick={abrirCrear}
-                aria-label="Crear local"
-                title="Crear local"
-                className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-white shadow-sm transition-all hover:brightness-110 active:scale-95 cursor-pointer"
-                style={{ backgroundColor: TOKENS.carne }}
-              >
-                <IconoMas className="w-4 h-4" />
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={abrirCrear}
+              aria-label="Crear local"
+              title="Crear local"
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-white shadow-sm transition-all hover:brightness-110 active:scale-95 cursor-pointer"
+              style={{ backgroundColor: TOKENS.carne }}
+            >
+              <IconoMas className="w-4 h-4" />
+            </button>
           </>
         }
       />
@@ -320,22 +313,18 @@ export function LocalesPanel() {
               <p className="text-xs text-muted mt-1 max-w-sm mx-auto">
                 {busqueda || clienteFiltro
                   ? "Prueba cambiando los filtros de búsqueda o cliente seleccionado."
-                  : soloLectura
-                    ? "Todavía no hay puntos de venta cargados."
-                    : "Agrega tu primer punto de venta para asignar visitas y tareas."}
+                  : "Agrega tu primer punto de venta para asignar visitas y tareas."}
               </p>
-              {soloLectura ? null : (
-                <button
-                  type="button"
-                  onClick={abrirCrear}
-                  aria-label="Crear local"
-                  title="Crear local"
-                  className="mt-3.5 inline-grid h-11 w-11 place-items-center rounded-lg text-white"
-                  style={{ backgroundColor: TOKENS.ink }}
-                >
-                  <IconoMas className="w-3.5 h-3.5" />
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={abrirCrear}
+                aria-label="Crear local"
+                title="Crear local"
+                className="mt-3.5 inline-grid h-11 w-11 place-items-center rounded-lg text-white"
+                style={{ backgroundColor: TOKENS.ink }}
+              >
+                <IconoMas className="w-3.5 h-3.5" />
+              </button>
             </div>
           ) : (
             <>
@@ -348,9 +337,9 @@ export function LocalesPanel() {
                     <TarjetaPdv
                       local={local}
                       ocupado={!!op.mensaje}
-                      onEditar={soloLectura ? undefined : () => setForm(local)}
+                      onEditar={() => setForm(local)}
                       onRuta={() => setPlan(local)}
-                      onEliminar={soloLectura ? undefined : () => abrirEliminar(local)}
+                      onEliminar={() => abrirEliminar(local)}
                     />
                   </li>
                 ))}
@@ -373,12 +362,10 @@ export function LocalesPanel() {
                       >
                         <td className="whitespace-nowrap px-3.5 py-2.5">
                           <div className="flex items-center gap-1.5">
-                            {soloLectura ? null : (
-                              <BotonEditar
-                                onClick={() => setForm(local)}
-                                etiqueta={`Editar local ${local.nombre}`}
-                              />
-                            )}
+                            <BotonEditar
+                              onClick={() => setForm(local)}
+                              etiqueta={`Editar local ${local.nombre}`}
+                            />
                             <button
                               type="button"
                               onClick={() => setPlan(local)}
@@ -387,13 +374,11 @@ export function LocalesPanel() {
                               <IconoPlanificacion className="h-3.5 w-3.5" />
                               Ruta
                             </button>
-                            {soloLectura ? null : (
-                              <BotonEliminarCampo
-                                onClick={() => abrirEliminar(local)}
-                                etiqueta={`Eliminar local ${local.nombre}`}
-                                disabled={!!op.mensaje}
-                              />
-                            )}
+                            <BotonEliminarCampo
+                              onClick={() => abrirEliminar(local)}
+                              etiqueta={`Eliminar local ${local.nombre}`}
+                              disabled={!!op.mensaje}
+                            />
                           </div>
                         </td>
                         <td className="min-w-[240px] px-3.5 py-2.5">
