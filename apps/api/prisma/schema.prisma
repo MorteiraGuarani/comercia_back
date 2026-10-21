@@ -24,6 +24,17 @@ model ConfiguracionTolerancia {
 }
 
 model Empresa {
+  socioNegocioFilas SocioNegocio[]
+  socioNegocioDireccionFilas SocioNegocioDireccion[]
+  socioNegocioCanalFilas SocioNegocioCanal[]
+  socioNegocioCanalesFilas SocioNegocioCanales[]
+  socioNegocioSubcanalFilas SocioNegocioSubcanal[]
+  socioNegocioSubcanalesFilas SocioNegocioSubcanales[]
+  socioNegocioSupervisorFilas SocioNegocioSupervisor[]
+  socioNegocioVendedorFilas SocioNegocioVendedor[]
+  socioNegocioGrupoFilas SocioNegocioGrupo[]
+  socioNegocioCondicionPagoFilas SocioNegocioCondicionPago[]
+  socioNegocioListaPrecioFilas SocioNegocioListaPrecio[]
   configuracionesTolerancia ConfiguracionTolerancia[]
   id                  Int                       @id @default(autoincrement())
   nombre              String                    @unique
@@ -52,6 +63,154 @@ model Empresa {
   updatedAt           DateTime                  @default(now()) @updatedAt @map("updated_at")
 
   @@map("empresas")
+}
+
+// Catálogos originales de socios de negocio. Las referencias entre códigos
+// se resuelven lógicamente por empresa para permitir sincronizaciones parciales.
+
+model SocioNegocio {
+  id BigInt @id @default(autoincrement())
+  empresaId Int @map("empresa_id")
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  CardCode String @db.VarChar(15)
+  CardName String? @db.VarChar(200)
+  GroupCode Int? @db.SmallInt
+  GroupNum Int? @default(-1) @db.SmallInt
+  LicTradNum String? @db.VarChar(32)
+  ListNum Int? @db.SmallInt
+  SlpCode Int? @default(-1)
+  QryLunes String? @default("N") @db.VarChar(1)
+  QryMartes String? @default("N") @db.VarChar(1)
+  QryMiercoles String? @default("N") @db.VarChar(1)
+  QryJueves String? @default("N") @db.VarChar(1)
+  QryViernes String? @default("N") @db.VarChar(1)
+  AgentCode String? @db.VarChar(32)
+  U_Latitud String? @db.VarChar(30)
+  U_Longitud String? @db.VarChar(30)
+  U_jCANAL String? @db.VarChar(50)
+  U_jSUBCANAL String? @db.VarChar(50)
+  @@unique([empresaId, CardCode], map: "uq_tbl_ocrd_cardcode")
+  @@index([empresaId, CardName], map: "idx_tbl_ocrd_cardname")
+  @@index([empresaId, GroupCode], map: "idx_tbl_ocrd_groupcode")
+  @@index([empresaId, GroupNum], map: "idx_tbl_ocrd_groupnum")
+  @@index([empresaId, ListNum], map: "idx_tbl_ocrd_listnum")
+  @@index([empresaId, SlpCode], map: "idx_tbl_ocrd_slpcode")
+  @@index([empresaId, AgentCode], map: "idx_tbl_ocrd_agentcode")
+  @@index([empresaId, U_jCANAL], map: "idx_tbl_ocrd_u_jcanal")
+  @@index([empresaId, U_jSUBCANAL], map: "idx_tbl_ocrd_u_jsubcanal")
+  @@map("tbl_ocrd")
+}
+
+model SocioNegocioDireccion {
+  id BigInt @id @default(autoincrement())
+  empresaId Int @map("empresa_id")
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  CardCode String? @db.VarChar(200)
+  Address String? @db.VarChar(200)
+  Street String? @db.VarChar(200)
+  AdresType String? @default("S") @db.VarChar(200)
+  @@unique([empresaId, CardCode, Address, Street, AdresType], map: "uq_tbl_crd1_empresa_clave")
+  @@index([empresaId, CardCode], map: "idx_tbl_crd1_cardcode")
+  @@map("tbl_crd1")
+}
+
+model SocioNegocioCanal {
+  id BigInt @id @default(autoincrement())
+  empresaId Int @map("empresa_id")
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  Code Int @default(autoincrement())
+  Name String? @db.VarChar(100)
+  @@unique([empresaId, Code], map: "uq_tbl_jcanal_empresa_clave")
+  @@index([empresaId, Name], map: "idx_tbl_jcanal_name")
+  @@map("tbl_jcanal")
+}
+
+model SocioNegocioCanales {
+  id BigInt @id @default(autoincrement())
+  empresaId Int @map("empresa_id")
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  Code Int @default(autoincrement())
+  Name String? @db.VarChar(100)
+  @@unique([empresaId, Code], map: "uq_tbl_jcanales_empresa_clave")
+  @@index([empresaId, Name], map: "idx_tbl_jcanales_name")
+  @@map("tbl_jcanales")
+}
+
+model SocioNegocioSubcanal {
+  id BigInt @id @default(autoincrement())
+  empresaId Int @map("empresa_id")
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  Code Int @default(autoincrement())
+  Name String? @db.VarChar(100)
+  @@unique([empresaId, Code], map: "uq_tbl_jsubcanal_empresa_clave")
+  @@index([empresaId, Name], map: "idx_tbl_jsubcanal_name")
+  @@map("tbl_jsubcanal")
+}
+
+model SocioNegocioSubcanales {
+  id BigInt @id @default(autoincrement())
+  empresaId Int @map("empresa_id")
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  Code Int @default(autoincrement())
+  Name String? @db.VarChar(100)
+  @@unique([empresaId, Code], map: "uq_tbl_jsubcanales_empresa_clave")
+  @@index([empresaId, Name], map: "idx_tbl_jsubcanales_name")
+  @@map("tbl_jsubcanales")
+}
+
+model SocioNegocioSupervisor {
+  id BigInt @id @default(autoincrement())
+  empresaId Int @map("empresa_id")
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  AgentCode String? @db.VarChar(200)
+  AgentName String? @db.VarChar(200)
+  @@unique([empresaId, AgentCode], map: "uq_tbl_oagp_empresa_clave")
+  @@index([empresaId, AgentName], map: "idx_tbl_oagp_agentname")
+  @@map("tbl_oagp")
+}
+
+model SocioNegocioVendedor {
+  id BigInt @id @default(autoincrement())
+  empresaId Int @map("empresa_id")
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  SlpCode Int?
+  SlpName String? @db.VarChar(200)
+  @@unique([empresaId, SlpCode], map: "uq_tbl_oslp_empresa_clave")
+  @@index([empresaId, SlpName], map: "idx_tbl_oslp_slpname")
+  @@map("tbl_oslp")
+}
+
+model SocioNegocioGrupo {
+  id BigInt @id @default(autoincrement())
+  empresaId Int @map("empresa_id")
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  GroupCode Int?
+  GroupName String? @db.VarChar(200)
+  @@unique([empresaId, GroupCode], map: "uq_tbl_ocrg_empresa_clave")
+  @@index([empresaId, GroupName], map: "idx_tbl_ocrg_groupname")
+  @@map("tbl_ocrg")
+}
+
+model SocioNegocioCondicionPago {
+  id BigInt @id @default(autoincrement())
+  empresaId Int @map("empresa_id")
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  GroupNum Int?
+  PymntGroup String? @db.VarChar(200)
+  @@unique([empresaId, GroupNum], map: "uq_tbl_octg_empresa_clave")
+  @@index([empresaId, PymntGroup], map: "idx_tbl_octg_pymntgroup")
+  @@map("tbl_octg")
+}
+
+model SocioNegocioListaPrecio {
+  id BigInt @id @default(autoincrement())
+  empresaId Int @map("empresa_id")
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  ListNum Int?
+  ListName String? @db.VarChar(200)
+  @@unique([empresaId, ListNum], map: "uq_tbl_opln_empresa_clave")
+  @@index([empresaId, ListName], map: "idx_tbl_opln_listname")
+  @@map("tbl_opln")
 }
 
 model Producto {

@@ -2,10 +2,11 @@ import { ConfigService } from '@nestjs/config';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { json } from 'express';
 import type { NextFunction, Request, Response } from 'express';
+import { RUTAS_LOTE_SOCIOS } from '../../socios-negocio/rutas-socios';
 
 const MB = 1024 * 1024;
 
-/** Carga masiva del catálogo: la única ruta que necesita cuerpos grandes. */
+/** Cargas masivas de catálogos: rutas que necesitan cuerpos grandes. */
 export const RUTA_LOTE_PRODUCTOS =
   '/api/v1/admin/catalogo/empresas/:empresaId/productos';
 
@@ -17,6 +18,17 @@ export function configurarCuerpoHttp(app: NestExpressApplication) {
   // Va antes del parser general: body-parser no vuelve a leer un cuerpo ya
   // leído, así que el lote conserva su límite y el resto usa el general.
   app.use(RUTA_LOTE_PRODUCTOS, json({ limit: loteBytes }));
+  const parserSocios = json({ limit: loteBytes });
+  app.use(
+    RUTAS_LOTE_SOCIOS,
+    (req: Request, res: Response, next: NextFunction) => {
+      // app.use consume el prefijo coincidente: solo POST a la colección exacta
+      // usa el límite de bulk; ediciones y rutas hijas conservan el límite general.
+      if (req.method === 'POST' && (req.path === '/' || req.path === ''))
+        return parserSocios(req, res, next);
+      next();
+    },
+  );
   app.useBodyParser('json', { limit: generalBytes });
   app.useBodyParser('urlencoded', { extended: true, limit: generalBytes });
   app.use(

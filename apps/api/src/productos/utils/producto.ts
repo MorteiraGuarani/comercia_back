@@ -1,5 +1,6 @@
 import type { ProductoFila } from '../interfaces/producto.interface';
 import { Decimal } from '@prisma/client/runtime/client';
+import { esIdBigint } from '../../common/utils/identificadores';
 
 export function productoRespuesta(fila: ProductoFila) {
   return {
@@ -10,11 +11,7 @@ export function productoRespuesta(fila: ProductoFila) {
 }
 
 export function esIdProducto(value: unknown): boolean {
-  return (
-    typeof value === 'string' &&
-    /^[1-9]\d{0,18}$/.test(value) &&
-    BigInt(value) <= 9223372036854775807n
-  );
+  return esIdBigint(value);
 }
 
 export function esPrecioProducto(value: unknown): boolean {

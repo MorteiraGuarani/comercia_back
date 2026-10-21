@@ -30,3 +30,6 @@ jobs:
       # El build del front toma NEXT_PUBLIC_* de apps/web/.env.production
       - name: Build (API + Web)
         run: npm run build
+
+      - name: Validar socios de negocio, bulk público y Swagger sin navegador
+        run: npm run test:socios --workspace=api

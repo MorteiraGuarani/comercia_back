@@ -84,6 +84,7 @@
   Esta excepción incluye GET, POST, PUT y DELETE sin sesión ni token; conservar
   validación de DTOs, existencia de empresa, paginación y filtros por empresa.
   `Precios especiales` es otra sección y conserva sus permisos.
+  También es público por petición explícita del usuario el módulo **Socios de negocio**, con GET, POST, PUT y DELETE de sus once tablas y sus consultas de relaciones, bajo `/admin/socios-negocio/empresas/:empresaId`. Admite carga individual/bulk sin login, cookie, token ni API key; conservar validación, existencia y aislamiento de empresa, paginación y límites de cuerpo/lote. Los nombres de tablas y columnas de negocio se mantienen tal como fueron proporcionados.
   El alta de usuarios se realiza desde el ABM autenticado de usuarios.
 - **Autenticado ≠ autorizado**: además del guard, verificar DENTRO del handler
   que el recurso pertenezca al usuario o a su alcance (su empresa, su equipo,

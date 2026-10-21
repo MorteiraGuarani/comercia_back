@@ -30,6 +30,9 @@ Servicios por defecto:
 - Swagger: `http://localhost:3001/api/docs`
 - Healthcheck: `http://localhost:3001/api/v1/health`
 
+API pública de socios de negocio, tablas y ejemplos de carga individual/bulk:
+[guía de socios de negocio](docs/socios-negocio.md).
+
 ## Comandos utiles
 
 ```bash
