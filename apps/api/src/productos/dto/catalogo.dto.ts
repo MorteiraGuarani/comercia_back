@@ -1,220 +1,192 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Transform, Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import {
   IsInt,
   IsOptional,
   IsString,
+  IsEmpty,
   Max,
   MaxLength,
-  Min,
   MinLength,
-  ValidateBy,
+  Min,
 } from 'class-validator';
-import { PaginacionDto } from '../../common/utils/paginacion';
 import {
-  MAX_INT2,
-  MAX_INT4,
-  MIN_INT2,
-  MIN_INT4,
-} from '../../common/utils/numeros';
-import { trimString } from '../../common/utils/transforms';
-import { esIdProducto, esPrecioProducto } from '../utils/producto';
-
-export class ConsultaCatalogoDto extends PaginacionDto {
-  @IsOptional() @IsString() @MaxLength(200) buscar?: string;
-  @IsOptional() @IsString() @MaxLength(50) itemcode?: string;
+  ConsultaSociosDto,
+  EmpresaSociosParams,
+} from '../../socios-negocio/dto/consulta-socios.dto';
+import { ResumenLoteDto } from '../../common/dto/resumen-lote.dto';
+import { CampoTabla } from '../utils/campo-catalogo';
+export class ConsultaCatalogoDto extends ConsultaSociosDto {
+  @ApiPropertyOptional({
+    example: 'A0001',
+    description: 'Código exacto del artículo.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  itemcode?: string;
+  @ApiPropertyOptional({
+    type: 'integer',
+    minimum: -2147483648,
+    maximum: 2147483647,
+    example: 1,
+    description: 'Código int4 de lista.',
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
-  @Min(MIN_INT2)
-  @Max(MAX_INT2)
+  @Min(-2147483648)
+  @Max(2147483647)
   pricelist?: number;
 }
-
-export class EmpresaCatalogoParams {
-  @Type(() => Number) @IsInt() @Min(1) @Max(MAX_INT4) empresaId!: number;
+export class EmpresaCatalogoParams extends EmpresaSociosParams {}
+export class ProductoCatalogoParams extends EmpresaSociosParams {
+  @ApiProperty({
+    type: String,
+    minLength: 1,
+    maxLength: 15,
+    example: 'A0001',
+    description: 'ItemCode original exacto en esta empresa, nunca id técnico.',
+  })
+  @IsString()
+  @MaxLength(15)
+  @MinLength(1)
+  ItemCode!: string;
+  @ApiProperty({
+    type: 'integer',
+    minimum: -2147483648,
+    maximum: 2147483647,
+    example: 1,
+    description: 'PriceList original; completa la clave del precio.',
+  })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' && /^-?\d+$/.test(value) ? Number(value) : value,
+  )
+  @IsInt()
+  @Min(-2147483648)
+  @Max(2147483647)
+  PriceList!: number;
 }
-
-export class ProductoCatalogoParams extends EmpresaCatalogoParams {
+// Adaptador de la pantalla existente. Las cargas nuevas usan tbl_oitm/tbl_itm1.
+export class DatosProductoDto {
+  @CampoTabla({
+    tipo: 'texto',
+    longitud: 15,
+    requerido: true,
+    descripcion: 'ItemCode del maestro tbl_oitm. Máximo 15 caracteres.',
+    ejemplo: 'A0001',
+  })
+  itemcode!: string;
+  @CampoTabla({
+    tipo: 'texto',
+    longitud: 200,
+    nullable: true,
+    descripcion: 'ItemName del maestro; compartido entre todas las listas.',
+    ejemplo: 'Artículo',
+  })
+  itemname?: string | null;
+  @CampoTabla({
+    tipo: 'entero',
+    small: true,
+    nullable: true,
+    descripcion: 'TaxCodeAR del maestro.',
+    ejemplo: 10,
+  })
+  iva?: number | null;
+  @CampoTabla({
+    tipo: 'entero',
+    small: true,
+    nullable: true,
+    defecto: -1,
+    descripcion: 'ItmsGrpCod int2 del maestro.',
+    ejemplo: 100,
+  })
+  itmsgrpcode?: number | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    deprecated: true,
+    description:
+      'Retirado del esquema: solo admite null o vacío. El nombre del grupo no forma parte del nuevo maestro.',
+  })
+  @IsOptional()
+  @IsEmpty()
+  itmsgrpnam?: string | null;
+  @CampoTabla({
+    tipo: 'texto',
+    longitud: 1,
+    nullable: true,
+    defecto: 'N',
+    descripcion: 'QryInventario del maestro.',
+    ejemplo: 'N',
+  })
+  inventory?: string | null;
+  @CampoTabla({
+    tipo: 'entero',
+    requerido: true,
+    descripcion:
+      'PriceList int4; junto a ItemCode identifica el precio en la empresa.',
+    ejemplo: 1,
+  })
+  pricelist!: number;
+  @CampoTabla({
+    tipo: 'texto',
+    longitud: 200,
+    nullable: true,
+    descripcion:
+      'Nombre de lista. Se guarda en tbl_opln.ListName y se comparte entre todos los artículos de la lista.',
+    ejemplo: 'General',
+  })
+  pricelistname?: string | null;
+  @CampoTabla({
+    tipo: 'decimal',
+    nullable: true,
+    descripcion: 'Price de tbl_itm1.',
+    ejemplo: '15000.123456',
+  })
+  price?: number | string | null;
+  @CampoTabla({
+    tipo: 'texto',
+    longitud: 50,
+    nullable: true,
+    descripcion: 'TIPO del maestro.',
+    ejemplo: 'Artículo',
+  })
+  tipo?: string | null;
+}
+export class CrearProductoDto extends DatosProductoDto {}
+export class ProductoRespuestaDto {
   @ApiProperty({
     type: String,
     example: '1',
-    description: 'ID BIGSERIAL del artículo y lista, como texto.',
+    readOnly: true,
+    description:
+      'ID técnico interno de tbl_itm1, solo informativo. Las rutas usan ItemCode y PriceList.',
   })
-  @ValidateBy({ name: 'idProducto', validator: { validate: esIdProducto } })
   id!: string;
-}
-
-// Una fila de tbl_itm1 por artículo y lista. empresa_id proviene de la ruta.
-export class DatosProductoDto {
+  @ApiProperty({ type: String, example: 'A0001' }) itemcode!: string;
+  @ApiProperty({ type: String, nullable: true }) itemname!: string | null;
+  @ApiProperty({ type: 'integer', nullable: true }) iva!: number | null;
+  @ApiProperty({ type: 'integer', nullable: true }) itmsgrpcode!: number | null;
   @ApiProperty({
     type: String,
-    maxLength: 50,
-    example: 'A0001',
-    description:
-      'Código de artículo. Puede repetirse con distinto pricelist dentro de la empresa.',
-  })
-  @Transform(trimString)
-  @IsString()
-  @MinLength(1)
-  @MaxLength(50)
-  itemcode!: string;
-  @ApiProperty({ type: String, maxLength: 200, example: 'Artículo de ejemplo' })
-  @Transform(trimString)
-  @IsString()
-  @MinLength(1)
-  @MaxLength(200)
-  itemname!: string;
-  @ApiProperty({
-    type: 'integer',
-    format: 'int32',
-    minimum: MIN_INT2,
-    maximum: MAX_INT2,
-    example: 10,
-    description: 'SMALLINT (int2).',
-  })
-  @IsInt()
-  @Min(MIN_INT2)
-  @Max(MAX_INT2)
-  iva!: number;
-  @ApiProperty({
-    type: 'integer',
-    format: 'int32',
-    minimum: MIN_INT4,
-    maximum: MAX_INT4,
-    example: 100,
-    description: 'INTEGER (int4).',
-  })
-  @IsInt()
-  @Min(MIN_INT4)
-  @Max(MAX_INT4)
-  itmsgrpcode!: number;
-  @ApiPropertyOptional({
-    type: String,
     nullable: true,
-    maxLength: 200,
-    example: 'Alimentos',
+    deprecated: true,
+    description: 'Campo retirado; siempre null.',
   })
-  @IsOptional()
-  @IsString()
-  @MaxLength(200)
-  itmsgrpnam?: string | null;
-  @ApiPropertyOptional({
-    type: String,
-    nullable: true,
-    default: 'Y',
-    maxLength: 1,
-    example: 'Y',
-    description: 'CHAR(1), admite null. Al crear, usa Y si se omite.',
-  })
-  @IsOptional()
-  @IsString()
-  @MaxLength(1)
-  inventory?: string | null;
-  @ApiProperty({
-    type: 'integer',
-    format: 'int32',
-    minimum: MIN_INT2,
-    maximum: MAX_INT2,
-    example: 1,
-    description:
-      'SMALLINT (int2). Junto a itemcode identifica la fila dentro de la empresa; no puede repetirse esa pareja.',
-  })
-  @IsInt()
-  @Min(MIN_INT2)
-  @Max(MAX_INT2)
-  pricelist!: number;
-  @ApiPropertyOptional({
-    type: String,
-    nullable: true,
-    maxLength: 200,
-    example: 'General',
-  })
-  @IsOptional()
-  @IsString()
-  @MaxLength(200)
-  pricelistname?: string | null;
-  @ApiPropertyOptional({
-    type: Number,
-    nullable: true,
-    example: 15000.123456,
-    description:
-      'NUMERIC(21,6): número JSON con hasta 15 enteros y 6 decimales. También acepta texto decimal exacto por compatibilidad.',
-  })
-  @IsOptional()
-  @ValidateBy({
-    name: 'precioProducto',
-    validator: {
-      validate: esPrecioProducto,
-      defaultMessage: () =>
-        'price debe ser numérico, con hasta 15 enteros y 6 decimales',
-    },
-  })
-  price?: number | string | null;
-  @ApiPropertyOptional({
-    type: String,
-    nullable: true,
-    maxLength: 50,
-    example: 'Artículo',
-  })
-  @IsOptional()
-  @IsString()
-  @MaxLength(50)
-  tipo?: string | null;
-}
-
-export class CrearProductoDto extends DatosProductoDto {}
-
-export class ProductoRespuestaDto {
-  @ApiProperty({ type: String, example: '1' }) id!: string;
-  itemcode!: string;
-  itemname!: string;
-  iva!: number;
-  itmsgrpcode!: number;
-  @ApiProperty({ type: String, nullable: true }) itmsgrpnam!: string | null;
+  itmsgrpnam!: string | null;
   @ApiProperty({ type: String, nullable: true }) inventory!: string | null;
-  pricelist!: number;
+  @ApiProperty({ type: 'integer' }) pricelist!: number;
   @ApiProperty({ type: String, nullable: true }) pricelistname!: string | null;
   @ApiProperty({ type: String, nullable: true, example: '15000.123456' })
   price!: string | null;
   @ApiProperty({ type: String, nullable: true }) tipo!: string | null;
 }
-
 export class PaginaProductoDto {
-  items!: ProductoRespuestaDto[];
-  total!: number;
-  page!: number;
-  limit!: number;
-  totalPages!: number;
+  @ApiProperty({ type: [ProductoRespuestaDto] }) items!: ProductoRespuestaDto[];
+  @ApiProperty({ type: 'integer' }) total!: number;
+  @ApiProperty({ type: 'integer' }) page!: number;
+  @ApiProperty({ type: 'integer' }) limit!: number;
+  @ApiProperty({ type: 'integer' }) totalPages!: number;
 }
-
-export class LoteProductosRespuestaDto {
-  @ApiProperty({ type: 'integer', minimum: 1, example: 5000 })
-  recibidos!: number;
-  @ApiProperty({ type: 'integer', minimum: 0, example: 4800 })
-  insertados!: number;
-  @ApiProperty({
-    type: 'integer',
-    minimum: 0,
-    example: 200,
-    description:
-      'Combinaciones únicas del envío que ya existen en la empresa, incluidas las creadas por otro envío concurrente. No se modifican.',
-  })
-  existentes!: number;
-  @ApiProperty({
-    type: 'integer',
-    minimum: 0,
-    example: 0,
-    description:
-      'Repeticiones adicionales de itemcode y pricelist dentro del arreglo. Se considera solo la primera aparición.',
-  })
-  duplicadosEnLote!: number;
-  @ApiProperty({
-    type: 'integer',
-    minimum: 0,
-    example: 200,
-    description:
-      'Total no insertado: existentes + duplicadosEnLote. recibidos = insertados + omitidos.',
-  })
-  omitidos!: number;
-}
+export class LoteProductosRespuestaDto extends ResumenLoteDto {}

@@ -84,6 +84,7 @@
   Esta excepción incluye GET, POST, PUT y DELETE sin sesión ni token; conservar
   validación de DTOs, existencia de empresa, paginación y filtros por empresa.
   `Precios especiales` es otra sección y conserva sus permisos.
+  El maestro oficial es `tbl_oitm` y los precios por lista son `tbl_itm1`: sus rutas por tabla también son públicas y admiten carga individual/bulk. `tbl_ospp`, `tbl_spp1` y `tbl_spp2` mantienen JWT y superadministrador activo. Conservar nombres y mayúsculas de columnas y aislamiento de empresa. `/productos` es el adaptador para la pantalla existente, no la tabla maestra.
   También es público por petición explícita del usuario el módulo **Socios de negocio**, con GET, POST, PUT y DELETE de sus once tablas y sus consultas de relaciones, bajo `/admin/socios-negocio/empresas/:empresaId`. Admite carga individual/bulk sin login, cookie, token ni API key; conservar validación, existencia y aislamiento de empresa, paginación y límites de cuerpo/lote. Los nombres de tablas y columnas de negocio se mantienen tal como fueron proporcionados.
   El alta de usuarios se realiza desde el ABM autenticado de usuarios.
 - **Autenticado ≠ autorizado**: además del guard, verificar DENTRO del handler

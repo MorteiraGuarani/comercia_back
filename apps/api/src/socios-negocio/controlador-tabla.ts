@@ -8,6 +8,7 @@ import {
   Post,
   Put,
   Query,
+  ValidationPipe,
 } from '@nestjs/common';
 import type { Type } from '@nestjs/common';
 import {
@@ -19,11 +20,13 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiParam,
   ApiResponse,
   ApiTags,
   getSchemaPath,
   PartialType,
 } from '@nestjs/swagger';
+import { SocioParams } from './dto/socio-params.dto';
 import { ResumenLoteDto } from '../common/dto/resumen-lote.dto';
 import {
   ConsultaSociosDto,
@@ -45,6 +48,28 @@ import {
 export function crearControladorSocios(
   tabla: TablaSociosDefinicion,
 ): Type<object> {
+  const esSocio = tabla.nombre === 'tbl_ocrd';
+  const ruta = esSocio ? ':CardCode' : ':id';
+  const Parametros = esSocio ? SocioParams : RegistroSociosParams;
+  const validar = new ValidationPipe({
+    expectedType: Parametros,
+    transform: true,
+    whitelist: true,
+    forbidNonWhitelisted: true,
+  });
+  const codigo = (p: SocioParams | RegistroSociosParams) =>
+    'CardCode' in p ? p.CardCode : p.id;
+  const documentarCodigo = () =>
+    ApiParam({
+      name: esSocio ? 'CardCode' : 'id',
+      schema: esSocio
+        ? { type: 'string', minLength: 1, maxLength: 15 }
+        : { type: 'string', pattern: '^[1-9][0-9]{0,18}$', maxLength: 19 },
+      example: esSocio ? 'C00001' : '1',
+      description: esSocio
+        ? 'CardCode original exacto del socio en esta empresa; conserva ceros iniciales. Codificar caracteres especiales en la URL. Nunca se interpreta como id técnico.'
+        : 'ID técnico de la fila de catálogo o dirección.',
+    });
   const respuesta = esquemaRespuestaSocios(tabla);
   const ejemplo = ejemploRespuestaSocios(tabla);
   const EdicionDto = PartialType(tabla.Dto, { skipNullProperties: false });
@@ -81,6 +106,7 @@ export function crearControladorSocios(
   };
 
   @Controller(`admin/socios-negocio/empresas/:empresaId/${tabla.nombre}`)
+  @ApiParam({ name: 'empresaId', type: Number, example: 1 })
   @ApiTags(`Socios de negocio · ${tabla.nombre}`)
   @ApiExtraModels(tabla.Dto, EdicionDto, ResumenLoteDto)
   @ApiBadRequestResponse({
@@ -121,14 +147,15 @@ export function crearControladorSocios(
       return this.servicio.listar(tabla, p.empresaId, q);
     }
 
-    @Get(':id')
+    @Get(ruta)
+    @documentarCodigo()
     @ApiOperation({
       summary: `Consultar una fila de ${tabla.nombre}`,
-      description: `${acceso} id es el identificador técnico de la fila, no el código ${tabla.clave.join(' + ')}.`,
+      description: `${acceso} ${esSocio ? 'La ruta usa exclusivamente CardCode, nunca el id técnico de PostgreSQL. Usar el código original en la ruta si se cambia CardCode en el cuerpo; codificar caracteres especiales en la URL.' : 'id es el identificador técnico de esta fila de catálogo o dirección.'}`,
     })
     @ApiOkResponse({ schema: respuesta, example: ejemplo })
-    obtener(@Param() p: RegistroSociosParams) {
-      return this.servicio.obtener(tabla, p.empresaId, p.id);
+    obtener(@Param(validar) p: SocioParams | RegistroSociosParams) {
+      return this.servicio.obtener(tabla, p.empresaId, codigo(p));
     }
 
     @Post()
@@ -183,10 +210,11 @@ export function crearControladorSocios(
       return this.servicio.crear(tabla, p.empresaId, d);
     }
 
-    @Put(':id')
+    @Put(ruta)
+    @documentarCodigo()
     @ApiOperation({
       summary: `Editar una fila de ${tabla.nombre}`,
-      description: `${acceso} Actualiza los campos enviados y conserva los omitidos; null vacía un campo nullable. Usa los mismos nombres y restricciones de creación. id y empresa_id no se aceptan en el cuerpo. No permite duplicar la clave ni cambiar un código mientras tenga referencias.`,
+      description: `${acceso} ${esSocio ? 'Identifica el socio por CardCode original y empresaId, sin alternativa por id técnico.' : ''} Actualiza los campos enviados y conserva los omitidos; null vacía un campo nullable. Usa los mismos nombres y restricciones de creación. id y empresa_id no se aceptan en el cuerpo. No permite duplicar la clave ni cambiar un código mientras tenga referencias.`,
     })
     @ApiBody({
       type: EdicionDto,
@@ -199,16 +227,17 @@ export function crearControladorSocios(
     })
     @ApiOkResponse({ schema: respuesta, example: ejemplo })
     editar(
-      @Param() p: RegistroSociosParams,
+      @Param(validar) p: SocioParams | RegistroSociosParams,
       @Body(new CrearSociosPipe(EdicionDto, false)) d: EntradaSocio,
     ) {
-      return this.servicio.editar(tabla, p.empresaId, p.id, d);
+      return this.servicio.editar(tabla, p.empresaId, codigo(p), d);
     }
 
-    @Delete(':id')
+    @Delete(ruta)
+    @documentarCodigo()
     @ApiOperation({
       summary: `Eliminar una fila de ${tabla.nombre}`,
-      description: `${acceso} Elimina únicamente la fila de esa empresa. Un socio con direcciones o un catálogo canónico usado por socios devuelve 409; quitar o reasignar sus referencias antes de eliminar.`,
+      description: `${acceso} ${esSocio ? 'Identifica el socio por CardCode exacto y empresaId, sin alternativa por id técnico.' : ''} Elimina únicamente la fila de esa empresa. Un socio con direcciones o un catálogo canónico usado por socios devuelve 409; quitar o reasignar sus referencias antes de eliminar.`,
     })
     @ApiOkResponse({
       schema: {
@@ -218,8 +247,8 @@ export function crearControladorSocios(
       },
       example: { ok: true },
     })
-    eliminar(@Param() p: RegistroSociosParams) {
-      return this.servicio.eliminar(tabla, p.empresaId, p.id);
+    eliminar(@Param(validar) p: SocioParams | RegistroSociosParams) {
+      return this.servicio.eliminar(tabla, p.empresaId, codigo(p));
     }
   }
   Object.defineProperty(ControladorTablaSocios, 'name', {

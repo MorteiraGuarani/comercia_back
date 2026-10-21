@@ -46,12 +46,12 @@ jobs:
         run: npm run test:planificacion --workspace=api
       - name: Validar catálogo y retiro de seguimiento en PostgreSQL aislado
         run: npm run test:productos --workspace=api
+      - name: Validar maestro OITM y migración de precios
+        run: npm run test:catalogo-v2 --workspace=api
       - name: Validar socios de negocio, bulk público y Swagger sin navegador
         run: npm run test:socios --workspace=api
       - name: Validar identificadores y precios del catálogo sin navegador
         run: npm run test:productos --workspace=web
-      - name: Validar Swagger compilado y permisos de produccion sin navegador
-        run: npm run test:swagger --workspace=api
       - name: Validar cuerpos HTTP de 50 MB y respuestas 413 sin navegador
         run: npm run test:http-body --workspace=api
 

@@ -92,10 +92,14 @@ describe('Socios de negocio públicos y separados por empresa', () => {
       expect(repositorio.findMany).toHaveBeenCalledWith(
         expect.objectContaining({ where: { empresaId: 20 }, skip: 0, take: 7 }),
       );
+      const referencia =
+        tabla.nombre === 'tbl_ocrd'
+          ? { CardCode: '9007199254740993' }
+          : { id: 9007199254740993n };
       await service.obtener(tabla, 20, '9007199254740993');
       expect(repositorio.findFirst).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { empresaId: 20, id: 9007199254740993n },
+          where: { empresaId: 20, ...referencia },
         }),
       );
       await service.crear(tabla, 20, tabla.ejemplo);
@@ -105,7 +109,7 @@ describe('Socios de negocio públicos y separados por empresa', () => {
       await service.editar(tabla, 20, '9007199254740993', {});
       expect(repositorio.update).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { empresaId: 20, id: 9007199254740993n },
+          where: { empresaId: 20, id: 9007199254740993n, ...referencia },
           data: {},
         }),
       );
@@ -243,7 +247,7 @@ describe('Socios de negocio públicos y separados por empresa', () => {
     expect(modelos.socioNegocio.create).not.toHaveBeenCalled();
   });
 
-  it('no modifica ni elimina un id de otra empresa', async () => {
+  it('no modifica ni elimina un CardCode de otra empresa', async () => {
     const { modelos, service } = preparar();
     modelos.socioNegocio.findFirst.mockResolvedValue(null);
     await expect(
@@ -300,7 +304,10 @@ describe('Socios de negocio públicos y separados por empresa', () => {
       U_jSUBCANAL: 'no numérico',
     });
     modelos.socioNegocioGrupo.findFirst.mockResolvedValue(null);
-    const resultado = await service.relaciones(20, '1');
+    const resultado = await service.relaciones(20, 'A');
+    expect(modelos.socioNegocio.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { empresaId: 20, CardCode: 'A' } }),
+    );
     expect(resultado.tbl_ocrd.U_jCANAL).toBe('0001');
     expect(resultado.tbl_ocrg).toBeNull();
     expect(resultado.tbl_octg).toBeNull();
@@ -313,7 +320,7 @@ describe('Socios de negocio públicos y separados por empresa', () => {
     );
     expect(modelos.socioNegocioCanales.findFirst).not.toHaveBeenCalled();
     expect(modelos.socioNegocioSubcanal.findFirst).not.toHaveBeenCalled();
-    await service.direcciones(20, '1', { page: 2, limit: 10 });
+    await service.direcciones(20, 'A', { page: 2, limit: 10 });
     expect(modelos.socioNegocioDireccion.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { empresaId: 20, CardCode: 'A' },

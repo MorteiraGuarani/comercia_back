@@ -41,7 +41,8 @@ describe('Entrada individual o por lote de productos', () => {
     { price: 'no-numero' },
     { iva: 32768 },
     { pricelist: null },
-    { itemname: null },
+    { itemcode: 'A'.repeat(16) },
+    { itmsgrpcode: 32768 },
     { empresa_id: 9 },
     { id: '1' },
   ])(

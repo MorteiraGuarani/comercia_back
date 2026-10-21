@@ -19,7 +19,7 @@ export class InventarioService {
     private readonly plataforma: AccesoPlataformaService,
   ) {}
 
-  // Todas las filas de tbl_itm1 de la empresa del usuario: un artículo aparece
+  // Precios de tbl_itm1 con el nombre oficial de tbl_oitm: un artículo aparece
   // una vez por cada lista de precios. La empresa sale de la sesión, nunca de
   // la consulta.
   async listarItems(usuarioId: number): Promise<CatalogoInventario> {
@@ -28,7 +28,7 @@ export class InventarioService {
       MODULO_INVENTARIO,
       PAGINA_INVENTARIO,
     );
-    const filas = await this.prisma.producto.findMany({
+    const filas = await this.prisma.productoPrecio.findMany({
       where: { empresaId },
       select: SELECT_ITEM_INVENTARIO,
       orderBy: [{ itemcode: 'asc' }, { pricelist: 'asc' }],
@@ -39,6 +39,20 @@ export class InventarioService {
       throw new PayloadTooLargeException(
         'El catálogo de artículos supera el máximo que se puede guardar en el equipo',
       );
-    return { items: filas.map(aItemInventario), total: filas.length };
+    const codigos = [...new Set(filas.map((f) => f.pricelist))];
+    const listas = codigos.length
+      ? await this.prisma.socioNegocioListaPrecio.findMany({
+          where: { empresaId, ListNum: { in: codigos } },
+          select: { ListNum: true, ListName: true },
+          take: codigos.length,
+        })
+      : [];
+    const nombres = new Map(listas.map((l) => [l.ListNum!, l.ListName]));
+    return {
+      items: filas.map((f) =>
+        aItemInventario(f, nombres.get(f.pricelist) ?? null),
+      ),
+      total: filas.length,
+    };
   }
 }

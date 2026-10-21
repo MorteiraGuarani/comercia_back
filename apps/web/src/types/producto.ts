@@ -6,9 +6,9 @@ export interface EmpresaCatalogo {
 export interface ProductoAdmin {
   id: string;
   itemcode: string;
-  itemname: string;
-  iva: number;
-  itmsgrpcode: number;
+  itemname: string | null;
+  iva: number | null;
+  itmsgrpcode: number | null;
   itmsgrpnam: string | null;
   inventory: string | null;
   pricelist: number;

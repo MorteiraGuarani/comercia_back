@@ -27,7 +27,7 @@ export class InventarioController {
   @Get('items')
   @ApiOperation({
     summary: 'Catálogo completo de artículos de la empresa',
-    description: `Todas las filas de tbl_itm1 de la empresa del usuario: un artículo aparece una vez por cada lista de precios. Ordenadas por código y lista. Sin paginar, con un máximo de ${LIMITE_ITEMS_INVENTARIO} filas. id y price viajan como texto.`,
+    description: `Precios de tbl_itm1 relacionados con el maestro oficial tbl_oitm y nombres de lista de tbl_opln, dentro de la empresa del usuario. Un artículo aparece una vez por cada lista de precios. Ordenados por código y lista. Conserva los ID de precio para la copia sin conexión. Sin paginar, con un máximo de ${LIMITE_ITEMS_INVENTARIO} filas. id y price viajan como texto.`,
   })
   @ApiOkResponse({
     schema: {

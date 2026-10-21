@@ -33,6 +33,9 @@ Servicios por defecto:
 API pública de socios de negocio, tablas y ejemplos de carga individual/bulk:
 [guía de socios de negocio](docs/socios-negocio.md).
 
+Maestro oficial de artículos OITM, precios por lista y precios especiales:
+[guía del catálogo](docs/catalogo-articulos.md).
+
 ## Comandos utiles
 
 ```bash

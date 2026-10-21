@@ -11,12 +11,12 @@ const decimal = (valor: string) => ({
 describe('Inventario del impulsador', () => {
   function preparar() {
     const prisma = {
-      producto: {
+      productoPrecio: {
         findMany: jest.fn().mockResolvedValue([
           {
             id: BigInt(7),
             itemcode: 'A-1',
-            itemname: 'Carne molida',
+            producto: { itemname: 'Carne molida' },
             pricelist: 1,
             pricelistname: 'Minorista',
             price: decimal('25000'),
@@ -24,12 +24,17 @@ describe('Inventario del impulsador', () => {
           {
             id: BigInt(8),
             itemcode: 'A-1',
-            itemname: 'Carne molida',
+            producto: { itemname: 'Carne molida' },
             pricelist: 2,
             pricelistname: null,
             price: null,
           },
         ]),
+      },
+      socioNegocioListaPrecio: {
+        findMany: jest
+          .fn()
+          .mockResolvedValue([{ ListNum: 1, ListName: 'Minorista' }]),
       },
     };
     const plataforma = {
@@ -53,14 +58,13 @@ describe('Inventario del impulsador', () => {
       'mi-jornada',
       'inventario',
     );
-    expect(prisma.producto.findMany).toHaveBeenCalledWith({
+    expect(prisma.productoPrecio.findMany).toHaveBeenCalledWith({
       where: { empresaId: 10 },
       select: {
         id: true,
         itemcode: true,
-        itemname: true,
+        producto: { select: { itemname: true } },
         pricelist: true,
-        pricelistname: true,
         price: true,
       },
       orderBy: [{ itemcode: 'asc' }, { pricelist: 'asc' }],
@@ -91,7 +95,7 @@ describe('Inventario del impulsador', () => {
 
   it('no entrega un catálogo truncado si supera el máximo', async () => {
     const { prisma, service } = preparar();
-    prisma.producto.findMany.mockResolvedValue(
+    prisma.productoPrecio.findMany.mockResolvedValue(
       Array.from({ length: 50_001 }, (_, i) => ({
         id: BigInt(i),
         itemcode: `A-${i}`,
@@ -112,6 +116,6 @@ describe('Inventario del impulsador', () => {
       new ForbiddenException('No tenés acceso a esta sección'),
     );
     await expect(service.listarItems(30)).rejects.toThrow(ForbiddenException);
-    expect(prisma.producto.findMany).not.toHaveBeenCalled();
+    expect(prisma.productoPrecio.findMany).not.toHaveBeenCalled();
   });
 });

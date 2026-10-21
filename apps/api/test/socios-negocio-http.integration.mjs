@@ -127,13 +127,15 @@ try {
   );
   for (const t of Object.values(TABLAS_SOCIOS)) {
     const route = '/api/v1/admin/socios-negocio/empresas/1/' + t.nombre;
+    const locator = t.nombre === 'tbl_ocrd' ? '{CardCode}' : '{id}';
+    const code = t.nombre === 'tbl_ocrd' ? 'C0001' : '1';
     const path = route.replace('/empresas/1/', '/empresas/{empresaId}/');
     for (const [p, method] of [
       [path, 'get'],
       [path, 'post'],
-      [path + '/{id}', 'get'],
-      [path + '/{id}', 'put'],
-      [path + '/{id}', 'delete'],
+      [path + '/' + locator, 'get'],
+      [path + '/' + locator, 'put'],
+      [path + '/' + locator, 'delete'],
     ]) {
       const op = doc.paths[p][method];
       assert.ok(op.summary && op.description);
@@ -180,7 +182,7 @@ try {
       ['id', ...t.campos].sort(),
     );
     await request(http)
-      .get(route + '/1')
+      .get(route + '/' + code)
       .expect(200);
     await request(http).post(route).send(t.ejemplo).expect(201);
     for (const sample of Object.values(
@@ -188,13 +190,13 @@ try {
     ))
       await request(http).post(route).send(sample.value).expect(201);
     await request(http)
-      .put(route + '/1')
+      .put(route + '/' + code)
       .send(t.ejemplo)
       .expect(200);
     const noClave =
       t.campos.find((c) => !t.clave.includes(c)) ?? t.campos.at(-1);
     await request(http)
-      .put(route + '/1')
+      .put(route + '/' + code)
       .send({ [noClave]: t.ejemplo[noClave] ?? null })
       .expect((r) =>
         assert.equal(
@@ -204,7 +206,7 @@ try {
         ),
       );
     await request(http)
-      .delete(route + '/1')
+      .delete(route + '/' + code)
       .expect(200, { ok: true });
     for (const invalid of [
       { ...t.ejemplo, empresa_id: 2 },
@@ -225,6 +227,20 @@ try {
       .expect(400);
   }
   const socios = '/api/v1/admin/socios-negocio/empresas/1/tbl_ocrd';
+  await request(http)
+    .get(socios + '/00001')
+    .expect(200);
+  assert.equal(calls.at(-1).id, '00001');
+  assert.ok(
+    doc.paths[
+      '/api/v1/admin/socios-negocio/empresas/{empresaId}/tbl_ocrd/{CardCode}/relaciones'
+    ],
+  );
+  assert.ok(
+    !doc.paths[
+      '/api/v1/admin/socios-negocio/empresas/{empresaId}/tbl_ocrd/{id}'
+    ],
+  );
   let before = calls.length;
   const invalid = await request(http)
     .post(socios)
@@ -255,10 +271,10 @@ try {
     .send({ Code: null })
     .expect(400);
   await request(http)
-    .get(socios + '/1/relaciones')
+    .get(socios + '/C0001/relaciones')
     .expect(200);
   await request(http)
-    .get(socios + '/1/direcciones')
+    .get(socios + '/C0001/direcciones')
     .expect(200);
   const large = Array.from({ length: 5000 }, (_, i) => ({
     CardCode: 'B' + i,

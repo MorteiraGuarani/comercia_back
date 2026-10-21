@@ -32,7 +32,7 @@ import {
 } from './dto/catalogo.dto';
 
 @Controller('admin/catalogo')
-@ApiTags('Productos y precios')
+@ApiTags('Productos y precios · pantalla compatible')
 @ApiExtraModels(
   CrearProductoDto,
   ProductoRespuestaDto,
@@ -44,20 +44,80 @@ export class ProductosController {
   constructor(private readonly servicio: ProductosService) {}
 
   @Get('empresas')
+  @ApiOkResponse({
+    schema: {
+      type: 'object',
+      properties: {
+        items: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: { id: { type: 'integer' }, nombre: { type: 'string' } },
+          },
+        },
+        total: { type: 'integer' },
+        page: { type: 'integer' },
+        limit: { type: 'integer' },
+        totalPages: { type: 'integer' },
+      },
+    },
+    example: {
+      items: [{ id: 1, nombre: 'Empresa de ejemplo' }],
+      total: 1,
+      page: 1,
+      limit: 7,
+      totalPages: 1,
+    },
+  })
+  @ApiOperation({
+    summary: 'Listar empresas del catálogo público',
+    description:
+      'Sin login ni token. Listado paginado: 7 registros por defecto, máximo 50; buscar filtra nombre.',
+  })
   empresas(@Query() q: ConsultaCatalogoDto) {
     return this.servicio.empresas(q);
   }
 
   @Get('empresas/:empresaId/productos/opciones')
+  @ApiOkResponse({
+    schema: {
+      type: 'object',
+      properties: {
+        items: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: { id: { type: 'string' }, nombre: { type: 'string' } },
+          },
+        },
+        total: { type: 'integer' },
+        page: { type: 'integer' },
+        limit: { type: 'integer' },
+        totalPages: { type: 'integer' },
+      },
+    },
+    example: {
+      items: [{ id: '1', nombre: 'A0001 · Artículo · Lista 1' }],
+      total: 1,
+      page: 1,
+      limit: 7,
+      totalPages: 1,
+    },
+  })
+  @ApiOperation({
+    summary: 'Opciones de artículo y lista para selectores',
+    description:
+      'Sin login ni token. Datos de tbl_oitm relacionados con tbl_itm1 por empresa y artículo. Paginación 7/50.',
+  })
   opciones(@Param() p: EmpresaCatalogoParams, @Query() q: ConsultaCatalogoDto) {
     return this.servicio.productos(p.empresaId, q, true);
   }
 
   @Get('empresas/:empresaId/productos')
   @ApiOperation({
-    summary: 'Listar tbl_itm1: una fila por artículo y lista de la empresa',
+    summary: 'Consultar productos y precios para la pantalla existente',
     description:
-      'itemcode puede repetirse con distinto pricelist. La clave primaria es (empresa_id, itemcode, pricelist).',
+      'Público sin sesión. Adapta tbl_oitm (maestro oficial) y tbl_itm1 (precios) al contrato de la pantalla existente. Cada fila incluye su ID técnico como dato informativo; las operaciones usan ItemCode y PriceList; los campos generales son compartidos por todas las listas. Los nombres de listas se leen de tbl_opln. Nuevas integraciones: usar las rutas /tbl_oitm y /tbl_itm1 con los nombres originales de columnas. Paginación 7/50.',
   })
   @ApiOkResponse({ type: PaginaProductoDto })
   productos(
@@ -112,6 +172,34 @@ export class ProductosController {
     },
   })
   @ApiCreatedResponse({
+    examples: {
+      individual: {
+        summary: 'Artículo y precio',
+        value: {
+          id: '1',
+          itemcode: 'A0001',
+          itemname: 'Artículo',
+          iva: 10,
+          itmsgrpcode: 100,
+          itmsgrpnam: null,
+          inventory: 'N',
+          pricelist: 1,
+          pricelistname: 'General',
+          price: '15000.123456',
+          tipo: null,
+        },
+      },
+      lote: {
+        summary: 'Resumen bulk',
+        value: {
+          recibidos: 3,
+          insertados: 1,
+          existentes: 1,
+          duplicadosEnLote: 1,
+          omitidos: 2,
+        },
+      },
+    },
     schema: {
       oneOf: [
         { $ref: getSchemaPath(ProductoRespuestaDto) },
@@ -128,19 +216,37 @@ export class ProductosController {
       : this.servicio.crearProducto(p.empresaId, d);
   }
 
-  @Put('empresas/:empresaId/productos/:id')
+  @Put('empresas/:empresaId/productos/:ItemCode/:PriceList')
   @ApiOperation({
-    summary: 'Editar un artículo de una lista por su ID',
+    summary: 'Editar un artículo de una lista por ItemCode y PriceList',
     description:
-      'id continúa siendo único. Cambiar itemcode o pricelist no puede duplicar la combinación dentro de la empresa (409).',
+      'Sin sesión. ItemCode y PriceList originales de la ruta identifican exclusivamente el precio en la empresa, nunca el id técnico. Los códigos conservan ceros iniciales y deben codificarse en la URL. Para cambiar la clave enviar sus valores nuevos en el cuerpo. Actualiza el maestro tbl_oitm del código enviado y el precio de esta lista en una transacción. Los datos generales y el nombre de la lista son compartidos por otros artículos/listas. No puede duplicar la pareja ItemCode/PriceList en la empresa (409).',
   })
   @ApiOkResponse({ type: ProductoRespuestaDto })
   editar(@Param() p: ProductoCatalogoParams, @Body() d: DatosProductoDto) {
-    return this.servicio.editarProducto(p.empresaId, p.id, d);
+    return this.servicio.editarProducto(
+      p.empresaId,
+      p.ItemCode,
+      p.PriceList,
+      d,
+    );
   }
 
-  @Delete('empresas/:empresaId/productos/:id')
+  @Delete('empresas/:empresaId/productos/:ItemCode/:PriceList')
+  @ApiOperation({
+    summary: 'Eliminar el precio de una lista',
+    description:
+      'Sin sesión. Identifica por ItemCode y PriceList exactos dentro de la empresa, nunca por id técnico. Elimina solo la fila de tbl_itm1 de la empresa; conserva el artículo oficial de tbl_oitm y sus otros precios.',
+  })
+  @ApiOkResponse({
+    schema: {
+      type: 'object',
+      required: ['ok'],
+      properties: { ok: { type: 'boolean' } },
+    },
+    example: { ok: true },
+  })
   eliminar(@Param() p: ProductoCatalogoParams) {
-    return this.servicio.eliminarProducto(p.empresaId, p.id);
+    return this.servicio.eliminarProducto(p.empresaId, p.ItemCode, p.PriceList);
   }
 }

@@ -22,10 +22,10 @@ export function formatearPrecio(texto: string): string {
 export function formularioProducto(producto: ProductoAdmin): FormProducto {
   return {
     itemcode: producto.itemcode,
-    itemname: producto.itemname,
-    iva: String(producto.iva),
-    itmsgrpcode: String(producto.itmsgrpcode),
-    itmsgrpnam: producto.itmsgrpnam ?? "",
+    itemname: producto.itemname ?? "",
+    iva: producto.iva === null ? "" : String(producto.iva),
+    itmsgrpcode: producto.itmsgrpcode === null ? "" : String(producto.itmsgrpcode),
+    itmsgrpnam: "",
     inventory: producto.inventory ?? "",
     pricelist: String(producto.pricelist),
     pricelistname: producto.pricelistname ?? "",
@@ -37,10 +37,10 @@ export function formularioProducto(producto: ProductoAdmin): FormProducto {
 export function datosProducto(form: FormProducto) {
   return {
     itemcode: form.itemcode.trim(),
-    itemname: form.itemname.trim(),
-    iva: Number(form.iva),
-    itmsgrpcode: Number(form.itmsgrpcode),
-    itmsgrpnam: form.itmsgrpnam || null,
+    itemname: form.itemname.trim() || null,
+    iva: form.iva.trim() === "" ? null : Number(form.iva),
+    itmsgrpcode: form.itmsgrpcode.trim() === "" ? null : Number(form.itmsgrpcode),
+    itmsgrpnam: null,
     inventory: form.inventory || null,
     pricelist: Number(form.pricelist),
     pricelistname: form.pricelistname || null,

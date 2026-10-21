@@ -1,22 +1,29 @@
 import type { ProductoFila } from '../interfaces/producto.interface';
 import { Decimal } from '@prisma/client/runtime/client';
 import { esIdBigint } from '../../common/utils/identificadores';
-
-export function productoRespuesta(fila: ProductoFila) {
+export function productoRespuesta(
+  fila: ProductoFila,
+  nombres: ReadonlyMap<number, string | null> = new Map(),
+) {
+  const p = fila.producto;
   return {
-    ...fila,
     id: fila.id.toString(),
+    itemcode: fila.itemcode,
+    itemname: p.itemname,
+    iva: p.iva,
+    itmsgrpcode: p.itmsgrpcode,
+    itmsgrpnam: null,
+    inventory: p.inventory,
+    pricelist: fila.pricelist,
+    pricelistname: nombres.get(fila.pricelist) ?? null,
     price: fila.price?.toFixed(6) ?? null,
+    tipo: p.tipo,
   };
 }
-
 export function esIdProducto(value: unknown): boolean {
   return esIdBigint(value);
 }
-
 export function esPrecioProducto(value: unknown): boolean {
-  // Se documenta como número JSON. El texto decimal sigue siendo compatible
-  // con el panel y las integraciones que conservan los 21 dígitos exactos.
   if (typeof value === 'string')
     return /^-?(?:0|[1-9]\d{0,14})(?:\.\d{1,6})?$/.test(value);
   return (

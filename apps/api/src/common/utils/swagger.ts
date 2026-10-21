@@ -20,7 +20,7 @@ export function configurarSwagger(app: INestApplication) {
   const documentConfig = new DocumentBuilder()
     .setTitle('Comercia API')
     .setDescription(
-      'Documentación pública de la API de Comercia. Productos y precios y Socios de negocio permiten todas sus operaciones sin sesión ni token. Socios de negocio conserva los nombres originales de once tablas y sus campos, con datos aislados por empresa y carga individual/bulk. Las otras secciones mantienen sus permisos.',
+      'Documentación pública de la API de Comercia. tbl_oitm es el maestro oficial de artículos; tbl_itm1 contiene precios por lista. Artículos se identifican por ItemCode y socios de tbl_ocrd por CardCode, dentro de empresaId; nunca por id técnico. Precios y líneas usan sus claves compuestas completas (PriceList, ListNum, LINENUM). Ambas tablas y Socios de negocio admiten CRUD y bulk sin sesión. tbl_ospp, tbl_spp1 y tbl_spp2 conservan sesión y permisos de superadministrador. Todos los catálogos se separan por empresa y conservan nombres y mayúsculas de negocio. Las rutas /productos adaptan maestro y precios para la pantalla existente y usan ItemCode/PriceList.',
     )
     .setVersion('1.0.0')
     .addBearerAuth()

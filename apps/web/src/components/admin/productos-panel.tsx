@@ -35,7 +35,7 @@ const PRODUCTO_VACIO: FormProducto = {
   iva: "",
   itmsgrpcode: "",
   itmsgrpnam: "",
-  inventory: "Y",
+  inventory: "N",
   pricelist: "",
   pricelistname: "",
   price: "",
@@ -111,17 +111,17 @@ function RegistrosCatalogo({ empresa }: { empresa: EmpresaCatalogo }) {
 
   const op = useOperacionCampo();
   const [form, setForm] = useState<FormProducto | null>(null);
-  const [editando, setEditando] = useState<string | null>(null);
+  const [editando, setEditando] = useState<ProductoAdmin | null>(null);
   const [eliminando, setEliminando] = useState<ProductoAdmin | null>(null);
   function abrir(producto?: ProductoAdmin) {
     op.limpiarError();
-    setEditando(producto?.id ?? null);
+    setEditando(producto ?? null);
     setForm(producto ? formularioProducto(producto) : { ...PRODUCTO_VACIO });
   }
   async function guardar() {
     if (!form) return;
     const ok = await op.ejecutar("Guardando artículo y precio", () =>
-      apiFetch(`${base}${editando === null ? "" : `/${editando}`}`, {
+      apiFetch(`${base}${editando === null ? "" : `/${encodeURIComponent(editando.itemcode)}/${editando.pricelist}`}`, {
         method: editando === null ? "POST" : "PUT",
         body: JSON.stringify(datosProducto(form)),
       }),
@@ -134,7 +134,7 @@ function RegistrosCatalogo({ empresa }: { empresa: EmpresaCatalogo }) {
   async function eliminar() {
     if (!eliminando) return;
     const ok = await op.ejecutar("Eliminando artículo de la lista", () =>
-      apiFetch(`${base}/${eliminando.id}`, { method: "DELETE" }),
+      apiFetch(`${base}/${encodeURIComponent(eliminando.itemcode)}/${eliminando.pricelist}`, { method: "DELETE" }),
     );
     if (ok) {
       setEliminando(null);
@@ -171,7 +171,7 @@ function RegistrosCatalogo({ empresa }: { empresa: EmpresaCatalogo }) {
             Artículos y precios
           </h2>
           <p className="text-sm text-muted dark:text-muted">
-            Una fila por artículo y lista de precios.
+            Una fila por artículo y lista. Los datos generales se comparten entre listas.
           </p>
         </div>
         <button
@@ -210,8 +210,8 @@ function RegistrosCatalogo({ empresa }: { empresa: EmpresaCatalogo }) {
               className={inputBase}
               type="number"
               step="1"
-              min={-32768}
-              max={32767}
+              min={-2147483648}
+              max={2147483647}
               value={lista}
               onChange={(e) => setLista(e.target.value)}
               placeholder="Todas"
@@ -286,10 +286,10 @@ function RegistrosCatalogo({ empresa }: { empresa: EmpresaCatalogo }) {
                     </div>
                     <div className="min-w-0">
                       <dt className="text-muted dark:text-muted">
-                        Grupo {item.itmsgrpcode}
+                        Grupo de artículos
                       </dt>
                       <dd className="break-words">
-                        {item.itmsgrpnam ?? "Sin nombre"}
+                        {item.itmsgrpcode ?? "Sin definir"}
                       </dd>
                     </div>
                     <div className="min-w-0">
@@ -347,7 +347,7 @@ function RegistrosCatalogo({ empresa }: { empresa: EmpresaCatalogo }) {
                     <td className={celda}>{item.iva}</td>
                     <td className={celda}>
                       <p className="max-w-48 break-words">
-                        {item.itmsgrpcode} · {item.itmsgrpnam ?? "Sin nombre"}
+                        {item.itmsgrpcode ?? "Sin definir"}
                       </p>
                       <p className="text-xs text-muted dark:text-muted">
                         {item.inventory ?? "Sin definir"} ·{" "}
@@ -472,7 +472,7 @@ function FormularioProducto({
           <input
             className={inputBase}
             value={form.itemcode}
-            maxLength={50}
+            maxLength={15}
             required
             pattern=".*\S.*"
             onChange={(e) => onCambiar({ ...form, itemcode: e.target.value })}
@@ -484,7 +484,6 @@ function FormularioProducto({
             className={inputBase}
             value={form.itemname}
             maxLength={200}
-            required
             pattern=".*\S.*"
             onChange={(e) => onCambiar({ ...form, itemname: e.target.value })}
           />
@@ -497,7 +496,6 @@ function FormularioProducto({
             min={-32768}
             max={32767}
             step="1"
-            required
             value={form.iva}
             onChange={(e) => onCambiar({ ...form, iva: e.target.value })}
           />
@@ -507,23 +505,13 @@ function FormularioProducto({
           <input
             className={inputBase}
             type="number"
-            min={-2147483648}
-            max={2147483647}
+            min={-32768}
+            max={32767}
             step="1"
-            required
             value={form.itmsgrpcode}
             onChange={(e) =>
               onCambiar({ ...form, itmsgrpcode: e.target.value })
             }
-          />
-        </label>
-        <label className={labelBase}>
-          itmsgrpnam
-          <input
-            className={inputBase}
-            value={form.itmsgrpnam}
-            maxLength={200}
-            onChange={(e) => onCambiar({ ...form, itmsgrpnam: e.target.value })}
           />
         </label>
         <label className={labelBase}>
@@ -541,8 +529,8 @@ function FormularioProducto({
           <input
             className={inputBase}
             type="number"
-            min={-32768}
-            max={32767}
+            min={-2147483648}
+            max={2147483647}
             step="1"
             required
             value={form.pricelist}
@@ -595,6 +583,10 @@ function FormularioProducto({
           />
         </label>
       </fieldset>
+      <p className="text-sm text-muted dark:text-muted">
+        Nombre, impuesto, grupo, inventario y tipo pertenecen al artículo y se comparten entre sus listas.
+        El nombre de la lista se comparte entre todos sus artículos.
+      </p>
       {error && (
         <p className={errorBox} role="alert">
           {error}

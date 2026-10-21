@@ -48,6 +48,8 @@ model Empresa {
   clientesCampo       ClienteCampo[]
   localesCampo        LocalCampo[]
   productos           Producto[]
+  productosPrecios ProductoPrecio[]
+  preciosPromociones PrecioEspecialPromocion[]
   preciosEspeciales   PrecioEspecial[]
   preciosEspDetalle   PrecioEspecialDetalle[]
   tareasCampo         TareaCampo[]
@@ -213,77 +215,84 @@ model SocioNegocioListaPrecio {
   @@map("tbl_opln")
 }
 
+// Maestro oficial de art?culos; precios por lista separados en tbl_itm1.
 model Producto {
+  id BigInt @id @default(autoincrement())
+  empresaId Int @map("empresa_id")
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  itemcode String @map("ItemCode") @db.VarChar(15)
+  itemname String? @map("ItemName") @db.VarChar(200)
+  iva Int? @map("TaxCodeAR") @db.SmallInt
+  itmsgrpcode Int? @default(-1) @map("ItmsGrpCod") @db.SmallInt
+  inventory String? @default("N") @map("QryInventario") @db.VarChar(1)
+  validFor String? @default("Y") @db.VarChar(1)
+  frozenFor String? @default("N") @db.VarChar(1)
+  tipo String? @map("TIPO") @db.VarChar(50)
+  precios ProductoPrecio[]
+  @@unique([empresaId, itemcode], map: "uq_tbl_ocrd_itemcode")
+  @@index([empresaId, itemname], map: "idx_tbl_oitm_itemname")
+  @@map("tbl_oitm")
+}
+
+model ProductoPrecio {
   id BigInt @unique(map: "uq_tbl_itm1_id") @default(autoincrement())
   empresaId Int @map("empresa_id")
   empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
-  itemcode String @db.VarChar(50)
-  itemname String @db.VarChar(200)
-  iva Int @db.SmallInt
-  itmsgrpcode Int
-  itmsgrpnam String? @db.VarChar(200)
-  inventory String? @default("Y") @db.Char(1)
-  pricelist Int @db.SmallInt
-  pricelistname String? @db.VarChar(200)
-  price Decimal? @db.Decimal(21, 6)
-  tipo String? @db.VarChar(50)
-
-  @@id([empresaId, itemcode, pricelist], map: "tbl_itm1_pkey")
-  @@index([itemcode], map: "idx_tbl_itm1_itemcode")
-  @@index([itemname], map: "idx_tbl_itm1_itemname")
-  @@index([itmsgrpcode], map: "idx_tbl_itm1_itmsgrpcode")
-  @@index([pricelist], map: "idx_tbl_itm1_pricelist")
-  @@index([tipo], map: "idx_tbl_itm1_tipo")
+  itemcode String @map("ItemCode") @db.VarChar(50)
+  pricelist Int @map("PriceList")
+  price Decimal? @map("Price") @db.Decimal(21, 6)
+  producto Producto @relation(fields: [empresaId, itemcode], references: [empresaId, itemcode], onDelete: Restrict, onUpdate: Cascade, map: "tbl_itm1_producto_fkey")
+  @@id([empresaId, itemcode, pricelist], map: "PK_tbl_itm1")
+  @@index([empresaId, pricelist], map: "idx_tbl_itm1_pricelist")
   @@map("tbl_itm1")
 }
 
-// Precio especial por cliente (cardcode) y artículo (itemcode), como OSPP de
-// SAP. Los datos de negocio son opcionales porque la carga puede venir parcial.
 model PrecioEspecial {
-  id            BigInt   @id @default(autoincrement())
-  empresaId     Int      @map("empresa_id")
-  empresa       Empresa  @relation(fields: [empresaId], references: [id], onDelete: Restrict)
-  cardCode      String?  @map("cardcode") @db.VarChar(50)
-  cardName      String?  @map("cardname") @db.VarChar(200)
-  cardType      String?  @map("cardtype") @db.VarChar(20)
-  listPriceName String?  @map("listpricename") @db.VarChar(100)
-  listPriceCod  Int?     @map("listpricecod")
-  itemCode      String?  @map("itemcode") @db.VarChar(50)
-  itemName      String?  @map("itemname") @db.VarChar(200)
-  price         Decimal? @default(0) @db.Decimal(21, 6)
-  um            String?  @db.VarChar(20)
-  itmsGrpCode   Int?     @map("itmsgrpcode")
-  itmsGrpNam    String?  @map("itmsgrpnam") @db.VarChar(200)
-  valid         String?  @default("Y") @db.Char(1)
-
-  @@unique([empresaId, itemCode, listPriceCod, cardCode, cardType], map: "uq_tbl_ospp_item_listprice")
+  id BigInt @unique(map: "uq_tbl_ospp_id") @default(autoincrement())
+  empresaId Int @map("empresa_id")
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  itemCode String @map("ItemCode") @db.VarChar(50)
+  cardCode String @map("CardCode") @db.VarChar(50)
+  price Decimal? @map("Price") @db.Decimal(21, 6)
+  currency String? @map("Currency") @db.VarChar(10)
+  discount Decimal? @map("Discount") @db.Decimal(21, 6)
+  listPriceCod Int @map("ListNum")
+  valid String @default("Y") @map("Valid") @db.VarChar(1)
+  @@id([empresaId, itemCode, cardCode, listPriceCod], map: "PK_tbl_ospp")
+  @@index([empresaId, cardCode], map: "idx_tbl_ospp_cardcode")
   @@map("tbl_ospp")
 }
 
-// Detalle del precio especial por línea y vigencia, como SPP1 de SAP. Se
-// relaciona con la cabecera por empresa, cardcode e itemcode (sin FK: ambos
-// lados admiten nulos).
 model PrecioEspecialDetalle {
-  id        BigInt    @id @default(autoincrement())
-  empresaId Int       @map("empresa_id")
-  empresa   Empresa   @relation(fields: [empresaId], references: [id], onDelete: Restrict)
-  itemCode  String?   @map("itemcode") @db.VarChar(50)
-  cardCode  String?   @map("cardcode") @db.VarChar(15)
-  lineNum   Int?      @map("linenum") @db.SmallInt
-  price     Decimal?  @db.Decimal(21, 6)
-  currency  String?   @db.VarChar(3)
-  discount  Decimal?  @db.Decimal(21, 6)
-  listNum   Int?      @default(0) @map("listnum") @db.SmallInt
-  fromDate  DateTime? @map("fromdate") @db.Timestamp(6)
-  toDate    DateTime? @map("todate") @db.Timestamp(6)
-
-  // El único (empresa, cardcode, itemcode, ...) ya cubre las búsquedas por
-  // cliente y por cliente + artículo.
-  @@unique([empresaId, cardCode, itemCode, lineNum, listNum], map: "uq_tbl_spp1")
-  @@index([empresaId, itemCode], map: "idx_tbl_spp1_itemcode")
-  @@index([empresaId, currency], map: "idx_tbl_spp1_currency")
-  @@index([empresaId, fromDate, toDate], map: "idx_tbl_spp1_validity")
+  id BigInt @unique(map: "uq_tbl_spp1_id") @default(autoincrement())
+  empresaId Int @map("empresa_id")
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  itemCode String @map("ItemCode") @db.VarChar(50)
+  cardCode String @map("CardCode") @db.VarChar(50)
+  lineNum Int @map("LINENUM")
+  price Decimal? @map("Price") @db.Decimal(21, 6)
+  currency String? @map("Currency") @db.VarChar(10)
+  discount Decimal? @map("Discount") @db.Decimal(21, 6)
+  listNum Int @map("ListNum")
+  @@id([empresaId, itemCode, cardCode, listNum, lineNum], map: "PK_tbl_spp1")
+  @@index([empresaId, cardCode], map: "idx_tbl_spp1_cardcode")
   @@map("tbl_spp1")
+}
+
+model PrecioEspecialPromocion {
+  id BigInt @unique(map: "uq_tbl_spp2_id") @default(autoincrement())
+  empresaId Int @map("empresa_id")
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  itemCode String @map("ItemCode") @db.VarChar(50)
+  cardCode String @map("CardCode") @db.VarChar(50)
+  spp1Lnum Int? @map("SPP1Lnum")
+  spp2LNum Int? @map("SPP2LNum")
+  amount Decimal? @map("Amount") @db.Decimal(21, 6)
+  price Decimal? @map("Price") @db.Decimal(21, 6)
+  discount Decimal? @map("Discount") @db.Decimal(21, 6)
+  @@id([empresaId, itemCode, cardCode], map: "pk_tbl_ssp2")
+  @@index([empresaId, cardCode], map: "idx_tbl_spp2_cardcode")
+  @@map("tbl_spp2")
 }
 
 model Conexion {

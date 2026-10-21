@@ -3,6 +3,7 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import { json } from 'express';
 import type { NextFunction, Request, Response } from 'express';
 import { RUTAS_LOTE_SOCIOS } from '../../socios-negocio/rutas-socios';
+import { RUTAS_LOTE_TABLAS_PRODUCTOS } from '../../productos/rutas-tablas';
 
 const MB = 1024 * 1024;
 
@@ -20,7 +21,7 @@ export function configurarCuerpoHttp(app: NestExpressApplication) {
   app.use(RUTA_LOTE_PRODUCTOS, json({ limit: loteBytes }));
   const parserSocios = json({ limit: loteBytes });
   app.use(
-    RUTAS_LOTE_SOCIOS,
+    [...RUTAS_LOTE_SOCIOS, ...RUTAS_LOTE_TABLAS_PRODUCTOS],
     (req: Request, res: Response, next: NextFunction) => {
       // app.use consume el prefijo coincidente: solo POST a la colección exacta
       // usa el límite de bulk; ediciones y rutas hijas conservan el límite general.

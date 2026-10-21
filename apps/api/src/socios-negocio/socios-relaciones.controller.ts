@@ -7,10 +7,8 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import {
-  ConsultaSociosDto,
-  RegistroSociosParams,
-} from './dto/consulta-socios.dto';
+import { ConsultaSociosDto } from './dto/consulta-socios.dto';
+import { SocioParams } from './dto/socio-params.dto';
 import { TABLAS_SOCIOS } from './tablas-socios';
 import { SociosNegocioService } from './socios-negocio.service';
 import {
@@ -29,11 +27,11 @@ import {
 // Consultas públicas expresamente solicitadas, con empresa e identificadores validados.
 export class SociosRelacionesController {
   constructor(private readonly servicio: SociosNegocioService) {}
-  @Get(':id/relaciones')
+  @Get(':CardCode/relaciones')
   @ApiOperation({
     summary: 'Resolver los catálogos relacionados con el socio',
     description:
-      'Público sin login ni token. Todas las referencias se resuelven dentro de empresaId. GroupCode→tbl_ocrg; GroupNum→tbl_octg; ListNum→tbl_opln; AgentCode→tbl_oagp; SlpCode→tbl_oslp. U_jCANAL y U_jSUBCANAL conservan texto y, cuando representan un entero int4, se buscan en Code de tbl_jcanal/tbl_jsubcanal. Las tablas en plural son catálogos independientes, sin mezcla automática. Una referencia nula o todavía no cargada devuelve null; no se crean filas ficticias para -1. Las direcciones se consultan por separado con paginación.',
+      'Público sin login ni token. El socio se identifica por CardCode exacto, nunca por id técnico. Todas las referencias se resuelven dentro de empresaId. GroupCode→tbl_ocrg; GroupNum→tbl_octg; ListNum→tbl_opln; AgentCode→tbl_oagp; SlpCode→tbl_oslp. U_jCANAL y U_jSUBCANAL conservan texto y, cuando representan un entero int4, se buscan en Code de tbl_jcanal/tbl_jsubcanal. Las tablas en plural son catálogos independientes, sin mezcla automática. Una referencia nula o todavía no cargada devuelve null; no se crean filas ficticias para -1. Las direcciones se consultan por separado con paginación.',
   })
   @ApiOkResponse({
     example: Object.fromEntries(
@@ -80,15 +78,15 @@ export class SociosRelacionesController {
       ),
     },
   })
-  relaciones(@Param() p: RegistroSociosParams) {
-    return this.servicio.relaciones(p.empresaId, p.id);
+  relaciones(@Param() p: SocioParams) {
+    return this.servicio.relaciones(p.empresaId, p.CardCode);
   }
 
-  @Get(':id/direcciones')
+  @Get(':CardCode/direcciones')
   @ApiOperation({
     summary: 'Listar tbl_crd1 del socio, por CardCode',
     description:
-      'Público sin login ni token. Devuelve exclusivamente las direcciones con el mismo CardCode y empresa del socio. Acepta buscar, page y limit (7 por defecto, máximo 50).',
+      'Público sin login ni token. La ruta usa CardCode exacto del socio, nunca el id técnico. Devuelve exclusivamente las direcciones con el mismo CardCode y empresa del socio. Acepta buscar, page y limit (7 por defecto, máximo 50).',
   })
   @ApiOkResponse({
     schema: esquemaPaginaSocios(TABLAS_SOCIOS.tbl_crd1),
@@ -100,7 +98,7 @@ export class SociosRelacionesController {
       totalPages: 1,
     },
   })
-  direcciones(@Param() p: RegistroSociosParams, @Query() q: ConsultaSociosDto) {
-    return this.servicio.direcciones(p.empresaId, p.id, q);
+  direcciones(@Param() p: SocioParams, @Query() q: ConsultaSociosDto) {
+    return this.servicio.direcciones(p.empresaId, p.CardCode, q);
   }
 }

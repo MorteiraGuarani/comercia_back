@@ -115,7 +115,12 @@ export class SociosNegocioService {
     id: string,
   ) {
     const fila = await this.modelo(this.prisma, tabla).findFirst({
-      where: { id: BigInt(id), empresaId },
+      where: {
+        empresaId,
+        ...(tabla.nombre === 'tbl_ocrd'
+          ? { CardCode: id }
+          : { id: BigInt(id) }),
+      },
       select: seleccionSocios(tabla),
     });
     if (!fila)
@@ -283,7 +288,12 @@ export class SociosNegocioService {
           await this.bloquearEmpresa(tx, empresaId);
           const modelo = this.modelo(tx, tabla);
           const actual = await modelo.findFirst({
-            where: { id: BigInt(id), empresaId },
+            where: {
+              empresaId,
+              ...(tabla.nombre === 'tbl_ocrd'
+                ? { CardCode: id }
+                : { id: BigInt(id) }),
+            },
             select: seleccionSocios(tabla),
           });
           if (!actual)
@@ -300,7 +310,13 @@ export class SociosNegocioService {
           return respuestaSocios(
             tabla,
             await modelo.update({
-              where: { id: BigInt(id), empresaId },
+              where: {
+                id: actual.id,
+                empresaId,
+                ...(tabla.nombre === 'tbl_ocrd'
+                  ? { CardCode: id }
+                  : { id: BigInt(id) }),
+              },
               data: datos,
               select: seleccionSocios(tabla),
             }),
@@ -319,7 +335,12 @@ export class SociosNegocioService {
           await this.bloquearEmpresa(tx, empresaId);
           const modelo = this.modelo(tx, tabla);
           const actual = await modelo.findFirst({
-            where: { id: BigInt(id), empresaId },
+            where: {
+              empresaId,
+              ...(tabla.nombre === 'tbl_ocrd'
+                ? { CardCode: id }
+                : { id: BigInt(id) }),
+            },
             select: seleccionSocios(tabla),
           });
           if (!actual)
@@ -328,7 +349,7 @@ export class SociosNegocioService {
             );
           await this.protegerReferencias(tx, tabla, empresaId, actual);
           await modelo.delete({
-            where: { id: BigInt(id), empresaId },
+            where: { id: actual.id, empresaId },
             select: { id: true },
           });
           return { ok: true };
@@ -340,9 +361,9 @@ export class SociosNegocioService {
     }
   }
 
-  async relaciones(empresaId: number, id: string) {
+  async relaciones(empresaId: number, CardCode: string) {
     await this.empresa(empresaId);
-    const socio = await this.fila(TABLAS_SOCIOS.tbl_ocrd, empresaId, id);
+    const socio = await this.fila(TABLAS_SOCIOS.tbl_ocrd, empresaId, CardCode);
     const resolver = async (
       tabla: TablaSociosDefinicion,
       campo: string,
@@ -391,9 +412,13 @@ export class SociosNegocioService {
       tbl_jsubcanal,
     };
   }
-  async direcciones(empresaId: number, id: string, query: ConsultaSociosDto) {
+  async direcciones(
+    empresaId: number,
+    CardCode: string,
+    query: ConsultaSociosDto,
+  ) {
     await this.empresa(empresaId);
-    const socio = await this.fila(TABLAS_SOCIOS.tbl_ocrd, empresaId, id);
+    const socio = await this.fila(TABLAS_SOCIOS.tbl_ocrd, empresaId, CardCode);
     return this.listar(TABLAS_SOCIOS.tbl_crd1, empresaId, query, {
       CardCode: socio.CardCode,
     });

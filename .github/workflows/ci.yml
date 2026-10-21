@@ -33,3 +33,5 @@ jobs:
 
       - name: Validar socios de negocio, bulk público y Swagger sin navegador
         run: npm run test:socios --workspace=api
+      - name: Validar maestro OITM y migración de precios
+        run: npm run test:catalogo-v2 --workspace=api
