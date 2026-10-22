@@ -95,7 +95,7 @@ export function TareasPanel() {
   const [categoriaPersonalizada, setCategoriaPersonalizada] = useState(false);
   const formularioAbierto = !!form && (id ? puedeEditar : puedeCrear);
 
-  const [nombresLocales, setNombresLocales] = useState<Record<number, string>>(
+  const [nombresLocales, setNombresLocales] = useState<Record<string, string>>(
     {},
   );
 
@@ -103,17 +103,17 @@ export function TareasPanel() {
     if (!destinatario || (t ? !puedeEditar || t.archivadaEn : !puedeCrear))
       return;
     let localIds = t?.locales.map((x) => x.local.id) ?? [];
-    const nombres: Record<number, string> = {};
+    const nombres: Record<string, string> = {};
     for (const local of t?.locales ?? [])
       nombres[local.local.id] = local.local.nombre;
     if (t && !t.todosLocales) {
-      const seleccion: number[] = [];
+      const seleccion: string[] = [];
       const ok = await op.ejecutar("Cargando locales asignados", async () => {
         let page = 1,
           totalPages = 1;
         do {
           const r = await apiFetch<
-            RespuestaPaginada<{ id: number; nombre: string }>
+            RespuestaPaginada<{ id: string; nombre: string }>
           >(`/campo/tareas/${t.id}/locales?page=${page}&limit=50`);
           for (const local of r.items) {
             seleccion.push(local.id);

@@ -2,10 +2,10 @@ import { Prisma } from '../../../generated/prisma/client';
 
 function condicionHorario(diaSql: Prisma.Sql, equipoCampoId: number) {
   return Prisma.sql`
-    NOT EXISTS (SELECT 1 FROM campo_horarios h WHERE h.local_id = l.id AND h.activo AND h.equipo_campo_id = ${equipoCampoId}
+    NOT EXISTS (SELECT 1 FROM campo_horarios h WHERE h.empresa_id = l.empresa_id AND h."CardCode" = l."CardCode" AND h.activo AND h.equipo_campo_id = ${equipoCampoId}
       AND (h.asignacion_id = a.id OR h.asignacion_id IS NULL))
     OR EXISTS (
-      SELECT 1 FROM campo_horarios h WHERE h.local_id = l.id AND h.activo AND h.equipo_campo_id = ${equipoCampoId}
+      SELECT 1 FROM campo_horarios h WHERE h.empresa_id = l.empresa_id AND h."CardCode" = l."CardCode" AND h.activo AND h.equipo_campo_id = ${equipoCampoId}
       AND (h.asignacion_id = a.id OR (h.asignacion_id IS NULL AND NOT EXISTS (
         SELECT 1 FROM campo_horarios propio WHERE propio.asignacion_id = a.id AND propio.activo AND propio.equipo_campo_id = ${equipoCampoId}
       )))
@@ -46,7 +46,7 @@ function condicionEquipo(
   )`;
 }
 
-// Alias fijos de tablas; todos los valores externos se parametrizan.
+// Alias fijos de tablas (l = tbl_ocrd); todos los valores externos se parametrizan.
 // Un solo día usa date (entero de días). El rango castea generate_series a date
 // porque el interval de series no admite `% intervalo`.
 export function condicionAgenda(
@@ -64,8 +64,7 @@ export function condicionAgenda(
   if (fecha === fechaFin) {
     const dia = Prisma.sql`${fecha}::date`;
     return Prisma.sql`
-      l.empresa_id = ${empresaId} AND l.eliminado_en IS NULL AND l.activo AND a.activo
-      AND (l.cliente_id IS NULL OR (c.activo AND c.eliminado_en IS NULL))
+      l.empresa_id = ${empresaId} AND a.activo
       AND ${tipoAsignacion}
       AND a.fecha_desde <= ${dia} AND (a.fecha_hasta IS NULL OR a.fecha_hasta >= ${dia})
       AND (
@@ -81,8 +80,7 @@ export function condicionAgenda(
 
   const dia = Prisma.sql`(d.dia::date)`;
   return Prisma.sql`
-    l.empresa_id = ${empresaId} AND l.eliminado_en IS NULL AND l.activo AND a.activo
-    AND (l.cliente_id IS NULL OR (c.activo AND c.eliminado_en IS NULL))
+    l.empresa_id = ${empresaId} AND a.activo
     AND ${tipoAsignacion}
     AND a.fecha_desde <= ${fechaFin}::date AND (a.fecha_hasta IS NULL OR a.fecha_hasta >= ${fecha}::date)
     AND (
@@ -108,12 +106,12 @@ export function condicionAgenda(
           ))
       )
     ) AND (
-      NOT EXISTS (SELECT 1 FROM campo_horarios h WHERE h.local_id = l.id AND h.activo AND h.equipo_campo_id = ${equipoCampoId}
+      NOT EXISTS (SELECT 1 FROM campo_horarios h WHERE h.empresa_id = l.empresa_id AND h."CardCode" = l."CardCode" AND h.activo AND h.equipo_campo_id = ${equipoCampoId}
         AND (h.asignacion_id = a.id OR h.asignacion_id IS NULL))
       OR EXISTS (
         SELECT 1 FROM campo_horarios h
         CROSS JOIN generate_series(${fecha}::date, ${fechaFin}::date, interval '1 day') AS d(dia)
-        WHERE h.local_id = l.id AND h.activo AND h.equipo_campo_id = ${equipoCampoId}
+        WHERE h.empresa_id = l.empresa_id AND h."CardCode" = l."CardCode" AND h.activo AND h.equipo_campo_id = ${equipoCampoId}
         AND (h.asignacion_id = a.id OR (h.asignacion_id IS NULL AND NOT EXISTS (
           SELECT 1 FROM campo_horarios propio WHERE propio.asignacion_id = a.id AND propio.activo AND propio.equipo_campo_id = ${equipoCampoId}
         )))

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return -- Prisma transaction mock and Jest matchers are intentionally partial. */
 import type { PrismaService } from '../prisma/prisma.service';
 import type { CampoAccesoService } from './campo-acceso.service';
 
@@ -6,46 +5,38 @@ jest.mock('../prisma/prisma.service', () => ({ PrismaService: class {} }));
 import { CatalogoCampoService } from './catalogo-campo.service';
 
 describe('Catálogo de tareas', () => {
-  it('impide crear otra ficha para el mismo local de la empresa', async () => {
-    const tx = {
-      $queryRaw: jest.fn(),
-      clienteCampo: { findFirst: jest.fn().mockResolvedValue({ id: 4 }) },
-      localCampo: {
-        findFirst: jest.fn().mockResolvedValue({ id: 12 }),
-        create: jest.fn(),
+  it('guarda la ubicación en OCRD solo dentro de la empresa del usuario', async () => {
+    const prisma = {
+      socioNegocio: {
+        updateMany: jest
+          .fn()
+          .mockResolvedValueOnce({ count: 1 })
+          .mockResolvedValueOnce({ count: 0 }),
+        findFirstOrThrow: jest.fn().mockResolvedValue({
+          CardCode: 'C001',
+          CardName: 'Granusa',
+          U_Latitud: '-25.3000000',
+          U_Longitud: '-57.6000000',
+        }),
       },
     };
-    const prisma = {
-      clienteCampo: { findFirst: jest.fn().mockResolvedValue({ id: 4 }) },
-      $transaction: jest.fn().mockImplementation((fn) => fn(tx)),
-    };
     const acceso = {
-      gestionar: jest.fn().mockResolvedValue({
-        empresaId: 10,
-        permisosTareas: ['CONSULTAR', 'CREAR', 'EDITAR', 'ARCHIVAR'],
-        equipoCampo: {
-          id: 1,
-          nombre: 'Impulsadores',
-          tipo: 'IMPULSADOR',
-          activo: true,
-        },
-      }),
+      gestionar: jest.fn().mockResolvedValue({ empresaId: 10 }),
     };
     const service = new CatalogoCampoService(
       prisma as unknown as PrismaService,
       acceso as unknown as CampoAccesoService,
     );
     await expect(
-      service.guardarLocal(1, {
-        clienteId: 4,
-        nombre: 'Sucursal Centro',
-        direccion: 'Calle 1',
-        latitud: -25.3,
-        longitud: -57.6,
-        radioMetros: 100,
-      } as never),
-    ).rejects.toThrow('El local ya existe (#12)');
-    expect(tx.localCampo.create).not.toHaveBeenCalled();
+      service.ubicarLocal(1, 'C001', { latitud: -25.3, longitud: -57.6 }),
+    ).resolves.toMatchObject({ id: 'C001', nombre: 'Granusa', latitud: -25.3 });
+    expect(prisma.socioNegocio.updateMany).toHaveBeenCalledWith({
+      where: { empresaId: 10, CardCode: 'C001' },
+      data: { U_Latitud: '-25.3000000', U_Longitud: '-57.6000000' },
+    });
+    await expect(
+      service.ubicarLocal(1, 'OTRA', { latitud: 1, longitud: 1 }),
+    ).rejects.toThrow('Local no disponible');
   });
 
   it('filtra antes de paginar y calcula el resumen de toda la empresa', async () => {
@@ -57,7 +48,9 @@ describe('Catálogo de tareas', () => {
           .mockResolvedValueOnce(30)
           .mockResolvedValueOnce(12)
           .mockResolvedValueOnce(15),
-        findMany: jest.fn().mockResolvedValue([{ id: 8, nombre: 'Precios' }]),
+        findMany: jest
+          .fn()
+          .mockResolvedValue([{ id: 8, nombre: 'Precios', locales: [] }]),
       },
     };
     const acceso = {

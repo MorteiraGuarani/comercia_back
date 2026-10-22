@@ -15,10 +15,12 @@ function contexto(
       count: jest.fn().mockResolvedValue(1),
       findMany: jest
         .fn()
-        .mockResolvedValue([{ id: 10, nombre: 'Control de precios' }]),
+        .mockResolvedValue([
+          { id: 10, nombre: 'Control de precios', locales: [] },
+        ]),
       findFirst: jest.fn(),
     },
-    localCampo: { count: jest.fn() },
+    socioNegocio: { count: jest.fn() },
     $transaction: jest.fn(),
   };
   const acceso = {
@@ -96,7 +98,7 @@ describe('Permisos del catálogo de tareas', () => {
       await expect(service.eliminarTarea(3, 10)).rejects.toBeInstanceOf(
         ForbiddenException,
       );
-      expect(prisma.localCampo.count).not.toHaveBeenCalled();
+      expect(prisma.socioNegocio.count).not.toHaveBeenCalled();
       expect(prisma.tareaCampo.findFirst).not.toHaveBeenCalled();
       expect(prisma.$transaction).not.toHaveBeenCalled();
     },
@@ -105,7 +107,9 @@ describe('Permisos del catálogo de tareas', () => {
   it('el TeamLeader puede consultar y recibe el catálogo en modo solo lectura', async () => {
     const { service } = contexto('TeamLeader');
     const resultado = await service.tareas(3, { page: 1, limit: 7 });
-    expect(resultado.items).toEqual([{ id: 10, nombre: 'Control de precios' }]);
+    expect(resultado.items).toEqual([
+      { id: 10, nombre: 'Control de precios', locales: [] },
+    ]);
     expect(resultado.permisos).toMatchObject({
       puedeAdministrar: false,
       consultar: true,

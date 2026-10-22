@@ -16,9 +16,9 @@ import { HorariosLocal } from "./horarios-local";
 
 // Responsables del local y sus reemplazos (backups).
 
-export function AsignacionesLocal({ localId }: { localId: number }) {
+export function AsignacionesLocal({ localId }: { localId: string }) {
   const lista = useListaCampo<AsignacionCampo>(
-    `/campo/locales/${localId}/asignaciones`,
+    `/campo/locales/${encodeURIComponent(localId)}/asignaciones`,
   );
   const op = useOperacionCampo();
   const [crear, setCrear] = useState(false);
@@ -170,7 +170,7 @@ export function AsignacionesLocal({ localId }: { localId: number }) {
             if (!usuarioId) return;
             if (
               await op.ejecutar("Asignando colaborador", () =>
-                apiFetch(`/campo/locales/${localId}/asignaciones`, {
+                apiFetch(`/campo/locales/${encodeURIComponent(localId)}/asignaciones`, {
                   method: "POST",
                   body: JSON.stringify({
                     usuarioId,

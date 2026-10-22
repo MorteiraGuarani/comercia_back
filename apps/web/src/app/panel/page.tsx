@@ -506,7 +506,6 @@ function descripcionPagina(modulo: string, pagina: string) {
       "Reportes pendientes y resolución de incidencias.",
     "gestion-campo/avisos":
       "Indicaciones operativas y confirmación de lectura.",
-    "gestion-campo/clientes": "Cuentas comerciales y cobertura geográfica.",
     "gestion-campo/locales":
       "Puntos de venta, rutas y planificación operativa.",
     "gestion-campo/tareas": "Protocolos y tareas asignadas al equipo.",

@@ -6,6 +6,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  Length,
   Max,
   MaxLength,
   Min,
@@ -32,10 +33,10 @@ export class ListarUsuariosDto extends PaginacionDto {
 }
 
 export class AsignarUsuarioLocalDto {
-  @IsInt()
-  @Min(1)
-  @Max(MAX_INT4)
-  localId!: number;
+  /** CardCode del socio de negocio (tbl_ocrd). */
+  @IsString()
+  @Length(1, 15)
+  localId!: string;
 
   @IsDateString({ strict: false })
   fechaDesde!: string;

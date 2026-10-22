@@ -243,6 +243,27 @@ export class SociosNegocioService {
         throw new ConflictException(
           'El socio tiene direcciones asociadas; quitarlas o reasignarlas primero',
         );
+      // El socio es el local de campo: sin esta comprobación el FK devolvería 404.
+      const usoCampo = await tx.socioNegocio.findFirst({
+        where: { empresaId, CardCode: valor as string },
+        select: {
+          _count: {
+            select: {
+              asignaciones: true,
+              horarios: true,
+              visitas: true,
+              tareas: true,
+              novedades: true,
+              eventosUcheck: true,
+              usuariosPrincipal: true,
+            },
+          },
+        },
+      });
+      if (usoCampo && Object.values(usoCampo._count).some((n) => n > 0))
+        throw new ConflictException(
+          'El socio tiene operación de campo asociada (asignaciones, horarios, visitas, tareas o novedades); quitarla primero',
+        );
       return;
     }
     const referencias: Record<string, string> = {

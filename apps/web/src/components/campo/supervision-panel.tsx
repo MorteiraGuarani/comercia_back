@@ -325,7 +325,7 @@ export function SupervisionPanel({
                         <p className="break-words text-sm font-semibold text-foreground">{p.local}</p>
                         <p className="break-words text-[11px] text-muted">
                           {[
-                            p.cliente,
+                            p.localId,
                             p.ventana ? `Franja ${p.ventana}` : "Sin franja",
                             p.checkin ? `Entrada ${p.checkin}` : null,
                             p.checkout ? `Salida ${p.checkout}` : null,
@@ -407,7 +407,7 @@ export function SupervisionPanel({
                         <div className="flex flex-wrap items-start justify-between gap-2">
                           <div className="min-w-0">
                             <h4 className="break-words text-sm font-semibold text-foreground">{evidencia.nombreTarea}</h4>
-                            <p className="break-words text-xs text-muted">{evidencia.local} · {evidencia.cliente}</p>
+                            <p className="break-words text-xs text-muted">{evidencia.local}</p>
                           </div>
                           <span
                             className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${

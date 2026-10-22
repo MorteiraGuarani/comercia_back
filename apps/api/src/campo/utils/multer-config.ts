@@ -1,4 +1,4 @@
-import { diskStorage, memoryStorage } from 'multer';
+import { diskStorage } from 'multer';
 import { extname, isAbsolute, join, resolve } from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { BadRequestException } from '@nestjs/common';
@@ -100,21 +100,6 @@ export const multerConfigFotosTareas: MulterOptions = {
   limits: { fileSize: MAX_FILE_SIZE },
   fileFilter: filtroImagen,
 };
-
-/**
- * Logos de clientes: quedan en memoria hasta que el servicio comprueba el
- * permiso y la firma de la imagen; recién ahí se escriben en disco. Sin SVG:
- * puede llevar scripts y se serviría desde el mismo origen que la app.
- */
-export const multerConfigLogoCliente: MulterOptions = {
-  storage: memoryStorage(),
-  limits: { fileSize: MAX_FILE_SIZE, files: 1 },
-  fileFilter: filtroImagen,
-};
-
-export function directorioLogosClientes(): string {
-  return join(directorioUploads(), 'clientes');
-}
 
 function descartar(file: Express.Multer.File): void {
   if (!file.path) return;

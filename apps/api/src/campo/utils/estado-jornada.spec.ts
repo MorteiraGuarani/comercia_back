@@ -113,12 +113,6 @@ describe('Estados de Comercia equivalentes a Presentismo UWeb', () => {
     expect(
       estadoVisita({ fecha, salida: null }, new Date('2026-10-10T02:59:59Z')),
     ).toBe('EN_CURSO');
-    expect(
-      estadoVisita(
-        { fecha, salida: null, local: { zonaHoraria: 'America/Lima' } },
-        new Date('2026-10-10T04:59:59Z'),
-      ),
-    ).toBe('EN_CURSO');
   });
   it('sin horario no deduce tardanza ni ausencia y conserva jornadas cerradas', () => {
     const general = { ...turno, horaDesde: null, horaHasta: null };

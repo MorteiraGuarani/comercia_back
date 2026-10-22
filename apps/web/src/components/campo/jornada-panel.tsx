@@ -27,6 +27,7 @@ import {
   ordenarParadasPorRuta,
   urlGoogleMapsRuta,
   type CoordenadaCampo,
+  conUbicacion,
 } from "@/utils/ruta-recomendada";
 import { mensajeError } from "@/utils/error";
 import type { MarcacionPendiente } from "@/types/seguimiento";
@@ -189,11 +190,10 @@ function AgendaDelDia({
     setCalculandoRuta(true);
     setAvisoRuta("");
     try {
-      const candidatos = lista.items.filter(
-        (a) =>
-          a.estado === "pendiente" &&
-          Number.isFinite(a.local.latitud) &&
-          Number.isFinite(a.local.longitud),
+      const candidatos = lista.items.flatMap((a) =>
+        a.estado === "pendiente" && conUbicacion(a.local)
+          ? [{ ...a, local: a.local }]
+          : [],
       );
       if (!candidatos.length) {
         setRuta(null);
@@ -205,7 +205,10 @@ function AgendaDelDia({
       const localActual = lista.items.find(
         (a) => a.id === abierta?.asignacionId,
       )?.local;
-      const inicio = gps ?? localActual ?? candidatos[0].local;
+      const inicio =
+        gps ??
+        (localActual && conUbicacion(localActual) ? localActual : null) ??
+        candidatos[0].local;
       const origen = { latitud: inicio.latitud, longitud: inicio.longitud };
       const orden = ordenarParadasPorRuta(
         origen,
@@ -242,7 +245,9 @@ function AgendaDelDia({
   const paradasRestantes = ruta
     ? ruta.ids.flatMap((id) => {
         const a = lista.items.find((x) => x.id === id);
-        return a?.estado === "pendiente" ? [a] : [];
+        return a?.estado === "pendiente" && conUbicacion(a.local)
+          ? [{ ...a, local: a.local }]
+          : [];
       })
     : [];
   const urlMapsRuta = ruta
@@ -266,7 +271,7 @@ function AgendaDelDia({
     return porEstado.filter(
       (a) =>
         a.local.nombre.toLowerCase().includes(q) ||
-        (a.local.cliente?.nombre ?? "Sin cliente").toLowerCase().includes(q) ||
+        a.local.id.toLowerCase().includes(q) ||
         a.local.direccion.toLowerCase().includes(q),
     );
   }, [itemsOrdenados, busqueda, filtro]);
@@ -568,7 +573,7 @@ function AgendaDelDia({
                     {a.local.nombre}
                   </strong>
                   <p className="text-xs text-brand-700 dark:text-brand-200 font-medium">
-                    {a.local.cliente?.nombre ?? "Sin cliente"}
+                    {a.local.direccion || a.local.id}
                   </p>
                 </div>
               </div>
@@ -624,7 +629,7 @@ function AgendaDelDia({
             agenda={a}
             orden={numeroParada.get(a.id) ?? 0}
             distancia={
-              ruta && a.estado === "pendiente"
+              ruta && a.estado === "pendiente" && conUbicacion(a.local)
                 ? formatoDistancia(metrosEntre(ruta.origen, a.local))
                 : undefined
             }

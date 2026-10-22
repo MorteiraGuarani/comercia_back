@@ -1,28 +1,4 @@
-export const CLIENTE_CAMPO_SELECT = {
-  id: true,
-  nombre: true,
-  ruc: true,
-  contacto: true,
-  telefono: true,
-  logoUrl: true,
-  activo: true,
-  _count: { select: { locales: { where: { eliminadoEn: null } } } },
-} as const;
-export const LOCAL_CAMPO_SELECT = {
-  id: true,
-  clienteId: true,
-  nombre: true,
-  direccion: true,
-  contacto: true,
-  telefono: true,
-  latitud: true,
-  longitud: true,
-  radioMetros: true,
-  zonaHoraria: true,
-  notas: true,
-  activo: true,
-  cliente: { select: { id: true, nombre: true, logoUrl: true } },
-} as const;
+import { LOCAL_OCRD_SELECT } from './local-ocrd';
 export const HORARIO_CAMPO_SELECT = {
   id: true,
   localId: true,
@@ -77,7 +53,7 @@ export const TAREA_CAMPO_SELECT = {
   estado: true,
   locales: {
     take: 50,
-    select: { local: { select: { id: true, nombre: true } } },
+    select: { local: { select: { CardCode: true, CardName: true } } },
   },
 } as const;
 export const VISITA_CAMPO_SELECT = {
@@ -107,9 +83,7 @@ export const VISITA_CAMPO_SELECT = {
   salidaDistancia: true,
   salidaFueraHorario: true,
   salidaFueraAtencion: true,
-  local: {
-    select: { id: true, nombre: true, radioMetros: true, zonaHoraria: true },
-  },
+  local: { select: LOCAL_OCRD_SELECT },
   horario: { select: { entrada: true, salida: true } },
   eventosUcheck: {
     where: { tipo: 'ENTRADA' },

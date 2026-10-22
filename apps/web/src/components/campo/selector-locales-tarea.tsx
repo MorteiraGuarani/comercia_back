@@ -8,9 +8,10 @@ export function SelectorLocalesTarea({
   nombres,
   onChange,
 }: {
-  ids: number[];
-  nombres: Record<number, string>;
-  onChange: (ids: number[], nombres: Record<number, string>) => void;
+  /** CardCodes de los socios de negocio elegidos. */
+  ids: string[];
+  nombres: Record<string, string>;
+  onChange: (ids: string[], nombres: Record<string, string>) => void;
 }) {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(7);
@@ -18,7 +19,7 @@ export function SelectorLocalesTarea({
   const pagina = Math.min(page, Math.max(1, Math.ceil(ids.length / limit)));
   return (
     <div className="space-y-2 rounded-xl border border-line bg-surface-raised p-3">
-      <SelectorPaginado
+      <SelectorPaginado<string>
         key={revision}
         url="/campo/locales"
         etiqueta="Agregar local"

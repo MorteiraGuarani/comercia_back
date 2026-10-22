@@ -1,4 +1,9 @@
-import { localesOperativos } from './utils/locales-operativos';
+import {
+  aLocalCampo,
+  conLocalCampo,
+  direccionesLocales,
+  LOCAL_OCRD_SELECT,
+} from './utils/local-ocrd';
 import { cargarTolerancias } from '../tolerancias/utils/cargar-tolerancias';
 import {
   evaluarMarcaHorario,
@@ -39,6 +44,7 @@ import {
   ocurreHorarioEnRango,
   rangoConsulta,
   relojCampo,
+  ZONA_CAMPO,
 } from './utils/calendario';
 import { condicionAgenda } from './utils/agenda-sql';
 import { obtenerColaboradoresGestionados } from './utils/autorizacion';
@@ -48,11 +54,7 @@ import {
   estadoAgenda,
   estadoVisita,
 } from './utils/estado-jornada';
-import {
-  HORARIO_CAMPO_SELECT,
-  LOCAL_CAMPO_SELECT,
-  VISITA_CAMPO_SELECT,
-} from './utils/selectores';
+import { HORARIO_CAMPO_SELECT, VISITA_CAMPO_SELECT } from './utils/selectores';
 import type {
   FilaAgendaId,
   TotalAgenda,
@@ -84,19 +86,12 @@ export class JornadaCampoService {
         activo: true,
         fechaDesde: { lte: fecha },
         OR: [{ fechaHasta: null }, { fechaHasta: { gte: fecha } }],
-        local: { activo: true, ...localesOperativos(empresaId) },
+        empresaId,
       },
       select: {
         id: true,
         localId: true,
-        local: {
-          select: {
-            latitud: true,
-            longitud: true,
-            radioMetros: true,
-            zonaHoraria: true,
-          },
-        },
+        local: { select: LOCAL_OCRD_SELECT },
         usuarioId: true,
         usuario: {
           select: {
@@ -159,16 +154,17 @@ export class JornadaCampoService {
       where: { id: u.id, empresaId: u.empresaId },
       select: { localPrincipalId: true },
     });
-    const base = Prisma.sql`FROM campo_asignaciones a JOIN campo_locales l ON l.id = a.local_id LEFT JOIN campo_clientes c ON c.id = l.cliente_id WHERE ${condicion}`;
+    const base = Prisma.sql`FROM campo_asignaciones a JOIN tbl_ocrd l ON l.empresa_id = a.empresa_id AND l."CardCode" = a."CardCode" WHERE ${condicion}`;
     const [conteo, ids] = await Promise.all([
       this.prisma.$queryRaw<TotalAgenda[]>(
-        Prisma.sql`SELECT COUNT(DISTINCT l.id) AS total ${base}`,
+        Prisma.sql`SELECT COUNT(DISTINCT l."CardCode") AS total ${base}`,
       ),
       this.prisma.$queryRaw<FilaAgendaId[]>(
         Prisma.sql`SELECT elegida.id FROM (
-          SELECT DISTINCT ON (l.id) a.id, l.id AS local_id, l.nombre
+          SELECT DISTINCT ON (l."CardCode") a.id, l."CardCode" AS local_id,
+            COALESCE(NULLIF(TRIM(l."CardName"), ''), l."CardCode") AS nombre
           ${base}
-          ORDER BY l.id, CASE WHEN a.usuario_id = ${u.id} THEN 0 ELSE 1 END, a.id
+          ORDER BY l."CardCode", CASE WHEN a.usuario_id = ${u.id} THEN 0 ELSE 1 END, a.id
         ) elegida ORDER BY CASE WHEN elegida.local_id = ${preferencia?.localPrincipalId ?? null} THEN 0 ELSE 1 END, elegida.nombre, elegida.id LIMIT ${take} OFFSET ${skip}`,
       ),
     ]);
@@ -193,7 +189,7 @@ export class JornadaCampoService {
         },
         local: {
           select: {
-            ...LOCAL_CAMPO_SELECT,
+            ...LOCAL_OCRD_SELECT,
             horarios: {
               where: {
                 activo: true,
@@ -222,7 +218,6 @@ export class JornadaCampoService {
             fecha: true,
             entrada: true,
             salida: true,
-            local: { select: { zonaHoraria: true } },
             horario: { select: { entrada: true, salida: true } },
             eventosUcheck: {
               where: { tipo: 'ENTRADA' },
@@ -234,6 +229,11 @@ export class JornadaCampoService {
       },
     });
     const porId = new Map(filas.map((f) => [f.id, f]));
+    const direcciones = await direccionesLocales(
+      this.prisma,
+      u.empresaId,
+      filas.map((f) => f.local.CardCode),
+    );
     const ahora = new Date();
     const items = ids.flatMap(({ id }) => {
       const a = porId.get(id);
@@ -241,12 +241,12 @@ export class JornadaCampoService {
         ? [
             {
               id: a.id,
-              esPrincipal: a.local.id === preferencia?.localPrincipalId,
+              esPrincipal: a.local.CardCode === preferencia?.localPrincipalId,
               esBackup: a.usuarioId !== u.id && !esTeamleader,
               heredada: a.usuarioId !== u.id && esTeamleader,
               titular: `${a.usuario.nombre} ${a.usuario.apellido}`,
               local: {
-                ...a.local,
+                ...aLocalCampo(a.local, direcciones.get(a.local.CardCode)),
                 horarios: (a.horarios.length
                   ? a.horarios
                   : a.local.horarios
@@ -258,7 +258,7 @@ export class JornadaCampoService {
               ...estadoAgenda(
                 a.visitas,
                 a.horarios.length ? a.horarios : a.local.horarios,
-                a.local.zonaHoraria,
+                ZONA_CAMPO,
                 desde,
                 hasta,
                 ahora,
@@ -291,7 +291,11 @@ export class JornadaCampoService {
           esTeamleader,
           u.equipoCampo,
         );
-        const distancia = comprobarMarcaEnLocal(dto, a.local, ahora);
+        const distancia = comprobarMarcaEnLocal(
+          dto,
+          aLocalCampo(a.local),
+          ahora,
+        );
         if (
           await tx.visitaCampo.count({
             where: { usuarioId, fecha, salida: null },
@@ -335,12 +339,13 @@ export class JornadaCampoService {
               reloj.fecha,
               h.entrada,
               h.salida,
-              a.local.zonaHoraria,
+              ZONA_CAMPO,
               tolerancias,
             )
           : null;
         const visita = await tx.visitaCampo.create({
           data: {
+            empresaId: u.empresaId,
             localId: a.localId,
             asignacionId: a.id,
             usuarioId: u.id,
@@ -361,7 +366,7 @@ export class JornadaCampoService {
           },
           select: VISITA_CAMPO_SELECT,
         });
-        return conEstadoVisita(visita, ahora);
+        return conLocalCampo(conEstadoVisita(visita, ahora));
       });
     } catch (error) {
       relanzarDuplicado(error, 'Ya se registró esta visita');
@@ -375,11 +380,11 @@ export class JornadaCampoService {
         usuarioId: u.id,
         fecha: fechaCampo(relojCampo().fecha),
         salida: null,
-        local: { empresaId: u.empresaId },
+        empresaId: u.empresaId,
       },
       select: VISITA_CAMPO_SELECT,
     });
-    return visita ? conEstadoVisita(visita) : null;
+    return visita ? conLocalCampo(conEstadoVisita(visita)) : null;
   }
   async salida(usuarioId: number, id: number, dto: MarcaCampoDto) {
     const u = await this.acceso.ejecutar(usuarioId);
@@ -391,23 +396,20 @@ export class JornadaCampoService {
         usuarioId: u.id,
         fecha,
         salida: null,
-        local: { empresaId: u.empresaId },
+        empresaId: u.empresaId,
       },
       select: {
         toleranciasAplicadas: true,
         horario: { select: { entrada: true, salida: true } },
-        local: {
-          select: {
-            latitud: true,
-            longitud: true,
-            radioMetros: true,
-            zonaHoraria: true,
-          },
-        },
+        local: { select: LOCAL_OCRD_SELECT },
       },
     });
     if (!visita) throw new NotFoundException('Visita abierta no disponible');
-    const distancia = comprobarMarcaEnLocal(dto, visita.local, ahora);
+    const distancia = comprobarMarcaEnLocal(
+      dto,
+      aLocalCampo(visita.local),
+      ahora,
+    );
     const evaluacion =
       visita.horario && visita.toleranciasAplicadas
         ? evaluarMarcaHorario(
@@ -416,7 +418,7 @@ export class JornadaCampoService {
             relojCampo(ahora).fecha,
             visita.horario.entrada,
             visita.horario.salida,
-            visita.local.zonaHoraria,
+            ZONA_CAMPO,
             heredarTolerancias(visita.toleranciasAplicadas),
           )
         : null;
@@ -426,7 +428,7 @@ export class JornadaCampoService {
         usuarioId: u.id,
         fecha,
         salida: null,
-        local: { empresaId: u.empresaId },
+        empresaId: u.empresaId,
       },
       data: {
         salida: ahora,
@@ -461,10 +463,7 @@ export class JornadaCampoService {
         activo: true,
         fechaDesde: { lte: fechaHasta },
         OR: [{ fechaHasta: null }, { fechaHasta: { gte: fechaDesde } }],
-        local: {
-          activo: true,
-          ...localesOperativos(u.empresaId),
-        },
+        empresaId: u.empresaId,
       },
       select: {
         id: true,
@@ -575,10 +574,7 @@ export class JornadaCampoService {
         activo: true,
         fechaDesde: { lte: fechaHasta },
         OR: [{ fechaHasta: null }, { fechaHasta: { gte: fechaDesde } }],
-        local: {
-          activo: true,
-          ...localesOperativos(u.empresaId),
-        },
+        empresaId: u.empresaId,
       },
       select: {
         id: true,
@@ -743,7 +739,7 @@ export class JornadaCampoService {
         where: {
           id: visitaId,
           usuarioId: u.id,
-          local: { empresaId: u.empresaId },
+          empresaId: u.empresaId,
         },
         select: { id: true, localId: true, fecha: true, salida: true },
       });
@@ -858,7 +854,7 @@ export class JornadaCampoService {
     const where: Prisma.VisitaCampoWhereInput = {
       fecha: { gte: fechaCampo(desde), lte: fechaCampo(hasta) },
       localId: query.localId,
-      local: { empresaId: u.empresaId },
+      empresaId: u.empresaId,
       ...(equipo
         ? {
             usuario: { empresaId: u.empresaId },
@@ -885,7 +881,7 @@ export class JornadaCampoService {
       }),
     ]);
     return respuestaPaginada(
-      items.map((v) => conEstadoVisita(v)),
+      items.map((v) => conLocalCampo(conEstadoVisita(v))),
       total,
       page,
       limit,

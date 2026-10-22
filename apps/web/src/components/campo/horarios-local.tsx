@@ -20,12 +20,12 @@ export function HorariosLocal({
   localId,
   asignacionId,
 }: {
-  localId: number;
+  localId: string;
   asignacionId?: number;
 }) {
   const ruta = asignacionId
     ? `/campo/asignaciones/${asignacionId}/horarios`
-    : `/campo/locales/${localId}/horarios`;
+    : `/campo/locales/${encodeURIComponent(localId)}/horarios`;
   const lista = useListaCampo<HorarioCampo>(ruta);
   const op = useOperacionCampo();
   const [form, setForm] = useState<FormHorarioCampo | null>(null);

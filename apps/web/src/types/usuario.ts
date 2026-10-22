@@ -40,9 +40,8 @@ export interface MetaUsuarios {
 
 export interface UsuarioLocalAsignacion {
   id: number;
-  localId: number;
+  localId: string;
   nombreLocal: string;
-  nombreCliente: string;
   fechaDesde: string;
   fechaHasta: string | null;
 }

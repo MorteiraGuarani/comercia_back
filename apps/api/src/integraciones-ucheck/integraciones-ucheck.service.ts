@@ -265,7 +265,7 @@ export class IntegracionesUcheckService {
           usuario: { rol: rolDelEquipoCampo(usuario.rol?.equipoCampo) },
           fechaDesde: { lte: fecha },
           OR: [{ fechaHasta: null }, { fechaHasta: { gte: fecha } }],
-          local: { empresaId: usuario.empresaId },
+          empresaId: usuario.empresaId,
           AND: [
             {
               OR: [
@@ -335,6 +335,7 @@ export class IntegracionesUcheckService {
         const horario = await tx.horarioCampo.findFirst({
           where: {
             id: dto.horarioId,
+            empresaId: usuario.empresaId,
             localId: dto.localId,
             OR: [{ asignacionId: dto.asignacionId }, { asignacionId: null }],
             ...(dto.tipo === 'ENTRADA'
@@ -425,6 +426,7 @@ export class IntegracionesUcheckService {
             })
           : await tx.visitaCampo.create({
               data: {
+                empresaId: usuario.empresaId,
                 localId: dto.localId,
                 asignacionId: asignacion.id,
                 usuarioId: usuario.id,

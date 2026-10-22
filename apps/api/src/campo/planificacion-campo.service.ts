@@ -1,4 +1,3 @@
-import { localesOperativos } from './utils/locales-operativos';
 import {
   BadRequestException,
   Injectable,
@@ -79,10 +78,11 @@ export class PlanificacionCampoService {
       limit,
     );
   }
-  async horarios(usuarioId: number, localId: number, query: ConsultaCampoDto) {
+  async horarios(usuarioId: number, localId: string, query: ConsultaCampoDto) {
     const u = await this.acceso.gestionar(usuarioId, 'locales');
     await this.acceso.local(u.empresaId, localId);
     const where = {
+      empresaId: u.empresaId,
       localId,
       asignacionId: null,
       equipoCampoId: exigirEquipoCampo(u.equipoCampo).id,
@@ -104,7 +104,7 @@ export class PlanificacionCampoService {
   }
   async guardarHorario(
     usuarioId: number,
-    localId: number,
+    localId: string,
     dto: HorarioCampoDto,
     id?: number,
     asignacionId?: number,
@@ -122,11 +122,12 @@ export class PlanificacionCampoService {
     validarHorario(data);
     return this.prisma.$transaction(async (tx) => {
       // Serializa cambios por local y limita el tamaño de los horarios de agenda.
-      await tx.$queryRaw`SELECT id FROM campo_locales WHERE id = ${localId} FOR UPDATE`;
+      await tx.$queryRaw`SELECT id FROM tbl_ocrd WHERE empresa_id = ${u.empresaId} AND "CardCode" = ${localId} FOR UPDATE`;
       if (id) {
         const anterior = await tx.horarioCampo.findFirst({
           where: {
             id,
+            empresaId: u.empresaId,
             localId,
             asignacionId: asignacionId ?? null,
             destinatario,
@@ -145,6 +146,7 @@ export class PlanificacionCampoService {
       if (
         (await tx.horarioCampo.count({
           where: {
+            empresaId: u.empresaId,
             localId,
             asignacionId: asignacionId ?? null,
             destinatario,
@@ -157,6 +159,7 @@ export class PlanificacionCampoService {
       const horario = await tx.horarioCampo.create({
         data: {
           ...data,
+          empresaId: u.empresaId,
           localId,
           asignacionId: asignacionId ?? null,
           destinatario,
@@ -182,12 +185,13 @@ export class PlanificacionCampoService {
       return horario;
     });
   }
-  async eliminarHorario(usuarioId: number, localId: number, id: number) {
+  async eliminarHorario(usuarioId: number, localId: string, id: number) {
     const u = await this.acceso.gestionar(usuarioId, 'locales');
     await this.acceso.local(u.empresaId, localId);
     const resultado = await this.prisma.horarioCampo.updateMany({
       where: {
         id,
+        empresaId: u.empresaId,
         localId,
         asignacionId: null,
         equipoCampoId: exigirEquipoCampo(u.equipoCampo).id,
@@ -253,12 +257,13 @@ export class PlanificacionCampoService {
   }
   async asignaciones(
     usuarioId: number,
-    localId: number,
+    localId: string,
     query: ConsultaCampoDto,
   ) {
     const u = await this.acceso.gestionar(usuarioId, 'locales');
     await this.acceso.local(u.empresaId, localId);
     const where = {
+      empresaId: u.empresaId,
       localId,
       activo: true,
       usuario: {
@@ -280,15 +285,16 @@ export class PlanificacionCampoService {
     ]);
     return respuestaPaginada(items, total, page, limit);
   }
-  async asignar(usuarioId: number, localId: number, dto: AsignacionCampoDto) {
+  async asignar(usuarioId: number, localId: string, dto: AsignacionCampoDto) {
     const u = await this.acceso.gestionar(usuarioId, 'locales');
     await this.acceso.local(u.empresaId, localId);
     await this.acceso.subordinado(u.empresaId, u.id, dto.usuarioId);
     const fechas = vigenciaCampo(dto.fechaDesde, dto.fechaHasta);
     return this.prisma.$transaction(async (tx) => {
-      await tx.$queryRaw`SELECT id FROM campo_locales WHERE id = ${localId} FOR UPDATE`;
+      await tx.$queryRaw`SELECT id FROM tbl_ocrd WHERE empresa_id = ${u.empresaId} AND "CardCode" = ${localId} FOR UPDATE`;
       const solapa = await tx.asignacionCampo.count({
         where: {
+          empresaId: u.empresaId,
           localId,
           usuarioId: dto.usuarioId,
           activo: true,
@@ -304,7 +310,12 @@ export class PlanificacionCampoService {
           'El usuario ya tiene una asignación en esas fechas',
         );
       return tx.asignacionCampo.create({
-        data: { localId, usuarioId: dto.usuarioId, ...fechas },
+        data: {
+          empresaId: u.empresaId,
+          localId,
+          usuarioId: dto.usuarioId,
+          ...fechas,
+        },
         select: ASIGNACION_CAMPO_SELECT,
       });
     });
@@ -316,7 +327,7 @@ export class PlanificacionCampoService {
       where: {
         id,
         activo: true,
-        local: { empresaId: u.empresaId },
+        empresaId: u.empresaId,
         usuario: {
           id: { in: colaboradores },
           empresaId: u.empresaId,
@@ -347,11 +358,8 @@ export class PlanificacionCampoService {
             id,
             activo: true,
             usuarioId: a.usuarioId,
+            empresaId: u.empresaId,
             localId: a.localId,
-            local: {
-              activo: true,
-              ...localesOperativos(u.empresaId),
-            },
             usuario: {
               id: { in: colaboradores },
               empresaId: u.empresaId,
@@ -400,7 +408,12 @@ export class PlanificacionCampoService {
           data: { activo: false },
         });
         const conservaLocal = await tx.asignacionCampo.count({
-          where: { usuarioId: a.usuarioId, localId: a.localId, activo: true },
+          where: {
+            empresaId: u.empresaId,
+            usuarioId: a.usuarioId,
+            localId: a.localId,
+            activo: true,
+          },
         });
         if (!conservaLocal)
           await tx.usuario.updateMany({

@@ -1,38 +1,20 @@
-"use client";
-
-import { useState } from "react";
 import { colorCartelLocal, textoCartelLocal } from "@/utils/foto-local";
 
 interface FotoLocalProps {
   nombre: string;
-  cliente: { nombre: string; logoUrl?: string | null } | null;
   className?: string;
 }
 
 /**
- * Imagen chica del local en la tarjeta de la agenda. Los locales todavía no
- * tienen foto propia: se usa el logo del cliente o una ilustración del frente,
- * que también reemplaza al logo si la imagen no carga.
+ * Imagen chica del local en las tarjetas. OCRD no trae foto ni logo: se
+ * dibuja el frente con el nombre del socio en el cartel.
  */
-export function FotoLocal({ nombre, cliente, className = "" }: FotoLocalProps) {
-  const logo = cliente?.logoUrl;
+export function FotoLocal({ nombre, className = "" }: FotoLocalProps) {
   const color = colorCartelLocal(nombre);
-  const [logoRoto, setLogoRoto] = useState<string | null>(null);
   return (
     <div
       className={`relative aspect-[4/3] overflow-hidden rounded-lg border border-line bg-surface-soft ${className}`}
     >
-      {logo && logoRoto !== logo ? (
-        // eslint-disable-next-line @next/next/no-img-element -- logo subido por la empresa, sin optimizador de imágenes
-        <img
-          src={logo}
-          alt={`Logo de ${cliente?.nombre ?? nombre}`}
-          loading="lazy"
-          decoding="async"
-          onError={() => setLogoRoto(logo)}
-          className="h-full w-full bg-white object-contain p-2 dark:bg-stone-100"
-        />
-      ) : (
         <svg
           viewBox="0 0 160 120"
           preserveAspectRatio="xMidYMid slice"
@@ -86,7 +68,6 @@ export function FotoLocal({ nombre, cliente, className = "" }: FotoLocalProps) {
             <rect x="112" y="84" width="10" height="7" />
           </g>
         </svg>
-      )}
     </div>
   );
 }

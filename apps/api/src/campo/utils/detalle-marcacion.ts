@@ -2,6 +2,8 @@ import type { Prisma } from '../../../generated/prisma/client';
 import type { DetalleMarcacion } from '../../common/interfaces/detalle-marcacion.interface';
 import { contextoTecnico } from '../../common/utils/contexto-tecnico';
 import { conEstadoVisita } from './estado-jornada';
+import { ZONA_CAMPO } from './calendario';
+import { nombreLocal } from './local-ocrd';
 
 export function selectorMarcaciones(empresaId: number, usuarioId: number) {
   return {
@@ -23,7 +25,7 @@ export function selectorMarcaciones(empresaId: number, usuarioId: number) {
     salidaFueraHorario: true,
     salidaFueraAtencion: true,
     usuario: { select: { id: true, nombre: true, apellido: true } },
-    local: { select: { id: true, nombre: true, zonaHoraria: true } },
+    local: { select: { CardCode: true, CardName: true } },
     horario: { select: { entrada: true, salida: true } },
     eventosUcheck: {
       where: { empresaId, usuarioId },
@@ -95,9 +97,9 @@ export function detalleVisita(
       id: v.usuario.id,
       nombre: `${v.usuario.nombre} ${v.usuario.apellido}`.trim(),
     },
-    local: { id: v.local.id, nombre: v.local.nombre },
+    local: { id: v.local.CardCode, nombre: nombreLocal(v.local) },
     fecha: v.fecha.toISOString().slice(0, 10),
-    zonaHoraria: v.local.zonaHoraria,
+    zonaHoraria: ZONA_CAMPO,
     entrada: marca('ENTRADA', v.entrada),
     salida: v.salida ? marca('SALIDA', v.salida) : null,
   };

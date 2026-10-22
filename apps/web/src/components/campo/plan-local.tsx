@@ -40,11 +40,11 @@ export function PlanLocal({
         >
           <div className="min-w-0 flex-1 break-words">
             <span className="text-xs font-bold uppercase tracking-wider text-muted">
-              Cuenta Comercial
+              Socio de negocio
             </span>
             <p className="text-sm font-bold text-foreground">
-              {local.cliente?.nombre ?? "Sin cliente"} —{" "}
-              {local.direccion || "Sin dirección fijada"}
+              {local.direccion || "Sin dirección en CRD1"} —{" "}
+              <span className="font-mono">{local.id}</span>
             </p>
           </div>
           <StatusStamp tone="frio" size="sm">

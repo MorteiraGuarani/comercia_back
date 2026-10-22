@@ -2,65 +2,51 @@
 
 import { BotonEditar } from "@/components/boton-editar";
 import type { LocalCampo } from "@/types/campo";
-import { BotonEliminarCampo } from "./boton-eliminar-campo";
 import { FotoLocal } from "./ui/foto-local";
 import { IconoPin, IconoPlanificacion } from "./ui/iconos-campo";
 
-// Tarjeta de punto de venta (vista celular de PDV y rutas): franja y estado de
-// color, imagen del local, dirección y quién lo atiende.
+// Tarjeta de punto de venta (vista celular de PDV y rutas): imagen del local,
+// CardCode, ubicación en OCRD y quién lo atiende.
 
 const iniciales = (nombre: string, apellido: string) =>
   `${nombre[0] ?? ""}${apellido[0] ?? ""}`.toUpperCase();
 
 export function TarjetaPdv({
   local,
-  ocupado,
-  onEditar,
+  onUbicar,
   onRuta,
-  onEliminar,
 }: {
   local: LocalCampo;
-  ocupado: boolean;
-  onEditar: () => void;
+  onUbicar: () => void;
   onRuta: () => void;
-  onEliminar: () => void;
 }) {
   const asignaciones = local.asignaciones ?? [];
+  const ubicado = local.latitud !== null && local.longitud !== null;
   return (
     <article className="relative overflow-hidden rounded-xl border border-line bg-surface-raised shadow-[0_2px_8px_rgba(var(--warm-shadow),0.06)] [content-visibility:auto]">
       <span
         aria-hidden="true"
-        className={`absolute inset-y-0 left-0 w-1 ${local.activo ? "bg-emerald-600 dark:bg-emerald-400" : "bg-stone-400 dark:bg-stone-500"}`}
+        className={`absolute inset-y-0 left-0 w-1 ${ubicado ? "bg-emerald-600 dark:bg-emerald-400" : "bg-amber-500 dark:bg-amber-400"}`}
       />
       <div className="p-3 pl-4">
         <div className="flex min-w-0 items-start gap-3">
-          {/* Misma imagen que en Mi Ruta: logo del cliente o ilustración del frente */}
           <FotoLocal
             nombre={local.nombre}
-            cliente={local.cliente}
             className="w-20 shrink-0 self-start sm:w-24"
           />
           <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 items-start justify-between gap-2">
-              <h3 className="min-w-0 break-words text-sm font-bold leading-snug text-foreground">{local.nombre}</h3>
-              <span
-                className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold ${
-                  local.activo
-                    ? "border-emerald-300 bg-emerald-100 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
-                    : "border-stone-300 bg-stone-100 text-stone-700 dark:border-stone-700 dark:bg-stone-800/70 dark:text-stone-200"
-                }`}
-              >
-                {local.activo ? "Activo" : "Inactivo"}
-              </span>
-            </div>
-            {local.cliente ? (
-              <p className="truncate text-xs font-semibold text-brand-700 dark:text-brand-200">{local.cliente.nombre}</p>
-            ) : (
-              <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">Sin cliente</p>
-            )}
-            <p className="mt-0.5 flex min-w-0 items-start gap-1 text-xs text-muted">
+            <h3 className="min-w-0 break-words text-sm font-bold leading-snug text-foreground">
+              {local.nombre}
+            </h3>
+            <p className="truncate font-mono text-xs text-muted">{local.id}</p>
+            <p
+              className={`mt-0.5 flex min-w-0 items-start gap-1 text-xs ${ubicado ? "text-muted" : "font-semibold text-amber-700 dark:text-amber-300"}`}
+            >
               <IconoPin className="mt-px h-3.5 w-3.5 shrink-0" />
-              <span className="min-w-0 break-words">{local.direccion || "Sin dirección cargada"}</span>
+              <span className="min-w-0 break-words">
+                {local.direccion ||
+                  (ubicado ? "Sin dirección en CRD1" : "Sin ubicación cargada")}
+              </span>
             </p>
           </div>
         </div>
@@ -73,7 +59,10 @@ export function TarjetaPdv({
                 title={a.usuario.rol?.descripcion ?? undefined}
                 className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-sky-200 bg-sky-50 py-0.5 pl-0.5 pr-2.5 text-[11px] font-semibold text-sky-900 dark:border-sky-900 dark:bg-sky-950/50 dark:text-sky-200"
               >
-                <span aria-hidden="true" className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-sky-600 text-[9px] font-bold text-white dark:bg-sky-500 dark:text-sky-950">
+                <span
+                  aria-hidden="true"
+                  className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-sky-600 text-[9px] font-bold text-white dark:bg-sky-500 dark:text-sky-950"
+                >
                   {iniciales(a.usuario.nombre, a.usuario.apellido)}
                 </span>
                 <span className="truncate">
@@ -89,7 +78,12 @@ export function TarjetaPdv({
         </div>
 
         <div className="mt-3 flex items-center gap-2 border-t border-line/70 pt-2.5">
-          <BotonEditar onClick={onEditar} etiqueta={`Editar local ${local.nombre}`} modo="texto" className="flex-1" />
+          <BotonEditar
+            onClick={onUbicar}
+            etiqueta={`Marcar ubicación de ${local.nombre}`}
+            modo="texto"
+            className="flex-1"
+          />
           <button
             type="button"
             onClick={onRuta}
@@ -98,7 +92,6 @@ export function TarjetaPdv({
             <IconoPlanificacion className="h-4 w-4" />
             Ruta
           </button>
-          <BotonEliminarCampo onClick={onEliminar} etiqueta={`Eliminar local ${local.nombre}`} disabled={ocupado} />
         </div>
       </div>
     </article>

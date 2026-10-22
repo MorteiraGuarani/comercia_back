@@ -31,7 +31,7 @@ function contexto() {
     cumplimientoCampo: { deleteMany: jest.fn() },
     tareaLocalCampo: { deleteMany: jest.fn() },
     novedadCampo: { updateMany: jest.fn() },
-    localCampo: { count: jest.fn().mockResolvedValue(0) },
+    socioNegocio: { count: jest.fn().mockResolvedValue(0) },
     $transaction: jest.fn(),
   };
   prisma.$transaction.mockImplementation((fn: (p: unknown) => unknown) =>

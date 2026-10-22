@@ -21,9 +21,9 @@ export interface MetaUsuariosDto {
 
 export interface UsuarioLocalAsignacionDto {
   id: number;
-  localId: number;
+  /** CardCode del socio de negocio (tbl_ocrd). */
+  localId: string;
   nombreLocal: string;
-  nombreCliente: string;
   fechaDesde: string;
   fechaHasta: string | null;
 }

@@ -4,6 +4,7 @@ import {
   IsIn,
   IsOptional,
   IsString,
+  Length,
   MaxLength,
   Min,
   MinLength,
@@ -17,10 +18,10 @@ import {
 } from '../../../generated/prisma/client';
 
 export class CrearNovedadDto {
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  localId!: number;
+  /** CardCode del socio de negocio (tbl_ocrd). */
+  @IsString()
+  @Length(1, 15)
+  localId!: string;
 
   @IsOptional()
   @Type(() => Number)
@@ -58,10 +59,9 @@ export class ListarNovedadesDto extends PaginacionDto {
   estado?: EstadoNovedadCampo;
 
   @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  localId?: number;
+  @IsString()
+  @Length(1, 15)
+  localId?: string;
 
   @IsOptional()
   @Type(() => Number)

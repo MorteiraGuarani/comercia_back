@@ -100,7 +100,7 @@ export function TareasImpulsadorPanel({
 
   // Modal para reportar novedad en tarea
   const [novedadTarea, setNovedadTarea] = useState<{
-    localId: number;
+    localId: string;
     tareaId: number;
     nombreTarea: string;
   } | null>(null);
@@ -222,7 +222,7 @@ export function TareasImpulsadorPanel({
   ]);
 
   // Completar tarea
-  const iniciarTarea = async (localId: number, tareaId: number) => {
+  const iniciarTarea = async (localId: string, tareaId: number) => {
     if (!abierta || abierta.local.id !== localId || completandoId) return;
     setCompletandoId(tareaId);
     setErrorAccion("");
@@ -246,7 +246,7 @@ export function TareasImpulsadorPanel({
       setCompletandoId(null);
     }
   };
-  const completarTarea = async (localId: number, tareaId: number) => {
+  const completarTarea = async (localId: string, tareaId: number) => {
     if (!abierta || abierta.local.id !== localId || completandoId) return;
     try {
       setCompletandoId(tareaId);
@@ -491,7 +491,7 @@ export function TareasImpulsadorPanel({
                       {ag.local.nombre}
                     </h3>
                     <p className="ft-body text-xs text-muted">
-                      {ag.local.cliente?.nombre ?? "Sin cliente"}
+                      {ag.local.direccion || ag.local.id}
                     </p>
                   </div>
                   {estaEnVisita ? (

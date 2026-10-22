@@ -11,65 +11,27 @@ export interface RespuestaCatalogoTareasCampo extends RespuestaPaginada<TareaCam
   };
 }
 
-/** Contadores de los paneles de catálogo (`?conResumen=1`). */
-export interface ResumenEstadoCatalogo {
-  total: number;
-  activos: number;
-  inactivos: number;
-}
-export interface RespuestaClientesCampo extends RespuestaPaginada<ClienteCampo> {
-  resumen?: ResumenEstadoCatalogo;
-}
-export interface RespuestaLocalesCampo extends RespuestaPaginada<LocalCampo> {
-  resumen?: ResumenEstadoCatalogo & { sinCliente: number };
-}
+export type RespuestaLocalesCampo = RespuestaPaginada<LocalCampo>;
 
-export interface ClienteCampo {
-  id: number;
-  nombre: string;
-  ruc: string;
-  contacto: string;
-  telefono: string;
-  logoUrl?: string | null;
-  activo: boolean;
-  _count?: { locales: number };
-}
+/** Local de campo = socio de negocio de OCRD; el id es su CardCode. */
 export interface LocalCampo {
-  id: number;
-  clienteId: number | null;
+  id: string;
   nombre: string;
+  /** "Address, Street" de tbl_crd1 (prioriza la de entrega); vacío si no hay. */
   direccion: string;
-  contacto: string;
-  telefono: string;
-  latitud: number;
-  longitud: number;
+  /** U_Latitud/U_Longitud de OCRD; null si SAP todavía no la tiene. */
+  latitud: number | null;
+  longitud: number | null;
   radioMetros: number;
   zonaHoraria: string;
-  notas: string;
-  activo: boolean;
-  cliente: { id: number; nombre: string; logoUrl?: string | null } | null;
   asignaciones?: Array<{
     id: number;
     usuario: PersonaCampo & { rol?: { descripcion: string } | null };
   }>;
 }
-export type DatosLocalCampo = Pick<
-  LocalCampo,
-  | "clienteId"
-  | "nombre"
-  | "direccion"
-  | "contacto"
-  | "telefono"
-  | "latitud"
-  | "longitud"
-  | "radioMetros"
-  | "zonaHoraria"
-  | "notas"
-  | "activo"
->;
 export interface HorarioCampo {
   id: number;
-  localId: number;
+  localId: string;
   frecuencia: "DIARIA" | "SEMANAL" | "MENSUAL";
   intervalo: number;
   diasSemana: number[];
@@ -87,9 +49,9 @@ export interface PersonaCampo {
 }
 export interface AsignacionCampo {
   id: number;
-  localId: number;
+  localId: string;
   usuarioId: number;
-  usuario: PersonaCampo & { localPrincipalId?: number | null };
+  usuario: PersonaCampo & { localPrincipalId?: string | null };
   fechaDesde: string;
   fechaHasta: string | null;
   activo: boolean;
@@ -120,7 +82,7 @@ export interface TareaCampo {
   categoria?: string;
   esObligatoria?: boolean;
   estado?: "ABIERTA" | "CERRADA" | "CANCELADA";
-  locales: { local: { id: number; nombre: string } }[];
+  locales: { local: { id: string; nombre: string } }[];
 }
 export interface VisitaCampo {
   entradaColor?: string | null;
@@ -141,7 +103,7 @@ export interface VisitaCampo {
   entradaLng: number | null;
   salidaLat: number | null;
   salidaLng: number | null;
-  local: { id: number; nombre: string; radioMetros: number };
+  local: { id: string; nombre: string; radioMetros: number };
   usuario: PersonaCampo;
   asignacion: { usuario: PersonaCampo };
   _count: { cumplimientos: number };
@@ -202,7 +164,7 @@ export interface FormTareaCampo {
   activo: boolean;
   fechaDesde: string;
   fechaHasta: string;
-  localIds: number[];
+  localIds: string[];
   requiereFotos: boolean;
   fotosObligatorias: boolean;
   categoria?: string;
@@ -313,12 +275,8 @@ export interface NovedadCampoItem {
     apellido: string;
   };
   local: {
-    id: number;
+    id: string;
     nombre: string;
-    direccion: string;
-    cliente?: {
-      nombre: string;
-    } | null;
   };
   tarea?: {
     id: number;
@@ -343,7 +301,7 @@ export interface RespuestaNovedadCampo {
 }
 
 export interface FormNovedadCampo {
-  localId: number;
+  localId: string;
   tareaId?: number;
   visitaId?: number;
   tipo: TipoNovedad;
@@ -525,8 +483,7 @@ export interface SupervisionResumenData {
 
 export interface ParadaRutaColaborador {
   id: string;
-  localId: number;
-  cliente: string;
+  localId: string;
   local: string;
   tipo: "carniceria" | "supermercado" | "restaurante" | "tienda";
   ventana: string;
@@ -577,7 +534,6 @@ export interface ColaboradorDetalleData {
   evidencias: {
     visitaId: number;
     local: string;
-    cliente: string;
     fecha: string;
     entrada: string;
     salida: string | null;

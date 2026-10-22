@@ -49,7 +49,7 @@ function contexto(rol: string, equipo: DestinatarioTareaCampo) {
   ];
   const prisma = {
     versionTareaCampo: { create: jest.fn() },
-    localCampo: { count: jest.fn().mockResolvedValue(0) },
+    socioNegocio: { count: jest.fn().mockResolvedValue(0) },
     tareaCampo: {
       findFirst: jest.fn().mockImplementation(
         ({
@@ -77,6 +77,7 @@ function contexto(rol: string, equipo: DestinatarioTareaCampo) {
           id: 4,
           version: 1,
           archivadaEn: null,
+          locales: [],
         })),
       update: jest.fn(),
       delete: jest.fn(),
@@ -197,11 +198,12 @@ describe.each(casos)('Separación de equipo: %s', (rol, equipo, otroEquipo) => {
 
   it('consulta los horarios generales de su equipo y rechaza borrar los ajenos', async () => {
     const { planificacion, prisma } = contexto(rol, equipo);
-    await planificacion.horarios(3, 20, {});
+    await planificacion.horarios(3, 'L20', {});
     expect(prisma.horarioCampo.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
-          localId: 20,
+          empresaId: 10,
+          localId: 'L20',
           asignacionId: null,
           destinatario: equipo,
           equipoCampoId: equipo === 'REPOSITOR' ? 2 : 1,
@@ -210,7 +212,7 @@ describe.each(casos)('Separación de equipo: %s', (rol, equipo, otroEquipo) => {
       }),
     );
     await expect(
-      planificacion.eliminarHorario(3, 20, 90),
+      planificacion.eliminarHorario(3, 'L20', 90),
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 });

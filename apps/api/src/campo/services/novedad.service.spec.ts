@@ -27,7 +27,7 @@ const adjuntosMock = () =>
 describe('NovedadService', () => {
   it('lanza NotFoundException si el local no existe en la empresa', async () => {
     const prisma = {
-      localCampo: { findFirst: jest.fn().mockResolvedValue(null) },
+      socioNegocio: { findFirst: jest.fn().mockResolvedValue(null) },
     };
     const notificaciones = {
       crearNotificacionNovedad: jest.fn(),
@@ -40,7 +40,7 @@ describe('NovedadService', () => {
 
     await expect(
       service.crear(1, 10, {
-        localId: 999,
+        localId: 'L999',
         tipo: 'RECLAMO',
         titulo: 'Faltante de stock',
         descripcion: 'No hay cajas de molida',
@@ -50,15 +50,18 @@ describe('NovedadService', () => {
 
   it('crea la novedad y notifica al líder', async () => {
     const prisma = {
-      localCampo: {
-        findFirst: jest.fn().mockResolvedValue({ id: 10, nombre: 'Super 1' }),
+      socioNegocio: {
+        findFirst: jest
+          .fn()
+          .mockResolvedValue({ CardCode: 'L10', CardName: 'Super 1' }),
       },
       novedadCampo: {
         create: jest.fn().mockResolvedValue({
           id: 5,
           empresaId: 10,
           usuarioId: 1,
-          localId: 10,
+          localId: 'L10',
+          local: { CardCode: 'L10', CardName: 'Super 1' },
           tipo: 'INCIDENCIA',
           estado: 'ABIERTA',
           titulo: 'Local cerrado',
@@ -76,7 +79,7 @@ describe('NovedadService', () => {
     );
 
     const res = await service.crear(1, 10, {
-      localId: 10,
+      localId: 'L10',
       tipo: 'INCIDENCIA',
       titulo: 'Local cerrado',
       descripcion: 'El local no abrió hoy',
@@ -88,7 +91,7 @@ describe('NovedadService', () => {
         data: expect.objectContaining({
           empresaId: 10,
           usuarioId: 1,
-          localId: 10,
+          localId: 'L10',
         }),
       }),
     );
@@ -103,11 +106,11 @@ describe('NovedadService', () => {
 
   it('pagina los locales dentro del alcance del impulsador sin usar permisos de gestión', async () => {
     const prisma = {
-      localCampo: {
+      socioNegocio: {
         count: jest.fn().mockResolvedValue(8),
         findMany: jest
           .fn()
-          .mockResolvedValue([{ id: 12, nombre: 'Local asignado' }]),
+          .mockResolvedValue([{ CardCode: 'L12', CardName: 'Local asignado' }]),
       },
     };
     const service = new NovedadService(
@@ -120,24 +123,14 @@ describe('NovedadService', () => {
       limit: 7,
       buscar: 'Local',
     });
-    expect(respuesta.items).toEqual([{ id: 12, nombre: 'Local asignado' }]);
-    expect(prisma.localCampo.findMany).toHaveBeenCalledWith(
+    expect(respuesta.items).toEqual([{ id: 'L12', nombre: 'Local asignado' }]);
+    expect(prisma.socioNegocio.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         skip: 7,
         take: 7,
-        select: { id: true, nombre: true },
+        select: { CardCode: true, CardName: true },
         where: expect.objectContaining({
           empresaId: 10,
-          eliminadoEn: null,
-          activo: true,
-          AND: [
-            {
-              OR: [
-                { clienteId: null },
-                { cliente: { activo: true, eliminadoEn: null } },
-              ],
-            },
-          ],
           OR: expect.arrayContaining([{ visitas: { some: { usuarioId: 1 } } }]),
         }),
       }),

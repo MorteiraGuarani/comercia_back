@@ -164,7 +164,7 @@ export function TarjetaAgendaRepositor({
         .join(" · ")
     : a.estado === "completado" && ultima
       ? `Visitado ${formatoHora(ultima.entrada)}–${formatoHora(ultima.salida)}`
-      : [a.local.cliente?.nombre || a.local.direccion || "Sin cliente", distancia]
+      : [a.local.direccion || a.local.id, distancia]
           .filter(Boolean)
           .join(" · ");
 
@@ -234,7 +234,6 @@ export function TarjetaAgendaRepositor({
           <div className="flex min-w-0 gap-3">
             <FotoLocal
               nombre={a.local.nombre}
-              cliente={a.local.cliente}
               className="w-[30%] max-w-32 shrink-0 self-start"
             />
             <div className="flex min-w-0 flex-1 flex-col gap-1.5">

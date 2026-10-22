@@ -5,6 +5,13 @@ export interface CoordenadaCampo {
   longitud: number;
 }
 
+/** Los socios de OCRD sin U_Latitud/U_Longitud no entran en rutas ni distancias. */
+export function conUbicacion<
+  T extends { latitud: number | null; longitud: number | null },
+>(local: T): local is T & CoordenadaCampo {
+  return Number.isFinite(local.latitud) && Number.isFinite(local.longitud);
+}
+
 export interface ParadaRutaSugerida {
   id: number;
   latitud: number;

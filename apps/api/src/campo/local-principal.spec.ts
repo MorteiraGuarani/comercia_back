@@ -69,19 +69,7 @@ it('solo permite elegir el local del titular del equipo y la empresa del actor',
           isActive: true,
           rol: { equipoCampoId: 1 },
         },
-        local: {
-          activo: true,
-          empresaId: 10,
-          eliminadoEn: null,
-          AND: [
-            {
-              OR: [
-                { clienteId: null },
-                { cliente: { activo: true, eliminadoEn: null } },
-              ],
-            },
-          ],
-        },
+        empresaId: 10,
       }) as unknown,
     }),
   );

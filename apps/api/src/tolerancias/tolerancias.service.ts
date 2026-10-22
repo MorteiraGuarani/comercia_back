@@ -66,10 +66,10 @@ export class ToleranciasService {
             })
           : await this.prisma.horarioCampo.findUnique({
               where: { id },
-              select: { local: { select: { empresaId: true } } },
+              select: { empresaId: true },
             });
       if (!recurso) throw new NotFoundException('Recurso no disponible');
-      return 'local' in recurso ? recurso.local.empresaId : recurso.empresaId;
+      return recurso.empresaId;
     }
     const u = await this.acceso.gestionar(actor, 'locales');
     if (alcance === 'usuario') {
@@ -89,7 +89,7 @@ export class ToleranciasService {
           id,
           activo: true,
           equipoCampoId: u.equipoCampo?.id,
-          local: { empresaId: u.empresaId, eliminadoEn: null },
+          empresaId: u.empresaId,
         },
         select: { id: true },
       }))

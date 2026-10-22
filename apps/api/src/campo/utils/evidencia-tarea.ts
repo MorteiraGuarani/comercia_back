@@ -27,7 +27,7 @@ export async function tareaParaEvidencia(
       usuarioId,
       fecha: fechaCampo(relojCampo().fecha),
       salida: null,
-      local: { empresaId },
+      empresaId,
     },
     select: {
       localId: true,

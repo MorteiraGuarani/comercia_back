@@ -14,7 +14,6 @@ import { NotificacionService } from './services/notificacion.service';
 import { NovedadService } from './services/novedad.service';
 import { AvisoService } from './services/aviso.service';
 import { SupervisionService } from './services/supervision.service';
-import { LogoClienteService } from './services/logo-cliente.service';
 import { LimpiezaFotosService } from './services/limpieza-fotos.service';
 import { AdjuntoCampoService } from './services/adjunto-campo.service';
 
@@ -34,7 +33,6 @@ import { AdjuntoCampoService } from './services/adjunto-campo.service';
     AvisoService,
     SupervisionService,
     AdjuntoCampoService,
-    LogoClienteService,
     LimpiezaFotosService,
   ],
   exports: [

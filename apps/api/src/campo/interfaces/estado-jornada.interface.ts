@@ -22,7 +22,6 @@ export interface VisitaParaEstado {
   entrada: Date;
   salida: Date | null;
   horarioId?: number | null;
-  local?: { zonaHoraria?: string };
   horario?: { entrada: string; salida: string } | null;
   eventosUcheck?: { horaDesde: string | null; horaHasta: string | null }[];
 }

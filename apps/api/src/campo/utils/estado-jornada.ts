@@ -81,12 +81,11 @@ export function evaluarPresentismo(
 }
 
 export function estadoVisita(
-  v: Pick<VisitaParaEstado, 'fecha' | 'salida' | 'local'>,
+  v: Pick<VisitaParaEstado, 'fecha' | 'salida'>,
   ahora = new Date(),
 ): EstadoVisita {
   if (v.salida) return 'CERRADA';
-  return v.fecha.toISOString().slice(0, 10) ===
-    relojCampo(ahora, v.local?.zonaHoraria).fecha
+  return v.fecha.toISOString().slice(0, 10) === relojCampo(ahora).fecha
     ? 'EN_CURSO'
     : 'INCOMPLETA';
 }
@@ -110,14 +109,13 @@ export function conEstadoVisita<T extends VisitaParaEstado>(
             v.fecha.toISOString().slice(0, 10),
             (evento?.horaDesde ?? v.horario?.entrada)!,
             (evento?.horaHasta ?? v.horario?.salida)!,
-            v.local?.zonaHoraria ?? ZONA_CAMPO,
+            ZONA_CAMPO,
           )
         : null,
     estado: estadoVisita(v, ahora),
     estadoPresentismo: evaluarPresentismo(
       {
         ...v,
-        zonaHoraria: v.local?.zonaHoraria,
         horaDesde: evento?.horaDesde ?? v.horario?.entrada,
         horaHasta: evento?.horaHasta ?? v.horario?.salida,
       },

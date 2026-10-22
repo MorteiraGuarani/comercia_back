@@ -30,7 +30,7 @@ export function ModalNovedadLocal({
   tarea,
   cerrar,
 }: {
-  local: { id: number; nombre: string };
+  local: { id: string; nombre: string };
   visitaId?: number;
   tarea?: { id: number; nombre: string };
   cerrar: () => void;

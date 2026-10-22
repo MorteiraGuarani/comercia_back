@@ -30,7 +30,7 @@ describe('Configuración autorizada de tolerancias', () => {
           id: 88,
           activo: true,
           equipoCampoId: 3,
-          local: { empresaId: 10, eliminadoEn: null },
+          empresaId: 10,
         },
       }),
     );

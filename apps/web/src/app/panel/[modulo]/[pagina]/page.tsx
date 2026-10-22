@@ -5,9 +5,6 @@ import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { usePanel } from "@/components/panel/contexto";
 
-const ClientesPanel = dynamic(() =>
-  import("@/components/campo/clientes-panel").then((m) => m.ClientesPanel),
-);
 const LocalesPanel = dynamic(() =>
   import("@/components/campo/locales-panel").then((m) => m.LocalesPanel),
 );
@@ -85,7 +82,6 @@ export default function PaginaModulo({
     if (pagina === "novedades") return <NovedadesPanel esImpulsador={false} />;
     if (pagina === "avisos")
       return <AvisosPanel esImpulsador={false} abrirRedactar={abrirRedactar} />;
-    if (pagina === "clientes") return <ClientesPanel />;
     if (pagina === "locales") return <LocalesPanel />;
     if (pagina === "tareas") return <TareasPanel />;
   }

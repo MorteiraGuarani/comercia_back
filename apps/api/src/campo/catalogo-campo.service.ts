@@ -7,20 +7,23 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import type { Prisma } from '../../generated/prisma/client';
-import { EliminarClienteCampoDto } from './dto/eliminar-cliente.dto';
 import { rangoPaginacion, respuestaPaginada } from '../common/utils/paginacion';
 import { CampoAccesoService } from './campo-acceso.service';
 import {
-  ClienteCampoDto,
   ConsultaCampoDto,
-  LocalCampoDto,
   TareaCampoDto,
+  UbicacionLocalCampoDto,
 } from './dto/campo.dto';
+import { TAREA_CAMPO_SELECT } from './utils/selectores';
 import {
-  CLIENTE_CAMPO_SELECT,
-  LOCAL_CAMPO_SELECT,
-  TAREA_CAMPO_SELECT,
-} from './utils/selectores';
+  aLocalCampo,
+  conLocalesTarea,
+  direccionesLocales,
+  LOCAL_OCRD_SELECT,
+  filtroLocales,
+  nombreLocal,
+  textoCoordenada,
+} from './utils/local-ocrd';
 import { fechaCampo, relojCampo, vigenciaCampo } from './utils/calendario';
 import { ConsultaTareasCampoDto } from './dto/consulta-tareas.dto';
 import {
@@ -42,130 +45,6 @@ export class CatalogoCampoService {
     private readonly acceso: CampoAccesoService,
   ) {}
 
-  async clientes(usuarioId: number, query: ConsultaCampoDto) {
-    const usuario = await this.acceso
-      .gestionar(usuarioId, 'clientes')
-      .catch((error: unknown) => {
-        if (!(error instanceof ForbiddenException)) throw error;
-        return this.acceso.gestionar(usuarioId, 'locales');
-      });
-    // Sin el filtro de estado: los contadores del panel lo usan como base.
-    const base = {
-      empresaId: usuario.empresaId,
-      eliminadoEn: null,
-      ...(query.buscar
-        ? {
-            OR: [
-              {
-                nombre: {
-                  contains: query.buscar,
-                  mode: 'insensitive' as const,
-                },
-              },
-              { ruc: { contains: query.buscar, mode: 'insensitive' as const } },
-              {
-                contacto: {
-                  contains: query.buscar,
-                  mode: 'insensitive' as const,
-                },
-              },
-            ],
-          }
-        : {}),
-    };
-    const where = {
-      ...base,
-      ...(query.estado && query.estado !== 'todos'
-        ? { activo: query.estado === 'activos' }
-        : {}),
-    };
-    const { skip, take, page, limit } = rangoPaginacion(query);
-    const [total, items, resumen] = await Promise.all([
-      this.prisma.clienteCampo.count({ where }),
-      this.prisma.clienteCampo.findMany({
-        where,
-        select: CLIENTE_CAMPO_SELECT,
-        orderBy: [{ nombre: 'asc' }, { id: 'asc' }],
-        skip,
-        take,
-      }),
-      query.conResumen
-        ? Promise.all([
-            this.prisma.clienteCampo.count({ where: base }),
-            this.prisma.clienteCampo.count({
-              where: { ...base, activo: true },
-            }),
-          ]).then(([todos, activos]) => ({
-            total: todos,
-            activos,
-            inactivos: todos - activos,
-          }))
-        : null,
-    ]);
-    return {
-      ...respuestaPaginada(items, total, page, limit),
-      ...(resumen ? { resumen } : {}),
-    };
-  }
-  async guardarCliente(usuarioId: number, dto: ClienteCampoDto, id?: number) {
-    const u = await this.acceso.gestionar(usuarioId, 'clientes');
-    return this.prisma.$transaction(async (tx) => {
-      await tx.$queryRaw`SELECT id FROM empresas WHERE id = ${u.empresaId} FOR UPDATE`;
-      if (
-        id &&
-        !(await tx.clienteCampo.findFirst({
-          where: { id, empresaId: u.empresaId, eliminadoEn: null },
-          select: { id: true },
-        }))
-      )
-        throw new NotFoundException('Cliente no disponible');
-      return id
-        ? tx.clienteCampo.update({
-            where: { id },
-            data: dto,
-            select: CLIENTE_CAMPO_SELECT,
-          })
-        : tx.clienteCampo.create({
-            data: { ...dto, empresaId: u.empresaId },
-            select: CLIENTE_CAMPO_SELECT,
-          });
-    });
-  }
-  async eliminarCliente(
-    usuarioId: number,
-    id: number,
-    dto: EliminarClienteCampoDto = new EliminarClienteCampoDto(),
-  ) {
-    const u = await this.acceso.gestionar(usuarioId, 'clientes');
-    if (dto.eliminarLocales) await this.acceso.gestionar(usuarioId, 'locales');
-    await this.prisma.$transaction(async (tx) => {
-      // Serializa también las asociaciones: un alta concurrente no puede
-      // volver a asociar un local al cliente que se está eliminando.
-      await tx.$queryRaw`SELECT id FROM empresas WHERE id = ${u.empresaId} FOR UPDATE`;
-      const cliente = await tx.clienteCampo.findFirst({
-        where: { id, empresaId: u.empresaId, eliminadoEn: null },
-        select: { id: true },
-      });
-      if (!cliente) throw new NotFoundException('Cliente no disponible');
-      const locales = { empresaId: u.empresaId, clienteId: id };
-      if (dto.eliminarLocales) {
-        await this.retirarLocales(tx, u.empresaId, {
-          ...locales,
-          eliminadoEn: null,
-        });
-      }
-      await tx.localCampo.updateMany({
-        where: locales,
-        data: { clienteId: null },
-      });
-      await tx.clienteCampo.update({
-        where: { id },
-        data: { activo: false, eliminadoEn: new Date() },
-        select: { id: true },
-      });
-    });
-    return { ok: true };
-  }
   async locales(usuarioId: number, query: ConsultaCampoDto) {
     // Selector compartido con el ABM de tareas; devuelve solo datos de su empresa.
     const u = await this.acceso
@@ -174,63 +53,16 @@ export class CatalogoCampoService {
         if (!(error instanceof ForbiddenException)) throw error;
         return this.acceso.gestionar(usuarioId, 'tareas');
       });
-    const busqueda = {
-      empresaId: u.empresaId,
-      eliminadoEn: null,
-      ...(query.buscar
-        ? {
-            OR: [
-              {
-                nombre: {
-                  contains: query.buscar,
-                  mode: 'insensitive' as const,
-                },
-              },
-              {
-                direccion: {
-                  contains: query.buscar,
-                  mode: 'insensitive' as const,
-                },
-              },
-              {
-                contacto: {
-                  contains: query.buscar,
-                  mode: 'insensitive' as const,
-                },
-              },
-            ],
-          }
-        : {}),
-    };
-    const porCliente = query.sinCliente
-      ? { clienteId: null }
-      : query.clienteId
-        ? { clienteId: query.clienteId }
-        : {};
-    const where = {
-      ...busqueda,
-      ...porCliente,
-      ...(query.estado && query.estado !== 'todos'
-        ? { activo: query.estado === 'activos' }
-        : {}),
-    };
-    // Contadores del panel: respetan búsqueda y cliente elegido, no el estado
-    // ni 'sin cliente' (son alternativas del mismo filtro).
-    const baseResumen = {
-      ...busqueda,
-      ...(query.clienteId && !query.sinCliente
-        ? { clienteId: query.clienteId }
-        : {}),
-    };
+    const where = filtroLocales(u.empresaId, query.buscar);
     const { skip, take, page, limit } = rangoPaginacion(query);
     const hoy = fechaCampo(relojCampo().fecha);
     const colaboradores = await obtenerColaboradoresGestionados(this.prisma, u);
-    const [total, items, resumen] = await Promise.all([
-      this.prisma.localCampo.count({ where }),
-      this.prisma.localCampo.findMany({
+    const [total, filas] = await Promise.all([
+      this.prisma.socioNegocio.count({ where }),
+      this.prisma.socioNegocio.findMany({
         where,
         select: {
-          ...LOCAL_CAMPO_SELECT,
+          ...LOCAL_OCRD_SELECT,
           asignaciones: {
             where: {
               activo: true,
@@ -256,78 +88,50 @@ export class CatalogoCampoService {
             take: 5,
           },
         },
-        orderBy: [{ nombre: 'asc' }, { id: 'asc' }],
+        orderBy: [{ CardName: 'asc' }, { CardCode: 'asc' }],
         skip,
         take,
       }),
-      query.conResumen
-        ? Promise.all([
-            this.prisma.localCampo.count({ where: baseResumen }),
-            this.prisma.localCampo.count({
-              where: { ...baseResumen, activo: true },
-            }),
-            this.prisma.localCampo.count({
-              where: { ...busqueda, clienteId: null },
-            }),
-          ]).then(([todos, activos, sinCliente]) => ({
-            total: todos,
-            activos,
-            inactivos: todos - activos,
-            sinCliente,
-          }))
-        : null,
     ]);
-    return {
-      ...respuestaPaginada(items, total, page, limit),
-      ...(resumen ? { resumen } : {}),
-    };
+    const direcciones = await direccionesLocales(
+      this.prisma,
+      u.empresaId,
+      filas.map((l) => l.CardCode),
+    );
+    return respuestaPaginada(
+      filas.map(({ asignaciones, ...l }) => ({
+        ...aLocalCampo(l, direcciones.get(l.CardCode)),
+        asignaciones,
+      })),
+      total,
+      page,
+      limit,
+    );
   }
   /**
-   * Puntos del mapa de cobertura: solo los campos que muestra el marcador. Filtra por cliente y búsqueda en el servidor
-   * para que el mapa no tenga que bajar toda la red.
+   * Puntos del mapa de cobertura: solo socios con U_Latitud/U_Longitud cargadas.
+   * Filtra por búsqueda en el servidor para no bajar toda la red.
    */
   async localesMapa(usuarioId: number, query: ConsultaCampoDto) {
     const u = await this.acceso.gestionar(usuarioId, 'locales');
-    const where: Prisma.LocalCampoWhereInput = {
-      empresaId: u.empresaId,
-      eliminadoEn: null,
-      ...(query.clienteId ? { clienteId: query.clienteId } : {}),
-      ...(query.buscar
-        ? {
-            OR: [
-              {
-                nombre: {
-                  contains: query.buscar,
-                  mode: 'insensitive' as const,
-                },
-              },
-              {
-                direccion: {
-                  contains: query.buscar,
-                  mode: 'insensitive' as const,
-                },
-              },
-            ],
-          }
-        : {}),
+    const where: Prisma.SocioNegocioWhereInput = {
+      ...filtroLocales(u.empresaId, query.buscar),
+      AND: [
+        { U_Latitud: { not: null } },
+        { U_Latitud: { not: '' } },
+        { U_Longitud: { not: null } },
+        { U_Longitud: { not: '' } },
+      ],
     };
     const { skip, take, page, limit } = rangoPaginacion(query);
     const hoy = fechaCampo(relojCampo().fecha);
     const colaboradores = await obtenerColaboradoresGestionados(this.prisma, u);
-    const [total, items] = await Promise.all([
-      this.prisma.localCampo.count({ where }),
-      this.prisma.localCampo.findMany({
+    const [total, filas] = await Promise.all([
+      this.prisma.socioNegocio.count({ where }),
+      this.prisma.socioNegocio.findMany({
         where,
         select: {
-          id: true,
-          clienteId: true,
-          nombre: true,
-          direccion: true,
-          telefono: true,
-          latitud: true,
-          longitud: true,
-          activo: true,
-          cliente: { select: { id: true, nombre: true, logoUrl: true } },
+          ...LOCAL_OCRD_SELECT,
           asignaciones: {
             where: {
               activo: true,
@@ -346,104 +150,47 @@ export class CatalogoCampoService {
             take: 5,
           },
         },
-        orderBy: [{ nombre: 'asc' }, { id: 'asc' }],
+        orderBy: [{ CardName: 'asc' }, { CardCode: 'asc' }],
         skip,
         take,
       }),
     ]);
-    return respuestaPaginada(items, total, page, limit);
+    const direcciones = await direccionesLocales(
+      this.prisma,
+      u.empresaId,
+      filas.map((l) => l.CardCode),
+    );
+    return respuestaPaginada(
+      filas.map(({ asignaciones, ...l }) => ({
+        ...aLocalCampo(l, direcciones.get(l.CardCode)),
+        asignaciones,
+      })),
+      total,
+      page,
+      limit,
+    );
   }
-  async guardarLocal(usuarioId: number, dto: LocalCampoDto, id?: number) {
-    const u = await this.acceso.gestionar(usuarioId, 'locales');
-    return this.prisma.$transaction(async (tx) => {
-      await tx.$queryRaw`SELECT id FROM empresas WHERE id = ${u.empresaId} FOR UPDATE`;
-      if (dto.clienteId !== null) {
-        const cliente = await tx.clienteCampo.findFirst({
-          where: {
-            id: dto.clienteId,
-            empresaId: u.empresaId,
-            activo: true,
-            eliminadoEn: null,
-          },
-          select: { id: true },
-        });
-        if (!cliente) throw new NotFoundException('Cliente no disponible');
-      }
-      if (
-        id &&
-        !(await tx.localCampo.findFirst({
-          where: { id, empresaId: u.empresaId, eliminadoEn: null },
-          select: { id: true },
-        }))
-      )
-        throw new NotFoundException('Local no disponible');
-      const direccion = dto.direccion.trim();
-      const repetido = await tx.localCampo.findFirst({
-        where: {
-          activo: true,
-          empresaId: u.empresaId,
-          eliminadoEn: null,
-          ...(id ? { id: { not: id } } : {}),
-          nombre: { equals: dto.nombre.trim(), mode: 'insensitive' },
-          OR: [
-            ...(direccion
-              ? [
-                  {
-                    direccion: {
-                      equals: direccion,
-                      mode: 'insensitive' as const,
-                    },
-                  },
-                ]
-              : []),
-            { latitud: dto.latitud, longitud: dto.longitud },
-          ],
-        },
-        select: { id: true },
-      });
-      if (repetido)
-        throw new BadRequestException(
-          `El local ya existe (#${repetido.id}); asignalo desde el catálogo`,
-        );
-      return id
-        ? tx.localCampo.update({
-            where: { id },
-            data: dto,
-            select: LOCAL_CAMPO_SELECT,
-          })
-        : tx.localCampo.create({
-            data: { ...dto, empresaId: u.empresaId },
-            select: LOCAL_CAMPO_SELECT,
-          });
-    });
-  }
-  async eliminarLocal(usuarioId: number, id: number) {
-    const u = await this.acceso.gestionar(usuarioId, 'locales');
-    await this.prisma.$transaction(async (tx) => {
-      await tx.$queryRaw`SELECT id FROM empresas WHERE id = ${u.empresaId} FOR UPDATE`;
-      const where = { id, empresaId: u.empresaId, eliminadoEn: null };
-      if (!(await tx.localCampo.findFirst({ where, select: { id: true } }))) {
-        throw new NotFoundException('Local no disponible');
-      }
-      await this.retirarLocales(tx, u.empresaId, where);
-    });
-    return { ok: true };
-  }
-
-  private async retirarLocales(
-    tx: Prisma.TransactionClient,
-    empresaId: number,
-    where: Prisma.LocalCampoWhereInput,
+  /** El alta y la baja de socios viven en OCRD; Comercia solo marca el punto. */
+  async ubicarLocal(
+    usuarioId: number,
+    localId: string,
+    dto: UbicacionLocalCampoDto,
   ) {
-    // Las visitas, fotos, horarios y asignaciones históricos permanecen intactos.
-    await tx.usuario.updateMany({
-      where: { empresaId, localPrincipal: where },
-      data: { localPrincipalId: null },
+    const u = await this.acceso.gestionar(usuarioId, 'locales');
+    const { count } = await this.prisma.socioNegocio.updateMany({
+      where: { empresaId: u.empresaId, CardCode: localId },
+      data: {
+        U_Latitud: textoCoordenada(dto.latitud),
+        U_Longitud: textoCoordenada(dto.longitud),
+      },
     });
-    await tx.localCampo.updateMany({
-      where,
-      data: { activo: false, eliminadoEn: new Date() },
-    });
+    if (!count) throw new NotFoundException('Local no disponible');
+    return aLocalCampo(
+      await this.prisma.socioNegocio.findFirstOrThrow({
+        where: { empresaId: u.empresaId, CardCode: localId },
+        select: LOCAL_OCRD_SELECT,
+      }),
+    );
   }
   async tareas(usuarioId: number, query: ConsultaTareasCampoDto) {
     const u = await this.acceso.gestionar(usuarioId, 'tareas');
@@ -502,7 +249,7 @@ export class CatalogoCampoService {
         }),
       ]);
     return {
-      ...respuestaPaginada(items, total, page, limit),
+      ...respuestaPaginada(items.map(conLocalesTarea), total, page, limit),
       resumen: { total: totalCatalogo, obligatorias, conFotos },
       permisos: permisosCatalogoTareas(u.permisosTareas),
     };
@@ -523,12 +270,8 @@ export class CatalogoCampoService {
     if (!dto.todosLocales && !dto.localIds.length)
       throw new BadRequestException('Elegí al menos un local');
     const fechas = vigenciaCampo(dto.fechaDesde, dto.fechaHasta);
-    const cantidad = await this.prisma.localCampo.count({
-      where: {
-        id: { in: dto.localIds },
-        empresaId: u.empresaId,
-        eliminadoEn: null,
-      },
+    const cantidad = await this.prisma.socioNegocio.count({
+      where: { CardCode: { in: dto.localIds }, empresaId: u.empresaId },
     });
     if (cantidad !== dto.localIds.length)
       throw new BadRequestException('Selección de locales no disponible');
@@ -576,7 +319,12 @@ export class CatalogoCampoService {
           );
       }
       if (id) await tx.tareaLocalCampo.deleteMany({ where: { tareaId: id } });
-      const locales = { create: dto.localIds.map((localId) => ({ localId })) };
+      const locales = {
+        create: dto.localIds.map((localId) => ({
+          localId,
+          empresaId: u.empresaId,
+        })),
+      };
       const tarea = id
         ? tx.tareaCampo.update({
             where: { id },
@@ -596,7 +344,7 @@ export class CatalogoCampoService {
           contenido: detalleTarea({ ...guardada, localIds: dto.localIds }),
         },
       });
-      return guardada;
+      return conLocalesTarea(guardada);
     });
   }
   async eliminarTarea(usuarioId: number, id: number) {
@@ -695,11 +443,14 @@ export class CatalogoCampoService {
         skip,
         take,
         orderBy: { localId: 'asc' },
-        select: { localId: true, local: { select: { nombre: true } } },
+        select: {
+          localId: true,
+          local: { select: { CardCode: true, CardName: true } },
+        },
       }),
     ]);
     return respuestaPaginada(
-      filas.map((x) => ({ id: x.localId, nombre: x.local.nombre })),
+      filas.map((x) => ({ id: x.localId, nombre: nombreLocal(x.local) })),
       total,
       page,
       limit,

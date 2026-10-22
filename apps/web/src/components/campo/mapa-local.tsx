@@ -4,16 +4,48 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Modal } from "@/components/modal";
 import { formatoDistancia, metrosEntre } from "@/utils/distancia";
+import { escaparHtml } from "@/utils/html";
 import type { LocalCampo } from "@/types/campo";
 import { montarCapaUsuario, type CapaUsuarioMapa } from "./ui/marcador-usuario-mapa";
 import { useGeolocalizacionMapa } from "./ui/use-geolocalizacion-mapa";
 import { CAPA_MAPA, CLASE_CAPA_OSCURA, useTemaOscuroMapa } from "./ui/use-tema-mapa";
 
+type LocalMapa = Pick<
+  LocalCampo,
+  "id" | "nombre" | "direccion" | "latitud" | "longitud"
+>;
+
+/** Un socio de OCRD puede no tener U_Latitud/U_Longitud todavía. */
 export function MapaLocal({
   local,
   cerrar,
 }: {
-  local: LocalCampo;
+  local: LocalMapa;
+  cerrar: () => void;
+}) {
+  const { latitud, longitud } = local;
+  if (latitud === null || longitud === null)
+    return (
+      <Modal titulo={local.nombre} abierto onCerrar={cerrar} ancho="md">
+        <p className="text-sm text-foreground">
+          Este local todavía no tiene ubicación cargada. Marcala desde{" "}
+          <b>PDV y rutas</b> o en U_Latitud/U_Longitud de OCRD.
+        </p>
+      </Modal>
+    );
+  return (
+    <MapaLocalUbicado local={{ ...local, latitud, longitud }} cerrar={cerrar} />
+  );
+}
+
+function MapaLocalUbicado({
+  local,
+  cerrar,
+}: {
+  local: Pick<LocalCampo, "id" | "nombre" | "direccion"> & {
+    latitud: number;
+    longitud: number;
+  };
   cerrar: () => void;
 }) {
   const { latitud: lat, longitud: lng } = local;
@@ -53,7 +85,7 @@ export function MapaLocal({
       fillOpacity: 1,
     })
       .addTo(mapa)
-      .bindPopup(`<strong>${local.nombre}</strong><br />${local.direccion || "Sin dirección fijada"}`)
+      .bindPopup(`<strong>${escaparHtml(local.nombre)}</strong><br />${escaparHtml(local.direccion || "Sin dirección cargada")}`)
       .openPopup();
 
     const yo = posicionGpsRef.current;

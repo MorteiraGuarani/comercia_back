@@ -377,7 +377,7 @@ export function MiDiaCampo() {
                     tono="ok"
                     icono={<IconoTienda />}
                     titulo={`Próximo local: ${proximo.local.nombre}`}
-                    detalle={proximo.local.direccion || proximo.local.cliente?.nombre || "Sin dirección cargada"}
+                    detalle={proximo.local.direccion || "Sin dirección cargada"}
                     accion="Ir"
                     href={rutaRuta ?? undefined}
                   />
@@ -428,7 +428,7 @@ export function MiDiaCampo() {
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-[13px] font-semibold text-foreground sm:text-sm">{a.local.nombre}</span>
-                        <span className="block truncate text-[11px] text-muted">{a.local.cliente?.nombre ?? a.local.direccion}</span>
+                        <span className="block truncate text-[11px] text-muted">{a.local.direccion || a.local.id}</span>
                       </span>
                       <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${RUTA_PILL[a.estado]}`}>
                         {RUTA[a.estado].etiqueta}

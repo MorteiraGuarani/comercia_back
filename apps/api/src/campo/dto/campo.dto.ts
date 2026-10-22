@@ -7,10 +7,10 @@ import {
   IsDateString,
   IsEnum,
   IsInt,
-  IsIn,
   IsNumber,
   IsOptional,
   IsString,
+  Length,
   Matches,
   Max,
   MaxLength,
@@ -34,38 +34,11 @@ export class ConsultaCampoDto extends PaginacionDto {
   @Max(1000)
   override limit?: number = undefined;
 
+  /** CardCode del socio de negocio (tbl_ocrd). */
   @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(MAX_INT4)
-  clienteId?: number;
-  @IsOptional()
-  @Transform(({ value }: { value: unknown }) =>
-    value === 'true' ? true : value === 'false' ? false : value,
-  )
-  @IsBoolean()
-  sinCliente?: boolean;
-  /** Pide los contadores del panel (total, activos...). Los selectores no lo usan. */
-  @IsOptional()
-  @Transform(({ value }: { value: unknown }) =>
-    value === 'true' || value === '1'
-      ? true
-      : value === 'false' || value === '0'
-        ? false
-        : value,
-  )
-  @IsBoolean()
-  conResumen?: boolean;
-  @IsOptional()
-  @IsIn(['todos', 'activos', 'inactivos'])
-  estado?: 'todos' | 'activos' | 'inactivos';
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(MAX_INT4)
-  localId?: number;
+  @IsString()
+  @Length(1, 15)
+  localId?: string;
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -90,45 +63,10 @@ export class ConsultaCampoDto extends PaginacionDto {
   fechaFin?: string;
 }
 
-export class ClienteCampoDto {
-  @Transform(({ value }: { value: unknown }) =>
-    typeof value === 'string' ? value.trim() : value,
-  )
-  @IsString()
-  @MinLength(2)
-  @MaxLength(120)
-  nombre!: string;
-  @IsString() @MaxLength(30) ruc = '';
-  @IsString() @MaxLength(120) contacto = '';
-  @IsString() @MaxLength(40) telefono = '';
-  @IsOptional() @IsString() @MaxLength(500) logoUrl?: string;
-  @IsBoolean() activo = true;
-}
-
-export class LocalCampoDto {
-  // Datos compartidos con UCHECK.
-  @ValidateIf((_, value) => value !== null)
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(MAX_INT4)
-  clienteId: number | null = null;
-  @Transform(({ value }: { value: unknown }) =>
-    typeof value === 'string' ? value.trim() : value,
-  )
-  @IsString()
-  @MinLength(2)
-  @MaxLength(120)
-  nombre!: string;
-  @IsString() @MaxLength(250) direccion = '';
-  @IsString() @MaxLength(120) contacto = '';
-  @IsString() @MaxLength(40) telefono = '';
+/** Punto del local en el mapa: se guarda en U_Latitud/U_Longitud de OCRD. */
+export class UbicacionLocalCampoDto {
   @IsNumber() @Min(-90) @Max(90) latitud!: number;
   @IsNumber() @Min(-180) @Max(180) longitud!: number;
-  @IsInt() @Min(10) @Max(5000) radioMetros = 100;
-  @IsString() @MaxLength(80) zonaHoraria = 'America/Asuncion';
-  @IsString() @MaxLength(1000) notas = '';
-  @IsBoolean() activo = true;
 }
 
 function fechaHastaCalendario(value: unknown): string | null {
@@ -201,10 +139,9 @@ export class TareaCampoDto extends VigenciaCampoDto {
   @IsArray()
   @ArrayUnique()
   @ArrayMaxSize(50)
-  @IsInt({ each: true })
-  @Min(1, { each: true })
-  @Max(MAX_INT4, { each: true })
-  localIds: number[] = [];
+  @IsString({ each: true })
+  @Length(1, 15, { each: true })
+  localIds: string[] = [];
   @IsBoolean() activo = true;
   @IsBoolean() requiereFotos = false;
   @IsBoolean() fotosObligatorias = false;

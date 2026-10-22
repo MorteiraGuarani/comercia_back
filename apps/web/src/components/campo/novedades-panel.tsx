@@ -47,7 +47,7 @@ export function NovedadesPanel({
 
   // Modal para crear novedad
   const [creando, setCreando] = useState(false);
-  const [localSeleccionado, setLocalSeleccionado] = useState<number | null>(
+  const [localSeleccionado, setLocalSeleccionado] = useState<string | null>(
     null,
   );
   const [tipo, setTipo] = useState<TipoNovedad>("INCIDENCIA");
@@ -380,7 +380,7 @@ export function NovedadesPanel({
                 {errorFormulario}
               </p>
             )}
-            <SelectorPaginado
+            <SelectorPaginado<string>
               url="/campo/novedades/locales"
               etiqueta="Local"
               buscable

@@ -5,7 +5,14 @@ import { EntradaCampoDto, MarcaCampoDto } from './dto/campo.dto';
 import { JornadaCampoService } from './jornada-campo.service';
 import { fechaCampo, relojCampo } from './utils/calendario';
 
-const local = { latitud: -25.3, longitud: -57.6, radioMetros: 100 };
+const local = { latitud: -25.3, longitud: -57.6 };
+// Fila de OCRD: SAP guarda las coordenadas como texto.
+const socio = {
+  CardCode: 'L3',
+  CardName: 'Centro',
+  U_Latitud: '-25.3',
+  U_Longitud: '-57.6',
+};
 
 function contexto() {
   const tx = {
@@ -14,8 +21,8 @@ function contexto() {
     asignacionCampo: {
       findFirst: jest.fn().mockResolvedValue({
         id: 2,
-        localId: 3,
-        local,
+        localId: 'L3',
+        local: socio,
         usuarioId: 1,
         backups: [],
       }),
@@ -27,6 +34,7 @@ function contexto() {
         fecha: fechaCampo(relojCampo().fecha),
         entrada: new Date(),
         salida: null,
+        local: socio,
       }),
     },
     horarioCampo: { findMany: jest.fn().mockResolvedValue([]) },
@@ -38,7 +46,7 @@ function contexto() {
         callback(tx),
       ),
     visitaCampo: {
-      findFirst: jest.fn().mockResolvedValue({ local }),
+      findFirst: jest.fn().mockResolvedValue({ local: socio }),
       updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
   };

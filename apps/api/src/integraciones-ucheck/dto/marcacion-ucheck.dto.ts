@@ -11,6 +11,7 @@ import {
   IsString,
   Matches,
   Max,
+  Length,
   MaxLength,
   Min,
   ValidateNested,
@@ -49,10 +50,10 @@ export class MarcacionUcheckDto {
   @Min(1)
   asignacionId!: number;
 
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  localId!: number;
+  /** CardCode del socio de negocio (tbl_ocrd) en Comercia. */
+  @IsString()
+  @Length(1, 15)
+  localId!: string;
 
   @IsOptional()
   @Type(() => Number)

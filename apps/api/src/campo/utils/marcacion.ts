@@ -4,9 +4,17 @@ import type { MarcaCampoDto } from '../dto/campo.dto';
 
 export function comprobarMarcaEnLocal(
   marca: MarcaCampoDto,
-  local: { latitud: number; longitud: number; radioMetros: number },
+  local: {
+    latitud: number | null;
+    longitud: number | null;
+    radioMetros: number;
+  },
   ahora: Date,
 ): number {
+  if (local.latitud === null || local.longitud === null)
+    throw new BadRequestException(
+      'El local no tiene ubicación cargada (U_Latitud/U_Longitud en OCRD)',
+    );
   const antiguedad = ahora.getTime() - new Date(marca.capturadaEn).getTime();
   if (
     !Number.isFinite(antiguedad) ||

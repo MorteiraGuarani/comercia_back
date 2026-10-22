@@ -29,6 +29,7 @@ import type {
 } from './interfaces/usuario-admin.interface';
 import { ListarSuperioresDto } from './dto/listar-superiores.dto';
 import { relanzarDuplicado } from '../common/utils/error-prisma';
+import { filtroLocales, nombreLocal } from '../campo/utils/local-ocrd';
 
 const SELECT_USUARIO_ADMIN = {
   id: true,
@@ -67,12 +68,6 @@ interface ContextoAdmin {
   empresaId: number;
   esSuperadmin: boolean;
 }
-
-const SELECT_LOCAL_USUARIO = {
-  id: true,
-  nombre: true,
-  cliente: { select: { nombre: true } },
-} as const;
 
 function aUsuarioDto(usuario: UsuarioFila): UsuarioAdminDto {
   return {
@@ -242,29 +237,22 @@ export class UsuariosService {
   async listarLocales(usuarioId: number, query: ListarUsuariosDto) {
     const actual = await this.contexto(usuarioId);
     const empresaId = this.empresaObjetivo(actual, query.empresaId);
-    const where = {
-      empresaId,
-      eliminadoEn: null,
-      ...(query.buscar
-        ? { nombre: { contains: query.buscar, mode: 'insensitive' as const } }
-        : {}),
-      activo: true,
-    };
+    const where = filtroLocales(empresaId, query.buscar);
     const { skip, take, page, limit } = rangoPaginacion(query);
     const [total, locales] = await Promise.all([
-      this.prisma.localCampo.count({ where }),
-      this.prisma.localCampo.findMany({
+      this.prisma.socioNegocio.count({ where }),
+      this.prisma.socioNegocio.findMany({
         where,
-        select: SELECT_LOCAL_USUARIO,
-        orderBy: [{ nombre: 'asc' }, { id: 'asc' }],
+        select: { CardCode: true, CardName: true },
+        orderBy: [{ CardName: 'asc' }, { CardCode: 'asc' }],
         skip,
         take,
       }),
     ]);
     return respuestaPaginada(
       locales.map((local) => ({
-        id: local.id,
-        nombre: `${local.nombre} · ${local.cliente?.nombre ?? 'Sin cliente'}`,
+        id: local.CardCode,
+        nombre: `${nombreLocal(local)} · ${local.CardCode}`,
       })),
       total,
       page,
@@ -303,9 +291,7 @@ export class UsuariosService {
           localId: true,
           fechaDesde: true,
           fechaHasta: true,
-          local: {
-            select: { nombre: true, cliente: { select: { nombre: true } } },
-          },
+          local: { select: { CardCode: true, CardName: true } },
         },
         orderBy: [{ fechaDesde: 'desc' }, { id: 'desc' }],
         skip,
@@ -316,8 +302,7 @@ export class UsuariosService {
       asignaciones.map((asignacion) => ({
         id: asignacion.id,
         localId: asignacion.localId,
-        nombreLocal: asignacion.local.nombre,
-        nombreCliente: asignacion.local.cliente?.nombre ?? 'Sin cliente',
+        nombreLocal: nombreLocal(asignacion.local),
         fechaDesde: asignacion.fechaDesde.toISOString(),
         fechaHasta: asignacion.fechaHasta?.toISOString() ?? null,
       })),
@@ -333,13 +318,9 @@ export class UsuariosService {
     dto: AsignarUsuarioLocalDto,
   ): Promise<UsuarioLocalAsignacionDto> {
     const { objetivo } = await this.objetivoAsignable(usuarioId, objetivoId);
-    const local = await this.prisma.localCampo.findFirst({
-      where: {
-        id: dto.localId,
-        empresaId: objetivo.empresaId,
-        eliminadoEn: null,
-      },
-      select: { id: true },
+    const local = await this.prisma.socioNegocio.findFirst({
+      where: { CardCode: dto.localId, empresaId: objetivo.empresaId },
+      select: { CardCode: true },
     });
     if (!local) throw new NotFoundException('El local no existe');
     const fechaDesde = new Date(`${dto.fechaDesde}T00:00:00.000Z`);
@@ -353,6 +334,7 @@ export class UsuariosService {
     }
     const solapada = await this.prisma.asignacionCampo.findFirst({
       where: {
+        empresaId: objetivo.empresaId,
         localId: dto.localId,
         usuarioId: objetivoId,
         activo: true,
@@ -367,6 +349,7 @@ export class UsuariosService {
       );
     const asignacion = await this.prisma.asignacionCampo.create({
       data: {
+        empresaId: objetivo.empresaId,
         localId: dto.localId,
         usuarioId: objetivoId,
         fechaDesde,
@@ -377,16 +360,13 @@ export class UsuariosService {
         localId: true,
         fechaDesde: true,
         fechaHasta: true,
-        local: {
-          select: { nombre: true, cliente: { select: { nombre: true } } },
-        },
+        local: { select: { CardCode: true, CardName: true } },
       },
     });
     return {
       id: asignacion.id,
       localId: asignacion.localId,
-      nombreLocal: asignacion.local.nombre,
-      nombreCliente: asignacion.local.cliente?.nombre ?? 'Sin cliente',
+      nombreLocal: nombreLocal(asignacion.local),
       fechaDesde: asignacion.fechaDesde.toISOString(),
       fechaHasta: asignacion.fechaHasta?.toISOString() ?? null,
     };

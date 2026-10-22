@@ -995,7 +995,7 @@ function HojaColaborador({
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-semibold text-foreground">{p.local}</span>
                     <span className="block truncate text-[11px] text-muted">
-                      {[p.cliente, p.ventana, p.checkin ? `Entrada ${p.checkin}` : null, p.checkout ? `Salida ${p.checkout}` : null]
+                      {[p.localId, p.ventana, p.checkin ? `Entrada ${p.checkin}` : null, p.checkout ? `Salida ${p.checkout}` : null]
                         .filter(Boolean)
                         .join(" · ")}
                     </span>

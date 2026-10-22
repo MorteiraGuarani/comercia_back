@@ -1,4 +1,3 @@
-import { localesOperativos } from '../utils/locales-operativos';
 import {
   ForbiddenException,
   Injectable,
@@ -12,7 +11,13 @@ import {
   SupervisionResumenDto,
 } from '../dto/supervision.dto';
 import { ParadaRuta } from '../interfaces/parada-ruta.interface';
-import { fechaCampo, rangoConsulta, relojCampo } from '../utils/calendario';
+import {
+  fechaCampo,
+  rangoConsulta,
+  relojCampo,
+  ZONA_CAMPO,
+} from '../utils/calendario';
+import { nombreLocal } from '../utils/local-ocrd';
 import { obtenerColaboradoresGestionados } from '../utils/autorizacion';
 import {
   destinatarioCampo,
@@ -58,7 +63,7 @@ export class SupervisionService {
     const where = {
       usuarioId: colaboradorId,
       usuario: { empresaId: u.empresaId },
-      local: { empresaId: u.empresaId },
+      empresaId: u.empresaId,
       fecha: { gte: fechaCampo(desde), lte: fechaCampo(hasta) },
     };
     const [total, filas] = await Promise.all([
@@ -216,10 +221,7 @@ export class SupervisionService {
               where: {
                 activo: true,
                 fechaDesde: { lte: fechaHasta },
-                local: {
-                  activo: true,
-                  ...localesOperativos(u.empresaId),
-                },
+                empresaId: u.empresaId,
                 AND: [
                   {
                     OR: [
@@ -271,7 +273,6 @@ export class SupervisionService {
                 },
                 local: {
                   select: {
-                    zonaHoraria: true,
                     horarios: {
                       where: {
                         activo: true,
@@ -294,7 +295,6 @@ export class SupervisionService {
             fecha: esRango ? { gte: fechaDesde, lte: fechaHasta } : fechaDesde,
           },
           include: {
-            local: { select: { zonaHoraria: true } },
             horario: { select: { entrada: true, salida: true } },
             eventosUcheck: {
               where: { tipo: 'ENTRADA' },
@@ -407,7 +407,7 @@ export class SupervisionService {
               : a.horarios.length
                 ? a.horarios
                 : a.local.horarios,
-            a.local.zonaHoraria,
+            ZONA_CAMPO,
             fechaDesdeStr,
             fechaHastaStr,
             ahora,
@@ -423,7 +423,7 @@ export class SupervisionService {
           estadoAgenda(
             visitasHoy.filter((x) => x.localId === v.localId),
             [],
-            v.local.zonaHoraria,
+            ZONA_CAMPO,
             fechaDesdeStr,
             fechaHastaStr,
             ahora,
@@ -651,10 +651,7 @@ export class SupervisionService {
         where: {
           activo: true,
           fechaDesde: { lte: fechaHasta },
-          local: {
-            activo: true,
-            ...localesOperativos(u.empresaId),
-          },
+          empresaId: u.empresaId,
           AND: [
             { OR: [{ fechaHasta: null }, { fechaHasta: { gte: fechaDesde } }] },
             {
@@ -687,7 +684,6 @@ export class SupervisionService {
           },
           local: {
             include: {
-              cliente: { select: { id: true, nombre: true } },
               horarios: {
                 where: {
                   activo: true,
@@ -717,7 +713,6 @@ export class SupervisionService {
           },
           local: {
             include: {
-              cliente: { select: { id: true, nombre: true } },
               horarios: {
                 where: {
                   activo: true,
@@ -765,7 +760,7 @@ export class SupervisionService {
           },
         },
         include: {
-          local: { select: { id: true, nombre: true } },
+          local: { select: { CardCode: true, CardName: true } },
         },
         orderBy: { creadoAt: 'desc' },
         take: 50,
@@ -773,23 +768,22 @@ export class SupervisionService {
     ]);
 
     // Armar la ruta del día ordenada
-    const paradasMap = new Map<number, ParadaRuta>();
+    const paradasMap = new Map<string, ParadaRuta>();
 
     // Primero asignaciones
     for (const a of asignaciones) {
       const h = (a.horarios.length ? a.horarios : a.local.horarios)[0];
       const ventana = h ? `${h.entrada} – ${h.salida}` : '08:00 – 18:00';
-      paradasMap.set(a.local.id, {
-        id: `local-${a.local.id}`,
-        localId: a.local.id,
-        cliente: a.local.cliente?.nombre ?? 'Sin cliente',
-        local: a.local.nombre,
+      paradasMap.set(a.localId, {
+        id: `local-${a.localId}`,
+        localId: a.localId,
+        local: nombreLocal(a.local),
         tipo: 'supermercado', // default semántico
         ventana,
         ...estadoAgenda(
           [],
           a.horarios.length ? a.horarios : a.local.horarios,
-          a.local.zonaHoraria,
+          ZONA_CAMPO,
           desde,
           hasta,
           ahora,
@@ -802,25 +796,24 @@ export class SupervisionService {
 
     // Actualizar con visitas reales
     for (const v of visitas) {
-      const existing = paradasMap.get(v.local.id);
+      const existing = paradasMap.get(v.localId);
       const h = v.local.horarios[0];
       const ventana = h ? `${h.entrada} – ${h.salida}` : '08:00 – 18:00';
-      const a = asignaciones.find((a) => a.local.id === v.local.id);
+      const a = asignaciones.find((a) => a.localId === v.localId);
       const estado = estadoAgenda(
         visitas.filter((x) => x.localId === v.localId),
         a?.horarios.length ? a.horarios : (a?.local.horarios ?? []),
-        v.local.zonaHoraria,
+        ZONA_CAMPO,
         desde,
         hasta,
         ahora,
         a,
       );
 
-      paradasMap.set(v.local.id, {
+      paradasMap.set(v.localId, {
         id: `visita-${v.id}`,
-        localId: v.local.id,
-        cliente: v.local.cliente?.nombre ?? 'Sin cliente',
-        local: v.local.nombre,
+        localId: v.localId,
+        local: nombreLocal(v.local),
         tipo: 'supermercado',
         ventana: existing?.ventana ?? ventana,
         ...estado,
@@ -880,8 +873,7 @@ export class SupervisionService {
     const evidencias = visitas.flatMap((visita) =>
       visita.cumplimientos.map((cumplimiento) => ({
         visitaId: visita.id,
-        local: visita.local.nombre,
-        cliente: visita.local.cliente?.nombre ?? 'Sin cliente',
+        local: nombreLocal(visita.local),
         fecha: visita.fecha,
         entrada: visita.entrada,
         salida: visita.salida,
@@ -947,7 +939,7 @@ export class SupervisionService {
       tipo: n.tipo,
       estado: n.estado.toLowerCase(),
       texto: n.descripcion,
-      cliente: n.local.nombre,
+      cliente: nombreLocal(n.local),
       hora: this.formatoHora(n.creadoAt) ?? 'hoy',
     }));
 

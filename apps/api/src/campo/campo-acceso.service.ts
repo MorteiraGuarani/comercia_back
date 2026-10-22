@@ -41,10 +41,10 @@ export class CampoAccesoService {
       return usuario;
     }
   }
-  async local(empresaId: number, id: number) {
-    const local = await this.prisma.localCampo.findFirst({
-      where: { id, empresaId, eliminadoEn: null },
-      select: { id: true, activo: true, cliente: { select: { activo: true } } },
+  async local(empresaId: number, id: string) {
+    const local = await this.prisma.socioNegocio.findFirst({
+      where: { CardCode: id, empresaId },
+      select: { CardCode: true },
     });
     if (!local) throw new NotFoundException('Local no disponible');
     return local;

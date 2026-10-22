@@ -93,7 +93,7 @@ export function HiloNovedad({ id, onActualizado }: { id: number; onActualizado?:
           <h2 className="min-w-0 break-words text-base font-bold">{novedad.titulo}</h2>
           <span className="rounded-full border border-line px-2 py-1 text-xs font-semibold">{novedad.estado}</span>
         </div>
-        <p className="mt-1 break-words text-xs text-muted">{novedad.local.cliente?.nombre ?? "Sin cliente"} · {novedad.local.nombre} · {novedad.usuario.nombre} {novedad.usuario.apellido}</p>
+        <p className="mt-1 break-words text-xs text-muted">{novedad.local.nombre} · {novedad.local.id} · {novedad.usuario.nombre} {novedad.usuario.apellido}</p>
         <p className="mt-3 whitespace-pre-wrap break-words text-sm">{novedad.descripcion}</p>
         <GaleriaAdjuntosCampo adjuntos={novedad.adjuntos} />
       </div>

@@ -26,6 +26,11 @@ import { esLiderDe, obtenerEquipoCompleto } from '../utils/autorizacion';
 import { localesParaNovedad } from '../utils/locales-novedad';
 import { ConsultaCampoDto } from '../dto/campo.dto';
 import { AdjuntoCampoService } from './adjunto-campo.service';
+import {
+  conLocalResumen,
+  localResumen,
+  nombreLocal,
+} from '../utils/local-ocrd';
 
 const adjuntosNovedadInclude = {
   select: {
@@ -47,24 +52,24 @@ export class NovedadService {
   ) {}
 
   async locales(usuarioId: number, empresaId: number, query: ConsultaCampoDto) {
-    const where: Prisma.LocalCampoWhereInput = {
+    const where: Prisma.SocioNegocioWhereInput = {
       ...localesParaNovedad(usuarioId, empresaId),
       ...(query.buscar
-        ? { nombre: { contains: query.buscar, mode: 'insensitive' } }
+        ? { CardName: { contains: query.buscar, mode: 'insensitive' } }
         : {}),
     };
     const { skip, take, page, limit } = rangoPaginacion(query);
     const [total, items] = await Promise.all([
-      this.prisma.localCampo.count({ where }),
-      this.prisma.localCampo.findMany({
+      this.prisma.socioNegocio.count({ where }),
+      this.prisma.socioNegocio.findMany({
         where,
-        select: { id: true, nombre: true },
-        orderBy: [{ nombre: 'asc' }, { id: 'asc' }],
+        select: { CardCode: true, CardName: true },
+        orderBy: [{ CardName: 'asc' }, { CardCode: 'asc' }],
         skip,
         take,
       }),
     ]);
-    return respuestaPaginada(items, total, page, limit);
+    return respuestaPaginada(items.map(localResumen), total, page, limit);
   }
 
   /**
@@ -79,12 +84,12 @@ export class NovedadService {
     let novedadId: number | undefined;
     try {
       // Validar existencia del local en la empresa
-      const local = await this.prisma.localCampo.findFirst({
+      const local = await this.prisma.socioNegocio.findFirst({
         where: {
           ...localesParaNovedad(usuarioId, empresaId),
-          id: dto.localId,
+          CardCode: dto.localId,
         },
-        select: { id: true, nombre: true },
+        select: { CardCode: true, CardName: true },
       });
       if (!local) {
         throw new NotFoundException('Local no encontrado o inactivo');
@@ -126,7 +131,12 @@ export class NovedadService {
       // Validar visita opcional
       if (dto.visitaId) {
         const visita = await this.prisma.visitaCampo.findFirst({
-          where: { id: dto.visitaId, localId: dto.localId, usuarioId },
+          where: {
+            id: dto.visitaId,
+            empresaId,
+            localId: dto.localId,
+            usuarioId,
+          },
           select: { id: true },
         });
         if (!visita) {
@@ -151,14 +161,7 @@ export class NovedadService {
         },
         include: {
           usuario: { select: { id: true, nombre: true, apellido: true } },
-          local: {
-            select: {
-              id: true,
-              nombre: true,
-              direccion: true,
-              cliente: { select: { nombre: true } },
-            },
-          },
+          local: { select: { CardCode: true, CardName: true } },
           tarea: { select: { id: true, nombre: true, categoria: true } },
         },
       });
@@ -177,14 +180,14 @@ export class NovedadService {
           empresaId,
           usuarioId,
           novedad.id,
-          local.nombre,
+          nombreLocal(local),
           dto.tipo,
         );
       } catch {
         // No fallar la creación si la notificación falla
       }
 
-      return { ...novedad, adjuntos };
+      return { ...conLocalResumen(novedad), adjuntos };
     } catch (error) {
       this.adjuntos.descartarArchivos(archivos);
       if (novedadId) {
@@ -236,14 +239,7 @@ export class NovedadService {
           where: whereConEstado,
           include: {
             usuario: { select: { id: true, nombre: true, apellido: true } },
-            local: {
-              select: {
-                id: true,
-                nombre: true,
-                direccion: true,
-                cliente: { select: { nombre: true } },
-              },
-            },
+            local: { select: { CardCode: true, CardName: true } },
             tarea: { select: { id: true, nombre: true, categoria: true } },
             cerradoPor: { select: { id: true, nombre: true, apellido: true } },
             adjuntos: adjuntosNovedadInclude,
@@ -264,7 +260,12 @@ export class NovedadService {
         }),
       ]);
 
-    const paginada = respuestaPaginada(items, total, page, limit);
+    const paginada = respuestaPaginada(
+      items.map(conLocalResumen),
+      total,
+      page,
+      limit,
+    );
     return {
       ...paginada,
       counts: {
@@ -284,14 +285,7 @@ export class NovedadService {
       where: { id, empresaId },
       include: {
         usuario: { select: { id: true, nombre: true, apellido: true } },
-        local: {
-          select: {
-            id: true,
-            nombre: true,
-            direccion: true,
-            cliente: { select: { nombre: true } },
-          },
-        },
+        local: { select: { CardCode: true, CardName: true } },
         tarea: { select: { id: true, nombre: true, categoria: true } },
         cerradoPor: { select: { id: true, nombre: true, apellido: true } },
         adjuntos: adjuntosNovedadInclude,
@@ -307,7 +301,7 @@ export class NovedadService {
       throw new ForbiddenException('No tienes acceso a esta novedad');
     }
 
-    return novedad;
+    return conLocalResumen(novedad);
   }
 
   async listarRespuestas(
@@ -394,7 +388,7 @@ export class NovedadService {
     const novedad = await this.prisma.novedadCampo.findUnique({
       where: { id },
       include: {
-        local: { select: { nombre: true } },
+        local: { select: { CardCode: true, CardName: true } },
       },
     });
 
@@ -439,13 +433,7 @@ export class NovedadService {
       },
       include: {
         usuario: { select: { id: true, nombre: true, apellido: true } },
-        local: {
-          select: {
-            id: true,
-            nombre: true,
-            cliente: { select: { nombre: true } },
-          },
-        },
+        local: { select: { CardCode: true, CardName: true } },
         tarea: { select: { id: true, nombre: true } },
         cerradoPor: { select: { id: true, nombre: true, apellido: true } },
         adjuntos: adjuntosNovedadInclude,
@@ -460,7 +448,7 @@ export class NovedadService {
           usuarioId,
           novedad.usuarioId,
           novedad.id,
-          novedad.local.nombre,
+          nombreLocal(novedad.local),
           dto.estado,
         );
       } catch {
@@ -468,6 +456,6 @@ export class NovedadService {
       }
     }
 
-    return actualizada;
+    return conLocalResumen(actualizada);
   }
 }

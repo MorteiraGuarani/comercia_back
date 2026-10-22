@@ -22,7 +22,7 @@ import type { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import type { RequestConUsuario } from '../auth/interfaces/request-con-usuario.interface';
 import { CatalogoCampoService } from './catalogo-campo.service';
-import { EliminarClienteCampoDto } from './dto/eliminar-cliente.dto';
+import { CardCodePipe } from '../common/pipes/card-code.pipe';
 import { LocalPrincipalCampoDto } from './dto/local-principal.dto';
 import { PlanificacionCampoService } from './planificacion-campo.service';
 import { JornadaCampoService } from './jornada-campo.service';
@@ -37,15 +37,14 @@ import { AdjuntoCampoService } from './services/adjunto-campo.service';
 import {
   AsignacionCampoDto,
   BackupCampoDto,
-  ClienteCampoDto,
   ConsultaCampoDto,
   EntradaCampoDto,
   EntradaRepositorCampoDto,
   HorarioCampoDto,
-  LocalCampoDto,
   MarcaCampoDto,
   MarcaRepositorCampoDto,
   TareaCampoDto,
+  UbicacionLocalCampoDto,
 } from './dto/campo.dto';
 import { CrearComentarioTareaDto } from './dto/comentario-tarea.dto';
 import { MomentoFotoDto, SubirFotoTareaDto } from './dto/foto-tarea.dto';
@@ -63,13 +62,10 @@ import { ConsultaTareasDiaDto } from './dto/consulta-tareas-dia.dto';
 import {
   multerConfigAdjuntosCampo,
   multerConfigFotosTareas,
-  multerConfigLogoCliente,
   resolverRutaFoto,
 } from './utils/multer-config';
 import { existsSync } from 'fs';
 import { enviarArchivo } from '../common/utils/enviar-archivo';
-import { tipoContenidoImagen } from '../common/utils/tipo-contenido-imagen';
-import { LogoClienteService } from './services/logo-cliente.service';
 
 @Controller('campo')
 @UseGuards(JwtAuthGuard)
@@ -86,63 +82,7 @@ export class CampoController {
     private readonly avisoService: AvisoService,
     private readonly supervisionService: SupervisionService,
     private readonly adjuntoCampoService: AdjuntoCampoService,
-    private readonly logoCliente: LogoClienteService,
   ) {}
-
-  @Get('clientes') clientes(
-    @Req() r: RequestConUsuario,
-    @Query() q: ConsultaCampoDto,
-  ) {
-    return this.catalogo.clientes(r.usuarioId, q);
-  }
-  @Post('clientes') crearCliente(
-    @Req() r: RequestConUsuario,
-    @Body() d: ClienteCampoDto,
-  ) {
-    return this.catalogo.guardarCliente(r.usuarioId, d);
-  }
-  @Put('clientes/:id') editarCliente(
-    @Req() r: RequestConUsuario,
-    @Param('id', ParseIntPipe) id: number,
-    @Body() d: ClienteCampoDto,
-  ) {
-    return this.catalogo.guardarCliente(r.usuarioId, d, id);
-  }
-  @Delete('clientes/:id') eliminarCliente(
-    @Req() r: RequestConUsuario,
-    @Param('id', ParseIntPipe) id: number,
-    @Body() d: EliminarClienteCampoDto,
-  ) {
-    return this.catalogo.eliminarCliente(r.usuarioId, id, d);
-  }
-
-  @Post('clientes/subir-logo')
-  @UseInterceptors(FileInterceptor('logo', multerConfigLogoCliente))
-  subirLogoCliente(
-    @Req() r: RequestConUsuario,
-    @UploadedFile() file?: Express.Multer.File,
-  ) {
-    return this.logoCliente.subir(r.usuarioId, file);
-  }
-
-  @Get('clientes/logos/:filename')
-  async servirLogoCliente(
-    @Req() r: RequestConUsuario,
-    @Param('filename') filename: string,
-    @Res() res: Response,
-  ) {
-    const ruta = await this.logoCliente.ruta(r.empresaId, filename);
-    if (!ruta) {
-      return res.status(404).json({ message: 'Logo no encontrado' });
-    }
-    // sandbox: un SVG anterior abierto directo no puede ejecutar scripts.
-    enviarArchivo(res, ruta, {
-      'Content-Type': tipoContenidoImagen(ruta),
-      'Content-Security-Policy':
-        "default-src 'none'; style-src 'unsafe-inline'; sandbox",
-      'Cache-Control': 'private, max-age=86400',
-    });
-  }
 
   @Get('locales/mapa') localesMapa(
     @Req() r: RequestConUsuario,
@@ -156,24 +96,13 @@ export class CampoController {
   ) {
     return this.catalogo.locales(r.usuarioId, q);
   }
-  @Post('locales') crearLocal(
+  // Los socios se dan de alta y baja en OCRD; acá solo se marca su ubicación.
+  @Put('locales/:localId/ubicacion') ubicarLocal(
     @Req() r: RequestConUsuario,
-    @Body() d: LocalCampoDto,
+    @Param('localId', CardCodePipe) id: string,
+    @Body() d: UbicacionLocalCampoDto,
   ) {
-    return this.catalogo.guardarLocal(r.usuarioId, d);
-  }
-  @Put('locales/:id') editarLocal(
-    @Req() r: RequestConUsuario,
-    @Param('id', ParseIntPipe) id: number,
-    @Body() d: LocalCampoDto,
-  ) {
-    return this.catalogo.guardarLocal(r.usuarioId, d, id);
-  }
-  @Delete('locales/:id') eliminarLocal(
-    @Req() r: RequestConUsuario,
-    @Param('id', ParseIntPipe) id: number,
-  ) {
-    return this.catalogo.eliminarLocal(r.usuarioId, id);
+    return this.catalogo.ubicarLocal(r.usuarioId, id, d);
   }
 
   @Get('tareas') tareas(
@@ -226,21 +155,21 @@ export class CampoController {
   }
   @Get('locales/:localId/horarios') horarios(
     @Req() r: RequestConUsuario,
-    @Param('localId', ParseIntPipe) id: number,
+    @Param('localId', CardCodePipe) id: string,
     @Query() q: ConsultaCampoDto,
   ) {
     return this.plan.horarios(r.usuarioId, id, q);
   }
   @Post('locales/:localId/horarios') crearHorario(
     @Req() r: RequestConUsuario,
-    @Param('localId', ParseIntPipe) id: number,
+    @Param('localId', CardCodePipe) id: string,
     @Body() d: HorarioCampoDto,
   ) {
     return this.plan.guardarHorario(r.usuarioId, id, d);
   }
   @Put('locales/:localId/horarios/:id') editarHorario(
     @Req() r: RequestConUsuario,
-    @Param('localId', ParseIntPipe) localId: number,
+    @Param('localId', CardCodePipe) localId: string,
     @Param('id', ParseIntPipe) id: number,
     @Body() d: HorarioCampoDto,
   ) {
@@ -248,7 +177,7 @@ export class CampoController {
   }
   @Delete('locales/:localId/horarios/:id') eliminarHorario(
     @Req() r: RequestConUsuario,
-    @Param('localId', ParseIntPipe) localId: number,
+    @Param('localId', CardCodePipe) localId: string,
     @Param('id', ParseIntPipe) id: number,
   ) {
     return this.plan.eliminarHorario(r.usuarioId, localId, id);
@@ -256,7 +185,7 @@ export class CampoController {
 
   @Get('locales/:localId/asignaciones') asignaciones(
     @Req() r: RequestConUsuario,
-    @Param('localId', ParseIntPipe) id: number,
+    @Param('localId', CardCodePipe) id: string,
     @Query() q: ConsultaCampoDto,
   ) {
     return this.plan.asignaciones(r.usuarioId, id, q);
@@ -292,7 +221,7 @@ export class CampoController {
   }
   @Post('locales/:localId/asignaciones') asignar(
     @Req() r: RequestConUsuario,
-    @Param('localId', ParseIntPipe) id: number,
+    @Param('localId', CardCodePipe) id: string,
     @Body() d: AsignacionCampoDto,
   ) {
     return this.plan.asignar(r.usuarioId, id, d);

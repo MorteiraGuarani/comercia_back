@@ -140,6 +140,19 @@ describe('Socios de negocio públicos y separados por empresa', () => {
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 
+  it('tbl_ocrd: no borra un socio usado como local de campo', async () => {
+    const { modelos, db, service } = preparar();
+    const fila = await modelos.socioNegocio.findFirst({});
+    modelos.socioNegocio.findFirst
+      .mockResolvedValueOnce(fila)
+      .mockResolvedValueOnce({ _count: { asignaciones: 1 } } as never);
+    db.$queryRaw.mockResolvedValueOnce([{ id: 20 }]);
+    await expect(
+      service.eliminar(TABLAS_SOCIOS.tbl_ocrd, 20, '000123'),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(modelos.socioNegocio.delete).not.toHaveBeenCalled();
+  });
+
   it.each(Object.values(TABLAS_SOCIOS))(
     '$nombre: pagina, proyecta y restringe todas las operaciones a la empresa sin sesión',
     async (tabla) => {
@@ -185,6 +198,13 @@ describe('Socios de negocio públicos y separados por empresa', () => {
           data: {},
         }),
       );
+      if (tabla.nombre === 'tbl_ocrd') {
+        // Sin operación de campo asociada: el borrado sigue permitido.
+        const fila = await repositorio.findFirst({});
+        repositorio.findFirst
+          .mockResolvedValueOnce(fila)
+          .mockResolvedValueOnce({ _count: {} } as never);
+      }
       // La consulta raw adicional de canales indica que no hay socios relacionados.
       db.$queryRaw
         .mockResolvedValueOnce([{ id: 20 }])

@@ -7,7 +7,12 @@ import { useJornadaCompleta } from "@/hooks/use-jornada-completa";
 import { useFechaCampo } from "@/hooks/use-fecha-campo";
 import { queryFechasCampo } from "@/utils/fechas";
 import { formatoDistancia, metrosEntre } from "@/utils/distancia";
-import { ordenarParadasPorRuta, urlGoogleMapsRuta, type CoordenadaCampo } from "@/utils/ruta-recomendada";
+import {
+  conUbicacion,
+  ordenarParadasPorRuta,
+  urlGoogleMapsRuta,
+  type CoordenadaCampo,
+} from "@/utils/ruta-recomendada";
 import { mensajeError } from "@/utils/error";
 import { RUTA, PRESENTISMO } from "@/utils/estado-jornada";
 import { formatoFechaHora } from "@/utils/fechas";
@@ -82,7 +87,7 @@ export function RutaImpulsadorPanel() {
       ? lista.items.filter(
           (a) =>
             a.local.nombre.toLowerCase().includes(q) ||
-            (a.local.cliente?.nombre ?? "Sin cliente").toLowerCase().includes(q) ||
+            a.local.id.toLowerCase().includes(q) ||
             a.local.direccion.toLowerCase().includes(q),
         )
       : lista.items;
@@ -120,12 +125,12 @@ export function RutaImpulsadorPanel() {
   }
 
   function pendientesParaRuta(items: AgendaCampo[]) {
-    return items.filter(
-      (a) =>
-        a.estado === "pendiente" &&
-        abierta?.local.id !== a.local.id &&
-        Number.isFinite(a.local.latitud) &&
-        Number.isFinite(a.local.longitud),
+    return items.flatMap((a) =>
+      a.estado === "pendiente" &&
+      abierta?.local.id !== a.local.id &&
+      conUbicacion(a.local)
+        ? [{ ...a, local: a.local }]
+        : [],
     );
   }
 
@@ -360,7 +365,7 @@ export function RutaImpulsadorPanel() {
                             {a.local.nombre}
                           </p>
                           <span className="ft-body text-[11px] text-muted truncate">
-                            · {a.local.cliente?.nombre ?? "Sin cliente"}
+                            · {a.local.id}
                           </span>
                         </div>
                         <p className="ft-body text-xs text-muted truncate mt-0.5">
@@ -400,14 +405,9 @@ export function RutaImpulsadorPanel() {
                     </div>
 
                     <div className="flex items-center gap-1.5">
-                      {origenGps && Number.isFinite(a.local.latitud) ? (
+                      {origenGps && conUbicacion(a.local) ? (
                         <span className="ft-mono text-[10px] text-muted">
-                          {formatoDistancia(
-                            metrosEntre(origenGps, {
-                              latitud: a.local.latitud,
-                              longitud: a.local.longitud,
-                            }),
-                          )}
+                          {formatoDistancia(metrosEntre(origenGps, a.local))}
                         </span>
                       ) : null}
                       <button
@@ -465,24 +465,7 @@ export function RutaImpulsadorPanel() {
 
       {/* Modal de Mapa */}
       {mapa && (
-        <MapaLocal
-          local={{
-            id: 0,
-            nombre: mapa.nombre,
-            direccion: mapa.nombre,
-            latitud: mapa.latitud,
-            longitud: mapa.longitud,
-            radioMetros: mapa.radioMetros,
-            zonaHoraria: "America/Asuncion",
-            clienteId: 0,
-            contacto: "",
-            telefono: "",
-            notas: "",
-            activo: true,
-            cliente: { id: 0, nombre: "" },
-          }}
-          cerrar={() => setMapa(null)}
-        />
+        <MapaLocal local={mapa} cerrar={() => setMapa(null)} />
       )}
 
       {novedadLocal ? (

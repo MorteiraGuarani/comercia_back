@@ -156,7 +156,6 @@ export class AdminEmpresasService {
         _count: {
           select: {
             roles: true,
-            clientesCampo: true,
             tareasCampo: true,
             usuarios: true,
             hijas: true,

@@ -733,7 +733,7 @@ function AsignacionesUsuario({
     useState<RespuestaPaginada<UsuarioLocalAsignacion> | null>(null);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(7);
-  const [localId, setLocalId] = useState<number | "">("");
+  const [localId, setLocalId] = useState<string | "">("");
   const [fechaDesde, setFechaDesde] = useState(() =>
     new Date().toISOString().slice(0, 10),
   );
@@ -838,7 +838,7 @@ function AsignacionesUsuario({
         onSubmit={asignar}
         className="mt-5 space-y-3 rounded-xl border border-line bg-surface-soft p-4"
       >
-        <SelectorPaginado
+        <SelectorPaginado<string>
           key={`${base}-${usuario.id}`}
           url={`${base}/locales?empresaId=${usuario.empresa.id}`}
           buscable
@@ -891,8 +891,8 @@ function AsignacionesUsuario({
                     <p className="truncate font-semibold">
                       {asignacion.nombreLocal}
                     </p>
-                    <p className="truncate text-xs text-muted">
-                      {asignacion.nombreCliente}
+                    <p className="truncate font-mono text-xs text-muted">
+                      {asignacion.localId}
                     </p>
                   </div>
                   <button
@@ -916,7 +916,7 @@ function AsignacionesUsuario({
               <thead className="bg-surface-soft text-left text-xs font-semibold uppercase">
                 <tr>
                   <th className="px-4 py-3">Local</th>
-                  <th className="px-4 py-3">Cliente</th>
+                  <th className="px-4 py-3">CardCode</th>
                   <th className="px-4 py-3">Vigencia</th>
                   <th className="px-4 py-3 text-right">Acción</th>
                 </tr>
@@ -927,7 +927,7 @@ function AsignacionesUsuario({
                     <td className="px-4 py-3 font-medium">
                       {asignacion.nombreLocal}
                     </td>
-                    <td className="px-4 py-3">{asignacion.nombreCliente}</td>
+                    <td className="px-4 py-3 font-mono">{asignacion.localId}</td>
                     <td className="px-4 py-3 text-muted">
                       {asignacion.fechaDesde.slice(0, 10)} ·{" "}
                       {asignacion.fechaHasta?.slice(0, 10) ?? "Sin fin"}

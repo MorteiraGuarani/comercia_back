@@ -43,8 +43,6 @@ model Empresa {
   usuarios            Usuario[]
   roles               Rol[]
   equiposCampo        EquipoCampo[]
-  clientesCampo       ClienteCampo[]
-  localesCampo        LocalCampo[]
   productos           Producto[]
   productosPrecios ProductoPrecio[]
   preciosPromociones PrecioEspecialPromocion[]
@@ -89,6 +87,14 @@ model SocioNegocio {
   U_Longitud String? @db.VarChar(30)
   U_jCANAL String? @db.VarChar(50)
   U_jSUBCANAL String? @db.VarChar(50)
+  // Operación de campo: cada socio es un local asignable por CardCode.
+  usuariosPrincipal Usuario[] @relation("LocalPrincipalCampo")
+  horarios HorarioCampo[]
+  asignaciones AsignacionCampo[]
+  tareas TareaLocalCampo[]
+  visitas VisitaCampo[]
+  novedades NovedadCampo[]
+  eventosUcheck IntegracionUcheckEvento[]
   @@unique([empresaId, CardCode], map: "uq_tbl_ocrd_cardcode")
   @@index([empresaId, CardName], map: "idx_tbl_ocrd_cardname")
   @@index([empresaId, GroupCode], map: "idx_tbl_ocrd_groupcode")
@@ -432,8 +438,8 @@ model Usuario {
   superiorId              Int?                      @map("superior_id")
   superior                Usuario?                  @relation("UsuarioJerarquia", fields: [superiorId], references: [id])
   subordinados            Usuario[]                 @relation("UsuarioJerarquia")
-  localPrincipalId        Int?                      @map("local_principal_id")
-  localPrincipal          LocalCampo?               @relation("LocalPrincipalCampo", fields: [localPrincipalId], references: [id], onDelete: SetNull)
+  localPrincipalId        String?                   @map("local_principal_card_code") @db.VarChar(15)
+  localPrincipal          SocioNegocio?             @relation("LocalPrincipalCampo", fields: [empresaId, localPrincipalId], references: [empresaId, CardCode], onDelete: NoAction, onUpdate: Cascade)
   asignacionesCampo       AsignacionCampo[]         @relation("CampoTitular")
   backupsCampo            BackupCampo[]             @relation("CampoBackup")
   visitasCampo            VisitaCampo[]
@@ -513,54 +519,6 @@ model OperacionCampo {
   @@map("campo_operaciones")
 }
 
-model ClienteCampo {
-  id        Int          @id @default(autoincrement())
-  empresaId Int          @map("empresa_id")
-  empresa   Empresa      @relation(fields: [empresaId], references: [id])
-  nombre    String       @db.VarChar(120)
-  ruc       String       @default("") @db.VarChar(30)
-  contacto  String       @default("") @db.VarChar(120)
-  telefono  String       @default("") @db.VarChar(40)
-  logoUrl   String?      @map("logo_url") @db.VarChar(500)
-  activo    Boolean      @default(true)
-  eliminadoEn DateTime?  @map("eliminado_en")
-  locales   LocalCampo[]
-
-  @@unique([id, empresaId])
-  @@index([empresaId, activo, nombre])
-  @@map("campo_clientes")
-}
-
-model LocalCampo {
-  id            Int                       @id @default(autoincrement())
-  empresaId     Int                       @map("empresa_id")
-  empresa       Empresa                   @relation(fields: [empresaId], references: [id], onDelete: Restrict)
-  clienteId     Int?                      @map("cliente_id")
-  cliente       ClienteCampo?             @relation(fields: [clienteId, empresaId], references: [id, empresaId], onDelete: NoAction, onUpdate: NoAction)
-  nombre        String                    @db.VarChar(120)
-  direccion     String                    @default("") @db.VarChar(250)
-  contacto      String                    @default("") @db.VarChar(120)
-  telefono      String                    @default("") @db.VarChar(40)
-  latitud       Float
-  longitud      Float
-  radioMetros   Int                       @default(100) @map("radio_metros")
-  zonaHoraria   String                    @default("America/Asuncion") @map("zona_horaria") @db.VarChar(80)
-  notas         String                    @default("") @db.VarChar(1000)
-  activo        Boolean                   @default(true)
-  eliminadoEn   DateTime?                 @map("eliminado_en")
-  usuariosPrincipal Usuario[] @relation("LocalPrincipalCampo")
-  horarios      HorarioCampo[]
-  asignaciones  AsignacionCampo[]
-  tareas        TareaLocalCampo[]
-  visitas       VisitaCampo[]
-  novedades     NovedadCampo[]
-  eventosUcheck IntegracionUcheckEvento[]
-
-  @@index([clienteId, activo])
-  @@index([empresaId, eliminadoEn, nombre])
-  @@map("campo_locales")
-}
-
 enum FrecuenciaCampo {
   DIARIA
   SEMANAL
@@ -569,8 +527,9 @@ enum FrecuenciaCampo {
 
 model HorarioCampo {
   id            Int                       @id @default(autoincrement())
-  localId       Int                       @map("local_id")
-  local         LocalCampo                @relation(fields: [localId], references: [id])
+  empresaId     Int                       @map("empresa_id")
+  localId       String                    @map("CardCode") @db.VarChar(15)
+  local         SocioNegocio              @relation(fields: [empresaId, localId], references: [empresaId, CardCode], onUpdate: Cascade)
   asignacionId  Int?                      @map("asignacion_id")
   asignacion    AsignacionCampo?          @relation(fields: [asignacionId], references: [id])
   destinatario  DestinatarioTareaCampo    @default(IMPULSADOR)
@@ -597,8 +556,9 @@ model HorarioCampo {
 
 model AsignacionCampo {
   id            Int                       @id @default(autoincrement())
-  localId       Int                       @map("local_id")
-  local         LocalCampo                @relation(fields: [localId], references: [id])
+  empresaId     Int                       @map("empresa_id")
+  localId       String                    @map("CardCode") @db.VarChar(15)
+  local         SocioNegocio              @relation(fields: [empresaId, localId], references: [empresaId, CardCode], onUpdate: Cascade)
   usuarioId     Int                       @map("usuario_id")
   usuario       Usuario                   @relation("CampoTitular", fields: [usuarioId], references: [id])
   fechaDesde    DateTime                  @map("fecha_desde") @db.Date
@@ -690,8 +650,9 @@ enum DestinatarioTareaCampo {
 model TareaLocalCampo {
   tareaId Int        @map("tarea_id")
   tarea   TareaCampo @relation(fields: [tareaId], references: [id])
-  localId Int        @map("local_id")
-  local   LocalCampo @relation(fields: [localId], references: [id])
+  empresaId Int        @map("empresa_id")
+  localId String       @map("CardCode") @db.VarChar(15)
+  local   SocioNegocio @relation(fields: [empresaId, localId], references: [empresaId, CardCode], onUpdate: Cascade)
 
   @@id([tareaId, localId])
   @@index([localId])
@@ -703,8 +664,9 @@ model VisitaCampo {
   entradaColor String? @map("entrada_color") @db.VarChar(8)
   salidaColor String? @map("salida_color") @db.VarChar(8)
   id                   Int                       @id @default(autoincrement())
-  localId              Int                       @map("local_id")
-  local                LocalCampo                @relation(fields: [localId], references: [id])
+  empresaId            Int                       @map("empresa_id")
+  localId              String                    @map("CardCode") @db.VarChar(15)
+  local                SocioNegocio              @relation(fields: [empresaId, localId], references: [empresaId, CardCode], onUpdate: Cascade)
   asignacionId         Int                       @map("asignacion_id")
   asignacion           AsignacionCampo           @relation(fields: [asignacionId], references: [id])
   usuarioId            Int                       @map("usuario_id")
@@ -758,8 +720,8 @@ model IntegracionUcheckEvento {
   empresa             Empresa          @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   visitaId            Int              @map("visita_id")
   visita              VisitaCampo      @relation(fields: [visitaId], references: [id], onDelete: Restrict)
-  localId             Int              @map("local_id")
-  local               LocalCampo       @relation(fields: [localId], references: [id], onDelete: Restrict)
+  localId             String           @map("CardCode") @db.VarChar(15)
+  local               SocioNegocio     @relation(fields: [empresaId, localId], references: [empresaId, CardCode], onDelete: Restrict, onUpdate: Cascade)
   asignacionId        Int              @map("asignacion_id")
   asignacion          AsignacionCampo  @relation(fields: [asignacionId], references: [id], onDelete: Restrict)
   horarioId           Int?             @map("horario_id")
@@ -915,8 +877,8 @@ model NovedadCampo {
   empresa      Empresa               @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   usuarioId    Int                   @map("usuario_id")
   usuario      Usuario               @relation("NovedadesReportadas", fields: [usuarioId], references: [id], onDelete: Restrict)
-  localId      Int                   @map("local_id")
-  local        LocalCampo            @relation(fields: [localId], references: [id], onDelete: Cascade)
+  localId      String                @map("CardCode") @db.VarChar(15)
+  local        SocioNegocio          @relation(fields: [empresaId, localId], references: [empresaId, CardCode], onDelete: Cascade, onUpdate: Cascade)
   visitaId     Int?                  @map("visita_id")
   visita       VisitaCampo?          @relation(fields: [visitaId], references: [id], onDelete: SetNull)
   tareaId      Int?                  @map("tarea_id")

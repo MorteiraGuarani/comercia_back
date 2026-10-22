@@ -13,7 +13,7 @@ export interface VersionTarea {
     requiere_fotos?: boolean;
     fotosObligatorias?: boolean;
     fotos_obligatorias?: boolean;
-    localIds?: number[];
-    locales?: Array<{ local: { id: number; nombre: string } }>;
+    localIds?: string[];
+    locales?: Array<{ local: { id: string; nombre: string } }>;
   };
 }

@@ -19,7 +19,7 @@ export interface DetalleMarcacion {
   estadoPresentismo: import('../../campo/interfaces/estado-jornada.interface').EstadoPresentismo;
   id: number;
   usuario: { id: number; nombre: string };
-  local: { id: number; nombre: string } | null;
+  local: { id: string; nombre: string } | null;
   fecha: string;
   zonaHoraria: string;
   entrada: DatosMarcacion;

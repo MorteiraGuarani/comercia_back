@@ -1,14 +1,13 @@
 import type { Prisma } from '../../../generated/prisma/client';
 import { fechaCampo, relojCampo } from './calendario';
-import { localesOperativos } from './locales-operativos';
 
 export function localesParaNovedad(
   usuarioId: number,
   empresaId: number,
-): Prisma.LocalCampoWhereInput {
+): Prisma.SocioNegocioWhereInput {
   const fecha = fechaCampo(relojCampo().fecha);
   return {
-    ...localesOperativos(empresaId),
+    empresaId,
     OR: [
       { visitas: { some: { usuarioId } } },
       {

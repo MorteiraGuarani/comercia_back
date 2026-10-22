@@ -1,4 +1,3 @@
-import { localesOperativos } from './utils/locales-operativos';
 import {
   BadRequestException,
   ForbiddenException,
@@ -12,6 +11,7 @@ import { CampoAccesoService } from './campo-acceso.service';
 import { fechaCampo, relojCampo } from './utils/calendario';
 import { VISITA_CAMPO_SELECT } from './utils/selectores';
 import { conEstadoVisita } from './utils/estado-jornada';
+import { conLocalCampo } from './utils/local-ocrd';
 import { DestinatarioTareaCampo } from '../../generated/prisma/client';
 import { exigirEquipoCampo, EQUIPO_CAMPO_SELECT } from './utils/equipo-campo';
 import type {
@@ -342,10 +342,7 @@ export class RepositorCampoService {
             ],
           },
         ],
-        local: {
-          activo: true,
-          ...localesOperativos(u.empresaId),
-        },
+        empresaId: u.empresaId,
       },
       select: { id: true },
     });
@@ -373,7 +370,7 @@ export class RepositorCampoService {
         data: { notaEntrada: dto.nota },
         select: { id: true },
       });
-    return conEstadoVisita(visita);
+    return conLocalCampo(conEstadoVisita(visita));
   }
 
   async salida(
@@ -391,7 +388,7 @@ export class RepositorCampoService {
         fecha: fechaCampo(relojCampo().fecha),
         salida: null,
         origen: 'UCHECK',
-        local: { empresaId: u.empresaId },
+        empresaId: u.empresaId,
       },
       select: {
         id: true,
