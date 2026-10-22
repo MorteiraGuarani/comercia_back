@@ -1,0 +1,108 @@
+/* Organigrama: árbol de arriba hacia abajo con conectores en CSS. Los colores
+   salen de los tokens del tema, así que el modo oscuro se adapta solo. */
+.lienzo {
+  --linea: color-mix(in srgb, var(--border) 85%, var(--muted));
+  --ancho: 15rem;
+  position: relative;
+  min-width: 0;
+  max-height: min(72vh, 52rem);
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background-color: var(--surface);
+  background-image: radial-gradient(color-mix(in srgb, var(--border) 70%, transparent) 1px, transparent 1px);
+  background-size: 18px 18px;
+  cursor: grab;
+  touch-action: pan-x pan-y;
+}
+.lienzo[data-arrastrando] { cursor: grabbing; user-select: none; }
+.lienzo:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+.contenido { width: max-content; min-width: 100%; padding: 1.5rem; }
+
+/* Ramas en fila, con los conectores dibujados por cada <li>. */
+.arbol, .arbol ul { display: flex; justify-content: center; margin: 0; padding: 0; list-style: none; }
+.arbol { gap: 2.5rem; }
+.arbol ul { position: relative; padding-top: 1.5rem; }
+.arbol ul::before { content: ""; position: absolute; top: 0; left: 50%; height: 1.5rem; border-left: 2px solid var(--linea); }
+.arbol ul > li { position: relative; display: flex; flex-direction: column; align-items: center; padding: 1.5rem .5rem 0; }
+.arbol ul > li::before, .arbol ul > li::after { content: ""; position: absolute; top: 0; width: 50%; height: 1.5rem; border-top: 2px solid var(--linea); }
+.arbol ul > li::before { right: 50%; }
+.arbol ul > li::after { left: 50%; border-left: 2px solid var(--linea); }
+.arbol ul > li:first-child::before, .arbol ul > li:last-child::after { border: 0; }
+.arbol ul > li:last-child::before { border-right: 2px solid var(--linea); border-top-right-radius: .75rem; }
+.arbol ul > li:first-child::after { border-top-left-radius: .75rem; }
+.arbol ul > li:only-child { padding-top: 0; }
+.arbol ul > li:only-child::before, .arbol ul > li:only-child::after { display: none; }
+.arbol > li { display: flex; flex-direction: column; align-items: center; }
+
+/* Cuando todos los hijos son hojas, se apilan en columna (como el ejemplo de
+   AG Charts): el árbol no se vuelve kilométrico de ancho. */
+.arbol ul.hojas { display: grid; justify-content: stretch; gap: .5rem; width: var(--ancho); padding: 1.5rem 0 0 1.5rem; }
+.arbol ul.hojas::before { left: .75rem; width: calc(50% - .75rem); height: .75rem; border-left: 0; border-right: 2px solid var(--linea); border-bottom: 2px solid var(--linea); border-bottom-right-radius: .75rem; }
+.arbol ul.hojas::after { content: ""; position: absolute; top: .75rem; left: .75rem; height: .75rem; border-left: 2px solid var(--linea); }
+.arbol ul.hojas > li { padding: 0; align-items: stretch; }
+.arbol ul.hojas > li::before { content: ""; display: block; position: absolute; top: -.5rem; bottom: 0; left: -.75rem; width: 0; height: auto; border: 0; border-left: 2px solid var(--linea); border-radius: 0; }
+.arbol ul.hojas > li:first-child::before { top: 0; }
+.arbol ul.hojas > li:last-child::before { bottom: 50%; }
+.arbol ul.hojas > li::after { content: ""; display: block; position: absolute; top: 50%; left: -.75rem; width: .75rem; height: 0; border: 0; border-top: 2px solid var(--linea); border-radius: 0; }
+
+/* Tarjeta de persona */
+.tarjeta {
+  --tono: var(--muted);
+  position: relative;
+  display: grid;
+  gap: .5rem;
+  width: var(--ancho);
+  padding: .75rem .75rem .625rem;
+  border: 1px solid var(--border);
+  border-top: 4px solid var(--tono);
+  border-radius: .875rem;
+  background: var(--surface-raised);
+  color: var(--foreground);
+  text-align: left;
+  box-shadow: 0 8px 22px rgba(var(--warm-shadow, 0 0 0), .08);
+  cursor: pointer;
+  transition: box-shadow .15s ease, transform .15s ease, border-color .15s ease;
+}
+.hojas .tarjeta { width: 100%; }
+.tarjeta:hover { border-color: var(--tono); box-shadow: 0 12px 28px rgba(var(--warm-shadow, 0 0 0), .16); transform: translateY(-1px); }
+.tarjeta:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; }
+.tarjeta[data-equipo="IMPULSADOR"] { --tono: var(--accent); }
+.tarjeta[data-equipo="REPOSITOR"] { --tono: var(--color-brand-500); }
+.tarjeta[data-inactivo] { opacity: .55; border-top-style: dashed; }
+.tarjeta[data-resaltado] { border-color: var(--focus-ring); box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus-ring) 35%, transparent); }
+.tarjeta[data-raiz] { --ancho: 16.5rem; }
+
+.cabeza { display: flex; align-items: center; gap: .625rem; min-width: 0; }
+.avatar { display: grid; place-items: center; flex: none; width: 2.5rem; height: 2.5rem; border-radius: 999px; background: var(--tono); color: #fff; font-size: .8125rem; font-weight: 800; letter-spacing: .02em; }
+.identidad { display: grid; min-width: 0; }
+.identidad strong { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-size: .875rem; line-height: 1.2; }
+.identidad span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .75rem; color: var(--muted); }
+
+.chips { display: flex; flex-wrap: wrap; gap: .25rem; }
+.chip { display: inline-flex; align-items: center; gap: .25rem; max-width: 100%; padding: .125rem .5rem; border-radius: 999px; background: color-mix(in srgb, var(--tono) 14%, var(--surface-raised)); color: var(--foreground); font-size: .6875rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chip[data-tono="curso"] { --tono: #2f8a57; }
+.chip[data-tono="marco"] { --tono: var(--color-brand-500); }
+.chip[data-tono="sin"] { --tono: var(--muted); }
+.chip[data-tono="baja"] { --tono: #b4232c; }
+.chip[data-tono="alerta"] { --tono: #c27803; }
+.punto { width: .4375rem; height: .4375rem; flex: none; border-radius: 999px; background: var(--tono); }
+
+.pie { display: flex; align-items: center; justify-content: space-between; gap: .5rem; font-size: .6875rem; color: var(--muted); }
+.alerta { display: inline-flex; align-items: center; gap: .25rem; padding: .0625rem .375rem; border-radius: .375rem; background: color-mix(in srgb, #c27803 18%, var(--surface-raised)); color: var(--foreground); font-weight: 800; }
+
+/* Botón para plegar/desplegar la rama, colgado bajo la tarjeta. */
+.plegar { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: .25rem; min-height: 1.75rem; margin-top: -.875rem; padding: 0 .625rem; border: 1px solid var(--border); border-radius: 999px; background: var(--surface-raised); color: var(--foreground); font-size: .75rem; font-weight: 800; cursor: pointer; }
+.plegar:hover { border-color: var(--accent-ink); background: var(--accent-soft); }
+.plegar:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.plegar svg { transition: transform .15s ease; }
+.plegar[aria-expanded="false"] svg { transform: rotate(-90deg); }
+/* Un toque táctil de 44 px sin agrandar la píldora. */
+.plegar::after { content: ""; position: absolute; inset: -.5rem -.25rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tarjeta, .plegar svg { transition: none; }
+  .tarjeta:hover { transform: none; }
+}

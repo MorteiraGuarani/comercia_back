@@ -18,7 +18,7 @@ import {
   ZONA_CAMPO,
 } from '../utils/calendario';
 import { nombreLocal } from '../utils/local-ocrd';
-import { obtenerColaboradoresGestionados } from '../utils/autorizacion';
+import { obtenerEquipoCompleto } from '../utils/autorizacion';
 import {
   destinatarioCampo,
   exigirEquipoCampo,
@@ -79,15 +79,14 @@ export class SupervisionService {
     return respuestaPaginada(filas.map(detalleVisita), total, page, limit);
   }
 
-  // El propio líder no se incluye: quien llama decide si puede verse a sí mismo.
-  private idsEquipo(u: {
-    id: number;
-    empresaId: number;
-    equipoCampo:
-      | import('../../roles/interfaces/equipo-campo.interface').EquipoCampoDto
-      | null;
-  }) {
-    return obtenerColaboradoresGestionados(this.prisma, u);
+  // Presentismo es de consulta: el líder ve toda su cadena del mismo equipo
+  // operativo (también en repositores), aunque nadie haya marcado. Gestionar
+  // sigue limitado por obtenerColaboradoresGestionados. El propio líder no se
+  // incluye: quien llama decide si puede verse a sí mismo.
+  private async idsEquipo(u: { id: number }) {
+    return (await obtenerEquipoCompleto(this.prisma, u.id)).filter(
+      (id) => id !== u.id,
+    );
   }
 
   private formatoHora(date: Date | string | null): string | null {

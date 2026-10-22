@@ -13,6 +13,7 @@ import { FotoService } from './services/foto.service';
 import { NotificacionService } from './services/notificacion.service';
 import { NovedadService } from './services/novedad.service';
 import { AvisoService } from './services/aviso.service';
+import { OrganigramaService } from './services/organigrama.service';
 import { SupervisionService } from './services/supervision.service';
 import { LimpiezaFotosService } from './services/limpieza-fotos.service';
 import { AdjuntoCampoService } from './services/adjunto-campo.service';
@@ -32,6 +33,7 @@ import { AdjuntoCampoService } from './services/adjunto-campo.service';
     NovedadService,
     AvisoService,
     SupervisionService,
+    OrganigramaService,
     AdjuntoCampoService,
     LimpiezaFotosService,
   ],

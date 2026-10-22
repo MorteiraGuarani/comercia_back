@@ -12,6 +12,59 @@ describe('SupervisionService', () => {
     jest.useFakeTimers().setSystemTime(new Date('2026-10-10T10:30:00-03:00')),
   );
   afterEach(() => jest.useRealTimers());
+  it('Presentismo lista toda la cadena del líder de repositores aunque nadie haya marcado', async () => {
+    const equipo = { id: 4, nombre: 'Repositores', tipo: 'REPOSITOR', activo: true };
+    const persona = (id: number, superiorId: number, rol: string) => ({
+      id,
+      nombre: `P${id}`,
+      apellido: 'X',
+      celular: '',
+      superiorId,
+      rol: { descripcion: rol, equipoCampo: equipo },
+    });
+    const prisma = {
+      usuario: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 1,
+          empresaId: 1,
+          isActive: true,
+          rol: { equipoCampoId: 4 },
+        }),
+        findMany: jest.fn(
+          ({ where }: { where: { superiorId?: { in: number[] }; id?: { in: number[] } } }) =>
+            where.id
+              ? [persona(2, 1, 'BOFFICE'), persona(3, 2, 'REPOSITOR')].filter((u) =>
+                  where.id!.in.includes(u.id),
+                )
+              : where.superiorId?.in.includes(1)
+                ? [{ id: 2 }]
+                : where.superiorId?.in.includes(2)
+                  ? [{ id: 3 }]
+                  : [],
+        ),
+      },
+      asignacionCampo: { findMany: jest.fn().mockResolvedValue([]) },
+      visitaCampo: { findMany: jest.fn().mockResolvedValue([]) },
+      novedadCampo: { groupBy: jest.fn().mockResolvedValue([]) },
+      tareaCampo: { findMany: jest.fn().mockResolvedValue([]) },
+    };
+    const acceso = {
+      gestionar: jest
+        .fn()
+        .mockResolvedValue({ id: 1, empresaId: 1, equipoCampo: equipo }),
+    };
+    const service = new SupervisionService(
+      prisma as unknown as PrismaService,
+      acceso as unknown as CampoAccesoService,
+    );
+    const r = await service.resumen(1, {});
+    expect(r.colaboradores.map((c) => [c.id, c.estadoPresentismo])).toEqual([
+      [2, 'SIN_REGISTRO'],
+      [3, 'SIN_REGISTRO'],
+    ]);
+    expect(r.presentismo.totalEquipo).toBe(2);
+  });
+
   it('entrega las fotos y comentarios de cada cumplimiento al líder sin contar borradores', async () => {
     const prisma = {
       usuario: {

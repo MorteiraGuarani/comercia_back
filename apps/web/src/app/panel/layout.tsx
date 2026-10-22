@@ -281,6 +281,16 @@ export default function PanelLayout({
                         <IconoEngranaje /> Administración
                       </Link>
                     )}
+                    {usuario.esSuperadmin && (
+                      <Link
+                        role="menuitem"
+                        href="/panel/organigrama"
+                        onClick={() => setMenuAbierto(false)}
+                        className={itemMenu}
+                      >
+                        <IconoPersona /> Organigrama
+                      </Link>
+                    )}
                     <div className="my-1 border-t border-line" />
                     <button
                       type="button"

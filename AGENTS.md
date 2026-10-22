@@ -83,8 +83,7 @@
   **Productos y precios** (empresas, opciones y CRUD de artículos/listas).
   Esta excepción incluye GET, POST, PUT y DELETE sin sesión ni token; conservar
   validación de DTOs, existencia de empresa, paginación y filtros por empresa.
-  `Precios especiales` es otra sección y conserva sus permisos.
-  El maestro oficial es `tbl_oitm` y los precios por lista son `tbl_itm1`: sus rutas por tabla también son públicas y admiten carga individual/bulk. `tbl_ospp`, `tbl_spp1` y `tbl_spp2` mantienen JWT y superadministrador activo. Conservar nombres y mayúsculas de columnas y aislamiento de empresa. `/productos` es el adaptador para la pantalla existente, no la tabla maestra.
+  El maestro oficial es `tbl_oitm` y los precios por lista son `tbl_itm1`. Por petición explícita del usuario, **todas las rutas por tabla `tbl_*`** (incluidas `tbl_ospp`, `tbl_spp1` y `tbl_spp2`) son públicas, sin login, cookie, token ni API key, y admiten carga individual/bulk: en bulk se conserva la primera aparición de cada clave y se saltean las repetidas o ya existentes sin cortar el lote. Conservar nombres y mayúsculas de columnas y aislamiento de empresa. `/productos` es el adaptador para la pantalla existente, no la tabla maestra.
   También es público por petición explícita del usuario el módulo **Socios de negocio**, con GET, POST, PUT y DELETE de sus nueve tablas y sus consultas de relaciones, bajo `/admin/socios-negocio/empresas/:empresaId`. Admite carga individual/bulk sin login, cookie, token ni API key; conservar validación, existencia y aislamiento de empresa, paginación y límites de cuerpo/lote. Los nombres de tablas y columnas de negocio se mantienen tal como fueron proporcionados. Socios y direcciones usan CardCode; los catálogos canónicos de canales y subcanales son únicamente tbl_jcanales y tbl_jsubcanales, con rutas por Code. PUT/DELETE de direcciones usan una fila identificada por CardCode y, cuando haya varias, selector de Address/Street/AdresType; nunca elegir una fila arbitraria ni borrar todas implícitamente.
   El alta de usuarios se realiza desde el ABM autenticado de usuarios.
 - **Autenticado ≠ autorizado**: además del guard, verificar DENTRO del handler
@@ -114,10 +113,14 @@
 - **Default 7 registros por página, máximo 50** (constantes del helper — no
   hardcodear otros valores).
 - Prohibido `findMany` sin `take` en endpoints que respondan al front.
-- **Excepción por petición explícita del usuario**: `GET /campo/inventario/items`
-  devuelve todos los artículos de la empresa (`{ items, total }`), sin
-  paginar, para guardarlo sin conexión en el navegador. Conserva un tope de
-  seguridad (`LIMITE_ITEMS_INVENTARIO`) y responde 413 en vez de truncar.
+- **Excepción por petición explícita del usuario**: `GET /campo/inventario/copia`
+  devuelve sin paginar los productos activos de la empresa y los locales de la
+  ruta con su inventario, para trabajar sin conexión desde el navegador.
+  Conserva topes de seguridad (`LIMITE_PRODUCTOS_COPIA`, `LIMITE_LOCALES_COPIA`)
+  y responde 413 en vez de truncar.
+- **Excepción**: `GET /campo/organigrama` devuelve el árbol completo (un
+  organigrama no se pagina): toda la empresa para superadmin, la cadena del
+  líder para quien tiene Presentismo. Tope de 2000 personas y 413 en vez de truncar.
 - El front consume esto con el componente `apps/web/src/components/paginacion.tsx`
   y el tipo `RespuestaPaginada<T>` (regla espejo en `apps/web/AGENTS.md`).
 

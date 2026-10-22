@@ -38,7 +38,7 @@ export function ResumenPresentismo({ resumen, onFiltrar }: {
       </ul>
       {sinEntrada > 0 ? <button type="button" className={styles.notice} onClick={() => onFiltrar("sin_iniciar")}>
         <span><b>{sinEntrada} sin entrada registrada</b><small>Revisá a quién contactar</small></span><span aria-hidden="true">→</span>
-      </button> : <p className={styles.calm}>{p.totalEquipo ? "Todo el equipo tiene una marcación." : "Sin equipo asignado en este período."}</p>}
+      </button> : <p className={styles.calm}>{p.totalEquipo ? "Todo el equipo tiene una marcación." : "No tenés personas a cargo. Revisá el Organigrama."}</p>}
     </section>
     <details className={styles.howto}>
       <summary>¿Cómo se calcula cada estado?</summary>
@@ -149,7 +149,7 @@ export function EquipoPresentismo({ colaboradores, metric = "presentismo", filtr
           <td><span className={styles.tableMetric}><b>{c.tareas.completadas}</b> / {c.tareas.total}</span><small>{c.tareas.obligPendientes} obligatorias pendientes</small></td>
           <td><button type="button" className={styles.detailButton} aria-label={`Ver detalle de ${c.nombre}`} onClick={() => onOpen(c.id)}>Ver ficha <span aria-hidden="true">→</span></button></td></tr>)}</tbody>
       </table></div>
-    </> : <p className={styles.empty}>{colaboradores.length ? "No hay personas con estos filtros." : "No hay colaboradores asignados en el período seleccionado."}</p>}
+    </> : <p className={styles.empty}>{colaboradores.length ? "No hay personas con estos filtros." : "No tenés personas a cargo: nadie te tiene como superior. Revisá el Organigrama; el superior de cada persona se define en Usuarios."}</p>}
     <Paginacion page={page} totalPages={totalPages} total={filtrados.length} limit={limit}
       onPageChange={valor => setPaginado({ clave, page: valor })} onLimitChange={setLimit} desplazarAlInicio={false} />
   </section>;

@@ -33,6 +33,8 @@ import { FotoService } from './services/foto.service';
 import { NotificacionService } from './services/notificacion.service';
 import { NovedadService } from './services/novedad.service';
 import { AvisoService } from './services/aviso.service';
+import { OrganigramaService } from './services/organigrama.service';
+import { ConsultaOrganigramaDto } from './dto/organigrama.dto';
 import { SupervisionService } from './services/supervision.service';
 import { AdjuntoCampoService } from './services/adjunto-campo.service';
 import {
@@ -81,6 +83,7 @@ export class CampoController {
     private readonly novedadService: NovedadService,
     private readonly avisoService: AvisoService,
     private readonly supervisionService: SupervisionService,
+    private readonly organigramaService: OrganigramaService,
     private readonly adjuntoCampoService: AdjuntoCampoService,
   ) {}
 
@@ -515,6 +518,15 @@ export class CampoController {
     @Query() q: ConsultaSupervisionDto,
   ) {
     return this.supervisionService.marcacionesColaborador(r.usuarioId, id, q);
+  }
+
+  @Get('organigrama')
+  @Header('Cache-Control', 'private, no-store')
+  organigrama(
+    @Req() r: RequestConUsuario,
+    @Query() q: ConsultaOrganigramaDto,
+  ) {
+    return this.organigramaService.organigrama(r.usuarioId, q);
   }
 
   // ========== NOVEDADES ==========

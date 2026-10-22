@@ -1,4 +1,6 @@
 "use client";
+
+import Link from "next/link";
 import { PRESENTISMO, RUTA } from "@/utils/estado-jornada";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -455,6 +457,10 @@ export function SupervisionPanel({
         <div><h1>Presentismo</h1><p>Equipo comercial · {resumen?.fecha ?? periodo.etiqueta}{actualizado ? ` · Actualizado ${actualizado}` : ""}</p></div>
         <div className={styles.toolbar}>
           <SelectorFechaFiltro valorActual={periodo} onChange={valor => { setPeriodo(valor); setFiltroEquipo("todos"); }} />
+          <Link href="/panel/organigrama" className={styles.organigrama} title="Ver quién está a cargo de quién">
+            <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="3" width="6" height="5" rx="1" /><rect x="3" y="16" width="6" height="5" rx="1" /><rect x="15" y="16" width="6" height="5" rx="1" /><path d="M12 8v4M6 16v-2h12v2" /></svg>
+            <span>Organigrama</span>
+          </Link>
           <button type="button" className={styles.refresh} onClick={cargarResumen} disabled={cargando} aria-busy={cargando} aria-label="Actualizar presentismo" title="Actualizar presentismo">
             <IconoRefrescar />
           </button>
