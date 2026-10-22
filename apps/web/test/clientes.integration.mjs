@@ -272,8 +272,19 @@ try {
     "El código de cliente no se edita",
   );
   await act(async () => ingresar("CardName", "Almacén Norte"));
-  await act(async () => enviar());
-  assert.equal(ediciones.length, 1);
+  // Antes se perdía: cambiar de pestaña con datos editados ahora los guarda.
+  await act(async () =>
+    click(
+      Array.from(document.querySelectorAll('[role="tab"]')).find(
+        (b) => b.textContent === "Horarios",
+      ),
+    ),
+  );
+  assert.equal(ediciones.length, 1, "Guarda los datos al cambiar de pestaña");
+  assert.equal(
+    document.querySelector('[role="tab"][aria-selected="true"]').textContent,
+    "Horarios",
+  );
   assert.equal(ediciones[0].url, "/campo/locales/00001");
   assert.equal(ediciones[0].cuerpo.CardName, "Almacén Norte");
   assert.equal(ediciones[0].cuerpo.CardCode, undefined, "La edición no manda el código");

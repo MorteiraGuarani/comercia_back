@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import dynamic from "next/dynamic";
 import { apiFetch } from "@/lib/api";
 import { useOperacionCampo } from "@/hooks/use-lista-campo";
@@ -71,16 +71,36 @@ export function ClienteModal({
       ? { latitud: inicial.latitud, longitud: inicial.longitud }
       : null,
   );
-  const dvRuc =
-    form.rucBase.length >= 3 ? calcularDvRucPy(form.rucBase) : null;
+  const dvRuc = form.rucBase.length >= 3 ? calcularDvRucPy(form.rucBase) : null;
   const telefono = pistaTelefono(form.Phone1);
+  // Lo que se envía en "Siguiente"; se compara para saber si hay cambios.
+  const datosActuales = JSON.stringify({ form, punto });
+  const [guardados, setGuardados] = useState(datosActuales);
+  const sucio = datosActuales !== guardados;
+  // Formularios abiertos en Horarios/Personal que todavía no se confirmaron.
+  const [pendientes, setPendientes] = useState({
+    horarios: false,
+    personal: false,
+  });
+  const [avisoPendiente, setAvisoPendiente] = useState("");
+  const marcarHorarios = useCallback(
+    (horarios: boolean) =>
+      setPendientes((p) => (p.horarios === horarios ? p : { ...p, horarios })),
+    [],
+  );
+  const marcarPersonal = useCallback(
+    (personal: boolean) =>
+      setPendientes((p) => (p.personal === personal ? p : { ...p, personal })),
+    [],
+  );
   const cambiar =
     (campo: keyof typeof form) =>
     (evento: React.ChangeEvent<HTMLInputElement>) =>
       setForm((actual) => ({ ...actual, [campo]: evento.target.value }));
 
-  async function guardar(evento: React.FormEvent) {
-    evento.preventDefault();
+  /** Guarda Datos y ubicación si cambiaron; false si la API lo rechazó. */
+  async function guardarDatos(): Promise<boolean> {
+    if (cliente && !sucio) return true;
     let guardado: ClientePdv | undefined;
     const ok = await op.ejecutar(
       cliente ? "Guardando cliente" : "Creando cliente",
@@ -104,18 +124,62 @@ export function ClienteModal({
         );
       },
     );
-    if (!ok || !guardado) return;
+    if (!ok || !guardado) return false;
     onGuardado(guardado);
+    setGuardados(datosActuales);
     if (cliente) {
       mostrarToast("exito", `Cliente ${guardado.nombre} actualizado.`);
+    } else {
+      setCliente(guardado);
+      mostrarToast(
+        "exito",
+        `Cliente ${guardado.nombre} creado. Ahora cargá sus horarios y el personal.`,
+      );
+    }
+    return true;
+  }
+
+  // Salir de Datos guarda lo cambiado: antes se perdía al cambiar de pestaña.
+  async function irA(destino: PestanaCliente) {
+    setAvisoPendiente("");
+    if (vista === "datos" && destino !== "datos" && !(await guardarDatos()))
+      return;
+    setVista(destino);
+  }
+
+  function cerrar() {
+    if (op.mensaje) return;
+    const sinGuardar = [
+      sucio && "los datos del cliente",
+      pendientes.horarios && "una franja horaria",
+      pendientes.personal && "una asignación de personal",
+    ].filter(Boolean);
+    if (
+      sinGuardar.length &&
+      !window.confirm(
+        `Hay cambios sin guardar en ${sinGuardar.join(", ")}. ¿Cerrar igual?`,
+      )
+    )
+      return;
+    onCerrar();
+  }
+
+  function avanzar() {
+    if (vista === "horarios" && pendientes.horarios) {
+      setAvisoPendiente(
+        "Tenés una franja sin guardar: tocá «Guardar franja» o «Cancelar».",
+      );
       return;
     }
-    setCliente(guardado);
-    setVista("horarios");
-    mostrarToast(
-      "exito",
-      `Cliente ${guardado.nombre} creado. Ahora cargá sus horarios y el personal.`,
-    );
+    if (vista === "personal" && pendientes.personal) {
+      setAvisoPendiente(
+        "Elegiste un colaborador sin confirmar: tocá «Confirmar asignación» o «Cancelar».",
+      );
+      return;
+    }
+    setAvisoPendiente("");
+    if (vista === "horarios") setVista("personal");
+    else cerrar();
   }
 
   return (
@@ -124,9 +188,7 @@ export function ClienteModal({
         titulo={cliente ? `Cliente · ${cliente.nombre}` : "Crear cliente"}
         abierto
         ancho="xl"
-        onCerrar={() => {
-          if (!op.mensaje) onCerrar();
-        }}
+        onCerrar={cerrar}
       >
         <div className="campo-screen min-w-0 w-full space-y-4">
           <div
@@ -144,7 +206,7 @@ export function ClienteModal({
                   aria-selected={vista === clave}
                   disabled={bloqueada}
                   title={bloqueada ? "Primero creá el cliente" : undefined}
-                  onClick={() => setVista(clave)}
+                  onClick={() => void irA(clave)}
                   className={`min-h-11 min-w-0 flex-1 cursor-pointer whitespace-nowrap rounded-lg px-3 text-xs font-bold uppercase tracking-wider transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none sm:px-4 ${
                     vista === clave
                       ? "bg-foreground text-background"
@@ -158,7 +220,13 @@ export function ClienteModal({
           </div>
 
           {vista === "datos" ? (
-            <form className="space-y-4" onSubmit={guardar}>
+            <form
+              className="space-y-4"
+              onSubmit={(evento) => {
+                evento.preventDefault();
+                void irA("horarios");
+              }}
+            >
               {op.error && (
                 <p
                   role="alert"
@@ -167,10 +235,7 @@ export function ClienteModal({
                   {op.error}
                 </p>
               )}
-              <fieldset
-                disabled={!!op.mensaje}
-                className="min-w-0 space-y-4"
-              >
+              <fieldset disabled={!!op.mensaje} className="min-w-0 space-y-4">
                 <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
                   <label className="min-w-0 space-y-1.5 text-sm font-semibold">
                     <span>Código de cliente</span>
@@ -308,11 +373,6 @@ export function ClienteModal({
                 </div>
                 <div className="min-w-0 space-y-1.5">
                   <p className="text-sm font-semibold">Ubicación en el mapa</p>
-                  <p className="text-xs text-muted">
-                    {punto
-                      ? `Marcado en ${punto.latitud.toFixed(5)}, ${punto.longitud.toFixed(5)}. Buscá otro lugar, tocá el mapa o arrastrá el pin para corregirlo.`
-                      : "Todavía sin ubicación: buscá el lugar, tocá el mapa o usá tu GPS para marcar dónde está el cliente."}
-                  </p>
                   <div className="overflow-hidden rounded-xl border border-line">
                     <SelectorUbicacion
                       latitud={punto?.latitud ?? CENTRO_INICIAL.latitud}
@@ -327,7 +387,7 @@ export function ClienteModal({
               <div className="flex flex-wrap justify-end gap-2 border-t border-line pt-4">
                 <button
                   type="button"
-                  onClick={onCerrar}
+                  onClick={cerrar}
                   disabled={!!op.mensaje}
                   className="min-h-11 cursor-pointer whitespace-nowrap rounded-lg border border-line px-4 text-sm font-semibold text-foreground hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
                 >
@@ -343,13 +403,14 @@ export function ClienteModal({
                   }
                   className="min-h-11 cursor-pointer whitespace-nowrap rounded-lg bg-brand-700 px-4 text-sm font-semibold text-white hover:bg-brand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-brand-500 dark:text-zinc-950 dark:hover:bg-brand-400"
                 >
-                  {cliente ? "Guardar cambios" : "Siguiente"}
+                  Siguiente
                 </button>
               </div>
             </form>
-          ) : (
-            cliente && (
-              <div className="min-w-0 space-y-4">
+          ) : null}
+          {/* Montadas aunque no se vean: cambiar de pestaña no pierde lo cargado. */}
+          {cliente && (
+              <div hidden={vista === "datos"} className="min-w-0 space-y-4">
                 <p className="text-sm text-muted">
                   Equipo:{" "}
                   <strong className="text-foreground">
@@ -357,24 +418,36 @@ export function ClienteModal({
                   </strong>
                   . Los horarios y el personal se configuran para este equipo.
                 </p>
-                {vista === "horarios" ? (
-                  <HorariosLocal localId={cliente.id} />
-                ) : (
-                  <AsignacionesLocal localId={cliente.id} />
+                <div hidden={vista !== "horarios"}>
+                  <HorariosLocal
+                    localId={cliente.id}
+                    onPendiente={marcarHorarios}
+                  />
+                </div>
+                <div hidden={vista !== "personal"}>
+                  <AsignacionesLocal
+                    localId={cliente.id}
+                    onPendiente={marcarPersonal}
+                  />
+                </div>
+                {avisoPendiente && (
+                  <p
+                    role="alert"
+                    className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100"
+                  >
+                    {avisoPendiente}
+                  </p>
                 )}
                 <div className="flex justify-end border-t border-line pt-4">
                   <button
                     type="button"
-                    onClick={() =>
-                      vista === "horarios" ? setVista("personal") : onCerrar()
-                    }
+                    onClick={avanzar}
                     className="min-h-11 cursor-pointer whitespace-nowrap rounded-lg bg-brand-700 px-4 text-sm font-semibold text-white hover:bg-brand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:bg-brand-500 dark:text-zinc-950 dark:hover:bg-brand-400"
                   >
                     {vista === "horarios" ? "Siguiente" : "Listo"}
                   </button>
                 </div>
               </div>
-            )
           )}
         </div>
       </Modal>

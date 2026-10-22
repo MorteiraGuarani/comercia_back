@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { ToleranciasHorario } from "@/components/tolerancias-horario";
 import { useListaCampo, useOperacionCampo } from "@/hooks/use-lista-campo";
@@ -16,7 +16,14 @@ import { HorariosLocal } from "./horarios-local";
 
 // Responsables del local y sus reemplazos (backups).
 
-export function AsignacionesLocal({ localId }: { localId: string }) {
+export function AsignacionesLocal({
+  localId,
+  onPendiente,
+}: {
+  localId: string;
+  /** Avisa si eligieron un colaborador y falta confirmar la asignación. */
+  onPendiente?: (pendiente: boolean) => void;
+}) {
   const lista = useListaCampo<AsignacionCampo>(
     `/campo/locales/${encodeURIComponent(localId)}/asignaciones`,
   );
@@ -27,6 +34,10 @@ export function AsignacionesLocal({ localId }: { localId: string }) {
   const [hasta, setHasta] = useState("");
   const [backup, setBackup] = useState<AsignacionCampo | null>(null);
   const [horariosDe, setHorariosDe] = useState<AsignacionCampo | null>(null);
+  useEffect(
+    () => onPendiente?.(crear && usuarioId !== ""),
+    [crear, usuarioId, onPendiente],
+  );
 
   return (
     <div className="space-y-4">
@@ -66,6 +77,18 @@ export function AsignacionesLocal({ localId }: { localId: string }) {
             Asigná un impulsador o repositor para que aparezca en su ruta
             diaria.
           </p>
+          {!crear && (
+            <button
+              type="button"
+              onClick={() => {
+                setCrear(true);
+                setUsuarioId("");
+              }}
+              className="mt-3 min-h-11 cursor-pointer whitespace-nowrap rounded-lg border border-line bg-surface-raised px-4 text-sm font-semibold text-foreground hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            >
+              Asignar colaborador
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -288,7 +311,7 @@ export function AsignacionesLocal({ localId }: { localId: string }) {
           ancho="xl"
         >
           <HorariosLocal localId={localId} asignacionId={horariosDe.id} />
-          <ToleranciasHorario alcance="usuario" id={horariosDe.usuario.id} titulo="Tolerancias de este usuario" />
+          <ToleranciasHorario alcance="usuario" id={horariosDe.usuario.id} titulo="Tolerancias del usuario" />
         </Modal>
       )}
 

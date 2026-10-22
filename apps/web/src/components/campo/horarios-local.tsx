@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { ToleranciasHorario } from "@/components/tolerancias-horario";
 import { useListaCampo, useOperacionCampo } from "@/hooks/use-lista-campo";
@@ -19,9 +19,12 @@ import type { FormHorarioCampo, HorarioCampo } from "@/types/campo";
 export function HorariosLocal({
   localId,
   asignacionId,
+  onPendiente,
 }: {
   localId: string;
   asignacionId?: number;
+  /** Avisa si hay una franja abierta sin guardar. */
+  onPendiente?: (pendiente: boolean) => void;
 }) {
   const ruta = asignacionId
     ? `/campo/asignaciones/${asignacionId}/horarios`
@@ -30,6 +33,8 @@ export function HorariosLocal({
   const op = useOperacionCampo();
   const [form, setForm] = useState<FormHorarioCampo | null>(null);
   const [id, setId] = useState(0);
+  const [quitando, setQuitando] = useState<number | null>(null);
+  useEffect(() => onPendiente?.(form !== null), [form, onPendiente]);
 
   function abrir(h?: HorarioCampo) {
     op.limpiarError();
@@ -84,28 +89,82 @@ export function HorariosLocal({
             No hay horarios configurados
           </p>
           <p className="text-xs text-muted mt-1">
-            Podés configurar una franja específica para esta asignación.
+            Agregá la primera franja de visita.
           </p>
+          {!form && (
+            <button
+              type="button"
+              onClick={() => abrir()}
+              className="mt-3 min-h-11 cursor-pointer whitespace-nowrap rounded-lg border border-line bg-surface-raised px-4 text-sm font-semibold text-foreground hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            >
+              Agregar franja
+            </button>
+          )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3">
           {lista.items.map((h) => (
             <div
               key={h.id}
-              className="min-w-0 p-3 sm:p-4 rounded-xl border flex flex-col justify-between"
+              className="min-w-0 space-y-3 rounded-xl border p-3 sm:p-4"
               style={{
                 backgroundColor: TOKENS.canvas,
                 borderColor: TOKENS.line,
               }}
             >
               <div>
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <span className="font-mono text-lg font-bold text-foreground tracking-tight">
-                    {h.entrada} — {h.salida}
-                  </span>
-                  <StatusStamp tone="frio" size="sm">
-                    {h.frecuencia}
-                  </StatusStamp>
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="font-mono text-lg font-bold tracking-tight text-foreground">
+                      {h.entrada} — {h.salida}
+                    </span>
+                    <StatusStamp tone="frio" size="sm">
+                      {h.frecuencia}
+                    </StatusStamp>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {quitando === h.id ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setQuitando(null)}
+                          className="min-h-11 cursor-pointer whitespace-nowrap rounded-lg border border-line px-3 text-xs font-semibold text-foreground hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            void op.ejecutar("Quitando horario", async () => {
+                              await apiFetch(`${ruta}/${h.id}`, {
+                                method: "DELETE",
+                              });
+                              setQuitando(null);
+                              lista.refrescar();
+                            })
+                          }
+                          className="min-h-11 cursor-pointer whitespace-nowrap rounded-lg bg-red-700 px-3 text-xs font-semibold text-white hover:bg-red-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:bg-red-500 dark:text-red-950 dark:hover:bg-red-400"
+                        >
+                          Sí, quitar
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <BotonEditar
+                          onClick={() => abrir(h)}
+                          etiqueta={`Editar franja ${h.entrada} a ${h.salida}`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setQuitando(h.id)}
+                          aria-label={`Quitar franja ${h.entrada} a ${h.salida}`}
+                          className="min-h-11 cursor-pointer whitespace-nowrap rounded-lg border border-red-200 bg-red-50 px-3 text-xs font-semibold text-red-700 hover:bg-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:border-red-900 dark:bg-red-950/60 dark:text-red-300 dark:hover:bg-red-900"
+                        >
+                          Quitar
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 {/* Días activos */}
@@ -141,31 +200,11 @@ export function HorariosLocal({
                 </p>
               </div>
 
-              <div
-                className="flex flex-wrap items-center justify-end gap-2 pt-3 border-t mt-3"
-                style={{ borderColor: TOKENS.line }}
-              >
-                <ToleranciasHorario alcance="horario" id={h.id} titulo="Tolerancias de esta franja" />
-                <BotonEditar
-                  onClick={() => abrir(h)}
-                  etiqueta={`Editar horario ${h.id}`}
-                  modo="texto"
-                />
-                <button
-                  type="button"
-                  onClick={() =>
-                    void op.ejecutar("Quitando horario", async () => {
-                      await apiFetch(`${ruta}/${h.id}`, {
-                        method: "DELETE",
-                      });
-                      lista.refrescar();
-                    })
-                  }
-                  className="min-h-11 whitespace-nowrap px-2.5 py-1 text-xs font-bold uppercase tracking-wider rounded border text-red-600 dark:text-red-300 border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/60 hover:bg-red-100 dark:hover:bg-red-900"
-                >
-                  Quitar
-                </button>
-              </div>
+              <ToleranciasHorario
+                alcance="horario"
+                id={h.id}
+                titulo="Tolerancias"
+              />
             </div>
           ))}
         </div>

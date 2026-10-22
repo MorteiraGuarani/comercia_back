@@ -4,8 +4,15 @@ import React, { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { TOKENS } from "./tokens";
-import { montarCapaUsuario, type CapaUsuarioMapa } from "./ui/marcador-usuario-mapa";
-import { CAPA_MAPA, CLASE_CAPA_OSCURA, useTemaOscuroMapa } from "./ui/use-tema-mapa";
+import {
+  montarCapaUsuario,
+  type CapaUsuarioMapa,
+} from "./ui/marcador-usuario-mapa";
+import {
+  CAPA_MAPA,
+  CLASE_CAPA_OSCURA,
+  useTemaOscuroMapa,
+} from "./ui/use-tema-mapa";
 import { obtenerPosicionPrecisa } from "@/lib/gps-preciso";
 import { BuscadorLugarMapa } from "./ui/buscador-lugar-mapa";
 
@@ -38,8 +45,12 @@ export default function SelectorUbicacion({
     if (!contenedor.current) return;
 
     // Coordenadas iniciales válidas o Asunción por defecto
-    const latIni = Number.isFinite(latitud) && Math.abs(latitud) <= 90 ? latitud : -25.2969;
-    const lngIni = Number.isFinite(longitud) && Math.abs(longitud) <= 180 ? longitud : -57.6415;
+    const latIni =
+      Number.isFinite(latitud) && Math.abs(latitud) <= 90 ? latitud : -25.2969;
+    const lngIni =
+      Number.isFinite(longitud) && Math.abs(longitud) <= 180
+        ? longitud
+        : -57.6415;
 
     const instancia = L.map(contenedor.current, {
       scrollWheelZoom: true,
@@ -108,7 +119,8 @@ export default function SelectorUbicacion({
 
     return () => {
       observer.disconnect();
-      if (watchGps.current != null) navigator.geolocation.clearWatch(watchGps.current);
+      if (watchGps.current != null)
+        navigator.geolocation.clearWatch(watchGps.current);
       watchGps.current = null;
       capaUsuario.current = null;
       instancia.remove();
@@ -144,7 +156,13 @@ export default function SelectorUbicacion({
       if (!mapa.current) return;
       mapa.current.flyTo([cLat, cLng], 18, { animate: true, duration: 0.6 });
       if (!capaUsuario.current) {
-        capaUsuario.current = montarCapaUsuario(mapa.current, L, cLat, cLng, pos.coords.accuracy);
+        capaUsuario.current = montarCapaUsuario(
+          mapa.current,
+          L,
+          cLat,
+          cLng,
+          pos.coords.accuracy,
+        );
       } else {
         capaUsuario.current.actualizar(cLat, cLng, pos.coords.accuracy);
       }
@@ -154,7 +172,9 @@ export default function SelectorUbicacion({
       maxMs: 12_000,
       alMejorar: (pos) => {
         ubicar(pos);
-        setGpsMensaje(`Afinando la ubicación… ±${Math.round(pos.coords.accuracy)} m`);
+        setGpsMensaje(
+          `Afinando la ubicación… ±${Math.round(pos.coords.accuracy)} m`,
+        );
       },
     })
       .then((pos) => {
@@ -180,14 +200,19 @@ export default function SelectorUbicacion({
       })
       .catch((e: unknown) => {
         setGpsMensaje(null);
-        setError(e instanceof Error ? e.message : "No se pudo obtener tu ubicación.");
+        setError(
+          e instanceof Error ? e.message : "No se pudo obtener tu ubicación.",
+        );
       })
       .finally(() => setObteniendoGps(false));
   };
 
   const reenfocarMarcador = () => {
     if (Number.isFinite(latitud) && Number.isFinite(longitud)) {
-      mapa.current?.flyTo([latitud, longitud], 17, { animate: true, duration: 0.8 });
+      mapa.current?.flyTo([latitud, longitud], 17, {
+        animate: true,
+        duration: 0.8,
+      });
     }
   };
 
@@ -195,20 +220,23 @@ export default function SelectorUbicacion({
     <div className="space-y-2.5 font-sans">
       {/* Barra de ayuda e instrucciones */}
       <div className="flex flex-wrap items-center justify-between text-xs gap-2">
-        <p className="text-[#726C60]">
-          Hacé clic en el mapa o arrastrá el pin. Podés usar la <b>rueda del ratón</b> o los botones para hacer zoom.
-        </p>
         <div className="flex items-center gap-1.5 font-mono text-[11px] font-bold px-2 py-0.5 rounded bg-zinc-100 border border-[#DAD5C9]">
-          <span>Lat: {Number.isFinite(latitud) ? latitud.toFixed(5) : "—"}</span>
+          <span>
+            Lat: {Number.isFinite(latitud) ? latitud.toFixed(5) : "—"}
+          </span>
           <span className="text-zinc-400">|</span>
-          <span>Lng: {Number.isFinite(longitud) ? longitud.toFixed(5) : "—"}</span>
+          <span>
+            Lng: {Number.isFinite(longitud) ? longitud.toFixed(5) : "—"}
+          </span>
         </div>
       </div>
 
       <BuscadorLugarMapa
         cerca={() => {
           const centro = mapa.current?.getCenter();
-          return centro ? { latitud: centro.lat, longitud: centro.lng } : undefined;
+          return centro
+            ? { latitud: centro.lat, longitud: centro.lng }
+            : undefined;
         }}
         onElegir={(lugar) => {
           const lat = Number(lugar.latitud.toFixed(6));
@@ -217,7 +245,9 @@ export default function SelectorUbicacion({
           marcador.current?.setLatLng([lat, lng]);
           mapa.current?.flyTo([lat, lng], 18, { animate: true, duration: 0.8 });
           setError(null);
-          setGpsMensaje(`Pin en ${lugar.nombre}. Ajustalo sobre la entrada del local si hace falta.`);
+          setGpsMensaje(
+            `Pin en ${lugar.nombre}. Ajustalo sobre la entrada del local si hace falta.`,
+          );
         }}
       />
 
@@ -246,7 +276,10 @@ export default function SelectorUbicacion({
               </>
             ) : (
               <>
-                <span className="campo-usuario campo-usuario--boton" aria-hidden="true">
+                <span
+                  className="campo-usuario campo-usuario--boton"
+                  aria-hidden="true"
+                >
                   <span className="campo-usuario__pulso" />
                   <span className="campo-usuario__punto" />
                 </span>
@@ -262,7 +295,14 @@ export default function SelectorUbicacion({
             title="Centrar mapa en el punto seleccionado"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/95 text-[#1E2320] border border-[#DAD5C9] shadow-sm hover:bg-white active:scale-95 transition-all cursor-pointer"
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg
+              width="13"
+              height="13"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
               <circle cx="12" cy="12" r="10" />
               <circle cx="12" cy="12" r="3" />
             </svg>
@@ -274,8 +314,16 @@ export default function SelectorUbicacion({
       {/* Mensaje de GPS o Error */}
       {gpsMensaje && !error && (
         <p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg font-medium flex items-center gap-1.5">
-          <svg className="w-3.5 h-3.5 text-emerald-600 shrink-0" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+          <svg
+            className="w-3.5 h-3.5 text-emerald-600 shrink-0"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fillRule="evenodd"
+              d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
+              clipRule="evenodd"
+            />
           </svg>
           <span>{gpsMensaje}</span>
         </p>
@@ -290,7 +338,11 @@ export default function SelectorUbicacion({
             onClick={() => setError(null)}
             className="text-red-500 hover:text-red-800 p-0.5 rounded cursor-pointer"
           >
-            <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
+            <svg
+              className="w-3.5 h-3.5"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
               <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
             </svg>
           </button>

@@ -15,11 +15,14 @@ import { KpisRuta } from "./ui/kpis-ruta";
 import { TarjetaAgendaRepositor } from "./tarjeta-agenda-repositor";
 import { ModalNovedadLocal } from "./modal-novedad-local";
 import {
+  IconoCaja,
   IconoCalendario,
   IconoCruz,
   IconoMapa,
+  IconoMensaje,
   IconoRefrescar,
   IconoRuta,
+  IconoTareas,
 } from "./ui/iconos-campo";
 import { formatoDistancia, metrosEntre } from "@/utils/distancia";
 import {
@@ -37,10 +40,19 @@ import { apiFetch } from "@/lib/api";
 import { usePanel } from "@/components/panel/contexto";
 import { useListaCampo } from "@/hooks/use-lista-campo";
 import { useFechaCampo } from "@/hooks/use-fecha-campo";
-import { formatoFechaHora, queryFechasCampo, textoRangoFechas } from "@/utils/fechas";
+import {
+  formatoFechaHora,
+  formatoHora,
+  queryFechasCampo,
+  textoRangoFechas,
+} from "@/utils/fechas";
 import { SelectorFechaFiltro, type PeriodoFiltro } from "./ui/selector-fecha-filtro";
 import { PantallaCarga } from "@/components/pantalla-carga";
-import { btnGhost, btnPrimary, errorBox } from "@/components/ui";
+import { btnPrimary, errorBox } from "@/components/ui";
+
+// Acciones secundarias de la tabla: compactas, con ícono y en una fila.
+const btnAccion =
+  "inline-flex min-h-11 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border border-control-line bg-surface-raised px-3 text-xs font-semibold text-foreground transition hover:border-brand-500 hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-control-line disabled:hover:bg-surface-raised";
 import { TablaCampo } from "./tabla-campo";
 import type { AgendaCampo, LocalCampo, VisitaCampo } from "@/types/campo";
 import { ModalMarca } from "./modal-marca";
@@ -580,12 +592,31 @@ function AgendaDelDia({
             ),
           },
           {
-            titulo: "Asignación",
-            valor: (a) => (
-              <span className="inline-flex items-center rounded-full bg-surface-soft px-2.5 py-0.5 text-xs font-medium text-foreground">
-                {a.esBackup ? `Backup de ${a.titular}` : "Titular"}
-              </span>
-            ),
+            titulo: "Visita",
+            valor: (a) => {
+              const enCurso =
+                abierta?.asignacionId === a.id
+                  ? abierta.entrada
+                  : a.visitas.find((v) => v.estado === "EN_CURSO")?.entrada;
+              const ultima = a.visitas.at(-1);
+              const parada = numeroParada.get(a.id);
+              return (
+                <div className="min-w-0 space-y-0.5 text-xs">
+                  <p className="font-semibold text-foreground">
+                    {enCurso
+                      ? `En el local desde ${formatoHora(enCurso)}`
+                      : a.estado === "completado" && ultima
+                        ? `Visitado ${formatoHora(ultima.entrada)}–${formatoHora(ultima.salida)}`
+                        : ruta && parada && conUbicacion(a.local)
+                          ? `Parada ${parada} · a ${formatoDistancia(metrosEntre(ruta.origen, a.local))}`
+                          : "Sin visita todavía"}
+                  </p>
+                  {a.esBackup ? (
+                    <p className="text-muted">Reemplazás a {a.titular}</p>
+                  ) : null}
+                </div>
+              );
+            },
           },
           {
             titulo: "Horario de Atención",
@@ -662,67 +693,92 @@ function AgendaDelDia({
             onNovedad={() => setNovedadDe(a)}
           />
         )}
-        acciones={(a) => (
-          <>
-            <button className={btnGhost} onClick={() => setMapa(a.local)}>
-              Mapa
-            </button>
-            <button
-              className={btnGhost}
-              onClick={() => setTareas(a)}
-              disabled={abierta?.asignacionId !== a.id}
-              title={
-                abierta?.asignacionId === a.id
-                  ? undefined
-                  : "Marcá entrada para ver las tareas"
-              }
-            >
-              Tareas
-            </button>
-            {rutaInventario ? (
-              abierta?.asignacionId === a.id ? (
-                <Link href={rutaInventario} className={btnGhost}>
-                  Inventario
-                </Link>
-              ) : (
+        acciones={(a) => {
+          const aqui = abierta?.asignacionId === a.id;
+          // Un solo "Marcar entrada": el del próximo horario sin visita.
+          const proximo =
+            hoy && !abierta
+              ? (a.local.horarios.length ? a.local.horarios : [null]).find(
+                  (h) =>
+                    !a.visitas.some((v) => v.horarioId === (h?.id ?? null)),
+                )
+              : undefined;
+          return (
+            <div className="flex min-w-[17rem] flex-col items-start gap-2">
+              {aqui ? (
                 <button
-                  className={btnGhost}
-                  disabled
-                  title="Marcá entrada para usar el inventario"
+                  className={btnPrimary}
+                  onClick={() =>
+                    setMarca({
+                      asignacionId: abierta.asignacionId,
+                      visitaId: abierta.id,
+                      nombre: abierta.local.nombre,
+                      radioMetros: abierta.local.radioMetros,
+                    })
+                  }
                 >
-                  Inventario
+                  Marcar salida
                 </button>
-              )
-            ) : null}
-            <button className={btnGhost} onClick={() => setNovedadDe(a)}>
-              Novedad
-            </button>
-            {/* Un solo botón, sin hora: el del próximo horario sin visita. */}
-            {hoy && !abierta
-              ? (a.local.horarios.length ? a.local.horarios : [null])
-                  .filter(
-                    (h) => !a.visitas.some((v) => v.horarioId === (h?.id ?? null)),
-                  )
-                  .slice(0, 1)
-                  .map((h) => (
+              ) : proximo !== undefined ? (
+                <button
+                  className={btnPrimary}
+                  onClick={() =>
+                    setMarca({
+                      asignacionId: a.id,
+                      horarioId: proximo?.id,
+                      nombre: a.local.nombre,
+                      radioMetros: a.local.radioMetros,
+                    })
+                  }
+                >
+                  Marcar entrada
+                </button>
+              ) : null}
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  className={btnAccion}
+                  onClick={() => setMapa(a.local)}
+                >
+                  <IconoMapa className="h-4 w-4" />
+                  Mapa
+                </button>
+                <button
+                  className={btnAccion}
+                  onClick={() => setTareas(a)}
+                  disabled={!aqui}
+                  title={aqui ? undefined : "Marcá entrada para ver las tareas"}
+                >
+                  <IconoTareas className="h-4 w-4" />
+                  Tareas
+                </button>
+                {rutaInventario ? (
+                  aqui ? (
+                    <Link href={rutaInventario} className={btnAccion}>
+                      <IconoCaja className="h-4 w-4" />
+                      Inventario
+                    </Link>
+                  ) : (
                     <button
-                      key={h?.id ?? 0}
-                      className={btnPrimary}
-                      onClick={() =>
-                        setMarca({
-                          asignacionId: a.id,
-                          horarioId: h?.id,
-                          nombre: a.local.nombre,
-                          radioMetros: a.local.radioMetros,
-                        })
-                      }
+                      className={btnAccion}
+                      disabled
+                      title="Marcá entrada para usar el inventario"
                     >
-                      Marcar entrada
+                      <IconoCaja className="h-4 w-4" />
+                      Inventario
                     </button>
-                  ))
-              : null}
-          </>
-        )}
+                  )
+                ) : null}
+                <button
+                  className={btnAccion}
+                  onClick={() => setNovedadDe(a)}
+                >
+                  <IconoMensaje className="h-4 w-4" />
+                  Novedad
+                </button>
+              </div>
+            </div>
+          );
+        }}
       />
       <PantallaCarga
         visible={calculandoRuta}
