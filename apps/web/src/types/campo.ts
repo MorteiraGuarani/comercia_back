@@ -11,7 +11,14 @@ export interface RespuestaCatalogoTareasCampo extends RespuestaPaginada<TareaCam
   };
 }
 
-export type RespuestaLocalesCampo = RespuestaPaginada<LocalCampo>;
+export type RespuestaLocalesCampo = RespuestaPaginada<ClientePdv>;
+
+/** Cliente del ABM de PDV y rutas: RUC y dirección de CRD1 por partes. */
+export interface ClientePdv extends LocalCampo {
+  ruc: string;
+  address: string;
+  street: string;
+}
 
 /** Local de campo = socio de negocio de OCRD; el id es su CardCode. */
 export interface LocalCampo {

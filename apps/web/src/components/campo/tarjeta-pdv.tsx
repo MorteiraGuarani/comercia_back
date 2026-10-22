@@ -13,11 +13,11 @@ const iniciales = (nombre: string, apellido: string) =>
 
 export function TarjetaPdv({
   local,
-  onUbicar,
+  onEditar,
   onRuta,
 }: {
   local: LocalCampo;
-  onUbicar: () => void;
+  onEditar: () => void;
   onRuta: () => void;
 }) {
   const asignaciones = local.asignaciones ?? [];
@@ -79,8 +79,8 @@ export function TarjetaPdv({
 
         <div className="mt-3 flex items-center gap-2 border-t border-line/70 pt-2.5">
           <BotonEditar
-            onClick={onUbicar}
-            etiqueta={`Marcar ubicación de ${local.nombre}`}
+            onClick={onEditar}
+            etiqueta={`Editar cliente ${local.nombre}`}
             modo="texto"
             className="flex-1"
           />

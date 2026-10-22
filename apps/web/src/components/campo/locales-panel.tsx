@@ -2,29 +2,19 @@
 
 import React, { useMemo, useState, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { apiFetch } from "@/lib/api";
 import { Paginacion } from "@/components/paginacion";
-import { useListaCampo, useOperacionCampo } from "@/hooks/use-lista-campo";
-import { Modal } from "@/components/modal";
+import { useListaCampo } from "@/hooks/use-lista-campo";
 import { BotonEditar } from "@/components/boton-editar";
-import { PantallaCarga } from "@/components/pantalla-carga";
+import { IconoMas } from "@/components/icono-mas";
+import { ClienteModal, type PestanaCliente } from "./cliente-modal";
 import { TOKENS } from "./tokens";
 import { BuscadorCatalogo } from "./ui/filtros-catalogo";
 import { TopBar } from "./ui/top-bar";
-import { PlanLocal } from "./plan-local";
 import { TarjetaPdv } from "./tarjeta-pdv";
 import { FotoLocal } from "./ui/foto-local";
 import { IconoTienda, IconoMapa, IconoPlanificacion } from "./ui/iconos-campo";
-import type { LocalCampo } from "@/types/campo";
+import type { ClientePdv } from "@/types/campo";
 
-const SelectorUbicacion = dynamic(() => import("./selector-ubicacion"), {
-  ssr: false,
-  loading: () => (
-    <p className="text-xs font-mono text-zinc-500 py-4 text-center">
-      Cargando mapa GPS…
-    </p>
-  ),
-});
 const MapaClientes = dynamic(
   () => import("./mapa-clientes").then((modulo) => modulo.MapaClientes),
   {
@@ -37,22 +27,17 @@ const MapaClientes = dynamic(
   },
 );
 
-// Centro de Asunción para ubicar por primera vez un socio sin coordenadas.
-const CENTRO_INICIAL = { latitud: -25.2969, longitud: -57.6415 };
-
-interface UbicacionEnEdicion {
-  local: LocalCampo;
-  latitud: number;
-  longitud: number;
-}
-
 /**
- * Puntos de venta = socios de negocio de OCRD. El alta y la baja se hacen en
- * SAP/Socios de negocio; acá se marca la ubicación y se planifica la ruta.
+ * Puntos de venta = socios de negocio de OCRD. Permite crear el cliente,
+ * marcar su ubicación y planificar la ruta con el permiso de esta página.
  */
 export function LocalesPanel() {
   const [mostrarMapaCobertura, setMostrarMapaCobertura] = useState(false);
   const [busqueda, setBusqueda] = useState("");
+  const [modal, setModal] = useState<{
+    cliente?: ClientePdv;
+    pestana?: PestanaCliente;
+  } | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -68,21 +53,8 @@ export function LocalesPanel() {
     return `/campo/locales${texto ? `?${new URLSearchParams({ buscar: texto })}` : ""}`;
   }, [busqueda]);
 
-  const lista = useListaCampo<LocalCampo>(endpoint, 0, 7);
-  const op = useOperacionCampo();
-
-  const [ubicacion, setUbicacion] = useState<UbicacionEnEdicion | null>(null);
-  const [plan, setPlan] = useState<LocalCampo | null>(null);
+  const lista = useListaCampo<ClientePdv>(endpoint, 0, 7);
   const [revisionMapa, setRevisionMapa] = useState(0);
-
-  const abrirUbicacion = (local: LocalCampo) => {
-    op.limpiarError();
-    setUbicacion({
-      local,
-      latitud: local.latitud ?? CENTRO_INICIAL.latitud,
-      longitud: local.longitud ?? CENTRO_INICIAL.longitud,
-    });
-  };
 
   const totalRegistros = lista.datos?.total ?? lista.items.length;
 
@@ -93,26 +65,37 @@ export function LocalesPanel() {
     >
       <TopBar
         title="Puntos de Venta & Rutas"
-        subtitle="Socios de negocio (OCRD) con su ubicación, franjas y asignaciones"
+        subtitle="Clientes con su ubicación, horarios y personal asignado"
         right={
-          <button
-            type="button"
-            onClick={() => setMostrarMapaCobertura((actual) => !actual)}
-            aria-pressed={mostrarMapaCobertura}
-            aria-label={
-              mostrarMapaCobertura
-                ? "Ocultar mapa de cobertura"
-                : "Mostrar mapa de cobertura"
-            }
-            title={
-              mostrarMapaCobertura
-                ? "Ocultar mapa de cobertura"
-                : "Mostrar mapa de cobertura"
-            }
-            className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-line bg-surface-raised text-foreground transition hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
-          >
-            <IconoMapa className="h-5 w-5" />
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => setModal({})}
+              aria-label="Crear cliente"
+              title="Crear cliente"
+              className="grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-xl bg-brand-700 text-white transition hover:bg-brand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:bg-brand-500 dark:text-zinc-950 dark:hover:bg-brand-400"
+            >
+              <IconoMas className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setMostrarMapaCobertura((actual) => !actual)}
+              aria-pressed={mostrarMapaCobertura}
+              aria-label={
+                mostrarMapaCobertura
+                  ? "Ocultar mapa de cobertura"
+                  : "Mostrar mapa de cobertura"
+              }
+              title={
+                mostrarMapaCobertura
+                  ? "Ocultar mapa de cobertura"
+                  : "Mostrar mapa de cobertura"
+              }
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-line bg-surface-raised text-foreground transition hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
+            >
+              <IconoMapa className="h-5 w-5" />
+            </button>
+          </>
         }
       />
 
@@ -127,13 +110,15 @@ export function LocalesPanel() {
                 setBusqueda(valor);
                 lista.setPage(1);
               }}
-              placeholder="Buscar por nombre o CardCode…"
+              placeholder="Buscar por nombre o código de cliente…"
               etiqueta="Buscar punto de venta"
             />
           </div>
-          <span className="shrink-0 rounded-lg border border-line bg-surface-raised px-3 py-2 font-mono text-xs font-bold text-foreground">
-            {totalRegistros} locales
-          </span>
+          {!lista.error && (
+            <span className="shrink-0 rounded-lg border border-line bg-surface-raised px-3 py-2 font-mono text-xs font-bold text-foreground">
+              {totalRegistros} locales
+            </span>
+          )}
         </div>
 
         <div
@@ -141,7 +126,21 @@ export function LocalesPanel() {
           className="scroll-mt-20 rounded-xl border border-line bg-surface-raised shadow-xs overflow-hidden"
           style={{ borderColor: TOKENS.line }}
         >
-          {lista.cargando && !lista.items.length ? (
+          {lista.error ? (
+            <div role="alert" className="space-y-3 px-4 py-12 text-center">
+              <p className="text-sm text-red-700 dark:text-red-300">
+                {lista.error}
+              </p>
+              <button
+                type="button"
+                onClick={lista.refrescar}
+                disabled={lista.cargando}
+                className="min-h-11 cursor-pointer rounded-lg border border-line px-4 text-sm font-semibold text-foreground hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 disabled:cursor-not-allowed disabled:opacity-50 dark:border-line dark:text-foreground dark:hover:bg-surface-soft"
+              >
+                Reintentar
+              </button>
+            </div>
+          ) : lista.cargando && !lista.items.length ? (
             <div className="py-16 text-center text-muted">
               <div className="w-6 h-6 mx-auto border-2 border-foreground border-t-transparent rounded-full animate-spin mb-2.5" />
               <p className="text-xs font-mono">Cargando puntos de venta...</p>
@@ -152,12 +151,12 @@ export function LocalesPanel() {
                 <IconoTienda className="w-5 h-5" />
               </div>
               <p className="text-sm font-bold text-foreground">
-                No se encontraron locales
+                No se encontraron clientes
               </p>
               <p className="text-xs text-muted mt-1 max-w-sm mx-auto">
                 {busqueda
-                  ? "Probá con otro nombre o CardCode."
-                  : "Cargá los socios de negocio (OCRD) de la empresa para asignar visitas y tareas."}
+                  ? "Probá con otro nombre o código de cliente."
+                  : "Usá el botón + para crear un cliente y después asignarle visitas y tareas."}
               </p>
             </div>
           ) : (
@@ -170,8 +169,10 @@ export function LocalesPanel() {
                   <li key={local.id} className="min-w-0">
                     <TarjetaPdv
                       local={local}
-                      onUbicar={() => abrirUbicacion(local)}
-                      onRuta={() => setPlan(local)}
+                      onEditar={() => setModal({ cliente: local })}
+                      onRuta={() =>
+                        setModal({ cliente: local, pestana: "horarios" })
+                      }
                     />
                   </li>
                 ))}
@@ -194,12 +195,14 @@ export function LocalesPanel() {
                         <td className="whitespace-nowrap px-3.5 py-2.5">
                           <div className="flex items-center gap-1.5">
                             <BotonEditar
-                              onClick={() => abrirUbicacion(local)}
-                              etiqueta={`Marcar ubicación de ${local.nombre}`}
+                              onClick={() => setModal({ cliente: local })}
+                              etiqueta={`Editar cliente ${local.nombre}`}
                             />
                             <button
                               type="button"
-                              onClick={() => setPlan(local)}
+                              onClick={() =>
+                                setModal({ cliente: local, pestana: "horarios" })
+                              }
                               className="inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-md border border-line px-2.5 font-semibold text-foreground hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
                             >
                               <IconoPlanificacion className="h-3.5 w-3.5" />
@@ -262,109 +265,40 @@ export function LocalesPanel() {
             </>
           )}
 
-          <Paginacion
-            page={lista.page}
-            totalPages={lista.datos?.totalPages ?? 1}
-            total={totalRegistros}
-            limit={lista.limit}
-            onPageChange={lista.setPage}
-            onLimitChange={lista.setLimit}
-          />
+          {!lista.error && totalRegistros > 0 && (
+            <div className="flex justify-end border-t border-line bg-surface-soft px-4 pb-3 dark:border-line dark:bg-surface-soft">
+              <div className="w-full min-w-0 sm:w-auto">
+                <Paginacion
+                  page={lista.page}
+                  totalPages={lista.datos?.totalPages ?? 1}
+                  total={totalRegistros}
+                  limit={lista.limit}
+                  onPageChange={lista.setPage}
+                  onLimitChange={lista.setLimit}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </main>
 
-      {plan && <PlanLocal local={plan} cerrar={() => setPlan(null)} />}
+      {modal && (
+        <ClienteModal
+          cliente={modal.cliente}
+          pestana={modal.pestana}
+          onCerrar={() => setModal(null)}
+          onGuardado={(cliente) => {
+            // Un alta nueva se busca por su código para verla en la lista.
+            if (!modal.cliente) {
+              setBusqueda(cliente.id);
+              lista.setPage(1);
+            }
+            lista.refrescar();
+            setRevisionMapa((valor) => valor + 1);
+          }}
+        />
+      )}
 
-      <Modal
-        titulo={ubicacion ? `Ubicación · ${ubicacion.local.nombre}` : ""}
-        abierto={!!ubicacion}
-        onCerrar={() => {
-          if (!op.mensaje) setUbicacion(null);
-        }}
-        ancho="lg"
-      >
-        {ubicacion && (
-          <form
-            onSubmit={async (e) => {
-              e.preventDefault();
-              const { local, latitud, longitud } = ubicacion;
-              if (
-                await op.ejecutar("Guardando ubicación", () =>
-                  apiFetch(
-                    `/campo/locales/${encodeURIComponent(local.id)}/ubicacion`,
-                    {
-                      method: "PUT",
-                      body: JSON.stringify({ latitud, longitud }),
-                    },
-                  ),
-                )
-              ) {
-                setUbicacion(null);
-                setRevisionMapa((valor) => valor + 1);
-                lista.refrescar();
-              }
-            }}
-            className="space-y-4 pt-1"
-          >
-            {op.error && (
-              <div className="p-2.5 rounded-lg border text-xs font-medium text-red-700 bg-red-50 border-red-200">
-                {op.error}
-              </div>
-            )}
-            <p className="text-xs text-muted">
-              CardCode{" "}
-              <span className="font-mono font-semibold text-foreground">
-                {ubicacion.local.id}
-              </span>
-              . El punto se guarda en U_Latitud/U_Longitud de OCRD; la entrada y
-              la salida exigen estar a menos de {ubicacion.local.radioMetros} m.
-            </p>
-            <div
-              className="rounded-xl border overflow-hidden"
-              style={{ borderColor: TOKENS.line }}
-            >
-              <SelectorUbicacion
-                latitud={ubicacion.latitud}
-                longitud={ubicacion.longitud}
-                onChange={(lat, lng) =>
-                  setUbicacion((actual) =>
-                    actual
-                      ? { ...actual, latitud: lat, longitud: lng }
-                      : actual,
-                  )
-                }
-              />
-            </div>
-            <div
-              className="flex items-center justify-end gap-2.5 pt-3 border-t"
-              style={{ borderColor: TOKENS.line }}
-            >
-              <button
-                type="button"
-                onClick={() => setUbicacion(null)}
-                className="px-4 py-2 rounded-lg border text-xs font-bold uppercase tracking-wider bg-white hover:bg-zinc-50 cursor-pointer"
-                style={{ borderColor: TOKENS.line }}
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                disabled={!!op.mensaje}
-                className="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider text-white shadow-sm transition-all hover:brightness-110 disabled:opacity-50 cursor-pointer"
-                style={{ backgroundColor: TOKENS.ink }}
-              >
-                {op.mensaje ? "Guardando..." : "Guardar ubicación"}
-              </button>
-            </div>
-          </form>
-        )}
-      </Modal>
-
-      <PantallaCarga
-        visible={!!op.mensaje}
-        mensaje={op.mensaje ?? "Procesando"}
-        detalle="Actualizando el catálogo..."
-      />
     </div>
   );
 }

@@ -161,7 +161,7 @@ export function MapaClientes() {
             <span style="position:relative;flex:none;width:38px;height:38px;border-radius:50%;background:#1E2320;color:white;font-size:13px;font-weight:bold;display:flex;align-items:center;justify-content:center;">${inicialesSeguras}</span>
             <div>
               <h4 style="font-size:16px;font-weight:700;color:#1E2320;margin:0;line-height:1.2;overflow-wrap:anywhere;">${escaparHtml(loc.nombre)}</h4>
-              <span style="font-size:11px;color:#888;font-family:monospace;">CardCode ${escaparHtml(loc.id)}</span>
+              <span style="font-size:11px;color:#888;font-family:monospace;">Código de cliente ${escaparHtml(loc.id)}</span>
             </div>
           </div>
 
@@ -246,7 +246,7 @@ export function MapaClientes() {
         {/* Buscador de Local o Dirección */}
         <div className="flex-1">
           <label className="block text-[11px] font-bold text-foreground uppercase tracking-wider mb-1">
-            Buscar punto de venta (nombre o CardCode):
+            Buscar punto de venta (nombre o código de cliente):
           </label>
           <div className="relative">
             <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted pointer-events-none">
@@ -256,7 +256,7 @@ export function MapaClientes() {
               type="text"
               value={busquedaTexto}
               onChange={(e) => setBusquedaTexto(e.target.value)}
-              placeholder="Buscar por nombre o CardCode..."
+              placeholder="Buscar por nombre o código de cliente…"
               className="w-full pl-9 pr-8 py-2 text-xs sm:text-sm rounded-lg border bg-surface-raised focus:outline-none focus:ring-2 focus:ring-focus"
               style={{ borderColor: TOKENS.line }}
             />

@@ -5,8 +5,8 @@ jest.mock('../prisma/prisma.service', () => ({ PrismaService: class {} }));
 import { CatalogoCampoService } from './catalogo-campo.service';
 
 describe('Catálogo de tareas', () => {
-  it('guarda la ubicación en OCRD solo dentro de la empresa del usuario', async () => {
-    const prisma = {
+  it('edita el cliente y su dirección principal solo dentro de la empresa del usuario', async () => {
+    const tx = {
       socioNegocio: {
         updateMany: jest
           .fn()
@@ -15,10 +15,23 @@ describe('Catálogo de tareas', () => {
         findFirstOrThrow: jest.fn().mockResolvedValue({
           CardCode: 'C001',
           CardName: 'Granusa',
+          LicTradNum: null,
           U_Latitud: '-25.3000000',
           U_Longitud: '-57.6000000',
         }),
       },
+      socioNegocioDireccion: {
+        // Sin dirección de entrega: se edita la primera que tenga.
+        findFirst: jest
+          .fn()
+          .mockResolvedValueOnce(null)
+          .mockResolvedValueOnce({ id: 7n }),
+        update: jest.fn(),
+        create: jest.fn(),
+      },
+    };
+    const prisma = {
+      $transaction: jest.fn((fn: (t: typeof tx) => unknown) => fn(tx)),
     };
     const acceso = {
       gestionar: jest.fn().mockResolvedValue({ empresaId: 10 }),
@@ -28,15 +41,40 @@ describe('Catálogo de tareas', () => {
       acceso as unknown as CampoAccesoService,
     );
     await expect(
-      service.ubicarLocal(1, 'C001', { latitud: -25.3, longitud: -57.6 }),
-    ).resolves.toMatchObject({ id: 'C001', nombre: 'Granusa', latitud: -25.3 });
-    expect(prisma.socioNegocio.updateMany).toHaveBeenCalledWith({
-      where: { empresaId: 10, CardCode: 'C001' },
-      data: { U_Latitud: '-25.3000000', U_Longitud: '-57.6000000' },
+      service.editarLocal(1, 'C001', {
+        CardName: 'Granusa',
+        Address: 'Itauguá',
+        Street: 'Gobernador Irala',
+        latitud: -25.3,
+        longitud: -57.6,
+      }),
+    ).resolves.toMatchObject({
+      id: 'C001',
+      direccion: 'Itauguá, Gobernador Irala',
+      latitud: -25.3,
+      ruc: '',
     });
+    expect(tx.socioNegocio.updateMany).toHaveBeenCalledWith({
+      where: { empresaId: 10, CardCode: 'C001' },
+      data: {
+        CardName: 'Granusa',
+        LicTradNum: null,
+        U_Latitud: '-25.3000000',
+        U_Longitud: '-57.6000000',
+      },
+    });
+    expect(tx.socioNegocioDireccion.update).toHaveBeenCalledWith({
+      where: { id: 7n },
+      data: { Address: 'Itauguá', Street: 'Gobernador Irala' },
+      select: { id: true },
+    });
+    expect(tx.socioNegocioDireccion.create).not.toHaveBeenCalled();
     await expect(
-      service.ubicarLocal(1, 'OTRA', { latitud: 1, longitud: 1 }),
-    ).rejects.toThrow('Local no disponible');
+      service.editarLocal(1, 'OTRA', { CardName: 'X' }),
+    ).rejects.toThrow('Cliente no disponible');
+    await expect(
+      service.editarLocal(1, 'C001', { CardName: 'X', latitud: 1 }),
+    ).rejects.toThrow('Marcá el punto completo en el mapa');
   });
 
   it('filtra antes de paginar y calcula el resumen de toda la empresa', async () => {

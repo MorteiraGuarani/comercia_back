@@ -246,7 +246,10 @@ export class JornadaCampoService {
               heredada: a.usuarioId !== u.id && esTeamleader,
               titular: `${a.usuario.nombre} ${a.usuario.apellido}`,
               local: {
-                ...aLocalCampo(a.local, direcciones.get(a.local.CardCode)),
+                ...aLocalCampo(
+                  a.local,
+                  direcciones.get(a.local.CardCode)?.direccion,
+                ),
                 horarios: (a.horarios.length
                   ? a.horarios
                   : a.local.horarios

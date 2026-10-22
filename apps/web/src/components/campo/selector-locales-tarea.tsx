@@ -22,7 +22,7 @@ export function SelectorLocalesTarea({
       <SelectorPaginado<string>
         key={revision}
         url="/campo/locales"
-        etiqueta="Agregar local"
+        etiqueta="Agregar cliente"
         buscable
         value=""
         onChange={() => undefined}
@@ -30,28 +30,28 @@ export function SelectorLocalesTarea({
           if (!ids.includes(local.id))
             onChange([...ids, local.id], {
               ...nombres,
-              [local.id]: local.nombre ?? `Local ${local.id}`,
+              [local.id]: local.nombre ?? `Cliente ${local.id}`,
             });
           setRevision((r) => r + 1);
         }}
-        vacio="Buscá un local de la empresa"
+        vacio="Buscá un cliente por nombre o código"
       />
       <p className="text-xs text-muted">
-        {ids.length} locales seleccionados. Los horarios y tareas de cada equipo
+        {ids.length} clientes seleccionados. Los horarios y tareas de cada equipo
         siguen separados.
       </p>
-      <ul aria-label="Locales seleccionados" className="divide-y divide-line">
+      <ul aria-label="Clientes seleccionados" className="divide-y divide-line">
         {ids.slice((pagina - 1) * limit, pagina * limit).map((id) => (
           <li
             key={id}
             className="flex min-h-11 items-center justify-between gap-2 py-1 text-sm text-foreground"
           >
             <span className="min-w-0 break-words">
-              {nombres[id] ?? `Local ${id}`}
+              {nombres[id] ?? `Cliente ${id}`}
             </span>
             <button
               type="button"
-              aria-label={`Quitar ${nombres[id] ?? `local ${id}`}`}
+              aria-label={`Quitar ${nombres[id] ?? `cliente ${id}`}`}
               className="min-h-11 shrink-0 rounded-md px-3 text-red-700 hover:bg-surface-soft dark:text-red-300"
               onClick={() =>
                 onChange(

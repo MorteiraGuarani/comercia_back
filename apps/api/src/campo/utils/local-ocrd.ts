@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common';
 import type { Prisma } from '../../../generated/prisma/client';
 import type { PrismaService } from '../../prisma/prisma.service';
 import { ZONA_CAMPO } from './calendario';
@@ -56,6 +57,43 @@ export function textoCoordenada(valor: number) {
   return valor.toFixed(7);
 }
 
+/** Punto del mapa en columnas de OCRD; sin punto, no toca las actuales. */
+export function ubicacionOcrd(p: { latitud?: number; longitud?: number }) {
+  if (p.latitud === undefined && p.longitud === undefined) return {};
+  if (p.latitud === undefined || p.longitud === undefined)
+    throw new BadRequestException('Marcá el punto completo en el mapa');
+  return {
+    U_Latitud: textoCoordenada(p.latitud),
+    U_Longitud: textoCoordenada(p.longitud),
+  };
+}
+
+/** Dirección visible: "Address, Street" de CRD1, omitiendo partes vacías. */
+export function unirDireccion(address?: string | null, street?: string | null) {
+  return [address, street]
+    .map((parte) => parte?.trim())
+    .filter(Boolean)
+    .join(', ');
+}
+
+export const CLIENTE_OCRD_SELECT = {
+  ...LOCAL_OCRD_SELECT,
+  LicTradNum: true,
+} as const;
+
+/** Cliente del ABM de PDV: el local más RUC y la dirección por partes. */
+export function aClientePdv(
+  l: Parameters<typeof aLocalCampo>[0] & { LicTradNum: string | null },
+  d?: { address: string; street: string },
+) {
+  return {
+    ...aLocalCampo(l, unirDireccion(d?.address, d?.street)),
+    ruc: l.LicTradNum ?? '',
+    address: d?.address ?? '',
+    street: d?.street ?? '',
+  };
+}
+
 /** Tareas con sus locales en la forma pública ({ id: CardCode, nombre }). */
 export function conLocalesTarea<
   T extends {
@@ -102,15 +140,27 @@ export async function direccionesLocales(
   empresaId: number,
   cardCodes: string[],
 ) {
-  if (!cardCodes.length) return new Map<string, string>();
+  if (!cardCodes.length)
+    return new Map<
+      string,
+      { address: string; street: string; direccion: string }
+    >();
   const filas = await prisma.$queryRaw<
-    { CardCode: string; direccion: string }[]
-  >`SELECT DISTINCT ON ("CardCode") "CardCode",
-      concat_ws(', ', NULLIF(TRIM("Address"), ''), NULLIF(TRIM("Street"), '')) AS direccion
+    { CardCode: string; Address: string | null; Street: string | null }[]
+  >`SELECT DISTINCT ON ("CardCode") "CardCode", "Address", "Street"
     FROM tbl_crd1
     WHERE empresa_id = ${empresaId} AND "CardCode" = ANY(${cardCodes})
     ORDER BY "CardCode", ("AdresType" = 'S') DESC NULLS LAST, id`;
-  return new Map(filas.map((f) => [f.CardCode, f.direccion]));
+  return new Map(
+    filas.map((f) => [
+      f.CardCode,
+      {
+        address: f.Address?.trim() ?? '',
+        street: f.Street?.trim() ?? '',
+        direccion: unirDireccion(f.Address, f.Street),
+      },
+    ]),
+  );
 }
 
 /** Visitas: el local completo (radio incluido) en la forma pública. */

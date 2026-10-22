@@ -108,7 +108,7 @@ export function TareasPanel() {
       nombres[local.local.id] = local.local.nombre;
     if (t && !t.todosLocales) {
       const seleccion: string[] = [];
-      const ok = await op.ejecutar("Cargando locales asignados", async () => {
+      const ok = await op.ejecutar("Cargando clientes asignados", async () => {
         let page = 1,
           totalPages = 1;
         do {
@@ -412,8 +412,8 @@ export function TareasPanel() {
                       </td>
                       <td className="p-4 text-muted">
                         {tarea.todosLocales
-                          ? "Todos los locales"
-                          : (tarea.locales?.length ?? 0) + " locales"}
+                          ? "Todos los clientes"
+                          : (tarea.locales?.length ?? 0) + " clientes"}
                       </td>
                       {puedeAdministrar ? (
                         <td className="p-4">
@@ -693,7 +693,7 @@ export function TareasPanel() {
               )}
             </div>
 
-            {/* Alcance de Locales */}
+            {/* Alcance: todos los clientes o una selección */}
             <div className="space-y-2">
               <label className="block text-xs font-bold uppercase tracking-wider text-muted">
                 Alcance Geográfico
@@ -711,7 +711,7 @@ export function TareasPanel() {
                   }`}
                 >
                   <IconoGlobo className="w-3.5 h-3.5" />
-                  <span>Todos los Locales de la Empresa</span>
+                  <span>Todos los clientes de la empresa</span>
                 </button>
                 <button
                   type="button"
@@ -723,7 +723,7 @@ export function TareasPanel() {
                   }`}
                 >
                   <IconoPin className="w-3.5 h-3.5" />
-                  <span>Seleccionar Locales Específicos</span>
+                  <span>Seleccionar clientes específicos</span>
                 </button>
               </div>
 

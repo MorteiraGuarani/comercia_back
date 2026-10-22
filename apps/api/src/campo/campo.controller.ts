@@ -24,6 +24,7 @@ import type { RequestConUsuario } from '../auth/interfaces/request-con-usuario.i
 import { CatalogoCampoService } from './catalogo-campo.service';
 import { CardCodePipe } from '../common/pipes/card-code.pipe';
 import { LocalPrincipalCampoDto } from './dto/local-principal.dto';
+import { CrearLocalCampoDto, EditarLocalCampoDto } from './dto/crear-local.dto';
 import { PlanificacionCampoService } from './planificacion-campo.service';
 import { JornadaCampoService } from './jornada-campo.service';
 import { RepositorCampoService } from './repositor-campo.service';
@@ -44,7 +45,6 @@ import {
   MarcaCampoDto,
   MarcaRepositorCampoDto,
   TareaCampoDto,
-  UbicacionLocalCampoDto,
 } from './dto/campo.dto';
 import { CrearComentarioTareaDto } from './dto/comentario-tarea.dto';
 import { MomentoFotoDto, SubirFotoTareaDto } from './dto/foto-tarea.dto';
@@ -96,13 +96,19 @@ export class CampoController {
   ) {
     return this.catalogo.locales(r.usuarioId, q);
   }
-  // Los socios se dan de alta y baja en OCRD; acá solo se marca su ubicación.
-  @Put('locales/:localId/ubicacion') ubicarLocal(
+  @Post('locales') crearLocal(
+    @Req() r: RequestConUsuario,
+    @Body() d: CrearLocalCampoDto,
+  ) {
+    return this.catalogo.crearLocal(r.usuarioId, d);
+  }
+
+  @Put('locales/:localId') editarLocal(
     @Req() r: RequestConUsuario,
     @Param('localId', CardCodePipe) id: string,
-    @Body() d: UbicacionLocalCampoDto,
+    @Body() d: EditarLocalCampoDto,
   ) {
-    return this.catalogo.ubicarLocal(r.usuarioId, id, d);
+    return this.catalogo.editarLocal(r.usuarioId, id, d);
   }
 
   @Get('tareas') tareas(

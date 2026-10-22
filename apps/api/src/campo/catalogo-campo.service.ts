@@ -9,20 +9,18 @@ import { PrismaService } from '../prisma/prisma.service';
 import type { Prisma } from '../../generated/prisma/client';
 import { rangoPaginacion, respuestaPaginada } from '../common/utils/paginacion';
 import { CampoAccesoService } from './campo-acceso.service';
-import {
-  ConsultaCampoDto,
-  TareaCampoDto,
-  UbicacionLocalCampoDto,
-} from './dto/campo.dto';
+import { ConsultaCampoDto, TareaCampoDto } from './dto/campo.dto';
 import { TAREA_CAMPO_SELECT } from './utils/selectores';
 import {
+  aClientePdv,
   aLocalCampo,
+  CLIENTE_OCRD_SELECT,
   conLocalesTarea,
   direccionesLocales,
   LOCAL_OCRD_SELECT,
   filtroLocales,
   nombreLocal,
-  textoCoordenada,
+  ubicacionOcrd,
 } from './utils/local-ocrd';
 import { fechaCampo, relojCampo, vigenciaCampo } from './utils/calendario';
 import { ConsultaTareasCampoDto } from './dto/consulta-tareas.dto';
@@ -37,6 +35,8 @@ import {
 } from './utils/permisos-tareas';
 import { detalleTarea } from './utils/version-tarea';
 import { obtenerColaboradoresGestionados } from './utils/autorizacion';
+import { CrearLocalCampoDto, EditarLocalCampoDto } from './dto/crear-local.dto';
+import { relanzarDuplicado } from '../common/utils/error-prisma';
 
 @Injectable()
 export class CatalogoCampoService {
@@ -62,7 +62,7 @@ export class CatalogoCampoService {
       this.prisma.socioNegocio.findMany({
         where,
         select: {
-          ...LOCAL_OCRD_SELECT,
+          ...CLIENTE_OCRD_SELECT,
           asignaciones: {
             where: {
               activo: true,
@@ -100,7 +100,7 @@ export class CatalogoCampoService {
     );
     return respuestaPaginada(
       filas.map(({ asignaciones, ...l }) => ({
-        ...aLocalCampo(l, direcciones.get(l.CardCode)),
+        ...aClientePdv(l, direcciones.get(l.CardCode)),
         asignaciones,
       })),
       total,
@@ -162,7 +162,7 @@ export class CatalogoCampoService {
     );
     return respuestaPaginada(
       filas.map(({ asignaciones, ...l }) => ({
-        ...aLocalCampo(l, direcciones.get(l.CardCode)),
+        ...aLocalCampo(l, direcciones.get(l.CardCode)?.direccion),
         asignaciones,
       })),
       total,
@@ -170,27 +170,103 @@ export class CatalogoCampoService {
       limit,
     );
   }
-  /** El alta y la baja de socios viven en OCRD; Comercia solo marca el punto. */
-  async ubicarLocal(
-    usuarioId: number,
-    localId: string,
-    dto: UbicacionLocalCampoDto,
-  ) {
+  async crearLocal(usuarioId: number, dto: CrearLocalCampoDto) {
+    // El permiso se resuelve por módulo/página, también para roles Back Office.
+    // La empresa sale de la sesión: nunca se acepta desde el formulario.
     const u = await this.acceso.gestionar(usuarioId, 'locales');
-    const { count } = await this.prisma.socioNegocio.updateMany({
-      where: { empresaId: u.empresaId, CardCode: localId },
-      data: {
-        U_Latitud: textoCoordenada(dto.latitud),
-        U_Longitud: textoCoordenada(dto.longitud),
-      },
-    });
-    if (!count) throw new NotFoundException('Local no disponible');
-    return aLocalCampo(
-      await this.prisma.socioNegocio.findFirstOrThrow({
-        where: { empresaId: u.empresaId, CardCode: localId },
-        select: LOCAL_OCRD_SELECT,
-      }),
-    );
+    const ubicacion = ubicacionOcrd(dto);
+    const direccion = { address: dto.Address ?? '', street: dto.Street ?? '' };
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const local = await tx.socioNegocio.create({
+          data: {
+            empresaId: u.empresaId,
+            CardCode: dto.CardCode,
+            CardName: dto.CardName,
+            LicTradNum: dto.LicTradNum || null,
+            ...ubicacion,
+          },
+          select: CLIENTE_OCRD_SELECT,
+        });
+        if (direccion.address || direccion.street) {
+          await tx.socioNegocioDireccion.create({
+            data: {
+              empresaId: u.empresaId,
+              CardCode: dto.CardCode,
+              Address: direccion.address || null,
+              Street: direccion.street || null,
+              AdresType: 'S',
+            },
+            select: { CardCode: true },
+          });
+        }
+        return aClientePdv(local, direccion);
+      });
+    } catch (error: unknown) {
+      relanzarDuplicado(
+        error,
+        'Ya existe un cliente con ese código en tu empresa',
+      );
+    }
+  }
+
+  /**
+   * Edita el cliente en OCRD y su dirección principal en CRD1 (la de entrega,
+   * o la primera). Sin punto en el mapa conserva la ubicación actual.
+   */
+  async editarLocal(usuarioId: number, id: string, dto: EditarLocalCampoDto) {
+    const u = await this.acceso.gestionar(usuarioId, 'locales');
+    const ubicacion = ubicacionOcrd(dto);
+    const direccion = { address: dto.Address ?? '', street: dto.Street ?? '' };
+    const delCliente = { empresaId: u.empresaId, CardCode: id };
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const { count } = await tx.socioNegocio.updateMany({
+          where: delCliente,
+          data: {
+            CardName: dto.CardName,
+            LicTradNum: dto.LicTradNum || null,
+            ...ubicacion,
+          },
+        });
+        if (!count) throw new NotFoundException('Cliente no disponible');
+        const actual =
+          (await tx.socioNegocioDireccion.findFirst({
+            where: { ...delCliente, AdresType: 'S' },
+            orderBy: { id: 'asc' },
+            select: { id: true },
+          })) ??
+          (await tx.socioNegocioDireccion.findFirst({
+            where: delCliente,
+            orderBy: { id: 'asc' },
+            select: { id: true },
+          }));
+        const datos = {
+          Address: direccion.address || null,
+          Street: direccion.street || null,
+        };
+        if (actual)
+          await tx.socioNegocioDireccion.update({
+            where: { id: actual.id },
+            data: datos,
+            select: { id: true },
+          });
+        else if (datos.Address || datos.Street)
+          await tx.socioNegocioDireccion.create({
+            data: { ...delCliente, ...datos, AdresType: 'S' },
+            select: { id: true },
+          });
+        return aClientePdv(
+          await tx.socioNegocio.findFirstOrThrow({
+            where: delCliente,
+            select: CLIENTE_OCRD_SELECT,
+          }),
+          direccion,
+        );
+      });
+    } catch (error: unknown) {
+      relanzarDuplicado(error, 'Esa dirección ya está cargada en el cliente');
+    }
   }
   async tareas(usuarioId: number, query: ConsultaTareasCampoDto) {
     const u = await this.acceso.gestionar(usuarioId, 'tareas');

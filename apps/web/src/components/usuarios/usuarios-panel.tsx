@@ -916,7 +916,7 @@ function AsignacionesUsuario({
               <thead className="bg-surface-soft text-left text-xs font-semibold uppercase">
                 <tr>
                   <th className="px-4 py-3">Local</th>
-                  <th className="px-4 py-3">CardCode</th>
+                  <th className="px-4 py-3">Código de cliente</th>
                   <th className="px-4 py-3">Vigencia</th>
                   <th className="px-4 py-3 text-right">Acción</th>
                 </tr>

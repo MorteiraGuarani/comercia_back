@@ -1,0 +1,301 @@
+"use client";
+
+import { useState } from "react";
+import dynamic from "next/dynamic";
+import { apiFetch } from "@/lib/api";
+import { useOperacionCampo } from "@/hooks/use-lista-campo";
+import { Modal } from "@/components/modal";
+import { PantallaCarga } from "@/components/pantalla-carga";
+import { mostrarToast } from "@/components/toast/toast-controller";
+import { usePanel } from "@/components/panel/contexto";
+import { HorariosLocal } from "./horarios-local";
+import { AsignacionesLocal } from "./asignaciones-local";
+import type { ClientePdv } from "@/types/campo";
+
+const SelectorUbicacion = dynamic(() => import("./selector-ubicacion"), {
+  ssr: false,
+  loading: () => (
+    <p className="py-4 text-center text-xs text-muted">Cargando mapa…</p>
+  ),
+});
+
+// Solo orienta el mapa de un cliente sin ubicación: no se guarda.
+const CENTRO_INICIAL = { latitud: -25.2969, longitud: -57.6415 };
+
+export type PestanaCliente = "datos" | "horarios" | "personal";
+
+const PESTANAS: { clave: PestanaCliente; texto: string }[] = [
+  { clave: "datos", texto: "Datos y ubicación" },
+  { clave: "horarios", texto: "Horarios" },
+  { clave: "personal", texto: "Personal asignado" },
+];
+
+const campoClase =
+  "min-h-11 w-full min-w-0 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-brand-600 read-only:bg-surface-soft read-only:text-muted dark:border-line dark:bg-surface dark:text-foreground";
+
+/**
+ * Alta y edición del cliente (OCRD + dirección CRD1) con su punto en el mapa.
+ * Guardado el cliente, se cargan sus horarios y el personal (uno o varios).
+ */
+export function ClienteModal({
+  cliente: inicial,
+  pestana = "datos",
+  onCerrar,
+  onGuardado,
+}: {
+  cliente?: ClientePdv;
+  pestana?: PestanaCliente;
+  onCerrar: () => void;
+  onGuardado: (cliente: ClientePdv) => void;
+}) {
+  const op = useOperacionCampo();
+  const { usuario } = usePanel();
+  const [cliente, setCliente] = useState(inicial);
+  const [vista, setVista] = useState<PestanaCliente>(
+    inicial ? pestana : "datos",
+  );
+  const [form, setForm] = useState({
+    CardCode: inicial?.id ?? "",
+    CardName: inicial?.nombre ?? "",
+    LicTradNum: inicial?.ruc ?? "",
+    Address: inicial?.address ?? "",
+    Street: inicial?.street ?? "",
+  });
+  // Sin punto marcado no se envía nada y se conserva la ubicación actual.
+  const [punto, setPunto] = useState(
+    inicial?.latitud != null && inicial.longitud != null
+      ? { latitud: inicial.latitud, longitud: inicial.longitud }
+      : null,
+  );
+  const cambiar =
+    (campo: keyof typeof form) =>
+    (evento: React.ChangeEvent<HTMLInputElement>) =>
+      setForm((actual) => ({ ...actual, [campo]: evento.target.value }));
+
+  async function guardar(evento: React.FormEvent) {
+    evento.preventDefault();
+    let guardado: ClientePdv | undefined;
+    const ok = await op.ejecutar(
+      cliente ? "Guardando cliente" : "Creando cliente",
+      async () => {
+        guardado = await apiFetch<ClientePdv>(
+          cliente
+            ? `/campo/locales/${encodeURIComponent(cliente.id)}`
+            : "/campo/locales",
+          {
+            method: cliente ? "PUT" : "POST",
+            body: JSON.stringify({
+              ...(cliente ? {} : { CardCode: form.CardCode.trim() }),
+              CardName: form.CardName.trim(),
+              LicTradNum: form.LicTradNum.trim(),
+              Address: form.Address.trim(),
+              Street: form.Street.trim(),
+              ...punto,
+            }),
+          },
+        );
+      },
+    );
+    if (!ok || !guardado) return;
+    onGuardado(guardado);
+    if (cliente) {
+      mostrarToast("exito", `Cliente ${guardado.nombre} actualizado.`);
+      return;
+    }
+    setCliente(guardado);
+    setVista("horarios");
+    mostrarToast(
+      "exito",
+      `Cliente ${guardado.nombre} creado. Ahora cargá sus horarios y el personal.`,
+    );
+  }
+
+  return (
+    <>
+      <Modal
+        titulo={cliente ? `Cliente · ${cliente.nombre}` : "Crear cliente"}
+        abierto
+        ancho="xl"
+        onCerrar={() => {
+          if (!op.mensaje) onCerrar();
+        }}
+      >
+        <div className="campo-screen min-w-0 w-full space-y-4">
+          <div
+            role="tablist"
+            aria-label="Secciones del cliente"
+            className="flex min-w-0 flex-wrap gap-2 border-b border-line pb-3"
+          >
+            {PESTANAS.map(({ clave, texto }) => {
+              const bloqueada = clave !== "datos" && !cliente;
+              return (
+                <button
+                  key={clave}
+                  type="button"
+                  role="tab"
+                  aria-selected={vista === clave}
+                  disabled={bloqueada}
+                  title={bloqueada ? "Primero creá el cliente" : undefined}
+                  onClick={() => setVista(clave)}
+                  className={`min-h-11 min-w-0 flex-1 cursor-pointer whitespace-nowrap rounded-lg px-3 text-xs font-bold uppercase tracking-wider transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none sm:px-4 ${
+                    vista === clave
+                      ? "bg-foreground text-background"
+                      : "border border-line bg-surface-raised text-muted hover:bg-surface-soft hover:text-foreground"
+                  }`}
+                >
+                  {texto}
+                </button>
+              );
+            })}
+          </div>
+
+          {vista === "datos" ? (
+            <form className="space-y-4" onSubmit={guardar}>
+              {op.error && (
+                <p
+                  role="alert"
+                  className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200"
+                >
+                  {op.error}
+                </p>
+              )}
+              <fieldset
+                disabled={!!op.mensaje}
+                className="min-w-0 space-y-4"
+              >
+                <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
+                  <label className="min-w-0 space-y-1.5 text-sm font-semibold">
+                    <span>Código de cliente</span>
+                    <input
+                      type="text"
+                      name="CardCode"
+                      required
+                      readOnly={!!cliente}
+                      maxLength={15}
+                      pattern=".*\S.*"
+                      title={
+                        cliente
+                          ? "El código no se puede cambiar"
+                          : "Ingresá un código de hasta 15 caracteres"
+                      }
+                      value={form.CardCode}
+                      onChange={cambiar("CardCode")}
+                      className={campoClase}
+                    />
+                  </label>
+                  <label className="min-w-0 space-y-1.5 text-sm font-semibold">
+                    <span>Nombre de cliente</span>
+                    <input
+                      type="text"
+                      name="CardName"
+                      required
+                      maxLength={200}
+                      pattern=".*\S.*"
+                      title="Ingresá el nombre del cliente"
+                      value={form.CardName}
+                      onChange={cambiar("CardName")}
+                      className={campoClase}
+                    />
+                  </label>
+                </div>
+                <label className="block min-w-0 space-y-1.5 text-sm font-semibold">
+                  <span>RUC (opcional)</span>
+                  <input
+                    type="text"
+                    name="LicTradNum"
+                    maxLength={32}
+                    value={form.LicTradNum}
+                    onChange={cambiar("LicTradNum")}
+                    className={campoClase}
+                  />
+                </label>
+                <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
+                  <label className="min-w-0 space-y-1.5 text-sm font-semibold">
+                    <span>Dirección (opcional)</span>
+                    <input
+                      type="text"
+                      name="Address"
+                      maxLength={200}
+                      placeholder="Ej.: Itauguá"
+                      value={form.Address}
+                      onChange={cambiar("Address")}
+                      className={campoClase}
+                    />
+                  </label>
+                  <label className="min-w-0 space-y-1.5 text-sm font-semibold">
+                    <span>Calle (opcional)</span>
+                    <input
+                      type="text"
+                      name="Street"
+                      maxLength={200}
+                      placeholder="Ej.: Gobernador Irala"
+                      value={form.Street}
+                      onChange={cambiar("Street")}
+                      className={campoClase}
+                    />
+                  </label>
+                </div>
+                <div className="min-w-0 space-y-1.5">
+                  <p className="text-sm font-semibold">Ubicación en el mapa</p>
+                  <p className="text-xs text-muted">
+                    {punto
+                      ? `Marcado en ${punto.latitud.toFixed(5)}, ${punto.longitud.toFixed(5)}. Buscá otro lugar, tocá el mapa o arrastrá el pin para corregirlo.`
+                      : "Todavía sin ubicación: buscá el lugar, tocá el mapa o usá tu GPS para marcar dónde está el cliente."}
+                  </p>
+                  <div className="overflow-hidden rounded-xl border border-line">
+                    <SelectorUbicacion
+                      latitud={punto?.latitud ?? CENTRO_INICIAL.latitud}
+                      longitud={punto?.longitud ?? CENTRO_INICIAL.longitud}
+                      onChange={(latitud, longitud) =>
+                        setPunto({ latitud, longitud })
+                      }
+                    />
+                  </div>
+                </div>
+              </fieldset>
+              <div className="flex flex-wrap justify-end gap-2 border-t border-line pt-4">
+                <button
+                  type="button"
+                  onClick={onCerrar}
+                  disabled={!!op.mensaje}
+                  className="min-h-11 cursor-pointer whitespace-nowrap rounded-lg border border-line px-4 text-sm font-semibold text-foreground hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={
+                    !!op.mensaje ||
+                    !form.CardCode.trim() ||
+                    !form.CardName.trim()
+                  }
+                  className="min-h-11 cursor-pointer whitespace-nowrap rounded-lg bg-brand-700 px-4 text-sm font-semibold text-white hover:bg-brand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-brand-500 dark:text-zinc-950 dark:hover:bg-brand-400"
+                >
+                  {cliente ? "Guardar cambios" : "Crear cliente"}
+                </button>
+              </div>
+            </form>
+          ) : (
+            cliente && (
+              <div className="min-w-0 space-y-4">
+                <p className="text-sm text-muted">
+                  Equipo:{" "}
+                  <strong className="text-foreground">
+                    {usuario.rol?.equipoCampo?.nombre ?? "Sin equipo operativo"}
+                  </strong>
+                  . Los horarios y el personal se configuran para este equipo.
+                </p>
+                {vista === "horarios" ? (
+                  <HorariosLocal localId={cliente.id} />
+                ) : (
+                  <AsignacionesLocal localId={cliente.id} />
+                )}
+              </div>
+            )
+          )}
+        </div>
+      </Modal>
+      <PantallaCarga visible={!!op.mensaje} mensaje={op.mensaje} />
+    </>
+  );
+}

@@ -63,12 +63,6 @@ export class ConsultaCampoDto extends PaginacionDto {
   fechaFin?: string;
 }
 
-/** Punto del local en el mapa: se guarda en U_Latitud/U_Longitud de OCRD. */
-export class UbicacionLocalCampoDto {
-  @IsNumber() @Min(-90) @Max(90) latitud!: number;
-  @IsNumber() @Min(-180) @Max(180) longitud!: number;
-}
-
 function fechaHastaCalendario(value: unknown): string | null {
   if (value == null) return null;
   if (value instanceof Date && !Number.isNaN(value.getTime())) {

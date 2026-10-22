@@ -10,6 +10,7 @@
     "test:pendientes": "node test/pendientes-tareas.integration.mjs",
     "test:ucheck": "node test/ucheck-seguimiento.integration.mjs",
     "test:productos": "node test/productos.integration.mjs",
+    "test:clientes": "node test/clientes.integration.mjs",
     "test:inventario": "node test/inventario.integration.mjs"
   },
   "dependencies": {

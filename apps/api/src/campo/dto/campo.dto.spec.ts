@@ -1,11 +1,7 @@
 import 'reflect-metadata';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
-import {
-  HorarioCampoDto,
-  TareaCampoDto,
-  UbicacionLocalCampoDto,
-} from './campo.dto';
+import { HorarioCampoDto, TareaCampoDto } from './campo.dto';
 
 function horario(extra: Record<string, unknown> = {}) {
   return plainToInstance(HorarioCampoDto, {
@@ -19,20 +15,6 @@ function horario(extra: Record<string, unknown> = {}) {
     ...extra,
   });
 }
-
-describe('UbicacionLocalCampoDto', () => {
-  it('acepta coordenadas válidas y rechaza las fuera de rango', async () => {
-    const valida = { latitud: -25.3, longitud: -57.6 };
-    expect(
-      await validate(plainToInstance(UbicacionLocalCampoDto, valida)),
-    ).toEqual([]);
-    expect(
-      await validate(
-        plainToInstance(UbicacionLocalCampoDto, { ...valida, latitud: 91 }),
-      ),
-    ).not.toEqual([]);
-  });
-});
 
 describe('VigenciaCampoDto', () => {
   it('convierte una fecha final vacía en null para un horario sin vencimiento', async () => {

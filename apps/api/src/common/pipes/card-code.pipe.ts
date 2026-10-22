@@ -4,7 +4,7 @@ import { BadRequestException, PipeTransform } from '@nestjs/common';
 export class CardCodePipe implements PipeTransform<unknown, string> {
   transform(valor: unknown) {
     if (typeof valor !== 'string' || valor.length < 1 || valor.length > 15)
-      throw new BadRequestException('CardCode inválido');
+      throw new BadRequestException('Código de cliente inválido');
     return valor;
   }
 }

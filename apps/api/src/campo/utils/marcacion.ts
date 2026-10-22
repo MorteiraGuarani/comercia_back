@@ -13,7 +13,7 @@ export function comprobarMarcaEnLocal(
 ): number {
   if (local.latitud === null || local.longitud === null)
     throw new BadRequestException(
-      'El local no tiene ubicación cargada (U_Latitud/U_Longitud en OCRD)',
+      'El cliente no tiene ubicación cargada. Marcala desde PDV y rutas.',
     );
   const antiguedad = ahora.getTime() - new Date(marca.capturadaEn).getTime();
   if (
