@@ -515,7 +515,7 @@ function descripcionPagina(modulo: string, pagina: string) {
     "mi-jornada/novedades": "Reportá un imprevisto y consultá la respuesta.",
     "mi-jornada/avisos": "Indicaciones recibidas de tu team leader.",
     "mi-jornada/agenda": "Agenda diaria de consulta, visitas y reemplazos.",
-    "mi-jornada/inventario": "Artículos elegidos, disponibles sin conexión.",
+    "mi-jornada/inventario": "Cantidades y vencimientos por local, también sin conexión.",
   };
   return (
     descripciones[`${modulo}/${pagina}`] ??

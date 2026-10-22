@@ -242,7 +242,8 @@ export type TipoNotificacion =
   | "NOVEDAD_CREADA"
   | "NOVEDAD_ACTUALIZADA"
   | "NOVEDAD_RESPUESTA"
-  | "AVISO_RECIBIDO";
+  | "AVISO_RECIBIDO"
+  | "VENCIMIENTO_PROXIMO";
 
 export interface Notificacion {
   id: number;

@@ -299,9 +299,10 @@ try {
     .set('Authorization', 'Bearer ' + token)
     .send({ ItemCode: 'A', CardCode: 'C', ListNum: 1, Valid: null })
     .expect(400);
-  assert.ok(authCalls.length > 0);
+  // Todas las tablas tbl_* son públicas: nunca se pide superadministrador.
+  assert.equal(authCalls.length, 0);
   console.log(
-    'OK: Swagger público completo, 42 operaciones de cinco tablas/alias, permisos, DTOs exactos, ejemplos válidos, bulk >1 MiB, validación atómica, decimales y BigInt.',
+    'OK: Swagger público completo, 42 operaciones de cinco tablas/alias públicas, DTOs exactos, ejemplos válidos, bulk >1 MiB, validación atómica, decimales y BigInt.',
   );
 } finally {
   await app.close();

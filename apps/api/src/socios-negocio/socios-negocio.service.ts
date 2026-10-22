@@ -256,13 +256,14 @@ export class SociosNegocioService {
               novedades: true,
               eventosUcheck: true,
               usuariosPrincipal: true,
+              cargasInventario: true,
             },
           },
         },
       });
       if (usoCampo && Object.values(usoCampo._count).some((n) => n > 0))
         throw new ConflictException(
-          'El socio tiene operación de campo asociada (asignaciones, horarios, visitas, tareas o novedades); quitarla primero',
+          'El socio tiene operación de campo asociada (asignaciones, horarios, visitas, tareas, novedades o inventario); quitarla primero',
         );
       return;
     }

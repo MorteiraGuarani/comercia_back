@@ -1,6 +1,6 @@
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
-import { SocioNegocioDto } from './tablas-socios.dto';
+import { SocioNegocioDto, SocioNegocioVendedorDto } from './tablas-socios.dto';
 
 describe('Contrato OCRD ampliado', () => {
   it('admite los nuevos largos y omitir las banderas con valor predeterminado', async () => {
@@ -8,8 +8,24 @@ describe('Contrato OCRD ampliado', () => {
       CardCode: 'C'.repeat(50),
       CardName: 'N'.repeat(250),
       Phone1: '+595991188620',
+      AliasName: 'A'.repeat(2000),
     });
     expect(await validate(dto)).toHaveLength(0);
+  });
+
+  it('OSLP: Active es Y/N y se puede omitir; Memo y Fax son texto', async () => {
+    const ok = plainToInstance(SocioNegocioVendedorDto, {
+      SlpCode: 1,
+      Memo: 'Zona centro',
+      Fax: '021000000',
+    });
+    expect(await validate(ok)).toHaveLength(0);
+    for (const Active of [null, 'X']) {
+      const dto = plainToInstance(SocioNegocioVendedorDto, { SlpCode: 1, Active });
+      expect((await validate(dto)).some((e) => e.property === 'Active')).toBe(
+        true,
+      );
+    }
   });
 
   it.each(['validFor', 'frozenFor'] as const)(

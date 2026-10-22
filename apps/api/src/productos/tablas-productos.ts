@@ -61,7 +61,7 @@ export const TABLAS_PRODUCTOS = {
     titulo: 'Precios especiales por socio y lista',
     modelo: 'precioEspecial',
     Dto: PrecioSocioDto,
-    protegida: true,
+    protegida: false,
     alias: 'precios-especiales',
     columnas: {
       ItemCode: 'itemCode',
@@ -90,7 +90,7 @@ export const TABLAS_PRODUCTOS = {
     titulo: 'Líneas de precios especiales',
     modelo: 'precioEspecialDetalle',
     Dto: LineaPrecioSocioDto,
-    protegida: true,
+    protegida: false,
     alias: 'precios-especiales-detalle',
     columnas: {
       ItemCode: 'itemCode',
@@ -119,7 +119,7 @@ export const TABLAS_PRODUCTOS = {
     titulo: 'Promociones de precios especiales',
     modelo: 'precioEspecialPromocion',
     Dto: PromocionPrecioDto,
-    protegida: true,
+    protegida: false,
     columnas: {
       ItemCode: 'itemCode',
       CardCode: 'cardCode',

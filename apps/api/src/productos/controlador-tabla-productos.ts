@@ -156,7 +156,7 @@ export function crearControladorTablaProductos(
       'Clave duplicada, artículo ausente o referencias que impiden la operación.',
   })
   @ApiResponse({ status: 429, description: 'Límite de solicitudes alcanzado.' })
-  // Solo tbl_oitm/tbl_itm1 son públicos. Los precios especiales conservan sus guards.
+  // Todas las tablas tbl_* son públicas por pedido del usuario; protegida vuelve a exigir JWT + superadmin.
   class TablaProductosController {
     constructor(
       @Inject(TablasProductosService) readonly servicio: TablasProductosService,

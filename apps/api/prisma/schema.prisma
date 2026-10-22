@@ -34,6 +34,8 @@ model Empresa {
   socioNegocioCondicionPagoFilas SocioNegocioCondicionPago[]
   socioNegocioListaPrecioFilas SocioNegocioListaPrecio[]
   configuracionesTolerancia ConfiguracionTolerancia[]
+  // Días antes del vencimiento en que se avisa por inventario de campo.
+  diasAvisoVencimiento Int @default(5) @map("dias_aviso_vencimiento")
   id                  Int                       @id @default(autoincrement())
   nombre              String                    @unique
   dbName              String?                   @map("db_name")
@@ -72,7 +74,7 @@ model SocioNegocio {
   empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   CardCode String @db.VarChar(50)
   CardName String? @db.VarChar(250)
-  CardFName String? @db.VarChar(250)
+  AliasName String? @db.Text
   CardType String? @default("C") @db.VarChar(1)
   Currency String? @db.VarChar(4)
   Cellular String? @db.VarChar(50)
@@ -107,6 +109,8 @@ model SocioNegocio {
   visitas VisitaCampo[]
   novedades NovedadCampo[]
   eventosUcheck IntegracionUcheckEvento[]
+  productosInventario ProductoLocalCampo[]
+  cargasInventario CargaInventarioCampo[]
   @@unique([empresaId, CardCode], map: "uq_tbl_ocrd_cardcode")
   @@index([empresaId, CardName], map: "idx_tbl_ocrd_cardname")
   @@index([empresaId, GroupCode], map: "idx_tbl_ocrd_groupcode")
@@ -162,6 +166,7 @@ model SocioNegocioSupervisor {
   empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   AgentCode String? @db.VarChar(200)
   AgentName String? @db.VarChar(200)
+  Memo String? @db.VarChar(200)
   @@unique([empresaId, AgentCode], map: "uq_tbl_oagp_empresa_clave")
   @@index([empresaId, AgentName], map: "idx_tbl_oagp_agentname")
   @@map("tbl_oagp")
@@ -173,6 +178,9 @@ model SocioNegocioVendedor {
   empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   SlpCode Int?
   SlpName String? @db.VarChar(200)
+  Memo String? @db.VarChar(200)
+  Active String @default("Y") @db.VarChar(1)
+  Fax String? @db.VarChar(200)
   @@unique([empresaId, SlpCode], map: "uq_tbl_oslp_empresa_clave")
   @@index([empresaId, SlpName], map: "idx_tbl_oslp_slpname")
   @@map("tbl_oslp")
@@ -225,6 +233,8 @@ model Producto {
   frozenFor String? @default("N") @db.VarChar(1)
   tipo String? @map("TIPO") @db.VarChar(50)
   precios ProductoPrecio[]
+  localesInventario ProductoLocalCampo[]
+  cargasInventario CargaInventarioCampo[]
   @@unique([empresaId, itemcode], map: "uq_tbl_ocrd_itemcode")
   @@index([empresaId, itemname], map: "idx_tbl_oitm_itemname")
   @@map("tbl_oitm")
@@ -473,6 +483,7 @@ model Usuario {
   permitirVinculoAutomatico Boolean @default(true) @map("permitir_vinculo_automatico")
   seguimientoCampo SeguimientoCampo?
   operacionesCampo OperacionCampo[]
+  cargasInventario CargaInventarioCampo[]
   esSuperadmin            Boolean                   @default(false) @map("es_superadmin")
   isActive                Boolean                   @default(true) @map("is_active")
   createdAt               DateTime                  @default(now()) @map("created_at")
@@ -790,6 +801,7 @@ enum TipoNotificacionCampo {
   NOVEDAD_ACTUALIZADA
   NOVEDAD_RESPUESTA
   AVISO_RECIBIDO
+  VENCIMIENTO_PROXIMO
 }
 
 enum MomentoFotoCampo {
@@ -1044,4 +1056,41 @@ model AdjuntoCampo {
   @@index([programacionId])
   @@index([empresaId, creadoAt(sort: Desc)])
   @@map("campo_adjuntos")
+}
+
+// Productos (tbl_oitm) que se controlan en el inventario de un local (tbl_ocrd).
+model ProductoLocalCampo {
+  empresaId Int @map("empresa_id")
+  localId String @map("CardCode") @db.VarChar(50)
+  local SocioNegocio @relation(fields: [empresaId, localId], references: [empresaId, CardCode], onDelete: Cascade, onUpdate: Cascade)
+  itemcode String @map("ItemCode") @db.VarChar(15)
+  producto Producto @relation(fields: [empresaId, itemcode], references: [empresaId, itemcode], onDelete: Cascade, onUpdate: Cascade)
+  creadoEn DateTime @default(now()) @map("creado_en")
+
+  @@id([empresaId, localId, itemcode])
+  @@map("campo_inventario_productos")
+}
+
+// Carga del día: cantidad y vencimiento de un producto en un local. avisadoEn
+// marca que ya se avisó su vencimiento próximo (una sola vez por carga).
+model CargaInventarioCampo {
+  id Int @id @default(autoincrement())
+  empresaId Int @map("empresa_id")
+  localId String @map("CardCode") @db.VarChar(50)
+  local SocioNegocio @relation(fields: [empresaId, localId], references: [empresaId, CardCode], onDelete: Restrict, onUpdate: Cascade)
+  itemcode String @map("ItemCode") @db.VarChar(15)
+  producto Producto @relation(fields: [empresaId, itemcode], references: [empresaId, itemcode], onDelete: Restrict, onUpdate: Cascade)
+  usuarioId Int @map("usuario_id")
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
+  fecha DateTime @db.Date
+  cantidad Int
+  vencimiento DateTime @db.Date
+  avisadoEn DateTime? @map("avisado_en")
+  creadaEn DateTime @default(now()) @map("creada_en")
+  actualizadaEn DateTime @default(now()) @updatedAt @map("actualizada_en")
+
+  @@unique([empresaId, localId, itemcode, fecha])
+  @@index([empresaId, localId, fecha])
+  @@index([avisadoEn, vencimiento])
+  @@map("campo_inventario_cargas")
 }

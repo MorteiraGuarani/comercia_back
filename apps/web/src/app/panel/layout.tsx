@@ -4,13 +4,19 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, LazyMotion, m } from "motion/react";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, ApiError } from "@/lib/api";
 import { borrarCacheSesion } from "@/lib/cache-sesion";
+import {
+  borrarSesionSinConexion,
+  guardarSesionSinConexion,
+  leerSesionSinConexion,
+} from "@/lib/sesion-sin-conexion";
 import type { UsuarioSesion } from "@/types/usuario";
 import type { ModuloMenu } from "@/types/plataforma";
 import { BrandMark } from "@/components/auth-shell";
 import { BotonTema } from "@/components/boton-tema";
 import { BadgeNotificaciones } from "@/components/campo/badge-notificaciones";
+import { SincronizadorInventario } from "@/components/campo/sincronizador-inventario";
 import { Modal } from "@/components/modal";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { PanelProvider } from "@/components/panel/contexto";
@@ -43,15 +49,27 @@ export default function PanelLayout({
   useEffect(() => {
     Promise.all([
       apiFetch<{ usuario: UsuarioSesion }>("/auth/me"),
-      apiFetch<{ modulos: ModuloMenu[] }>("/mi-plataforma").catch(() => ({
-        modulos: [],
-      })),
+      apiFetch<{ modulos: ModuloMenu[] }>("/mi-plataforma").catch(() => null),
     ])
       .then(([me, menu]) => {
         setUsuario(me.usuario);
-        setModulos(menu.modulos);
+        setModulos(menu?.modulos ?? []);
+        if (menu) guardarSesionSinConexion({ usuario: me.usuario, modulos: menu.modulos });
       })
-      .catch(() => router.replace("/login"))
+      .catch((e: unknown) => {
+        // Sin señal (o sin servidor) se abre con la última sesión del equipo.
+        const guardada =
+          e instanceof ApiError && [0, 502, 503, 504].includes(e.status)
+            ? leerSesionSinConexion()
+            : null;
+        if (guardada) {
+          setUsuario(guardada.usuario);
+          setModulos(guardada.modulos);
+          return;
+        }
+        borrarSesionSinConexion();
+        router.replace("/login");
+      })
       .finally(() => setCargando(false));
   }, [router]);
 
@@ -90,6 +108,7 @@ export default function PanelLayout({
     try {
       await apiFetch("/auth/logout", { method: "POST" }).catch(() => undefined);
       borrarCacheSesion();
+      borrarSesionSinConexion();
       router.replace("/login");
     } finally {
       setCerrandoSesion(false);
@@ -133,6 +152,9 @@ export default function PanelLayout({
       })),
     ),
   ];
+  const tieneInventario = modulos.some(
+    (m) => m.ruta === "mi-jornada" && m.paginas.some((p) => p.ruta === "inventario"),
+  );
   const activo = (href: string) =>
     href === "/panel" ? pathname === "/panel" : pathname === href;
   const tieneMasEnlaces = enlaces.length > 5;
@@ -311,6 +333,7 @@ export default function PanelLayout({
           </main>
         </div>
         <BotonSubir />
+        {tieneInventario ? <SincronizadorInventario usuarioId={usuario.id} /> : null}
 
         <AnimatePresence>
           {masAbierto && tieneMasEnlaces ? (

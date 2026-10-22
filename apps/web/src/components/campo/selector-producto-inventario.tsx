@@ -1,35 +1,34 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
-import { buscarItems } from "@/lib/inventario-db";
+import { buscarProductos } from "@/lib/inventario-db";
 import { Paginacion } from "@/components/paginacion";
 import { btnGhost, errorBox, inputBase, labelBase } from "@/components/ui";
 import { mensajeError } from "@/utils/error";
-import { detalleListaPrecio } from "@/utils/inventario";
-import type { ItemInventarioLocal } from "@/types/inventario";
+import type { ProductoGuardado } from "@/types/inventario";
 import type { RespuestaPaginada } from "@/types/paginacion";
 
-interface SelectorItemInventarioProps {
-  empresaId: number;
-  // ids (artículo + lista) ya elegidos.
+interface SelectorProductoInventarioProps {
+  usuarioId: number;
+  // Códigos que ya están en el local.
   elegidos: Set<string>;
   // Cambia al renovarse el catálogo para volver a buscar.
   version: number;
   disabled?: boolean;
   // Explica por qué no se puede buscar (sin copia, sin conexión).
   placeholder?: string;
-  onElegir: (item: ItemInventarioLocal) => void;
+  onElegir: (item: ProductoGuardado) => void;
 }
 
-// Combobox sobre la copia local del catálogo: funciona sin conexión.
-export function SelectorItemInventario({
-  empresaId,
+// Combobox sobre los productos guardados en el equipo: funciona sin conexión.
+export function SelectorProductoInventario({
+  usuarioId,
   elegidos,
   version,
   disabled = false,
   placeholder = "Elegí o escribí código o nombre",
   onElegir,
-}: SelectorItemInventarioProps) {
+}: SelectorProductoInventarioProps) {
   const [texto, setTexto] = useState("");
   const [abierto, setAbierto] = useState(false);
   const [page, setPage] = useState(1);
@@ -38,11 +37,11 @@ export function SelectorItemInventario({
   const [intento, setIntento] = useState(0);
   const [resultado, setResultado] = useState<{
     clave: string;
-    datos: RespuestaPaginada<ItemInventarioLocal> | null;
+    datos: RespuestaPaginada<ProductoGuardado> | null;
     error: string | null;
   } | null>(null);
   const listaId = useId();
-  const clave = JSON.stringify([empresaId, texto, page, limit, version, intento]);
+  const clave = JSON.stringify([usuarioId, texto, page, limit, version, intento]);
   const cargando = abierto && resultado?.clave !== clave;
   const datos = resultado?.datos ?? null;
   const error = resultado?.clave === clave ? resultado.error : null;
@@ -53,7 +52,7 @@ export function SelectorItemInventario({
     let vigente = true;
     const temporizador = setTimeout(
       () => {
-        buscarItems(empresaId, texto, page, limit).then(
+        buscarProductos(usuarioId, texto, page, limit).then(
           (respuesta) => {
             if (vigente) setResultado({ clave, datos: respuesta, error: null });
           },
@@ -62,7 +61,7 @@ export function SelectorItemInventario({
               setResultado({
                 clave,
                 datos: null,
-                error: mensajeError(problema, "No se pudo buscar en los artículos guardados"),
+                error: mensajeError(problema, "No se pudo buscar en los productos guardados"),
               });
           },
         );
@@ -73,15 +72,15 @@ export function SelectorItemInventario({
       vigente = false;
       clearTimeout(temporizador);
     };
-  }, [abierto, clave, empresaId, texto, page, limit]);
+  }, [abierto, clave, usuarioId, texto, page, limit]);
 
   useEffect(() => {
     if (abierto && activa >= 0)
       document.getElementById(`${listaId}-${activa}`)?.scrollIntoView({ block: "nearest" });
   }, [abierto, activa, listaId]);
 
-  function elegir(item: ItemInventarioLocal) {
-    if (elegidos.has(item.id)) return;
+  function elegir(item: ProductoGuardado) {
+    if (elegidos.has(item.itemcode)) return;
     onElegir(item);
     setTexto("");
     setPage(1);
@@ -97,7 +96,7 @@ export function SelectorItemInventario({
       }}
     >
       <label className={labelBase}>
-        Agregar artículo
+        Agregar producto
         <input
           type="text"
           role="combobox"
@@ -145,20 +144,20 @@ export function SelectorItemInventario({
         <div className="absolute left-0 right-0 top-full z-20 mt-1 rounded-xl border border-control-line bg-surface-raised p-2 shadow-lg">
           <div role="status" className="text-sm text-muted">
             {cargando && !datos
-              ? "Buscando artículos…"
+              ? "Buscando productos…"
               : !error && datos?.total === 0
                 ? texto.trim()
-                  ? "No hay artículos que coincidan."
-                  : "No hay artículos guardados en este equipo."
+                  ? "No hay productos que coincidan."
+                  : "No hay productos guardados en este equipo."
                 : ""}
           </div>
-          <ul id={listaId} role="listbox" aria-label="Artículos" aria-busy={cargando} className="max-h-80 overflow-y-auto">
+          <ul id={listaId} role="listbox" aria-label="Productos" aria-busy={cargando} className="max-h-80 overflow-y-auto">
             {!error
               ? opciones.map((item, index) => {
-                  const agregado = elegidos.has(item.id);
+                  const agregado = elegidos.has(item.itemcode);
                   return (
                     <li
-                      key={item.id}
+                      key={item.itemcode}
                       id={`${listaId}-${index}`}
                       role="option"
                       aria-selected={activa === index}
@@ -168,12 +167,7 @@ export function SelectorItemInventario({
                       onClick={() => elegir(item)}
                     >
                       <span className="shrink-0 font-mono text-xs text-muted">{item.itemcode}</span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block break-words text-foreground">{item.itemname}</span>
-                        <span className="block break-words text-xs text-muted [font-variant-numeric:tabular-nums]">
-                          {detalleListaPrecio(item)}
-                        </span>
-                      </span>
+                      <span className="min-w-0 flex-1 break-words text-foreground">{item.itemname}</span>
                       {agregado ? (
                         <span className="shrink-0 whitespace-nowrap rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
                           Agregado

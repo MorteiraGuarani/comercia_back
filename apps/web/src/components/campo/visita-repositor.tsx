@@ -172,7 +172,10 @@ export function VisitaRepositor({
         </div>
 
         {rutaInventario ? (
-          <Link href={rutaInventario} className={`${btnAccion} mt-3 w-full`}>
+          <Link
+            href={`${rutaInventario}?local=${encodeURIComponent(agenda.local.id)}`}
+            className={`${btnAccion} mt-3 w-full`}
+          >
             <IconoCaja className="h-4 w-4" />
             Inventario
           </Link>

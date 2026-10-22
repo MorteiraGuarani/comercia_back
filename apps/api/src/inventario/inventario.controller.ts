@@ -1,8 +1,18 @@
-import { Controller, Get, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Put,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiForbiddenResponse,
-  ApiOkResponse,
   ApiOperation,
   ApiPayloadTooLargeResponse,
   ApiTags,
@@ -10,68 +20,111 @@ import {
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import type { RequestConUsuario } from '../auth/interfaces/request-con-usuario.interface';
-import { LIMITE_ITEMS_INVENTARIO } from './inventario.constants';
-import { InventarioService } from './inventario.service';
+import { CardCodePipe } from '../common/pipes/card-code.pipe';
+import {
+  AgregarProductosInventarioDto,
+  BuscarInventarioDto,
+  ConfiguracionInventarioDto,
+  ConsultaInventarioLocalDto,
+  GuardarCargasInventarioDto,
+} from './dto/inventario-local.dto';
+import { InventarioLocalService } from './inventario-local.service';
 
-@ApiTags('Inventario del impulsador')
+@ApiTags('Inventario por local')
 @ApiBearerAuth()
 @ApiUnauthorizedResponse({ description: 'Sesión requerida' })
 @ApiForbiddenResponse({ description: 'Sin acceso a Mi jornada · Inventario' })
 @Controller('campo/inventario')
 @UseGuards(JwtAuthGuard)
 export class InventarioController {
-  constructor(private readonly servicio: InventarioService) {}
+  constructor(private readonly servicio: InventarioLocalService) {}
 
-  // Excepción a la paginación obligatoria, por pedido explícito del usuario:
-  // el navegador guarda el catálogo completo para usarlo sin conexión.
-  @Get('items')
+  @Get('locales')
+  @ApiOperation({ summary: 'Locales de la ruta del usuario, paginados' })
+  locales(@Req() r: RequestConUsuario, @Query() q: BuscarInventarioDto) {
+    return this.servicio.locales(r.usuarioId, q);
+  }
+
+  @Get('copia')
   @ApiOperation({
-    summary: 'Catálogo completo de artículos de la empresa',
-    description: `Precios de tbl_itm1 relacionados con el maestro oficial tbl_oitm y nombres de lista de tbl_opln, dentro de la empresa del usuario. Un artículo aparece una vez por cada lista de precios. Ordenados por código y lista. Conserva los ID de precio para la copia sin conexión. Sin paginar, con un máximo de ${LIMITE_ITEMS_INVENTARIO} filas. id y price viajan como texto.`,
-  })
-  @ApiOkResponse({
-    schema: {
-      type: 'object',
-      required: ['items', 'total'],
-      properties: {
-        items: {
-          type: 'array',
-          items: {
-            type: 'object',
-            required: [
-              'id',
-              'itemcode',
-              'itemname',
-              'pricelist',
-              'pricelistname',
-              'price',
-            ],
-            properties: {
-              id: { type: 'string', example: '1' },
-              itemcode: { type: 'string', example: 'A-1001' },
-              itemname: { type: 'string', example: 'Artículo de ejemplo' },
-              pricelist: { type: 'integer', example: 1 },
-              pricelistname: {
-                type: 'string',
-                nullable: true,
-                example: 'Lista mayorista',
-              },
-              price: {
-                type: 'string',
-                nullable: true,
-                example: '25000.000000',
-              },
-            },
-          },
-        },
-        total: { type: 'integer', example: 1 },
-      },
-    },
+    summary:
+      'Copia sin conexión: productos activos y locales de la ruta con su carga de hoy (sin paginar, con tope)',
   })
   @ApiPayloadTooLargeResponse({
-    description: `El catálogo supera ${LIMITE_ITEMS_INVENTARIO} artículos; no se entrega truncado`,
+    description: 'Supera el máximo que se guarda en el equipo',
   })
-  listarItems(@Req() r: RequestConUsuario) {
-    return this.servicio.listarItems(r.usuarioId);
+  copia(@Req() r: RequestConUsuario) {
+    return this.servicio.copia(r.usuarioId);
+  }
+
+  @Get('productos')
+  @ApiOperation({
+    summary: 'Productos activos de tbl_oitm para agregar a un local',
+  })
+  productos(@Req() r: RequestConUsuario, @Query() q: BuscarInventarioDto) {
+    return this.servicio.productos(r.usuarioId, q);
+  }
+
+  @Get('configuracion')
+  @ApiOperation({
+    summary: 'Días de aviso antes del vencimiento (PDV y rutas o superadmin)',
+  })
+  configuracion(@Req() r: RequestConUsuario) {
+    return this.servicio.configuracion(r.usuarioId);
+  }
+
+  @Put('configuracion')
+  @ApiOperation({ summary: 'Cambiar los días de aviso de la empresa' })
+  guardarConfiguracion(
+    @Req() r: RequestConUsuario,
+    @Body() d: ConfiguracionInventarioDto,
+  ) {
+    return this.servicio.guardarConfiguracion(r.usuarioId, d);
+  }
+
+  @Get('locales/:localId')
+  @ApiOperation({
+    summary:
+      'Inventario del local: hoy, productos y su carga; otra fecha, lo cargado ese día',
+  })
+  detalle(
+    @Req() r: RequestConUsuario,
+    @Param('localId', CardCodePipe) localId: string,
+    @Query() q: ConsultaInventarioLocalDto,
+  ) {
+    return this.servicio.detalle(r.usuarioId, localId, q);
+  }
+
+  @Post('locales/:localId/productos')
+  @ApiOperation({ summary: 'Asociar productos al inventario del local' })
+  agregarProductos(
+    @Req() r: RequestConUsuario,
+    @Param('localId', CardCodePipe) localId: string,
+    @Body() d: AgregarProductosInventarioDto,
+  ) {
+    return this.servicio.agregarProductos(r.usuarioId, localId, d);
+  }
+
+  @Delete('locales/:localId/productos/:itemcode')
+  @ApiOperation({ summary: 'Quitar un producto del inventario del local' })
+  quitarProducto(
+    @Req() r: RequestConUsuario,
+    @Param('localId', CardCodePipe) localId: string,
+    @Param('itemcode') itemcode: string,
+  ) {
+    return this.servicio.quitarProducto(r.usuarioId, localId, itemcode);
+  }
+
+  @Put('locales/:localId/cargas')
+  @ApiOperation({
+    summary:
+      'Guardar la carga del día (hoy o, sin conexión, hasta 7 días atrás): cantidad y vencimiento',
+  })
+  guardarCargas(
+    @Req() r: RequestConUsuario,
+    @Param('localId', CardCodePipe) localId: string,
+    @Body() d: GuardarCargasInventarioDto,
+  ) {
+    return this.servicio.guardarCargas(r.usuarioId, localId, d);
   }
 }

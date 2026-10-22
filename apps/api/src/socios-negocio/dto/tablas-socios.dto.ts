@@ -10,8 +10,8 @@ export class SocioNegocioDto {
   CardCode!: string;
   @TextoSocio(250, true, undefined)
   CardName?: string | null;
-  @TextoSocio(250, true, undefined)
-  CardFName?: string | null;
+  @TextoSocio(2000, true, undefined)
+  AliasName?: string | null;
   @TextoSocio(1, true, 'C')
   CardType?: string | null;
   @EnteroSocio('int2', undefined)
@@ -94,6 +94,8 @@ export class SocioNegocioSupervisorDto {
   AgentCode?: string | null;
   @TextoSocio(200, true, undefined)
   AgentName?: string | null;
+  @TextoSocio(200, true, undefined)
+  Memo?: string | null;
 }
 
 export class SocioNegocioVendedorDto {
@@ -101,6 +103,12 @@ export class SocioNegocioVendedorDto {
   SlpCode?: number | null;
   @TextoSocio(200, true, undefined)
   SlpName?: string | null;
+  @TextoSocio(200, true, undefined)
+  Memo?: string | null;
+  @BanderaSocio('Y')
+  Active?: string;
+  @TextoSocio(200, true, undefined)
+  Fax?: string | null;
 }
 
 export class SocioNegocioGrupoDto {

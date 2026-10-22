@@ -5,7 +5,7 @@ import { PantallaCarga } from "@/components/pantalla-carga";
 import { btnGhost, errorBox } from "@/components/ui";
 import type { RespuestaPaginada } from "@/types/paginacion";
 
-export function TablaCampo<T extends { id: number }>({
+export function TablaCampo<T extends { id: number | string }>({
   lista,
   columnas,
   etiqueta,

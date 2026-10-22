@@ -80,6 +80,30 @@ async function pantalla(pedido) {
   }
 }
 
+// La app pide guardar pantallas que tienen que abrir sin señal aunque nunca se
+// hayan cargado completas (se llega a ellas navegando dentro de la app).
+self.addEventListener("message", (evento) => {
+  const datos = evento.data;
+  if (datos?.tipo !== "guardar-pantallas" || !Array.isArray(datos.rutas)) return;
+  const rutas = datos.rutas.filter((r) => typeof r === "string" && r.startsWith("/panel/"));
+  evento.waitUntil(
+    caches
+      .open(CACHE_PAGINAS)
+      .then((cache) =>
+        Promise.all(
+          rutas.map(async (ruta) => {
+            const url = new URL(ruta, self.location.origin).href;
+            const respuesta = await fetch(url);
+            if (respuesta.ok && respuesta.type === "basic" && !respuesta.redirected)
+              await cache.put(url, respuesta);
+          }),
+        ),
+      )
+      .then(() => recortar(CACHE_PAGINAS, MAX_PAGINAS))
+      .catch(() => undefined),
+  );
+});
+
 self.addEventListener("fetch", (evento) => {
   const pedido = evento.request;
   if (pedido.method !== "GET" || pedido.cache === "no-store") return;

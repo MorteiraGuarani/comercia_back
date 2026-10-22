@@ -3,11 +3,12 @@ import { AuthModule } from '../auth/auth.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { PlataformaModule } from '../plataforma/plataforma.module';
 import { InventarioController } from './inventario.controller';
-import { InventarioService } from './inventario.service';
+import { InventarioLocalService } from './inventario-local.service';
+import { VencimientosService } from './vencimientos.service';
 
 @Module({
   imports: [AuthModule, PrismaModule, PlataformaModule],
   controllers: [InventarioController],
-  providers: [InventarioService],
+  providers: [InventarioLocalService, VencimientosService],
 })
 export class InventarioModule {}

@@ -12,7 +12,13 @@ import { BuscadorCatalogo } from "./ui/filtros-catalogo";
 import { TopBar } from "./ui/top-bar";
 import { TarjetaPdv } from "./tarjeta-pdv";
 import { FotoLocal } from "./ui/foto-local";
-import { IconoTienda, IconoMapa, IconoPlanificacion } from "./ui/iconos-campo";
+import {
+  IconoCalendario,
+  IconoTienda,
+  IconoMapa,
+  IconoPlanificacion,
+} from "./ui/iconos-campo";
+import { ConfigVencimientosModal } from "./config-vencimientos-modal";
 import type { ClientePdv } from "@/types/campo";
 
 const MapaClientes = dynamic(
@@ -55,6 +61,7 @@ export function LocalesPanel() {
 
   const lista = useListaCampo<ClientePdv>(endpoint, 0, 7);
   const [revisionMapa, setRevisionMapa] = useState(0);
+  const [configVencimientos, setConfigVencimientos] = useState(false);
 
   const totalRegistros = lista.datos?.total ?? lista.items.length;
 
@@ -94,6 +101,15 @@ export function LocalesPanel() {
               className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-line bg-surface-raised text-foreground transition hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
             >
               <IconoMapa className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfigVencimientos(true)}
+              aria-label="Avisos de vencimiento"
+              title="Avisos de vencimiento del inventario"
+              className="grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-xl border border-line bg-surface-raised text-foreground transition hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
+            >
+              <IconoCalendario className="h-5 w-5" />
             </button>
           </>
         }
@@ -281,6 +297,10 @@ export function LocalesPanel() {
           )}
         </div>
       </main>
+
+      {configVencimientos && (
+        <ConfigVencimientosModal onCerrar={() => setConfigVencimientos(false)} />
+      )}
 
       {modal && (
         <ClienteModal

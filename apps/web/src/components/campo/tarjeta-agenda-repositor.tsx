@@ -288,7 +288,10 @@ export function TarjetaAgendaRepositor({
                 </button>
                 {rutaInventario ? (
                   visitaAqui ? (
-                    <Link href={rutaInventario} className={btnInfo}>
+                    <Link
+                      href={`${rutaInventario}?local=${encodeURIComponent(a.local.id)}`}
+                      className={btnInfo}
+                    >
                       <IconoCaja className="h-3.5 w-3.5 shrink-0" />
                       Inventario
                     </Link>

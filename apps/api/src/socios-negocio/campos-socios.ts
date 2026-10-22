@@ -9,8 +9,9 @@ export const CAMPOS_SOCIOS = {
     description: 'Nombre o razón social del socio de negocio.',
     example: 'Comercial del Centro',
   },
-  CardFName: {
-    description: 'Nombre extranjero o de fantasía del socio.',
+  AliasName: {
+    description:
+      'Alias o nombre de fantasía del socio (texto libre, hasta 2000 caracteres).',
     example: 'Comercial del Centro S.A.',
   },
   CardType: {
@@ -152,6 +153,15 @@ export const CAMPOS_SOCIOS = {
   },
   AgentName: { description: 'Nombre del supervisor.', example: 'Ana Pérez' },
   SlpName: { description: 'Nombre del vendedor.', example: 'Luis Gómez' },
+  Memo: {
+    description: 'Observaciones de SAP, conservadas como texto.',
+    example: 'Zona centro',
+  },
+  Active: {
+    description: 'Vendedor activo en SAP (Y/N). Por defecto Y.',
+    example: 'Y',
+  },
+  Fax: { description: 'Fax del vendedor, conservado como texto.', example: '021000000' },
   GroupName: {
     description: 'Nombre del grupo de clientes.',
     example: 'Minoristas',

@@ -753,7 +753,10 @@ function AgendaDelDia({
                 </button>
                 {rutaInventario ? (
                   aqui ? (
-                    <Link href={rutaInventario} className={btnAccion}>
+                    <Link
+                      href={`${rutaInventario}?local=${encodeURIComponent(a.local.id)}`}
+                      className={btnAccion}
+                    >
                       <IconoCaja className="h-4 w-4" />
                       Inventario
                     </Link>

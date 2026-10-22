@@ -16,9 +16,9 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   usuarios, productos), usar un selector con búsqueda remota y paginación.
   No descargar el catálogo completo ni obligar a recorrer opciones a ojo:
   aumenta el consumo, vuelve lento el formulario y facilita selecciones erróneas.
-  Excepción pedida por el usuario: Mi jornada · Inventario descarga todos los
-  artículos de la empresa a IndexedDB (Dexie) para trabajar sin conexión; su selector
-  busca y pagina sobre esa copia local con las mismas reglas de combobox.
+  Excepción pedida por el usuario: Mi jornada · Inventario guarda en IndexedDB
+  (Dexie) los productos y los locales de la ruta para trabajar sin conexión; sus
+  listas y su selector buscan y paginan sobre esa copia con las mismas reglas.
 - Reutilizar `src/components/selector-paginado.tsx` con `buscable` cuando el
   endpoint admita `buscar`. El servidor filtra dentro del alcance autorizado
   y pagina; filtrar solamente la página actual en el navegador no alcanza.
