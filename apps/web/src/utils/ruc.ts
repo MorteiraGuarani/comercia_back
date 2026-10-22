@@ -1,5 +1,5 @@
 // Validación del RUC paraguayo con dígito verificador (módulo 11, algoritmo de
-// la SET). Mantener sincronizado con apps/api/src/auth/ruc.util.ts.
+// la SET). Mantener sincronizado con apps/api/src/common/utils/ruc.ts.
 
 export function calcularDvRucPy(base: string): number {
   let k = 2;

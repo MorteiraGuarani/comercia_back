@@ -4,6 +4,7 @@ import type { ApiPropertyOptions } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
   IsInt,
+  IsIn,
   IsOptional,
   IsString,
   Max,
@@ -68,6 +69,21 @@ export function EnteroSocio(tipo: 'int2' | 'int4', defecto?: number) {
     IsInt(),
     Min(minimum),
     Max(maximum),
+  );
+}
+
+/** Opcional al crear, con valor predeterminado; SQL no admite NULL. */
+export function BanderaSocio(defecto: 'Y' | 'N') {
+  return applyDecorators(
+    documentarSocio({
+      type: String,
+      enum: ['Y', 'N'],
+      nullable: false,
+      default: defecto,
+    }),
+    Transform(trimString),
+    ValidateIf((_obj: object, value: unknown) => value !== undefined),
+    IsIn(['Y', 'N']),
   );
 }
 

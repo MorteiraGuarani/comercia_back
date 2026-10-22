@@ -9,6 +9,51 @@ export const CAMPOS_SOCIOS = {
     description: 'Nombre o razón social del socio de negocio.',
     example: 'Comercial del Centro',
   },
+  CardFName: {
+    description: 'Nombre extranjero o de fantasía del socio.',
+    example: 'Comercial del Centro S.A.',
+  },
+  CardType: {
+    description:
+      'Tipo de socio de SAP (C cliente, S proveedor, L oportunidad). Por defecto C.',
+    example: 'C',
+  },
+  Currency: {
+    description: 'Moneda del socio, código de SAP.',
+    example: 'GS',
+  },
+  Phone1: {
+    description: 'Teléfono principal. Desde PDV y rutas se guarda en E.164.',
+    example: '+595991188620',
+  },
+  Cellular: {
+    description: 'Celular del socio, conservado como texto.',
+    example: '+595981000000',
+  },
+  E_Mail: {
+    description: 'Correo electrónico del socio, conservado como texto.',
+    example: 'compras@ejemplo.com.py',
+  },
+  validFor: {
+    description: 'Activo en SAP (Y/N). Por defecto Y.',
+    example: 'Y',
+  },
+  frozenFor: {
+    description: 'Bloqueado en SAP (Y/N). Por defecto N.',
+    example: 'N',
+  },
+  GlblLocNum: {
+    description: 'Número de ubicación global (GLN) del socio.',
+    example: '7840000000001',
+  },
+  U_SubCanal: {
+    description: 'Subcanal propio de SAP, conservado como texto.',
+    example: '1',
+  },
+  U_Repositor: {
+    description: 'Repositor asignado en SAP, conservado como texto.',
+    example: 'REP01',
+  },
   GroupCode: {
     description:
       'Código de grupo de clientes; referencia lógica a tbl_ocrg.GroupCode de la empresa.',

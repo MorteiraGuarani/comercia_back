@@ -37,7 +37,7 @@ export class ConsultaCampoDto extends PaginacionDto {
   /** CardCode del socio de negocio (tbl_ocrd). */
   @IsOptional()
   @IsString()
-  @Length(1, 15)
+  @Length(1, 50)
   localId?: string;
   @IsOptional()
   @Type(() => Number)
@@ -134,7 +134,7 @@ export class TareaCampoDto extends VigenciaCampoDto {
   @ArrayUnique()
   @ArrayMaxSize(50)
   @IsString({ each: true })
-  @Length(1, 15, { each: true })
+  @Length(1, 50, { each: true })
   localIds: string[] = [];
   @IsBoolean() activo = true;
   @IsBoolean() requiereFotos = false;

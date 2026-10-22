@@ -192,13 +192,30 @@ try {
     click(document.querySelector('[aria-label="Crear cliente"]')),
   );
   assert.ok(document.querySelector('[role="dialog"]'));
+  await act(async () => ingresar("Phone1", "0991 18"));
+  assert.match(
+    document.getElementById("telefono-pista").textContent,
+    /Faltan dígitos/,
+  );
   await act(async () => {
     ingresar("CardCode", "00001");
     ingresar("CardName", "Almacén Central");
     ingresar("LicTradNum", "80012345-6");
+    ingresar("Phone1", "0991188620");
     ingresar("Street", "Calle 123");
   });
   assert.equal(document.querySelector('button[type="submit"]').disabled, false);
+  assert.equal(
+    document.querySelector('[aria-label="Dígito verificador"]').textContent,
+    "-0",
+    "Calcula el DV del RUC y reemplaza el que escribieron",
+  );
+  assert.equal(
+    document.querySelector('input[name="Phone1"]').value,
+    "+595 991 188620",
+    "Formatea el teléfono con el código de Paraguay",
+  );
+  assert.equal(document.querySelector('button[type="submit"]').textContent, "Siguiente");
   await act(async () => {
     enviar();
     enviar();
@@ -227,7 +244,8 @@ try {
   assert.deepEqual(altas.at(-1), {
     CardCode: "00001",
     CardName: "Almacén Central",
-    LicTradNum: "80012345-6",
+    LicTradNum: "80012345-0",
+    Phone1: "+595991188620",
     Address: "",
     Street: "Calle 123",
   }, "Sin punto marcado no envía coordenadas");

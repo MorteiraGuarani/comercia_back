@@ -35,7 +35,7 @@ export class ListarUsuariosDto extends PaginacionDto {
 export class AsignarUsuarioLocalDto {
   /** CardCode del socio de negocio (tbl_ocrd). */
   @IsString()
-  @Length(1, 15)
+  @Length(1, 50)
   localId!: string;
 
   @IsDateString({ strict: false })

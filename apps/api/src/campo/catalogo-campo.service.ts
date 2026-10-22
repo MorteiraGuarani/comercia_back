@@ -20,6 +20,8 @@ import {
   LOCAL_OCRD_SELECT,
   filtroLocales,
   nombreLocal,
+  rucOcrd,
+  telefonoOcrd,
   ubicacionOcrd,
 } from './utils/local-ocrd';
 import { fechaCampo, relojCampo, vigenciaCampo } from './utils/calendario';
@@ -175,6 +177,10 @@ export class CatalogoCampoService {
     // La empresa sale de la sesión: nunca se acepta desde el formulario.
     const u = await this.acceso.gestionar(usuarioId, 'locales');
     const ubicacion = ubicacionOcrd(dto);
+    const datosCliente = {
+      LicTradNum: rucOcrd(dto.LicTradNum),
+      Phone1: telefonoOcrd(dto.Phone1),
+    };
     const direccion = { address: dto.Address ?? '', street: dto.Street ?? '' };
     try {
       return await this.prisma.$transaction(async (tx) => {
@@ -183,7 +189,7 @@ export class CatalogoCampoService {
             empresaId: u.empresaId,
             CardCode: dto.CardCode,
             CardName: dto.CardName,
-            LicTradNum: dto.LicTradNum || null,
+            ...datosCliente,
             ...ubicacion,
           },
           select: CLIENTE_OCRD_SELECT,
@@ -217,17 +223,17 @@ export class CatalogoCampoService {
   async editarLocal(usuarioId: number, id: string, dto: EditarLocalCampoDto) {
     const u = await this.acceso.gestionar(usuarioId, 'locales');
     const ubicacion = ubicacionOcrd(dto);
+    const datosCliente = {
+      LicTradNum: rucOcrd(dto.LicTradNum),
+      Phone1: telefonoOcrd(dto.Phone1),
+    };
     const direccion = { address: dto.Address ?? '', street: dto.Street ?? '' };
     const delCliente = { empresaId: u.empresaId, CardCode: id };
     try {
       return await this.prisma.$transaction(async (tx) => {
         const { count } = await tx.socioNegocio.updateMany({
           where: delCliente,
-          data: {
-            CardName: dto.CardName,
-            LicTradNum: dto.LicTradNum || null,
-            ...ubicacion,
-          },
+          data: { CardName: dto.CardName, ...datosCliente, ...ubicacion },
         });
         if (!count) throw new NotFoundException('Cliente no disponible');
         const actual =

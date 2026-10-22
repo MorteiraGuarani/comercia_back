@@ -2,21 +2,40 @@ import {
   TextoSocio,
   EnteroSocio,
   CodigoIdentidadSocio,
+  BanderaSocio,
 } from '../utils/campos-dto';
 
 export class SocioNegocioDto {
-  @TextoSocio(15, false, undefined)
+  @TextoSocio(50, false, undefined)
   CardCode!: string;
-  @TextoSocio(200, true, undefined)
+  @TextoSocio(250, true, undefined)
   CardName?: string | null;
+  @TextoSocio(250, true, undefined)
+  CardFName?: string | null;
+  @TextoSocio(1, true, 'C')
+  CardType?: string | null;
   @EnteroSocio('int2', undefined)
   GroupCode?: number | null;
   @EnteroSocio('int2', -1)
   GroupNum?: number | null;
   @TextoSocio(32, true, undefined)
   LicTradNum?: string | null;
+  @TextoSocio(4, true, undefined)
+  Currency?: string | null;
+  @TextoSocio(50, true, undefined)
+  Phone1?: string | null;
+  @TextoSocio(50, true, undefined)
+  Cellular?: string | null;
+  @TextoSocio(250, true, undefined)
+  E_Mail?: string | null;
   @EnteroSocio('int2', undefined)
   ListNum?: number | null;
+  @BanderaSocio('Y')
+  validFor?: string;
+  @BanderaSocio('N')
+  frozenFor?: string;
+  @TextoSocio(50, true, undefined)
+  GlblLocNum?: string | null;
   @EnteroSocio('int4', -1)
   SlpCode?: number | null;
   @TextoSocio(1, true, 'N')
@@ -39,6 +58,10 @@ export class SocioNegocioDto {
   U_jCANAL?: string | null;
   @TextoSocio(50, true, undefined)
   U_jSUBCANAL?: string | null;
+  @TextoSocio(50, true, undefined)
+  U_SubCanal?: string | null;
+  @TextoSocio(50, true, undefined)
+  U_Repositor?: string | null;
 }
 
 export class SocioNegocioDireccionDto {

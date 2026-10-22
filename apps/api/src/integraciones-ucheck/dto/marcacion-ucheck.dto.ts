@@ -52,7 +52,7 @@ export class MarcacionUcheckDto {
 
   /** CardCode del socio de negocio (tbl_ocrd) en Comercia. */
   @IsString()
-  @Length(1, 15)
+  @Length(1, 50)
   localId!: string;
 
   @IsOptional()

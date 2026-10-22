@@ -3,7 +3,7 @@ import {
   getCountries,
   parsePhoneNumberFromString,
 } from 'libphonenumber-js/max';
-import { esRucParaguayoValido, normalizarRucPy } from './ruc';
+import { esRucParaguayoValido, normalizarRucPy } from '../../common/utils/ruc';
 
 const TIPOS_CELULAR_VALIDOS = new Set(['MOBILE', 'FIXED_LINE_OR_MOBILE']);
 

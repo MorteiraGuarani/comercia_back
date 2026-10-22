@@ -117,17 +117,24 @@ describe('Alta de clientes desde PDV y rutas', () => {
     const respuesta = await crear({
       ...cliente,
       CardName: ' Almacén Central ',
-      LicTradNum: ' 80012345-6 ',
+      LicTradNum: ' 800123450 ',
+      Phone1: ' 0991 188620 ',
       Street: ' Calle 123 ',
     }).expect(201);
     expect(acceso.gestionar).toHaveBeenCalledWith(13, 'locales');
     expect(socioNegocio.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: { empresaId: 10, ...cliente, LicTradNum: '80012345-6' },
+        data: {
+          empresaId: 10,
+          ...cliente,
+          LicTradNum: '80012345-0',
+          Phone1: '+595991188620',
+        },
         select: {
           CardCode: true,
           CardName: true,
           LicTradNum: true,
+          Phone1: true,
           U_Latitud: true,
           U_Longitud: true,
         },
@@ -152,6 +159,7 @@ describe('Alta de clientes desde PDV y rutas', () => {
       radioMetros: 100,
       zonaHoraria: 'America/Asuncion',
       ruc: '',
+      telefono: '',
       address: '',
       street: 'Calle 123',
     });
@@ -187,7 +195,7 @@ describe('Alta de clientes desde PDV y rutas', () => {
     await crear(cliente).expect(201);
     expect(socioNegocio.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: { empresaId: 10, ...cliente, LicTradNum: null },
+        data: { empresaId: 10, ...cliente, LicTradNum: null, Phone1: null },
       }),
     );
     expect(socioNegocioDireccion.create).not.toHaveBeenCalled();
@@ -197,10 +205,13 @@ describe('Alta de clientes desde PDV y rutas', () => {
     { ...cliente, empresaId: 20 },
     { ...cliente, empresa_id: 20 },
     { ...cliente, CardCode: '   ' },
-    { ...cliente, CardCode: '1234567890123456' },
+    { ...cliente, CardCode: '1'.repeat(51) },
     { ...cliente, CardName: '   ' },
-    { ...cliente, CardName: 'x'.repeat(201) },
+    { ...cliente, CardName: 'x'.repeat(251) },
     { ...cliente, LicTradNum: 'x'.repeat(33) },
+    { ...cliente, LicTradNum: '80012345-6' },
+    { ...cliente, Phone1: '+595 99118' },
+    { ...cliente, Phone1: 'x'.repeat(31) },
     { ...cliente, Street: 'x'.repeat(201) },
     { ...cliente, Address: 'x'.repeat(201) },
     { ...cliente, latitud: 91, longitud: 0 },

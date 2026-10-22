@@ -20,7 +20,7 @@ import {
 export class CrearNovedadDto {
   /** CardCode del socio de negocio (tbl_ocrd). */
   @IsString()
-  @Length(1, 15)
+  @Length(1, 50)
   localId!: string;
 
   @IsOptional()
@@ -60,7 +60,7 @@ export class ListarNovedadesDto extends PaginacionDto {
 
   @IsOptional()
   @IsString()
-  @Length(1, 15)
+  @Length(1, 50)
   localId?: string;
 
   @IsOptional()

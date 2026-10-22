@@ -259,9 +259,24 @@ try {
       .get(
         route +
           '/' +
-          (t.nombre === 'tbl_crd1' ? 'x'.repeat(201) : '9223372036854775808'),
+          (t.nombre === 'tbl_crd1'
+            ? 'x'.repeat(201)
+            : t.nombre === 'tbl_ocrd'
+              ? 'x'.repeat(51)
+              : '9223372036854775808'),
       )
       .expect(400);
+    if (t.nombre === 'tbl_ocrd') {
+      const codigoLargo = '0'.repeat(50);
+      await request(http).get(route + '/' + codigoLargo).expect(200);
+      assert.equal(calls.at(-1).id, codigoLargo);
+      for (const campo of ['validFor', 'frozenFor']) {
+        const before = calls.length;
+        await request(http).post(route).send({ ...t.ejemplo, [campo]: null }).expect(400);
+        await request(http).put(route + '/' + code).send({ [campo]: null }).expect(400);
+        assert.equal(calls.length, before);
+      }
+    }
   }
   for (const deleted of ['tbl_jcanal', 'tbl_jsubcanal']) {
     assert.ok(

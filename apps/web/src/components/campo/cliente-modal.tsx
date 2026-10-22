@@ -10,6 +10,8 @@ import { mostrarToast } from "@/components/toast/toast-controller";
 import { usePanel } from "@/components/panel/contexto";
 import { HorariosLocal } from "./horarios-local";
 import { AsignacionesLocal } from "./asignaciones-local";
+import { calcularDvRucPy } from "@/utils/ruc";
+import { formatearTelefono, pistaTelefono } from "@/utils/telefono";
 import type { ClientePdv } from "@/types/campo";
 
 const SelectorUbicacion = dynamic(() => import("./selector-ubicacion"), {
@@ -57,7 +59,9 @@ export function ClienteModal({
   const [form, setForm] = useState({
     CardCode: inicial?.id ?? "",
     CardName: inicial?.nombre ?? "",
-    LicTradNum: inicial?.ruc ?? "",
+    // Solo el número base: el dígito verificador se calcula solo.
+    rucBase: (inicial?.ruc ?? "").split("-")[0].replace(/\D/g, "").slice(0, 8),
+    Phone1: formatearTelefono(inicial?.telefono ?? ""),
     Address: inicial?.address ?? "",
     Street: inicial?.street ?? "",
   });
@@ -67,6 +71,9 @@ export function ClienteModal({
       ? { latitud: inicial.latitud, longitud: inicial.longitud }
       : null,
   );
+  const dvRuc =
+    form.rucBase.length >= 3 ? calcularDvRucPy(form.rucBase) : null;
+  const telefono = pistaTelefono(form.Phone1);
   const cambiar =
     (campo: keyof typeof form) =>
     (evento: React.ChangeEvent<HTMLInputElement>) =>
@@ -87,7 +94,8 @@ export function ClienteModal({
             body: JSON.stringify({
               ...(cliente ? {} : { CardCode: form.CardCode.trim() }),
               CardName: form.CardName.trim(),
-              LicTradNum: form.LicTradNum.trim(),
+              LicTradNum: dvRuc === null ? "" : `${form.rucBase}-${dvRuc}`,
+              Phone1: telefono.e164,
               Address: form.Address.trim(),
               Street: form.Street.trim(),
               ...punto,
@@ -171,12 +179,12 @@ export function ClienteModal({
                       name="CardCode"
                       required
                       readOnly={!!cliente}
-                      maxLength={15}
+                      maxLength={50}
                       pattern=".*\S.*"
                       title={
                         cliente
                           ? "El código no se puede cambiar"
-                          : "Ingresá un código de hasta 15 caracteres"
+                          : "Ingresá un código de hasta 50 caracteres"
                       }
                       value={form.CardCode}
                       onChange={cambiar("CardCode")}
@@ -189,7 +197,7 @@ export function ClienteModal({
                       type="text"
                       name="CardName"
                       required
-                      maxLength={200}
+                      maxLength={250}
                       pattern=".*\S.*"
                       title="Ingresá el nombre del cliente"
                       value={form.CardName}
@@ -198,17 +206,80 @@ export function ClienteModal({
                     />
                   </label>
                 </div>
-                <label className="block min-w-0 space-y-1.5 text-sm font-semibold">
-                  <span>RUC (opcional)</span>
-                  <input
-                    type="text"
-                    name="LicTradNum"
-                    maxLength={32}
-                    value={form.LicTradNum}
-                    onChange={cambiar("LicTradNum")}
-                    className={campoClase}
-                  />
-                </label>
+                <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
+                  <label className="min-w-0 space-y-1.5 text-sm font-semibold">
+                    <span>RUC (opcional)</span>
+                    <span className="flex min-w-0 items-center gap-2">
+                      <input
+                        type="text"
+                        name="LicTradNum"
+                        inputMode="numeric"
+                        maxLength={8}
+                        placeholder="Ej.: 80012345"
+                        aria-describedby="ruc-dv"
+                        value={form.rucBase}
+                        onChange={(evento) =>
+                          setForm((actual) => ({
+                            ...actual,
+                            // Si pegan "80012345-0", el DV se recalcula.
+                            rucBase: evento.target.value
+                              .split("-")[0]
+                              .replace(/\D/g, "")
+                              .slice(0, 8),
+                          }))
+                        }
+                        className={campoClase}
+                      />
+                      <output
+                        id="ruc-dv"
+                        aria-label="Dígito verificador"
+                        title="Dígito verificador calculado"
+                        className="grid min-h-11 w-14 shrink-0 place-items-center rounded-lg border border-line bg-surface-soft font-mono text-sm text-foreground"
+                      >
+                        -{dvRuc ?? "?"}
+                      </output>
+                    </span>
+                  </label>
+                  <label className="min-w-0 space-y-1.5 text-sm font-semibold">
+                    <span>Teléfono (opcional)</span>
+                    <input
+                      type="tel"
+                      name="Phone1"
+                      autoComplete="tel"
+                      placeholder="+595 991 188620"
+                      maxLength={30}
+                      aria-invalid={!telefono.valido || undefined}
+                      aria-describedby="telefono-pista"
+                      value={form.Phone1}
+                      onChange={(evento) => {
+                        const valor = evento.target.value;
+                        const digitos = (texto: string) =>
+                          texto.replace(/\D/g, "").length;
+                        // Formatea si suma dígitos; al borrar deja el texto tal cual.
+                        setForm((actual) => ({
+                          ...actual,
+                          Phone1:
+                            digitos(valor) > digitos(actual.Phone1)
+                              ? formatearTelefono(valor)
+                              : valor,
+                        }));
+                      }}
+                      onBlur={() =>
+                        setForm((actual) => ({
+                          ...actual,
+                          Phone1: formatearTelefono(actual.Phone1),
+                        }))
+                      }
+                      className={campoClase}
+                    />
+                    <span
+                      id="telefono-pista"
+                      className={`block text-xs font-normal ${telefono.valido ? "text-emerald-700 dark:text-emerald-300" : "text-red-700 dark:text-red-300"}`}
+                    >
+                      {telefono.mensaje}
+                    </span>
+                  </label>
+                </div>
                 <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
                   <label className="min-w-0 space-y-1.5 text-sm font-semibold">
                     <span>Dirección (opcional)</span>
@@ -267,11 +338,12 @@ export function ClienteModal({
                   disabled={
                     !!op.mensaje ||
                     !form.CardCode.trim() ||
-                    !form.CardName.trim()
+                    !form.CardName.trim() ||
+                    !telefono.valido
                   }
                   className="min-h-11 cursor-pointer whitespace-nowrap rounded-lg bg-brand-700 px-4 text-sm font-semibold text-white hover:bg-brand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-brand-500 dark:text-zinc-950 dark:hover:bg-brand-400"
                 >
-                  {cliente ? "Guardar cambios" : "Crear cliente"}
+                  {cliente ? "Guardar cambios" : "Siguiente"}
                 </button>
               </div>
             </form>
@@ -290,6 +362,17 @@ export function ClienteModal({
                 ) : (
                   <AsignacionesLocal localId={cliente.id} />
                 )}
+                <div className="flex justify-end border-t border-line pt-4">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      vista === "horarios" ? setVista("personal") : onCerrar()
+                    }
+                    className="min-h-11 cursor-pointer whitespace-nowrap rounded-lg bg-brand-700 px-4 text-sm font-semibold text-white hover:bg-brand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:bg-brand-500 dark:text-zinc-950 dark:hover:bg-brand-400"
+                  >
+                    {vista === "horarios" ? "Siguiente" : "Listo"}
+                  </button>
+                </div>
               </div>
             )
           )}

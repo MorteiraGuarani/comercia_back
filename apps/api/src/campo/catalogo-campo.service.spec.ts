@@ -16,6 +16,7 @@ describe('Catálogo de tareas', () => {
           CardCode: 'C001',
           CardName: 'Granusa',
           LicTradNum: null,
+          Phone1: null,
           U_Latitud: '-25.3000000',
           U_Longitud: '-57.6000000',
         }),
@@ -59,6 +60,7 @@ describe('Catálogo de tareas', () => {
       data: {
         CardName: 'Granusa',
         LicTradNum: null,
+        Phone1: null,
         U_Latitud: '-25.3000000',
         U_Longitud: '-57.6000000',
       },

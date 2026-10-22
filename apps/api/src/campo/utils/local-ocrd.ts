@@ -1,5 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
+import { parsePhoneNumberFromString } from 'libphonenumber-js/max';
 import type { Prisma } from '../../../generated/prisma/client';
+import { esRucParaguayoValido, normalizarRucPy } from '../../common/utils/ruc';
 import type { PrismaService } from '../../prisma/prisma.service';
 import { ZONA_CAMPO } from './calendario';
 
@@ -79,16 +81,43 @@ export function unirDireccion(address?: string | null, street?: string | null) {
 export const CLIENTE_OCRD_SELECT = {
   ...LOCAL_OCRD_SELECT,
   LicTradNum: true,
+  Phone1: true,
 } as const;
+
+/** RUC paraguayo con dígito verificador correcto; vacío = sin RUC. */
+export function rucOcrd(ruc?: string) {
+  if (!ruc) return null;
+  const normalizado = normalizarRucPy(ruc);
+  if (!esRucParaguayoValido(normalizado))
+    throw new BadRequestException(
+      'El RUC no es válido: revisá el número y su dígito verificador',
+    );
+  return normalizado;
+}
+
+/** Teléfono en E.164; sin "+" se asume Paraguay. Vacío = sin teléfono. */
+export function telefonoOcrd(telefono?: string) {
+  if (!telefono) return null;
+  const numero = parsePhoneNumberFromString(telefono, 'PY');
+  if (!numero?.isValid())
+    throw new BadRequestException(
+      'El teléfono no es válido: revisá el código de país y la cantidad de dígitos',
+    );
+  return numero.number;
+}
 
 /** Cliente del ABM de PDV: el local más RUC y la dirección por partes. */
 export function aClientePdv(
-  l: Parameters<typeof aLocalCampo>[0] & { LicTradNum: string | null },
+  l: Parameters<typeof aLocalCampo>[0] & {
+    LicTradNum: string | null;
+    Phone1: string | null;
+  },
   d?: { address: string; street: string },
 ) {
   return {
     ...aLocalCampo(l, unirDireccion(d?.address, d?.street)),
     ruc: l.LicTradNum ?? '',
+    telefono: l.Phone1 ?? '',
     address: d?.address ?? '',
     street: d?.street ?? '',
   };

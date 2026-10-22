@@ -146,7 +146,7 @@ export function crearControladorSocios(
       name: identidad,
       schema:
         esSocio || esDireccion
-          ? { type: 'string', minLength: 1, maxLength: esDireccion ? 200 : 15 }
+          ? { type: 'string', minLength: 1, maxLength: esDireccion ? 200 : 50 }
           : esCodigo
             ? { type: 'integer', minimum: -2147483648, maximum: 2147483647 }
             : { type: 'string', pattern: '^[1-9][0-9]{0,18}$', maxLength: 19 },
