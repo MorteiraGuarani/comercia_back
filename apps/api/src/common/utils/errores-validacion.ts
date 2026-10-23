@@ -57,9 +57,26 @@ function resumen(errores: ErrorCampo[], details: string | object) {
   return Array.isArray(m) ? m.join('; ') : (m ?? '');
 }
 
+/** Los campos de la clave que trae la fila, tal como llegaron. */
+export function claveDe(fila: unknown, campos: readonly string[]) {
+  const datos = (fila ?? {}) as Record<string, unknown>;
+  return Object.fromEntries(
+    campos.filter((c) => datos[c] !== undefined).map((c) => [c, datos[c]]),
+  );
+}
+
+// El motivo empieza por la clave (ej. "ItemCode A0001"); sin clave queda la fila.
+function conClave(clave: Record<string, unknown>, texto: string) {
+  const id = Object.entries(clave)
+    .map(([c, v]) => `${c} ${String(v)}`)
+    .join(', ');
+  return id ? `${id}: ${texto}` : texto;
+}
+
 export function filaInvalida(
   index: number,
   error: BadRequestException,
+  clave: Record<string, unknown> = {},
 ): FilaInvalida {
   const details = error.getResponse();
   const errores =
@@ -69,8 +86,9 @@ export function filaInvalida(
   return {
     index,
     fila: index + 1,
+    clave,
     errores,
-    motivo: resumen(errores, details),
+    motivo: conClave(clave, resumen(errores, details)),
     details,
   };
 }
@@ -78,16 +96,17 @@ export function filaInvalida(
 /** Fila válida para el DTO que la base no puede guardar (ej. referencia ausente). */
 export function filaRechazada(
   index: number,
+  clave: Record<string, unknown>,
   campo: string,
-  valor: unknown,
   mensaje: string,
 ): FilaInvalida {
-  const errores = [{ campo, valor, mensajes: [mensaje] }];
+  const errores = [{ campo, valor: clave[campo], mensajes: [mensaje] }];
   return {
     index,
     fila: index + 1,
+    clave,
     errores,
-    motivo: resumen(errores, mensaje),
+    motivo: conClave(clave, resumen(errores, mensaje)),
     details: mensaje,
   };
 }
@@ -114,8 +133,8 @@ export function resumenInvalidas(invalidas: FilaInvalida[]) {
     filasInvalidas: [...invalidas]
       .sort((a, b) => a.index - b.index)
       .slice(0, MAX_FILAS_INFORMADAS)
-      .map(({ index, fila, errores, motivo }) => ({
-        index,
+      .map(({ clave, fila, errores, motivo }) => ({
+        clave,
         fila,
         errores,
         motivo,

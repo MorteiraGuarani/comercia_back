@@ -10,6 +10,8 @@ export interface FilaInvalida {
   index: number;
   /** Número de fila para personas, desde uno. */
   fila: number;
+  /** Clave de negocio del registro (ej. ItemCode), para ubicarlo en el archivo. */
+  clave: Record<string, unknown>;
   errores: ErrorCampo[];
   /** El problema de la fila en una línea, para mostrar al usuario. */
   motivo: string;

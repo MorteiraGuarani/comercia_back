@@ -10,3 +10,12 @@ export function lowerTrimString({ value }: TransformFnParams): unknown {
     ? value.trim().toLowerCase()
     : (value as unknown);
 }
+
+/**
+ * Recorta textos y toma "" (exportes de SAP o Excel) como dato vacío, no como
+ * error: NULL, o undefined para que la columna sin NULL use su default.
+ */
+export function vacioComo(vacio: null | undefined) {
+  return ({ value }: TransformFnParams): unknown =>
+    typeof value === 'string' ? value.trim() || vacio : (value as unknown);
+}

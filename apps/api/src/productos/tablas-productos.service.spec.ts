@@ -47,6 +47,7 @@ describe('Bulk de tablas tbl_* que no se corta', () => {
         {
           index: 1,
           fila: 2,
+          clave: {},
           errores: [],
           motivo: 'Price = "": inválido',
           details: 'x',
@@ -75,7 +76,10 @@ describe('Bulk de tablas tbl_* que no se corta', () => {
       expect.objectContaining({ fila: 2 }),
       expect.objectContaining({
         fila: 3,
-        motivo: expect.stringContaining('no existe en tbl_oitm') as unknown,
+        clave: { ItemCode: 'NO', PriceList: 1 },
+        motivo: expect.stringMatching(
+          /^ItemCode NO, PriceList 1: ItemCode = "NO": El artículo no existe en tbl_oitm/,
+        ) as unknown,
       }),
     ]);
   });

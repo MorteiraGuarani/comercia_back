@@ -14,10 +14,12 @@ import type {
   LoteValidado,
 } from '../common/interfaces/error-validacion.interface';
 import {
+  claveDe,
   comoLote,
   filaRechazada,
   resumenInvalidas,
 } from '../common/utils/errores-validacion';
+import { TABLAS_PRODUCTOS } from './tablas-productos';
 import { rangoPaginacion, respuestaPaginada } from '../common/utils/paginacion';
 import { errorTabla } from './utils/error-tabla';
 import { ProductosService } from './productos.service';
@@ -219,8 +221,8 @@ export class TablasProductosService {
       invalidas.push(
         filaRechazada(
           index,
+          claveDe(f, TABLAS_PRODUCTOS.tbl_itm1.clave),
           'ItemCode',
-          f.ItemCode,
           'El artículo no existe en tbl_oitm de esta empresa; cargalo primero',
         ),
       );

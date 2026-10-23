@@ -14,13 +14,17 @@ import {
   ValidateIf,
 } from 'class-validator';
 import type { CampoCatalogo } from '../interfaces/campo-catalogo.interface';
-import { trimString } from '../../common/utils/transforms';
+import { trimString, vacioComo } from '../../common/utils/transforms';
 import { esPrecioProducto } from './producto';
 
 export function CampoTabla(c: CampoCatalogo) {
   const minimo = c.small ? -32768 : -2147483648;
   const maximo = c.small ? 32767 : 2147483647;
   const api = c.requerido ? ApiProperty : ApiPropertyOptional;
+  // Una clave obligatoria vacía sigue siendo error: sin ella no hay fila.
+  const vacio = c.requerido
+    ? []
+    : [Transform(vacioComo(c.nullable ? null : undefined))];
   const swagger =
     c.tipo === 'decimal'
       ? api({
@@ -34,7 +38,7 @@ export function CampoTabla(c: CampoCatalogo) {
           ],
           description:
             c.descripcion +
-            ' NUMERIC(21,6). Acepta número o texto decimal exacto; responde texto con seis decimales.',
+            ' NUMERIC(21,6). Acepta número o texto decimal exacto; "" se guarda vacío (NULL) si el campo no es obligatorio; responde texto con seis decimales.',
           example: c.ejemplo,
         })
       : c.tipo === 'entero'
@@ -71,8 +75,9 @@ export function CampoTabla(c: CampoCatalogo) {
           ...(c.requerido ? [MinLength(1)] : []),
         ]
       : c.tipo === 'entero'
-        ? [IsInt(), Min(minimo), Max(maximo)]
+        ? [...vacio, IsInt(), Min(minimo), Max(maximo)]
         : [
+            ...vacio,
             ValidateBy({
               name: 'decimal21_6',
               validator: {

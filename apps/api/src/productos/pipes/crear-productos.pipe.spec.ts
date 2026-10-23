@@ -64,19 +64,19 @@ describe('Entrada individual o por lote de productos', () => {
   it('dice el campo, el valor recibido y el motivo, y junta todas las filas inválidas', async () => {
     const error = (await pipe
       .transform([
-        { ...producto, price: '' },
+        { ...producto, price: '1,5' },
         producto,
         { ...producto, iva: 'diez', extra: 1 },
       ])
       .catch((e: unknown) => e)) as BadRequestException;
     const r = error.getResponse() as Record<string, unknown>;
     expect(r.message).toBe(
-      'Fila 1 inválida — price = "": El decimal admite hasta 15 enteros y 6 decimales. Hay 2 filas con errores, detalladas en filasInvalidas',
+      'Fila 1 inválida — price = "1,5": El decimal admite hasta 15 enteros y 6 decimales. Hay 2 filas con errores, detalladas en filasInvalidas',
     );
     expect(r.errores).toEqual([
       {
         campo: 'price',
-        valor: '',
+        valor: '1,5',
         mensajes: ['El decimal admite hasta 15 enteros y 6 decimales'],
       },
     ]);

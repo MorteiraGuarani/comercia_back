@@ -235,7 +235,7 @@ export function crearControladorTablaProductos(
                 invalidas: 1,
                 filasInvalidas: [
                   {
-                    index: 3,
+                    clave: { ItemCode: 'A0001' },
                     fila: 4,
                     errores: [
                       {
@@ -247,7 +247,7 @@ export function crearControladorTablaProductos(
                       },
                     ],
                     motivo:
-                      'SWeight1 = "": El decimal admite hasta 15 enteros y 6 decimales',
+                      'ItemCode A0001: SWeight1 = "": El decimal admite hasta 15 enteros y 6 decimales',
                   },
                 ],
               },
@@ -263,7 +263,7 @@ export function crearControladorTablaProductos(
     crear(
       @Req() r: RequestConUsuario,
       @Param() p: EmpresaSociosParams,
-      @Body(new CargaTablaPipe(t.Dto))
+      @Body(new CargaTablaPipe(t.Dto, true, undefined, t.clave))
       d: Record<string, unknown> | LoteValidado,
     ) {
       return this.servicio.crear(t, p.empresaId, d, r.usuarioId);

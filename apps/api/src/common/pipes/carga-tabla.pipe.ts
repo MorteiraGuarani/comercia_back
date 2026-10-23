@@ -4,7 +4,11 @@ import type {
   FilaInvalida,
   LoteValidado,
 } from '../interfaces/error-validacion.interface';
-import { excepcionConCampos, filaInvalida } from '../utils/errores-validacion';
+import {
+  claveDe,
+  excepcionConCampos,
+  filaInvalida,
+} from '../utils/errores-validacion';
 
 /**
  * Valida antes de escribir. Un objeto inválido responde 400; en un bulk las
@@ -16,6 +20,8 @@ export class CargaTablaPipe implements PipeTransform {
     Dto: Type<object>,
     private readonly admiteLote = true,
     private readonly maximo = 50_000,
+    /** Campos que identifican la fila en los errores del bulk (ej. ItemCode). */
+    private readonly clave: readonly string[] = [],
   ) {
     this.validacion = new ValidationPipe({
       whitelist: true,
@@ -53,7 +59,7 @@ export class CargaTablaPipe implements PipeTransform {
       } catch (error: unknown) {
         if (!lote || !(error instanceof BadRequestException)) throw error;
         // Una fila mala no corta el bulk: se saltea y se informa.
-        invalidas.push(filaInvalida(index, error));
+        invalidas.push(filaInvalida(index, error, claveDe(fila, this.clave)));
       }
     }
     return lote

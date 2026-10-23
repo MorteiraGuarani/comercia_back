@@ -184,12 +184,12 @@ export function crearControladorSocios(
         items: {
           type: 'object' as const,
           properties: {
-            campo: { type: 'string' as const, example: 'SWeight1' },
-            valor: { example: '' },
+            campo: { type: 'string' as const, example: 'GroupCode' },
+            valor: { example: 32768 },
             mensajes: {
               type: 'array' as const,
               items: { type: 'string' as const },
-              example: ['El decimal admite hasta 15 enteros y 6 decimales'],
+              example: ['GroupCode must not be greater than 32767'],
             },
           },
         },
@@ -329,19 +329,17 @@ export function crearControladorSocios(
                 invalidas: 1,
                 filasInvalidas: [
                   {
-                    index: 3,
+                    clave: { CardCode: 'C0001' },
                     fila: 4,
                     errores: [
                       {
-                        campo: 'SWeight1',
-                        valor: '',
-                        mensajes: [
-                          'El decimal admite hasta 15 enteros y 6 decimales',
-                        ],
+                        campo: 'GroupCode',
+                        valor: 32768,
+                        mensajes: ['GroupCode must not be greater than 32767'],
                       },
                     ],
                     motivo:
-                      'SWeight1 = "": El decimal admite hasta 15 enteros y 6 decimales',
+                      'CardCode C0001: GroupCode = 32768: GroupCode must not be greater than 32767',
                   },
                 ],
               },
@@ -357,7 +355,8 @@ export function crearControladorSocios(
     })
     crear(
       @Param() p: EmpresaSociosParams,
-      @Body(new CrearSociosPipe(tabla.Dto)) d: EntradaSocio | LoteValidado,
+      @Body(new CrearSociosPipe(tabla.Dto, true, tabla.clave))
+      d: EntradaSocio | LoteValidado,
     ) {
       return this.servicio.crear(tabla, p.empresaId, d);
     }

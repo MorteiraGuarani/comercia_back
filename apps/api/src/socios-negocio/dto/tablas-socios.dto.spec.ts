@@ -21,7 +21,10 @@ describe('Contrato OCRD ampliado', () => {
     });
     expect(await validate(ok)).toHaveLength(0);
     for (const Active of [null, 'X']) {
-      const dto = plainToInstance(SocioNegocioVendedorDto, { SlpCode: 1, Active });
+      const dto = plainToInstance(SocioNegocioVendedorDto, {
+        SlpCode: 1,
+        Active,
+      });
       expect((await validate(dto)).some((e) => e.property === 'Active')).toBe(
         true,
       );
@@ -31,7 +34,7 @@ describe('Contrato OCRD ampliado', () => {
   it.each(['validFor', 'frozenFor'] as const)(
     'rechaza NULL y valores distintos de Y/N en %s antes de llegar a SQL',
     async (campo) => {
-      for (const valor of [null, '', 'X', 1]) {
+      for (const valor of [null, 'X', 1]) {
         const dto = plainToInstance(SocioNegocioDto, {
           CardCode: 'C001',
           [campo]: valor,
@@ -49,4 +52,19 @@ describe('Contrato OCRD ampliado', () => {
       }
     },
   );
+
+  it('un vacío no corta la fila: las banderas toman su default y los enteros quedan NULL', async () => {
+    const dto = plainToInstance(SocioNegocioDto, {
+      CardCode: 'C001',
+      validFor: '',
+      frozenFor: ' ',
+      GroupCode: '',
+    });
+    expect(await validate(dto)).toHaveLength(0);
+    expect(dto).toMatchObject({
+      validFor: undefined,
+      frozenFor: undefined,
+      GroupCode: null,
+    });
+  });
 });

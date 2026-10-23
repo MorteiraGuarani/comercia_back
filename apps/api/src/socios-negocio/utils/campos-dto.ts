@@ -13,7 +13,7 @@ import {
   MinLength,
   ValidateIf,
 } from 'class-validator';
-import { trimString } from '../../common/utils/transforms';
+import { trimString, vacioComo } from '../../common/utils/transforms';
 import { CAMPOS_SOCIOS } from '../campos-socios';
 import {
   MAX_INT2,
@@ -65,6 +65,7 @@ export function EnteroSocio(tipo: 'int2' | 'int4', defecto?: number) {
       maximum,
       ...(defecto === undefined ? {} : { default: defecto }),
     }),
+    Transform(vacioComo(null)),
     IsOptional(),
     IsInt(),
     Min(minimum),
@@ -81,7 +82,8 @@ export function BanderaSocio(defecto: 'Y' | 'N') {
       nullable: false,
       default: defecto,
     }),
-    Transform(trimString),
+    // SQL no admite NULL: vacío toma el valor predeterminado.
+    Transform(vacioComo(undefined)),
     ValidateIf((_obj: object, value: unknown) => value !== undefined),
     IsIn(['Y', 'N']),
   );
@@ -95,8 +97,9 @@ export function CodigoIdentidadSocio() {
       minimum: MIN_INT4,
       maximum: MAX_INT4,
       description:
-        'Code original. Puede enviarse explícitamente; si se omite al crear se asigna el siguiente código disponible de la empresa.',
+        'Code original. Puede enviarse explícitamente; si se omite o llega vacío al crear se asigna el siguiente código disponible de la empresa.',
     }),
+    Transform(vacioComo(undefined)),
     ValidateIf((_obj: object, value: unknown) => value !== undefined),
     IsInt(),
     Min(MIN_INT4),

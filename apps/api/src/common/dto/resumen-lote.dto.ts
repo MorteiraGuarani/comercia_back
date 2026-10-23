@@ -36,12 +36,16 @@ export class ResumenLoteDto {
   invalidas!: number;
   @ApiProperty({
     description:
-      'Detalle de las filas salteadas (hasta 1000): fila desde uno, index desde cero, cada campo con su valor y mensajes, y el motivo en una línea.',
+      'Detalle de las filas salteadas (hasta 1000): la clave de negocio del registro (ej. ItemCode, o ItemCode + PriceList en tbl_itm1), la fila desde uno por si falta la clave, cada campo con su valor y mensajes, y el motivo en una línea que empieza por la clave.',
     type: 'array',
     items: {
       type: 'object',
       properties: {
-        index: { type: 'integer', minimum: 0, example: 0 },
+        clave: {
+          type: 'object',
+          additionalProperties: true,
+          example: { ItemCode: 'A0001' },
+        },
         fila: { type: 'integer', minimum: 1, example: 1 },
         errores: {
           type: 'array',
@@ -57,7 +61,7 @@ export class ResumenLoteDto {
         motivo: {
           type: 'string',
           example:
-            'SWeight1 = "": El decimal admite hasta 15 enteros y 6 decimales',
+            'ItemCode A0001: SWeight1 = "": El decimal admite hasta 15 enteros y 6 decimales',
         },
       },
     },

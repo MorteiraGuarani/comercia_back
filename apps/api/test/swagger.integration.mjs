@@ -238,6 +238,9 @@ try {
     assert.equal(parcial.body.invalidas, 1);
     assert.equal(parcial.body.filasInvalidas[0].fila, 2);
     assert.equal(parcial.body.filasInvalidas[0].errores[0].campo, t.clave[0]);
+    // La fila se identifica por su clave de negocio (ItemCode...), no solo por posición.
+    assert.ok('clave' in parcial.body.filasInvalidas[0]);
+    assert.ok(!('index' in parcial.body.filasInvalidas[0]));
     assert.equal(writes.length, before + 1);
     await call('get', route + '?limit=51').expect(400);
     await call(
