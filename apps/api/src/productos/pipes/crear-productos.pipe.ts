@@ -4,6 +4,13 @@ import {
   PipeTransform,
   ValidationPipe,
 } from '@nestjs/common';
+import type { FilaInvalida } from '../../common/interfaces/error-validacion.interface';
+import {
+  excepcionConCampos,
+  excepcionLote,
+  filaInvalida,
+  MAX_FILAS_INVALIDAS,
+} from '../../common/utils/errores-validacion';
 import { CrearProductoDto } from '../dto/catalogo.dto';
 import { MAX_PRODUCTOS_POR_LOTE } from '../productos.constants';
 
@@ -15,6 +22,7 @@ export class CrearProductosPipe implements PipeTransform {
     transform: true,
     transformOptions: { enableImplicitConversion: true },
     expectedType: CrearProductoDto,
+    exceptionFactory: excepcionConCampos,
   });
 
   async transform(
@@ -28,6 +36,7 @@ export class CrearProductosPipe implements PipeTransform {
       );
 
     const productos: CrearProductoDto[] = [];
+    const invalidas: FilaInvalida[] = [];
     for (const [index, fila] of filas.entries()) {
       try {
         if (!fila || typeof fila !== 'object' || Array.isArray(fila))
@@ -40,17 +49,12 @@ export class CrearProductosPipe implements PipeTransform {
           })) as CrearProductoDto,
         );
       } catch (error: unknown) {
-        if (lote && error instanceof BadRequestException) {
-          throw new BadRequestException({
-            statusCode: 400,
-            message: `Fila ${index + 1} inválida`,
-            index,
-            details: error.getResponse(),
-          });
-        }
-        throw error;
+        if (!lote || !(error instanceof BadRequestException)) throw error;
+        if (invalidas.push(filaInvalida(index, error)) >= MAX_FILAS_INVALIDAS)
+          break;
       }
     }
+    if (invalidas.length) throw excepcionLote(invalidas);
     return lote ? productos : productos[0];
   }
 }

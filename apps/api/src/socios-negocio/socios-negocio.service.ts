@@ -6,6 +6,8 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import type { LoteValidado } from '../common/interfaces/error-validacion.interface';
+import { comoLote, resumenInvalidas } from '../common/utils/errores-validacion';
 import { rangoPaginacion, respuestaPaginada } from '../common/utils/paginacion';
 import { MAX_INT4 } from '../common/utils/numeros';
 import { ConsultaSociosDto } from './dto/consulta-socios.dto';
@@ -144,10 +146,12 @@ export class SociosNegocioService {
   async crear(
     tabla: TablaSociosDefinicion,
     empresaId: number,
-    datos: EntradaSocio | EntradaSocio[],
+    datos: EntradaSocio | EntradaSocio[] | LoteValidado,
   ) {
-    const lote = Array.isArray(datos);
-    const filas = lote ? datos : [datos];
+    const lote = comoLote(datos);
+    const filas = lote
+      ? (lote.filas as EntradaSocio[])
+      : [datos as EntradaSocio];
     try {
       return await this.prisma.$transaction(
         async (tx) => {
@@ -211,11 +215,12 @@ export class SociosNegocioService {
             insertados += resultado.count;
           }
           return {
-            recibidos: filas.length,
+            recibidos: lote.recibidos,
             insertados,
             existentes: unicas.length - insertados,
             duplicadosEnLote: filas.length - unicas.length,
             omitidos: filas.length - insertados,
+            ...resumenInvalidas(lote.invalidas),
           };
         },
         { maxWait: 5_000, timeout: TIMEOUT_LOTE_SOCIOS_MS },

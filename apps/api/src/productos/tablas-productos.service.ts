@@ -9,6 +9,15 @@ import type {
   RegistroTabla,
   RepositorioTabla,
 } from '../common/interfaces/repositorio-tabla.interface';
+import type {
+  FilaInvalida,
+  LoteValidado,
+} from '../common/interfaces/error-validacion.interface';
+import {
+  comoLote,
+  filaRechazada,
+  resumenInvalidas,
+} from '../common/utils/errores-validacion';
 import { rangoPaginacion, respuestaPaginada } from '../common/utils/paginacion';
 import { errorTabla } from './utils/error-tabla';
 import { ProductosService } from './productos.service';
@@ -123,33 +132,44 @@ export class TablasProductosService {
   async crear(
     t: TablaProductos,
     empresaId: number,
-    datos: Record<string, unknown> | Record<string, unknown>[],
+    datos: Record<string, unknown> | Record<string, unknown>[] | LoteValidado,
     usuarioId?: number,
   ) {
     await this.acceso(t, empresaId, usuarioId);
-    const lote = Array.isArray(datos);
-    const filas = lote ? datos : [datos];
+    const lote = comoLote(datos);
+    const filas = lote ? lote.filas : [datos as Record<string, unknown>];
     const claves = new Set<string>();
-    const unicas = filas.filter((f) => {
-      const clave = claveTabla(t, f);
-      if (claves.has(clave)) return false;
-      claves.add(clave);
-      return true;
-    });
+    const unicas = filas
+      .map((f, i) => ({ f, index: lote ? lote.indices[i] : 0 }))
+      .filter(({ f }) => {
+        const clave = claveTabla(t, f);
+        if (claves.has(clave)) return false;
+        claves.add(clave);
+        return true;
+      });
     try {
       return await this.prisma.$transaction(
         async (tx) => {
           await tx.$queryRaw`SELECT id FROM empresas WHERE id=${empresaId} FOR UPDATE`;
           const m = this.modelo(tx, t);
-          const entradas = unicas.map((f) => ({
-            ...entradaTabla(t, f),
-            empresaId,
-          }));
           if (!lote)
             return salidaTabla(
               t,
-              await m.create({ data: entradas[0], select: seleccionTabla(t) }),
+              await m.create({
+                data: { ...entradaTabla(t, unicas[0].f), empresaId },
+                select: seleccionTabla(t),
+              }),
             );
+          const invalidas: FilaInvalida[] = [...lote.invalidas];
+          // Un precio de un artículo inexistente se saltea; no corta el lote.
+          const validas =
+            t.nombre === 'tbl_itm1'
+              ? await this.conArticulo(tx, empresaId, unicas, invalidas)
+              : unicas;
+          const entradas = validas.map(({ f }) => ({
+            ...entradaTabla(t, f),
+            empresaId,
+          }));
           let insertados = 0;
           for (let i = 0; i < entradas.length; i += PRODUCTOS_POR_BLOQUE)
             insertados += (
@@ -158,12 +178,15 @@ export class TablasProductosService {
                 skipDuplicates: true,
               })
             ).count;
+          const existentes = validas.length - insertados;
+          const duplicadosEnLote = filas.length - unicas.length;
           return {
-            recibidos: filas.length,
+            recibidos: lote.recibidos,
             insertados,
-            existentes: unicas.length - insertados,
-            duplicadosEnLote: filas.length - unicas.length,
-            omitidos: filas.length - insertados,
+            existentes,
+            duplicadosEnLote,
+            omitidos: existentes + duplicadosEnLote,
+            ...resumenInvalidas(invalidas),
           };
         },
         { maxWait: 5000, timeout: TIMEOUT_LOTE_PRODUCTOS_MS },
@@ -171,6 +194,38 @@ export class TablasProductosService {
     } catch (e: unknown) {
       errorTabla(e);
     }
+  }
+  private async conArticulo<
+    T extends { f: Record<string, unknown>; index: number },
+  >(
+    tx: Prisma.TransactionClient,
+    empresaId: number,
+    filas: T[],
+    invalidas: FilaInvalida[],
+  ): Promise<T[]> {
+    const codigos = [...new Set(filas.map(({ f }) => f.ItemCode as string))];
+    const existen = new Set<string>();
+    for (let i = 0; i < codigos.length; i += PRODUCTOS_POR_BLOQUE)
+      for (const p of await tx.producto.findMany({
+        where: {
+          empresaId,
+          itemcode: { in: codigos.slice(i, i + PRODUCTOS_POR_BLOQUE) },
+        },
+        select: { itemcode: true },
+      }))
+        existen.add(p.itemcode);
+    return filas.filter(({ f, index }) => {
+      if (existen.has(f.ItemCode as string)) return true;
+      invalidas.push(
+        filaRechazada(
+          index,
+          'ItemCode',
+          f.ItemCode,
+          'El artículo no existe en tbl_oitm de esta empresa; cargalo primero',
+        ),
+      );
+      return false;
+    });
   }
   private async proteger(
     tx: Prisma.TransactionClient,

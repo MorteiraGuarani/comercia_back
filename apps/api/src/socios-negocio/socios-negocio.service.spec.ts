@@ -235,6 +235,8 @@ describe('Socios de negocio públicos y separados por empresa', () => {
       existentes: 1,
       duplicadosEnLote: 1,
       omitidos: 2,
+      invalidas: 0,
+      filasInvalidas: [],
     });
     expect(repositorio.createMany).toHaveBeenCalledWith({
       data: [
@@ -266,6 +268,8 @@ describe('Socios de negocio públicos y separados por empresa', () => {
       existentes: 0,
       duplicadosEnLote: 1,
       omitidos: 1,
+      invalidas: 0,
+      filasInvalidas: [],
     });
   });
 
@@ -283,6 +287,8 @@ describe('Socios de negocio públicos y separados por empresa', () => {
       existentes: 0,
       duplicadosEnLote: 0,
       omitidos: 0,
+      invalidas: 0,
+      filasInvalidas: [],
     });
     expect(modelos.socioNegocio.createMany).toHaveBeenCalledTimes(2);
     expect(db.$transaction).toHaveBeenCalledTimes(1);

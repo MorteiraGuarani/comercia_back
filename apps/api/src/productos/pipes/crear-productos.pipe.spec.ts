@@ -54,9 +54,40 @@ describe('Entrada individual o por lote de productos', () => {
         response: {
           statusCode: 400,
           index: 1,
-          message: 'Fila 2 inválida',
+          message: expect.stringMatching(/^Fila 2 inválida — /) as unknown,
+          filasInvalidas: [expect.objectContaining({ index: 1, fila: 2 })],
         },
       });
     },
   );
+
+  it('dice el campo, el valor recibido y el motivo, y junta todas las filas inválidas', async () => {
+    const error = (await pipe
+      .transform([
+        { ...producto, price: '' },
+        producto,
+        { ...producto, iva: 'diez', extra: 1 },
+      ])
+      .catch((e: unknown) => e)) as BadRequestException;
+    const r = error.getResponse() as Record<string, unknown>;
+    expect(r.message).toBe(
+      'Fila 1 inválida — price = "": El decimal admite hasta 15 enteros y 6 decimales. Hay 2 filas con errores, detalladas en filasInvalidas',
+    );
+    expect(r.errores).toEqual([
+      {
+        campo: 'price',
+        valor: '',
+        mensajes: ['El decimal admite hasta 15 enteros y 6 decimales'],
+      },
+    ]);
+    const filas = r.filasInvalidas as {
+      fila: number;
+      errores: { campo: string }[];
+    }[];
+    expect(filas.map((f) => f.fila)).toEqual([1, 3]);
+    expect(filas[1].errores.map((e) => e.campo).sort()).toEqual([
+      'extra',
+      'iva',
+    ]);
+  });
 });

@@ -45,6 +45,7 @@ import {
 } from './dto/consulta-socios.dto';
 import type { TablaSociosDefinicion } from './interfaces/tabla-socios.interface';
 import type { EntradaSocio } from './interfaces/registro-socio.interface';
+import type { LoteValidado } from '../common/interfaces/error-validacion.interface';
 import { CrearSociosPipe } from './pipes/crear-socios.pipe';
 import { SociosNegocioService } from './socios-negocio.service';
 import { MAX_SOCIOS_POR_LOTE } from './tablas-socios';
@@ -174,7 +175,41 @@ export function crearControladorSocios(
       index: {
         type: 'integer' as const,
         minimum: 0,
-        description: 'Índice de la fila inválida en bulk, comenzando en cero.',
+        description:
+          'Índice de la primera fila inválida en bulk, comenzando en cero.',
+      },
+      errores: {
+        type: 'array' as const,
+        description: 'Cada campo inválido: nombre, valor recibido y motivos.',
+        items: {
+          type: 'object' as const,
+          properties: {
+            campo: { type: 'string' as const, example: 'SWeight1' },
+            valor: { example: '' },
+            mensajes: {
+              type: 'array' as const,
+              items: { type: 'string' as const },
+              example: ['El decimal admite hasta 15 enteros y 6 decimales'],
+            },
+          },
+        },
+      },
+      filasInvalidas: {
+        type: 'array' as const,
+        description:
+          'Bulk: filas salteadas por error (hasta 1000), en el resumen 201; el resto se guarda.',
+        items: {
+          type: 'object' as const,
+          properties: {
+            index: { type: 'integer' as const, minimum: 0 },
+            fila: { type: 'integer' as const, minimum: 1 },
+            errores: {
+              type: 'array' as const,
+              items: { type: 'object' as const },
+            },
+            motivo: { type: 'string' as const },
+          },
+        },
       },
       details: {
         type: 'object' as const,
@@ -260,7 +295,7 @@ export function crearControladorSocios(
     @Post()
     @ApiOperation({
       summary: `Cargar ${tabla.nombre}: individual o bulk`,
-      description: `${acceso} Acepta un objeto o un arreglo de 1 a ${MAX_SOCIOS_POR_LOTE} filas, hasta el límite HTTP de carga masiva (50 MiB por defecto). Clave de duplicado dentro de la empresa: ${tabla.clave.join(' + ')}; null y los valores predeterminados omitidos se comparan de forma consistente. En bulk se conserva la primera aparición y se omiten las claves existentes, sin actualizarlas. Una fila inválida devuelve 400 antes de escribir; cualquier otro fallo revierte la transacción completa. Un objeto devuelve la fila y responde 409 si ya existe. Un arreglo devuelve el resumen con 201 incluso si todo se omite. ${tabla.identidad ? 'Si falta Code se asigna uno nuevo por empresa; filas sin Code son nuevas filas, no se deduplican por Name.' : ''} Las referencias lógicas pueden cargarse en cualquier orden; no se inventan registros para -1 o códigos todavía ausentes.`,
+      description: `${acceso} Acepta un objeto o un arreglo de 1 a ${MAX_SOCIOS_POR_LOTE} filas, hasta el límite HTTP de carga masiva (50 MiB por defecto). Clave de duplicado dentro de la empresa: ${tabla.clave.join(' + ')}; null y los valores predeterminados omitidos se comparan de forma consistente. En bulk se conserva la primera aparición y se omiten las claves existentes, sin actualizarlas. Una fila con error no corta la carga: se saltea y vuelve en filasInvalidas con fila, campo, valor y motivo, y el resto se guarda; un fallo inesperado de la base revierte el lote. Un objeto devuelve la fila, 400 si es inválido y 409 si ya existe. Un arreglo devuelve siempre el resumen con 201, aunque no se guarde ninguna fila. ${tabla.identidad ? 'Si falta Code se asigna uno nuevo por empresa; filas sin Code son nuevas filas, no se deduplican por Name.' : ''} Las referencias lógicas pueden cargarse en cualquier orden; no se inventan registros para -1 o códigos todavía ausentes.`,
     })
     @ApiBody({
       schema: {
@@ -286,11 +321,29 @@ export function crearControladorSocios(
             individual: { value: ejemplo },
             lote: {
               value: {
-                recibidos: 3,
+                recibidos: 4,
                 insertados: 1,
                 existentes: 1,
                 duplicadosEnLote: 1,
                 omitidos: 2,
+                invalidas: 1,
+                filasInvalidas: [
+                  {
+                    index: 3,
+                    fila: 4,
+                    errores: [
+                      {
+                        campo: 'SWeight1',
+                        valor: '',
+                        mensajes: [
+                          'El decimal admite hasta 15 enteros y 6 decimales',
+                        ],
+                      },
+                    ],
+                    motivo:
+                      'SWeight1 = "": El decimal admite hasta 15 enteros y 6 decimales',
+                  },
+                ],
               },
             },
           },
@@ -304,7 +357,7 @@ export function crearControladorSocios(
     })
     crear(
       @Param() p: EmpresaSociosParams,
-      @Body(new CrearSociosPipe(tabla.Dto)) d: EntradaSocio | EntradaSocio[],
+      @Body(new CrearSociosPipe(tabla.Dto)) d: EntradaSocio | LoteValidado,
     ) {
       return this.servicio.crear(tabla, p.empresaId, d);
     }

@@ -2,6 +2,7 @@ import { ConflictException } from '@nestjs/common';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { CampoAccesoService } from '../campo/campo-acceso.service';
 import type { JornadaCampoService } from '../campo/jornada-campo.service';
+import type { UbicacionesService } from '../ubicaciones/ubicaciones.service';
 jest.mock('../prisma/prisma.service', () => ({ PrismaService: class {} }));
 import { IntegracionesUcheckService } from './integraciones-ucheck.service';
 
@@ -29,7 +30,12 @@ function contexto() {
   prisma.$transaction.mockImplementation((fn: (p: unknown) => unknown) =>
     fn(prisma),
   );
-  const acceso = { ejecutar: jest.fn().mockResolvedValue({ id: 8 }) };
+  const acceso = {
+    ejecutar: jest.fn().mockResolvedValue({ id: 8, empresaId: 2 }),
+  };
+  const ubicaciones = {
+    registrarSeguimientoUcheck: jest.fn().mockResolvedValue(true),
+  };
   const jornada = {
     agenda: jest.fn().mockResolvedValue({
       items: [],
@@ -43,6 +49,7 @@ function contexto() {
     prisma as unknown as PrismaService,
     acceso as unknown as CampoAccesoService,
     jornada as unknown as JornadaCampoService,
+    ubicaciones as unknown as UbicacionesService,
   );
   const dto = {
     ucheckUsuarioId: 11,
@@ -56,12 +63,17 @@ function contexto() {
     longitud: -57.6,
     precisionMetros: 10,
   };
-  return { prisma, servicio, dto, jornada };
+  return { prisma, servicio, dto, jornada, ubicaciones };
 }
 describe('Integración de ubicaciones', () => {
   it('resuelve la cuenta por la identidad estable y verifica acceso operativo', async () => {
-    const { prisma, servicio, dto } = contexto();
+    const { prisma, servicio, dto, ubicaciones } = contexto();
     await servicio.registrarSeguimiento(dto);
+    // El punto también va al recorrido de Ubicaciones, en la empresa de la cuenta.
+    expect(ubicaciones.registrarSeguimientoUcheck).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 8, empresaId: 2 }),
+      expect.objectContaining({ latitud: -25.3, longitud: -57.6 }),
+    );
     expect(prisma.usuario.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: 8, isActive: true, esSuperadmin: false },
@@ -72,7 +84,7 @@ describe('Integración de ubicaciones', () => {
     );
   });
   it('un reporte antiguo no vuelve a colocar un punto después de finalizar', async () => {
-    const { prisma, servicio, dto } = contexto();
+    const { prisma, servicio, dto, ubicaciones } = contexto();
     prisma.seguimientoCampo.findUnique.mockResolvedValue({
       reportadaEn: new Date(Date.now() + 1000),
     });
@@ -80,10 +92,12 @@ describe('Integración de ubicaciones', () => {
       omitida: true,
     });
     expect(prisma.seguimientoCampo.upsert).not.toHaveBeenCalled();
+    expect(ubicaciones.registrarSeguimientoUcheck).not.toHaveBeenCalled();
   });
   it('la finalización elimina coordenadas y nunca deja un punto como activo', async () => {
-    const { prisma, servicio, dto } = contexto();
+    const { prisma, servicio, dto, ubicaciones } = contexto();
     await servicio.registrarSeguimiento({ ...dto, activo: false });
+    expect(ubicaciones.registrarSeguimientoUcheck).not.toHaveBeenCalled();
     expect(prisma.seguimientoCampo.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         update: expect.objectContaining({

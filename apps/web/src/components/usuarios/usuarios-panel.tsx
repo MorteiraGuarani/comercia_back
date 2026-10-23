@@ -537,6 +537,7 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
             <>
               <Campo
                 label="Nombre de usuario"
+                autoComplete="off"
                 value={form.nombreLogin}
                 onChange={(nombreLogin) =>
                   setForm((f) => ({ ...f, nombreLogin }))
@@ -673,6 +674,9 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
                 : "Nueva contraseña (opcional)"
             }
             type="password"
+            // El navegador no debe completar con la contraseña guardada de quien
+            // administra: al guardar se la pondría al usuario editado.
+            autoComplete="new-password"
             value={form.password}
             required={editando === "nuevo"}
             onChange={(password) => setForm((f) => ({ ...f, password }))}
@@ -760,12 +764,14 @@ function Campo({
   onChange,
   type = "text",
   required = true,
+  autoComplete,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   type?: string;
   required?: boolean;
+  autoComplete?: string;
 }) {
   return (
     <label className={labelBase}>
@@ -775,6 +781,7 @@ function Campo({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         required={required}
+        autoComplete={autoComplete}
         minLength={type === "password" ? 8 : undefined}
         className={inputBase}
       />

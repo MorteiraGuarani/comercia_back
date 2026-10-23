@@ -152,6 +152,50 @@ export class UbicacionesService implements OnModuleInit, OnModuleDestroy {
     };
   }
 
+  /**
+   * El seguimiento laboral de UCheck (repositores) manda la posición cada pocos
+   * segundos; la persona lo inicia a propósito y equivale a su jornada. Se
+   * guarda un punto por intervalo para no superar el tope del recorrido.
+   */
+  async registrarSeguimientoUcheck(
+    u: { id: number; empresaId: number },
+    p: {
+      latitud: number;
+      longitud: number;
+      precisionMetros: number;
+      capturadaEn: Date;
+    },
+  ): Promise<boolean> {
+    const fecha = fechaCampo(relojCampo(p.capturadaEn).fecha);
+    const ultima = await this.prisma.ubicacionCampo.findFirst({
+      where: { empresaId: u.empresaId, usuarioId: u.id, fecha },
+      select: { capturadaEn: true },
+      orderBy: { capturadaEn: 'desc' },
+    });
+    // 5 s de holgura: el teléfono no reporta a intervalos exactos.
+    if (
+      ultima &&
+      p.capturadaEn.getTime() - ultima.capturadaEn.getTime() <
+        INTERVALO_PING_SEGUNDOS * 1000 - 5000
+    )
+      return false;
+    const { count } = await this.prisma.ubicacionCampo.createMany({
+      data: [
+        {
+          empresaId: u.empresaId,
+          usuarioId: u.id,
+          fecha,
+          capturadaEn: p.capturadaEn,
+          latitud: p.latitud,
+          longitud: p.longitud,
+          precisionMetros: p.precisionMetros,
+        },
+      ],
+      skipDuplicates: true,
+    });
+    return count > 0;
+  }
+
   // Superadmin: toda la empresa elegida. Líder con la página: su cadena del
   // mismo equipo operativo, sin incluirse (igual que Presentismo).
   private async alcance(usuarioId: number, empresaIdPedida?: number) {

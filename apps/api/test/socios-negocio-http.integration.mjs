@@ -58,13 +58,14 @@ const service = {
   },
   crear: async (t, e, d) => {
     calls.push({ method: 'crear', tabla: t.nombre, empresa: e, data: d });
-    return Array.isArray(d)
+    return Array.isArray(d?.filas)
       ? {
-          recibidos: d.length,
-          insertados: d.length,
+          recibidos: d.recibidos,
+          insertados: d.filas.length,
           existentes: 0,
           duplicadosEnLote: 0,
           omitidos: 0,
+          invalidas: d.invalidas.length,
         }
       : ejemploRespuestaSocios(t);
   },
@@ -345,12 +346,18 @@ try {
     ],
   );
   let before = calls.length;
-  const invalid = await request(http)
+  // La fila inválida no corta el bulk: la válida llega al servicio y la otra se informa.
+  const parcial = await request(http)
     .post(socios)
     .send([{ CardCode: 'VALIDO' }, { CardCode: 'INVALIDO', GroupCode: 32768 }])
-    .expect(400);
-  assert.equal(invalid.body.index, 1);
-  assert.equal(calls.length, before);
+    .expect(201);
+  assert.equal(parcial.body.invalidas, 1);
+  assert.equal(calls.length, before + 1);
+  assert.deepEqual(
+    calls.at(-1).data.filas.map((f) => f.CardCode),
+    ['VALIDO'],
+  );
+  assert.equal(calls.at(-1).data.invalidas[0].errores[0].campo, 'GroupCode');
   await request(http).post(socios).send({ cardcode: 'C0001' }).expect(400);
   await request(http).post(socios).send([]).expect(400);
   await request(http)
@@ -395,7 +402,7 @@ try {
     .expect(413);
   assert.ok(calls.every((c) => c.empresa === 1));
   console.log(
-    'OK: 47 operaciones públicas, nueve DTOs y ejemplos, validación atómica, nombres exactos y bulk >1 MiB con límites acotados',
+    'OK: 47 operaciones públicas, nueve DTOs y ejemplos, filas inválidas salteadas, nombres exactos y bulk >1 MiB con límites acotados',
   );
 } finally {
   await app.close();

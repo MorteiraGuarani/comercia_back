@@ -230,10 +230,15 @@ try {
     await call('post', route)
       .send({ ...t.ejemplo, campoRetirado: 'x' })
       .expect(400);
-    await call('post', route)
-      .send([{ ...t.ejemplo }, { ...t.ejemplo, [t.clave[0]]: null }])
-      .expect(400);
     assert.equal(writes.length, before);
+    // Una fila inválida no corta el bulk: se saltea, se informa y la otra se guarda.
+    const parcial = await call('post', route)
+      .send([{ ...t.ejemplo }, { ...t.ejemplo, [t.clave[0]]: null }])
+      .expect(201);
+    assert.equal(parcial.body.invalidas, 1);
+    assert.equal(parcial.body.filasInvalidas[0].fila, 2);
+    assert.equal(parcial.body.filasInvalidas[0].errores[0].campo, t.clave[0]);
+    assert.equal(writes.length, before + 1);
     await call('get', route + '?limit=51').expect(400);
     await call(
       'get',
@@ -302,7 +307,7 @@ try {
   // Todas las tablas tbl_* son públicas: nunca se pide superadministrador.
   assert.equal(authCalls.length, 0);
   console.log(
-    'OK: Swagger público completo, 42 operaciones de cinco tablas/alias públicas, DTOs exactos, ejemplos válidos, bulk >1 MiB, validación atómica, decimales y BigInt.',
+    'OK: Swagger público completo, 42 operaciones de cinco tablas/alias públicas, DTOs exactos, ejemplos válidos, bulk >1 MiB, filas inválidas salteadas e informadas, decimales y BigInt.',
   );
 } finally {
   await app.close();

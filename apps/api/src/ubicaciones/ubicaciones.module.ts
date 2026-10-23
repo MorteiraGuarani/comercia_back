@@ -9,5 +9,6 @@ import { UbicacionesService } from './ubicaciones.service';
   imports: [AuthModule, PrismaModule, CampoModule],
   controllers: [UbicacionesController],
   providers: [UbicacionesService],
+  exports: [UbicacionesService],
 })
 export class UbicacionesModule {}

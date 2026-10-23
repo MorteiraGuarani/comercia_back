@@ -61,6 +61,7 @@ function armar({ superadmin = false } = {}) {
     ubicacionCampo: {
       groupBy: jest.fn().mockResolvedValue([]),
       findMany: jest.fn().mockResolvedValue([]),
+      findFirst: jest.fn().mockResolvedValue(null),
       createMany: jest.fn(({ data }: { data: unknown[] }) => ({
         count: data.length,
       })),
@@ -192,5 +193,46 @@ describe('UbicacionesService', () => {
     });
     expect(r).toEqual({ guardados: 0, descartados: 1, activa: false });
     expect(prisma.ubicacionCampo.createMany).not.toHaveBeenCalled();
+  });
+
+  it('del seguimiento de UCheck guarda un punto por minuto', async () => {
+    const { prisma, service } = armar();
+    const punto = (hora: string) => ({
+      latitud: -25.3,
+      longitud: -57.6,
+      precisionMetros: 8,
+      capturadaEn: new Date(`2026-10-23T${hora}-03:00`),
+    });
+    expect(
+      await service.registrarSeguimientoUcheck(
+        { id: 3, empresaId: 5 },
+        punto('09:00:00'),
+      ),
+    ).toBe(true);
+    prisma.ubicacionCampo.findFirst.mockResolvedValue({
+      capturadaEn: new Date('2026-10-23T09:00:00-03:00'),
+    });
+    expect(
+      await service.registrarSeguimientoUcheck(
+        { id: 3, empresaId: 5 },
+        punto('09:00:10'),
+      ),
+    ).toBe(false);
+    expect(
+      await service.registrarSeguimientoUcheck(
+        { id: 3, empresaId: 5 },
+        punto('09:00:58'),
+      ),
+    ).toBe(true);
+    expect(prisma.ubicacionCampo.createMany).toHaveBeenCalledTimes(2);
+    expect(prisma.ubicacionCampo.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          empresaId: 5,
+          usuarioId: 3,
+          fecha: new Date('2026-10-23T00:00:00.000Z'),
+        },
+      }),
+    );
   });
 });

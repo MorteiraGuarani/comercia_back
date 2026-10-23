@@ -39,6 +39,7 @@ import { SuperadminGuard } from '../auth/superadmin.guard';
 import type { RequestConUsuario } from '../auth/interfaces/request-con-usuario.interface';
 import { EmpresaSociosParams } from '../socios-negocio/dto/consulta-socios.dto';
 import { CargaTablaPipe } from '../common/pipes/carga-tabla.pipe';
+import type { LoteValidado } from '../common/interfaces/error-validacion.interface';
 import { ResumenLoteDto } from '../common/dto/resumen-lote.dto';
 import type { TablaProductos } from './interfaces/tabla-productos.interface';
 import { ConsultaTablasDto } from './dto/consulta-tablas.dto';
@@ -146,7 +147,7 @@ export function crearControladorTablaProductos(
   @ApiExtraModels(t.Dto, EdicionDto, ResumenLoteDto)
   @ApiBadRequestResponse({
     description:
-      'Datos, parámetros o paginación inválidos. En bulk, index identifica la fila desde cero y details detalla la validación.',
+      'Objeto, cuerpo, parámetros o paginación inválidos. message dice el campo, el valor recibido y el motivo; errores lista cada campo inválido ({ campo, valor, mensajes }). Un bulk bien formado no responde 400 por sus filas: las inválidas vuelven en filasInvalidas del resumen (201).',
   })
   @ApiNotFoundResponse({
     description: 'Empresa o registro no disponible en la empresa.',
@@ -197,7 +198,7 @@ export function crearControladorTablaProductos(
       summary: 'Cargar ' + t.nombre + ': individual o bulk',
       description:
         detalle +
-        ` Acepta un objeto o un arreglo de 1 a ${MAX_PRODUCTOS_POR_LOTE} filas, hasta 50 MiB por defecto. Se valida todo antes de escribir. En bulk se conserva la primera aparición de cada clave y se omiten las existentes sin actualizarlas. Un fallo real revierte toda la transacción. Un objeto devuelve la fila y 409 si ya existe; un arreglo devuelve el resumen con 201 incluso si todo se omite. null guarda NULL solo en columnas nullable; omitir un campo aplica su default al crear.`,
+        ` Acepta un objeto o un arreglo de 1 a ${MAX_PRODUCTOS_POR_LOTE} filas, hasta 50 MiB por defecto. En bulk, una fila con error no corta la carga: las filas inválidas (y en tbl_itm1 las de artículos que no existen en tbl_oitm) se saltean y vuelven en filasInvalidas con fila, campo, valor y motivo; se conserva la primera aparición de cada clave y se omiten las existentes sin actualizarlas; el resto se guarda. Un fallo inesperado de la base revierte el lote. Un objeto devuelve la fila, 400 si es inválido y 409 si ya existe; un arreglo devuelve siempre el resumen con 201, aunque no se guarde ninguna fila. null guarda NULL solo en columnas nullable; omitir un campo aplica su default al crear.`,
     })
     @ApiBody({
       schema: {
@@ -226,11 +227,29 @@ export function crearControladorTablaProductos(
             individual: { value: ejemplo },
             lote: {
               value: {
-                recibidos: 3,
+                recibidos: 4,
                 insertados: 1,
                 existentes: 1,
                 duplicadosEnLote: 1,
                 omitidos: 2,
+                invalidas: 1,
+                filasInvalidas: [
+                  {
+                    index: 3,
+                    fila: 4,
+                    errores: [
+                      {
+                        campo: 'SWeight1',
+                        valor: '',
+                        mensajes: [
+                          'El decimal admite hasta 15 enteros y 6 decimales',
+                        ],
+                      },
+                    ],
+                    motivo:
+                      'SWeight1 = "": El decimal admite hasta 15 enteros y 6 decimales',
+                  },
+                ],
               },
             },
           },
@@ -245,7 +264,7 @@ export function crearControladorTablaProductos(
       @Req() r: RequestConUsuario,
       @Param() p: EmpresaSociosParams,
       @Body(new CargaTablaPipe(t.Dto))
-      d: Record<string, unknown> | Record<string, unknown>[],
+      d: Record<string, unknown> | LoteValidado,
     ) {
       return this.servicio.crear(t, p.empresaId, d, r.usuarioId);
     }
