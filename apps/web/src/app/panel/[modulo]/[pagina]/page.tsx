@@ -45,6 +45,15 @@ const InventarioPanel = dynamic(
   { ssr: false },
 );
 
+// Mapa de Leaflet: solo en el navegador.
+const UbicacionesPanel = dynamic(
+  () =>
+    import("@/components/campo/ubicaciones-panel").then(
+      (m) => m.UbicacionesPanel,
+    ),
+  { ssr: false },
+);
+
 export default function PaginaModulo({
   params,
 }: {
@@ -84,6 +93,7 @@ export default function PaginaModulo({
       return <AvisosPanel esImpulsador={false} abrirRedactar={abrirRedactar} />;
     if (pagina === "locales") return <LocalesPanel />;
     if (pagina === "tareas") return <TareasPanel />;
+    if (pagina === "ubicaciones") return <UbicacionesPanel />;
   }
 
   // MÓDULO: MI JORNADA (IMPULSADOR / REPOSITOR DE CAMPO)

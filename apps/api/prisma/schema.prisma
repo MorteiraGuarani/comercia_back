@@ -59,6 +59,7 @@ model Empresa {
   avisosCampo         AvisoCampo[]
   programacionesAviso AvisoProgramacionCampo[]
   adjuntosCampo       AdjuntoCampo[]
+  ubicacionesCampo    UbicacionCampo[]
   createdAt           DateTime                  @default(now()) @map("created_at")
   updatedAt           DateTime                  @default(now()) @updatedAt @map("updated_at")
 
@@ -488,6 +489,7 @@ model Usuario {
   seguimientoCampo SeguimientoCampo?
   operacionesCampo OperacionCampo[]
   cargasInventario CargaInventarioCampo[]
+  ubicacionesCampo UbicacionCampo[]
   esSuperadmin            Boolean                   @default(false) @map("es_superadmin")
   isActive                Boolean                   @default(true) @map("is_active")
   createdAt               DateTime                  @default(now()) @map("created_at")
@@ -1097,4 +1099,27 @@ model CargaInventarioCampo {
   @@index([empresaId, localId, fecha])
   @@index([avisadoEn, vencimiento])
   @@map("campo_inventario_cargas")
+}
+
+// Posición que manda el navegador del equipo de campo durante su jornada. La
+// clave es también el índice de consulta (empresa + usuario + día) y hace
+// idempotente el reenvío de la cola sin señal. Se borra a los 90 días.
+model UbicacionCampo {
+  empresaId Int @map("empresa_id")
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  usuarioId Int @map("usuario_id")
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  // Día de campo (America/Asuncion) del momento en que el equipo la tomó.
+  fecha DateTime @db.Date
+  capturadaEn DateTime @map("capturada_en")
+  recibidaEn DateTime @default(now()) @map("recibida_en")
+  latitud Float
+  longitud Float
+  precisionMetros Float @map("precision_metros") @db.Real
+  velocidadMps Float? @map("velocidad_mps") @db.Real
+  rumboGrados Float? @map("rumbo_grados") @db.Real
+
+  @@id([empresaId, usuarioId, fecha, capturadaEn])
+  @@index([fecha], type: Brin)
+  @@map("campo_ubicaciones")
 }

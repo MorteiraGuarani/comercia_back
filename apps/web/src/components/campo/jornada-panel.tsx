@@ -37,6 +37,7 @@ import type { MarcacionPendiente } from "@/types/seguimiento";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
+import { notificarJornadaMarcada } from "@/lib/eventos-plataforma";
 import { usePanel } from "@/components/panel/contexto";
 import { useListaCampo } from "@/hooks/use-lista-campo";
 import { useFechaCampo } from "@/hooks/use-fecha-campo";
@@ -856,6 +857,7 @@ function AgendaDelDia({
               } satisfies MarcacionPendiente;
             actualizar();
             setMarca(null);
+            if (!marca.visitaId) notificarJornadaMarcada();
             if (esRepositor && !marca.visitaId)
               router.push("/panel/mi-jornada/tareas");
           }}

@@ -121,6 +121,11 @@
 - **Excepción**: `GET /campo/organigrama` devuelve el árbol completo (un
   organigrama no se pagina): toda la empresa para superadmin, la cadena del
   líder para quien tiene Presentismo. Tope de 2000 personas y 413 en vez de truncar.
+- **Excepción**: `GET /campo/ubicaciones/equipo` (última posición de hoy de cada
+  persona para el mapa en vivo) y `GET /campo/ubicaciones/recorrido/:usuarioId`
+  (los puntos de un día para trazarlo) se entregan completos: un mapa no se
+  pagina. Superadmin ve la empresa; el líder con la página Ubicaciones, su cadena
+  (`obtenerEquipoCompleto`). Topes de 2000 personas y 5000 puntos, 413 en vez de truncar.
 - El front consume esto con el componente `apps/web/src/components/paginacion.tsx`
   y el tipo `RespuestaPaginada<T>` (regla espejo en `apps/web/AGENTS.md`).
 

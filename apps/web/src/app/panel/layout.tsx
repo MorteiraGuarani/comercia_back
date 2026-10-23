@@ -17,6 +17,7 @@ import { BrandMark } from "@/components/auth-shell";
 import { BotonTema } from "@/components/boton-tema";
 import { BadgeNotificaciones } from "@/components/campo/badge-notificaciones";
 import { SincronizadorInventario } from "@/components/campo/sincronizador-inventario";
+import { EmisorUbicacion } from "@/components/campo/emisor-ubicacion";
 import { Modal } from "@/components/modal";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { PanelProvider } from "@/components/panel/contexto";
@@ -291,6 +292,16 @@ export default function PanelLayout({
                         <IconoPersona /> Organigrama
                       </Link>
                     )}
+                    {usuario.esSuperadmin && (
+                      <Link
+                        role="menuitem"
+                        href="/panel/ubicaciones"
+                        onClick={() => setMenuAbierto(false)}
+                        className={itemMenu}
+                      >
+                        <IconoPersona /> Ubicaciones
+                      </Link>
+                    )}
                     <div className="my-1 border-t border-line" />
                     <button
                       type="button"
@@ -344,6 +355,10 @@ export default function PanelLayout({
         </div>
         <BotonSubir />
         {tieneInventario ? <SincronizadorInventario usuarioId={usuario.id} /> : null}
+        {/* La API decide si la jornada está activa; un supervisor recibe 403 y se detiene. */}
+        {usuario.rol?.equipoCampo?.activo && !usuario.esSuperadmin ? (
+          <EmisorUbicacion usuarioId={usuario.id} />
+        ) : null}
 
         <AnimatePresence>
           {masAbierto && tieneMasEnlaces ? (

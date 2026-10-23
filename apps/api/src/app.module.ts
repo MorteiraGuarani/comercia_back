@@ -23,6 +23,7 @@ import { ProductosModule } from './productos/productos.module';
 import { CampoModule } from './campo/campo.module';
 import { IntegracionesUcheckModule } from './integraciones-ucheck/integraciones-ucheck.module';
 import { InventarioModule } from './inventario/inventario.module';
+import { UbicacionesModule } from './ubicaciones/ubicaciones.module';
 import { SociosNegocioModule } from './socios-negocio/socios-negocio.module';
 
 const usaBaseProduccion = process.env.COMERCIA_DATABASE_TARGET === 'production';
@@ -72,6 +73,7 @@ if (process.env.NODE_ENV !== 'production' && !usaBaseProduccion) {
     SociosNegocioModule,
     CampoModule,
     InventarioModule,
+    UbicacionesModule,
     IntegracionesUcheckModule,
     PlataformaModule,
     UsuariosModule,
