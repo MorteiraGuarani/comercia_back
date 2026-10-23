@@ -4,7 +4,7 @@ export interface UsuarioAdminDto {
   apellido: string;
   correo: string;
   nombreLogin: string;
-  ruc: string;
+  ruc: string | null;
   celular: string;
   legajo: string | null;
   empresa: { id: number; nombre: string };

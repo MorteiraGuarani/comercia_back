@@ -88,6 +88,7 @@ describe('UsuariosService - permiso de superadmin', () => {
         superiorId: null,
         esSuperadmin: true,
       },
+      undefined,
     );
   });
 
@@ -288,5 +289,83 @@ describe('UsuariosService - permiso de superadmin', () => {
       service.actualizar(10, 2, { correo: 'ana@gmail.com' }),
     ).rejects.toBeInstanceOf(NotFoundException);
     expect(prisma.usuario.update).not.toHaveBeenCalled();
+  });
+});
+
+describe('UsuariosService - alta en lote', () => {
+  it('completa lo que falta, usa la contraseña por defecto y deja los errores al final', async () => {
+    const creado = {
+      id: 2,
+      nombre: 'juan.perez',
+      apellido: '',
+      correo: 'juan.perez@x.com',
+      nombreLogin: 'juan.perez',
+      ruc: null,
+      celular: '',
+      legajo: null,
+      esSuperadmin: false,
+      isActive: true,
+      createdAt: new Date('2026-10-23T12:00:00.000Z'),
+      empresa: { id: 20, nombre: 'Empresa' },
+      rol: null,
+      superior: null,
+    };
+    const prisma = {
+      usuario: {
+        findUnique: jest.fn(({ where }: { where: { id: number } }) =>
+          where.id === 1
+            ? { id: 1, empresaId: 20, esSuperadmin: true, isActive: true, rol: null }
+            : creado,
+        ),
+      },
+    };
+    const auth = {
+      crearUsuario: jest
+        .fn()
+        .mockResolvedValueOnce({ id: 2 })
+        .mockRejectedValueOnce(
+          new ConflictException('Ese nombre de usuario ya está en uso'),
+        ),
+    };
+    const service = new UsuariosService(
+      prisma as unknown as PrismaService,
+      auth as unknown as AuthService,
+    );
+
+    const r = await service.crearLote(1, [
+      { dto: { correo: 'juan.perez@x.com' } },
+      { dto: { nombreLogin: 'juan.perez' } },
+      { error: 'el correo no tiene un formato válido' },
+    ]);
+
+    expect(r).toMatchObject({
+      total: 3,
+      exitosos: 1,
+      fallidos: 2,
+      resultados: [{ id: 2, ruc: null }],
+      errores: [
+        { indice: 1, usuario: 'juan.perez', error: 'Ese nombre de usuario ya está en uso' },
+        { indice: 2, error: 'el correo no tiene un formato válido' },
+      ],
+    });
+    const [[primero, asignacion, hash], [segundo, , hash2]] =
+      auth.crearUsuario.mock.calls as [
+        Record<string, unknown>,
+        unknown,
+        string,
+      ][];
+    expect(primero).toMatchObject({
+      empresaId: 20,
+      nombreLogin: 'juan.perez',
+      correo: 'juan.perez@x.com',
+      nombre: 'juan.perez',
+      apellido: '',
+      password: '12345678',
+    });
+    expect(asignacion).toEqual({ rolId: null, superiorId: undefined, esSuperadmin: undefined });
+    expect(segundo.correo).toBe('juan.perez@sin-correo.invalid');
+    // La contraseña por defecto se hashea una sola vez por lote.
+    expect(hash).toMatch(/^scrypt\$/);
+    expect(hash2).toBe(hash);
   });
 });

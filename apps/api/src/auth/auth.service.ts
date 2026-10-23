@@ -36,11 +36,19 @@ export class AuthService {
   ) {}
 
   async crearUsuario(
-    dto: RegisterDto & { legajo?: string | null },
+    dto: Omit<RegisterDto, 'ruc' | 'celular' | 'celularPais'> & {
+      ruc?: string | null;
+      celular?: string | null;
+      celularPais?: string;
+      legajo?: string | null;
+    },
     asignacion: AsignacionUsuario,
+    // Un lote con la contraseña por defecto la hashea una sola vez.
+    passwordHashPrevio?: string,
   ): Promise<UsuarioSesion> {
-    const celularE164 = normalizarCelular(dto.celular, dto.celularPais);
-    const ruc = normalizarRucUsuario(dto.ruc, dto.celularPais);
+    const pais = dto.celularPais ?? 'PY';
+    const celularE164 = dto.celular ? normalizarCelular(dto.celular, pais) : '';
+    const ruc = dto.ruc ? normalizarRucUsuario(dto.ruc, pais) : null;
 
     const empresa = await this.prisma.empresa.findUnique({
       where: { id: dto.empresaId },
@@ -53,7 +61,11 @@ export class AuthService {
     // Chequeos amables (la garantía real son los índices únicos + catch P2002)
     const duplicado = await this.prisma.usuario.findFirst({
       where: {
-        OR: [{ correo: dto.correo }, { nombreLogin: dto.nombreLogin }, { ruc }],
+        OR: [
+          { correo: dto.correo },
+          { nombreLogin: dto.nombreLogin },
+          ...(ruc ? [{ ruc }] : []),
+        ],
       },
       select: { correo: true, nombreLogin: true, ruc: true },
     });
@@ -67,7 +79,8 @@ export class AuthService {
       throw new ConflictException(MENSAJES_DUPLICADO.ruc);
     }
 
-    const passwordHash = await hashPassword(dto.password);
+    const passwordHash =
+      passwordHashPrevio ?? (await hashPassword(dto.password));
     const usuario = await this.prisma.usuario
       .create({
         data: {
@@ -214,7 +227,7 @@ export class AuthService {
     apellido: string;
     correo: string;
     nombreLogin: string;
-    ruc: string;
+    ruc: string | null;
     celular: string;
     esSuperadmin: boolean;
     empresa: { id: number; nombre: string };

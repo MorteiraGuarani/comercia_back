@@ -7,7 +7,7 @@ export interface UsuarioSesion {
   apellido: string;
   correo: string;
   nombreLogin: string;
-  ruc: string;
+  ruc: string | null;
   celular: string;
   esSuperadmin: boolean;
   puedeAdministrarUsuarios: boolean;

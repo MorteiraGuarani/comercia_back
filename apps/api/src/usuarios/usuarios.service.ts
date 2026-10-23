@@ -6,6 +6,14 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
+import { randomBytes } from 'node:crypto';
+import type {
+  ErrorLoteUsuario,
+  FilaLoteUsuarios,
+  ResultadoLoteUsuarios,
+} from './interfaces/lote-usuarios.interface';
+import { loginDesdeCorreo, mensajeErrorLote } from './utils/lote-usuarios';
+import { PASSWORD_POR_DEFECTO } from './usuarios.constants';
 import { AuthService } from '../auth/auth.service';
 import {
   MENSAJES_DUPLICADO,
@@ -24,8 +32,10 @@ import type { Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   ActualizarUsuarioDto,
+  ActualizarUsuarioLoteDto,
   AsignarUsuarioLocalDto,
   CrearUsuarioDto,
+  DesactivarUsuarioLoteDto,
   ListarUsuariosDto,
 } from './dto/usuario.dto';
 import type {
@@ -60,7 +70,7 @@ type UsuarioFila = {
   apellido: string;
   correo: string;
   nombreLogin: string;
-  ruc: string;
+  ruc: string | null;
   celular: string;
   legajo: string | null;
   esSuperadmin: boolean;
@@ -400,10 +410,18 @@ export class UsuariosService {
 
   private async validarAsignaciones(
     empresaId: number,
-    rolId: number,
+    rolId: number | null,
     superiorId?: number | null,
     usuarioEditadoId?: number,
   ): Promise<void> {
+    // Sin rol no hay organigrama contra el cual validar al superior.
+    if (rolId === null) {
+      if (superiorId)
+        throw new BadRequestException(
+          'Para asignar un superior, el usuario necesita un rol',
+        );
+      return;
+    }
     const [rol, superior] = await Promise.all([
       this.prisma.rol.findUnique({
         where: { id: rolId },
@@ -471,21 +489,67 @@ export class UsuariosService {
     usuarioId: number,
     dto: CrearUsuarioDto,
   ): Promise<UsuarioAdminDto> {
+    return this.crearCon(await this.contexto(usuarioId), dto);
+  }
+
+  async crearLote(
+    usuarioId: number,
+    filas: FilaLoteUsuarios<CrearUsuarioDto>[],
+  ): Promise<ResultadoLoteUsuarios<UsuarioAdminDto>> {
     const actual = await this.contexto(usuarioId);
+    let hashPorDefecto: Promise<string> | undefined;
+    return procesarLote(
+      filas,
+      (dto) =>
+        this.crearCon(
+          actual,
+          dto,
+          dto.password
+            ? undefined
+            : (hashPorDefecto ??= hashPassword(PASSWORD_POR_DEFECTO)),
+        ),
+      (dto) => ({ usuario: dto.nombreLogin ?? dto.correo }),
+    );
+  }
+
+  // Completa lo que falte: usuario desde el correo (o uno generado), correo
+  // interno no entregable, nombre = usuario y la contraseña por defecto.
+  private async crearCon(
+    actual: ContextoAdmin,
+    dto: CrearUsuarioDto,
+    passwordHash?: Promise<string>,
+  ): Promise<UsuarioAdminDto> {
     const empresaId = this.empresaObjetivo(actual, dto.empresaId);
     if (dto.esSuperadmin && !actual.esSuperadmin) {
       throw new ForbiddenException(
         'Solo un superadministrador puede otorgar ese permiso',
       );
     }
-    await this.validarAsignaciones(empresaId, dto.rolId, dto.superiorId);
+    await this.validarAsignaciones(
+      empresaId,
+      dto.rolId ?? null,
+      dto.superiorId,
+    );
+    const nombreLogin =
+      dto.nombreLogin ??
+      loginDesdeCorreo(dto.correo) ??
+      `usuario-${randomBytes(4).toString('hex')}`;
     const creado = await this.auth.crearUsuario(
-      { ...dto, empresaId },
       {
-        rolId: dto.rolId,
+        ...dto,
+        empresaId,
+        nombreLogin,
+        correo: dto.correo ?? `${nombreLogin}@sin-correo.invalid`,
+        nombre: dto.nombre ?? nombreLogin,
+        apellido: dto.apellido ?? '',
+        password: dto.password ?? PASSWORD_POR_DEFECTO,
+      },
+      {
+        rolId: dto.rolId ?? null,
         superiorId: dto.superiorId,
         esSuperadmin: dto.esSuperadmin,
       },
+      passwordHash ? await passwordHash : undefined,
     );
     const usuario = await this.prisma.usuario.findUnique({
       where: { id: creado.id },
@@ -500,7 +564,26 @@ export class UsuariosService {
     id: number,
     dto: ActualizarUsuarioDto,
   ): Promise<UsuarioAdminDto> {
+    return this.actualizarCon(await this.contexto(usuarioId), id, dto);
+  }
+
+  async actualizarLote(
+    usuarioId: number,
+    filas: FilaLoteUsuarios<ActualizarUsuarioLoteDto>[],
+  ): Promise<ResultadoLoteUsuarios<UsuarioAdminDto>> {
     const actual = await this.contexto(usuarioId);
+    return procesarLote(
+      filas,
+      ({ id, ...dto }) => this.actualizarCon(actual, id, dto),
+      (dto) => ({ id: dto.id }),
+    );
+  }
+
+  private async actualizarCon(
+    actual: ContextoAdmin,
+    id: number,
+    dto: ActualizarUsuarioDto,
+  ): Promise<UsuarioAdminDto> {
     const objetivo = await this.prisma.usuario.findUnique({
       where: { id },
       select: {
@@ -518,7 +601,6 @@ export class UsuariosService {
       throw new NotFoundException('El usuario no existe');
     }
     const rolId = dto.rolId ?? objetivo.rolId;
-    if (rolId === null) throw new BadRequestException('El rol es obligatorio');
     await this.validarAsignaciones(
       objetivo.empresaId,
       rolId,
@@ -529,11 +611,11 @@ export class UsuariosService {
     const ruc =
       dto.ruc === undefined
         ? undefined
-        : normalizarRucUsuario(dto.ruc, dto.celularPais!);
+        : normalizarRucUsuario(dto.ruc, dto.celularPais ?? 'PY');
     const celular =
       dto.celular === undefined
         ? undefined
-        : normalizarCelular(dto.celular, dto.celularPais!);
+        : normalizarCelular(dto.celular, dto.celularPais ?? 'PY');
     const unicos = [
       dto.correo === undefined ? null : { correo: dto.correo },
       dto.nombreLogin === undefined ? null : { nombreLogin: dto.nombreLogin },
@@ -582,9 +664,30 @@ export class UsuariosService {
     }
   }
 
-  // Conserva el registro de la cuenta y bloquea inmediatamente el acceso.
   async eliminar(usuarioId: number, id: number): Promise<{ ok: true }> {
+    return this.eliminarCon(await this.contexto(usuarioId), id);
+  }
+
+  async eliminarLote(
+    usuarioId: number,
+    filas: FilaLoteUsuarios<DesactivarUsuarioLoteDto>[],
+  ): Promise<ResultadoLoteUsuarios<{ id: number }>> {
     const actual = await this.contexto(usuarioId);
+    return procesarLote(
+      filas,
+      async ({ id }) => {
+        await this.eliminarCon(actual, id);
+        return { id };
+      },
+      (dto) => ({ id: dto.id }),
+    );
+  }
+
+  // Conserva el registro de la cuenta y bloquea inmediatamente el acceso.
+  private async eliminarCon(
+    actual: ContextoAdmin,
+    id: number,
+  ): Promise<{ ok: true }> {
     const objetivo = await this.prisma.usuario.findUnique({
       where: { id },
       select: { id: true, empresaId: true, esSuperadmin: true },
@@ -603,4 +706,37 @@ export class UsuariosService {
     });
     return { ok: true };
   }
+}
+
+// Cada fila se procesa sola, en orden: un error no frena a las demás y queda
+// al final de la respuesta con su motivo.
+async function procesarLote<T, R>(
+  filas: FilaLoteUsuarios<T>[],
+  hacer: (dto: T) => Promise<R>,
+  quien: (dto: T) => { id?: number; usuario?: string },
+): Promise<ResultadoLoteUsuarios<R>> {
+  const resultados: R[] = [];
+  const errores: ErrorLoteUsuario[] = [];
+  for (const [indice, fila] of filas.entries()) {
+    if ('error' in fila) {
+      errores.push({ indice, error: fila.error });
+      continue;
+    }
+    try {
+      resultados.push(await hacer(fila.dto));
+    } catch (error: unknown) {
+      errores.push({
+        indice,
+        ...quien(fila.dto),
+        error: mensajeErrorLote(error),
+      });
+    }
+  }
+  return {
+    total: filas.length,
+    exitosos: resultados.length,
+    fallidos: errores.length,
+    resultados,
+    errores,
+  };
 }

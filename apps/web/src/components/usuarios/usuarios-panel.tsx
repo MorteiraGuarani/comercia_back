@@ -65,7 +65,7 @@ const FORM_INICIAL: FormUsuario = {
 };
 
 // Base del RUC tal como la edita el formulario (dígitos antes del verificador).
-const baseRuc = (ruc: string) => ruc.split("-")[0].replace(/\D/g, "").slice(0, 8);
+const baseRuc = (ruc: string | null) => (ruc ?? "").split("-")[0].replace(/\D/g, "").slice(0, 8);
 
 function ListaUsuariosMovil({
   usuarios,
@@ -262,9 +262,10 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
             apellido: form.apellido.trim(),
             correo: form.correo.trim().toLowerCase(),
             nombreLogin: form.nombreLogin.trim().toLowerCase(),
-            ruc: `${form.ruc}-${calcularDvRucPy(form.ruc)}`,
+            // RUC y celular son opcionales: solo viajan si se cargaron.
+            ...(form.ruc ? { ruc: `${form.ruc}-${calcularDvRucPy(form.ruc)}` } : {}),
+            ...(form.celular.trim() ? { celular: form.celular.trim() } : {}),
             celularPais: form.celularPais,
-            celular: form.celular.trim(),
             legajo: form.legajo.trim() || null,
             password: form.password,
             rolId: form.rolId,
@@ -275,9 +276,10 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
       } else {
         // RUC y celular viajan solo si cambiaron: se vuelven a validar.
         const original = partesCelular(editando.celular);
-        const cambioRuc = form.ruc !== baseRuc(editando.ruc);
+        const cambioRuc = !!form.ruc && form.ruc !== baseRuc(editando.ruc);
         const cambioCelular =
-          form.celularPais !== original.pais || form.celular.trim() !== original.numero;
+          !!form.celular.trim() &&
+          (form.celularPais !== original.pais || form.celular.trim() !== original.numero);
         await apiFetch(`${base}/${editando.id}`, {
           method: "PATCH",
           body: JSON.stringify({
@@ -543,7 +545,7 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
               <div>
                 <div className="grid grid-cols-[minmax(0,1fr)_5rem] gap-3">
                   <label className={labelBase}>
-                    RUC (sin dígito verificador)
+                    RUC (opcional, sin dígito verificador)
                     <input
                       value={form.ruc}
                       onChange={(e) => {
@@ -555,7 +557,6 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
                       inputMode="numeric"
                       pattern="[0-9]{3,8}"
                       minLength={3}
-                      required
                       aria-describedby="ruc-calculado"
                       className={inputBase}
                     />
@@ -603,8 +604,9 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
                   </select>
                 </label>
                 <Campo
-                  label="Celular"
+                  label="Celular (opcional)"
                   type="tel"
+                  required={false}
                   value={form.celular}
                   onChange={(celular) => setForm((f) => ({ ...f, celular }))}
                 />

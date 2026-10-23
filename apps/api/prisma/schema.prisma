@@ -456,7 +456,7 @@ model Usuario {
   correo                  String                    @unique
   nombreLogin             String                    @unique @map("nombre_login")
   passwordHash            String                    @map("password_hash")
-  ruc                     String                    @unique
+  ruc                     String?                   @unique
   celular                 String
   legajo                  String?                   @db.VarChar(64)
   rolId                   Int?                      @map("rol_id")

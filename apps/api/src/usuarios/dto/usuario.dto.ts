@@ -14,7 +14,6 @@ import {
   MinLength,
   ValidateIf,
 } from 'class-validator';
-import { RegisterDto } from '../../auth/dto/register.dto';
 import { MAX_INT4 } from '../../common/utils/numeros';
 import { lowerTrimString, trimString } from '../../common/utils/transforms';
 
@@ -52,11 +51,73 @@ export class AsignarUsuarioLocalDto {
   fechaHasta?: string | null;
 }
 
-export class CrearUsuarioDto extends RegisterDto {
+// Alta: todos los campos son opcionales; el servicio completa lo que falte
+// (usuario desde el correo, contraseña por defecto, etc.).
+export class CrearUsuarioDto {
+  @IsOptional()
+  @IsString()
+  @Transform(trimString)
+  @Length(1, 60)
+  nombre?: string;
+
+  @IsOptional()
+  @IsString()
+  @Transform(trimString)
+  @MaxLength(60)
+  apellido?: string;
+
+  @IsOptional()
+  @Transform(lowerTrimString)
+  @IsEmail({}, { message: 'el correo no tiene un formato válido' })
+  @MaxLength(120)
+  correo?: string;
+
+  @IsOptional()
+  @IsString()
+  @Transform(lowerTrimString)
+  @Matches(/^[a-z0-9][a-z0-9._-]{2,29}$/, {
+    message:
+      'el nombre de usuario debe tener 3 a 30 caracteres (letras, números, ".", "-", "_") y empezar con letra o número',
+  })
+  nombreLogin?: string;
+
+  @IsOptional()
   @IsInt()
   @Min(1)
   @Max(MAX_INT4)
-  rolId!: number;
+  empresaId?: number;
+
+  @IsOptional()
+  @IsString()
+  @Transform(trimString)
+  @Length(3, 20)
+  ruc?: string;
+
+  /** País (ISO 3166-1 alfa-2) para validar celular y RUC; por defecto PY. */
+  @IsOptional()
+  @IsString()
+  @Matches(/^[A-Z]{2}$/, {
+    message: 'celularPais debe ser un código de país de 2 letras',
+  })
+  celularPais?: string;
+
+  @IsOptional()
+  @IsString()
+  @Transform(trimString)
+  @Length(4, 25)
+  celular?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(8, { message: 'la contraseña debe tener al menos 8 caracteres' })
+  @MaxLength(100)
+  password?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(MAX_INT4)
+  rolId?: number;
 
   @IsOptional()
   @IsInt()
@@ -109,11 +170,8 @@ export class ActualizarUsuarioDto {
   @Length(3, 20)
   ruc?: string;
 
-  // Obligatorio al cambiar RUC o celular: define cómo se validan.
-  @ValidateIf(
-    (o: ActualizarUsuarioDto) =>
-      o.celularPais !== undefined || o.ruc !== undefined || o.celular !== undefined,
-  )
+  /** País para validar celular y RUC; por defecto PY. */
+  @IsOptional()
   @IsString()
   @Matches(/^[A-Z]{2}$/, {
     message: 'celularPais debe ser un código de país de 2 letras',
@@ -153,4 +211,22 @@ export class ActualizarUsuarioDto {
   @MinLength(8)
   @MaxLength(100)
   password?: string;
+}
+
+/** Fila de la edición en lote: el id indica qué usuario se modifica. */
+export class ActualizarUsuarioLoteDto extends ActualizarUsuarioDto {
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(MAX_INT4)
+  id!: number;
+}
+
+/** Fila de la desactivación en lote. */
+export class DesactivarUsuarioLoteDto {
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(MAX_INT4)
+  id!: number;
 }
