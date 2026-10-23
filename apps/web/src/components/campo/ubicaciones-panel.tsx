@@ -18,7 +18,8 @@ import { StatChip } from "./ui/stat-chip";
 import { TopBar } from "./ui/top-bar";
 
 // Polling corto: funciona detrás de cualquier proxy, sin conexiones abiertas.
-const REFRESCO_MS = 30_000;
+// Los puntos llegan cada ~30 s; mirar cada 15 s deja el mapa casi en vivo.
+const REFRESCO_MS = 15_000;
 
 const btnFila = `${btnGhost} min-h-11 whitespace-nowrap px-3`;
 const textoTramo: Record<TramoRecorrido["tipo"], string> = {

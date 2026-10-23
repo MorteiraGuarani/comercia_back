@@ -1,7 +1,11 @@
 export const PAGINA_UBICACIONES = 'ubicaciones';
 
-/** Cada cuánto manda su posición el navegador mientras la jornada está activa. */
-export const INTERVALO_PING_SEGUNDOS = 60;
+/**
+ * Un punto cada 30 s: el navegador lo manda a ese ritmo y del seguimiento de
+ * UCheck (cada ~10 s) se guarda uno por intervalo. Da el detalle para armar
+ * recorridos por hora, día o semana con la retención de 90 días.
+ */
+export const INTERVALO_PING_SEGUNDOS = 30;
 /** Después de cada salida se sigue registrando el traslado al próximo local. */
 export const MARGEN_TRASLADO_MS = 60 * 60_000;
 /** Lo encolado sin señal que supere esta antigüedad se descarta. */

@@ -186,7 +186,7 @@ describe('UbicacionesService', () => {
     prisma.visitaCampo.findMany.mockResolvedValue([]);
     expect(await service.estado(3)).toEqual({
       activa: false,
-      intervaloSegundos: 60,
+      intervaloSegundos: 30,
     });
     const r = await service.registrar(3, {
       pings: [ping('2026-10-23T09:59:00-03:00')],
@@ -195,7 +195,7 @@ describe('UbicacionesService', () => {
     expect(prisma.ubicacionCampo.createMany).not.toHaveBeenCalled();
   });
 
-  it('del seguimiento de UCheck guarda un punto por minuto', async () => {
+  it('del seguimiento de UCheck guarda un punto cada 30 s', async () => {
     const { prisma, service } = armar();
     const punto = (hora: string) => ({
       latitud: -25.3,
@@ -221,7 +221,7 @@ describe('UbicacionesService', () => {
     expect(
       await service.registrarSeguimientoUcheck(
         { id: 3, empresaId: 5 },
-        punto('09:00:58'),
+        punto('09:00:28'),
       ),
     ).toBe(true);
     expect(prisma.ubicacionCampo.createMany).toHaveBeenCalledTimes(2);

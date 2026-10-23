@@ -3,8 +3,8 @@ import Dexie, { type Table } from "dexie";
 import { apiFetch, ApiError } from "./api";
 import type { PingPendiente, RespuestaPings } from "@/types/ubicacion";
 
-// Unas dos jornadas a un punto por minuto; lo más viejo se descarta primero.
-const MAX_PENDIENTES = 1500;
+// Unas dos jornadas a un punto cada 30 s; lo más viejo se descarta primero.
+const MAX_PENDIENTES = 3000;
 const POR_LOTE = 50;
 
 class BaseUbicaciones extends Dexie {
