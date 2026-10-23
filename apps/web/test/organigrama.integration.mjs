@@ -11,7 +11,7 @@ const js = ts.transpileModule(
 const modulo = { exports: {} };
 vm.runInThisContext(`(function (module, exports, require) {${js}
 })`)(modulo, modulo.exports, () => ({}));
-const { armarArbol, caminoHasta, estadoHoy } = modulo.exports;
+const { armarArbol, caminoHasta, cumpleFiltros, estadoHoy, filtrarArbol, SIN_FILTROS } = modulo.exports;
 
 const hoy = { locales: 0, visitas: 0, entrada: null, enCurso: false };
 const p = (id, superiorId, nombre = `P${id}`, extra = {}) => ({ id, superiorId, nombre, activo: true, hoy, ...extra });
@@ -44,4 +44,15 @@ assert.equal(estadoHoy(p(1, null, "x", { hoy: { ...hoy, entrada: "08:05" } })).t
 assert.equal(estadoHoy(p(1, null)).tono, "sin");
 assert.equal(estadoHoy(p(1, null, "x", { activo: false })).tono, "baja");
 
-console.log("OK: árbol del organigrama, raíces, ciclos, camino y estado de hoy");
+// Filtros: queda quien coincide y su línea de mando como contexto.
+const conEquipo = personas.map((x) => ({ ...x, equipo: x.id === 3 ? { nombre: "Repositores", tipo: "REPOSITOR" } : null, alertas: x.id === 4 ? ["AISLADO"] : [] }));
+const filtrado = filtrarArbol(armarArbol(conEquipo, null), (x) => cumpleFiltros(x, { ...SIN_FILTROS, equipo: "Repositores" }));
+assert.deepEqual(filtrado.map((n) => [n.persona.id, n.contexto, n.hijos.map((h) => [h.persona.id, h.contexto, h.hijos.map((x) => [x.persona.id, x.contexto])])]), [
+  [1, true, [[2, true, [[3, false]]]]],
+]);
+assert.deepEqual(filtrarArbol(armarArbol(conEquipo, null), (x) => cumpleFiltros(x, { ...SIN_FILTROS, alertas: true })).map((n) => n.persona.id), [4]);
+assert.equal(cumpleFiltros(p(1, null, "x", { hoy: { ...hoy, entrada: "08:00", enCurso: true } }), { ...SIN_FILTROS, hoy: "marco" }), true);
+assert.equal(cumpleFiltros(p(1, null, "x", { equipo: null }), { ...SIN_FILTROS, hoy: "sin" }), false);
+assert.equal(cumpleFiltros(p(1, null, "x", { activo: false }), { ...SIN_FILTROS, hoy: "baja" }), true);
+
+console.log("OK: árbol del organigrama, raíces, ciclos, camino, estado de hoy y filtros");

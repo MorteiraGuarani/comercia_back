@@ -25,6 +25,10 @@ import {
   CrearEjecutableDto,
 } from './dto/ejecutable.dto';
 import { AsignarModuloDto } from './dto/asignacion.dto';
+import {
+  ActualizarConexionDto,
+  CrearConexionDto,
+} from './dto/conexion.dto';
 
 // Endpoint del usuario común: su menú (auth, sin superadmin)
 @ApiTags('plataforma')
@@ -97,6 +101,24 @@ export class AdminPlataformaController {
   @Get('conexiones')
   listarConexiones() {
     return this.ejecutables.listarConexiones();
+  }
+
+  @Post('conexiones')
+  crearConexion(@Body() dto: CrearConexionDto) {
+    return this.ejecutables.crearConexion(dto);
+  }
+
+  @Patch('conexiones/:id')
+  actualizarConexion(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: ActualizarConexionDto,
+  ) {
+    return this.ejecutables.actualizarConexion(id, dto);
+  }
+
+  @Delete('conexiones/:id')
+  eliminarConexion(@Param('id', ParseIntPipe) id: number) {
+    return this.ejecutables.eliminarConexion(id);
   }
 
   @Post('ejecutables')

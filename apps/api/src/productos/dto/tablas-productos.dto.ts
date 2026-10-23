@@ -48,6 +48,23 @@ export class ArticuloDto {
   })
   QryInventario?: string | null;
   @CampoTabla({
+    tipo: 'decimal',
+    requerido: false,
+    nullable: true,
+    descripcion: 'Peso de venta (SAP SWeight1), numeric(21,6).',
+    ejemplo: '1.250000',
+  })
+  SWeight1?: number | string | null;
+  @CampoTabla({
+    tipo: 'texto',
+    longitud: 10,
+    requerido: false,
+    nullable: true,
+    descripcion: 'Almacén por defecto (SAP DfltWH).',
+    ejemplo: '01',
+  })
+  DfltWH?: string | null;
+  @CampoTabla({
     tipo: 'texto',
     longitud: 1,
     requerido: false,
@@ -67,6 +84,14 @@ export class ArticuloDto {
     ejemplo: 'N',
   })
   frozenFor?: string | null;
+  @CampoTabla({
+    tipo: 'decimal',
+    requerido: false,
+    nullable: true,
+    descripcion: 'Cantidad por unidad del artículo (SAP U_ItemQty), numeric(21,6).',
+    ejemplo: '12.000000',
+  })
+  U_ItemQty?: number | string | null;
   @CampoTabla({
     tipo: 'texto',
     longitud: 50,

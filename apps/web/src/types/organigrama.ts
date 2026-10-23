@@ -37,4 +37,14 @@ export interface NodoOrganigrama {
   hijos: NodoOrganigrama[];
   /** Personas debajo, directas e indirectas. */
   total: number;
+  /** Con filtros: está solo para mostrar el camino hasta quien sí coincide. */
+  contexto?: boolean;
+}
+
+export interface FiltrosOrganigrama {
+  /** Nombre del equipo; "-" = sin equipo operativo. */
+  equipo: string;
+  rol: string;
+  hoy: "" | "marco" | "curso" | "sin" | "baja";
+  alertas: boolean;
 }

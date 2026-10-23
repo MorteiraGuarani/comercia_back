@@ -11,6 +11,8 @@ describe('filtrosBusquedaUsuario', () => {
         { apellido: { contains: 'Ana', mode: 'insensitive' } },
         { nombreLogin: { contains: 'Ana', mode: 'insensitive' } },
         { correo: { contains: 'Ana', mode: 'insensitive' } },
+        { legajo: { contains: 'Ana', mode: 'insensitive' } },
+        { ruc: { contains: 'Ana', mode: 'insensitive' } },
       ],
     });
     expect(filtros[1]).toEqual({
@@ -19,6 +21,8 @@ describe('filtrosBusquedaUsuario', () => {
         { apellido: { contains: 'Rojas', mode: 'insensitive' } },
         { nombreLogin: { contains: 'Rojas', mode: 'insensitive' } },
         { correo: { contains: 'Rojas', mode: 'insensitive' } },
+        { legajo: { contains: 'Rojas', mode: 'insensitive' } },
+        { ruc: { contains: 'Rojas', mode: 'insensitive' } },
       ],
     });
   });

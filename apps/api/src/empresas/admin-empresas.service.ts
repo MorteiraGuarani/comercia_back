@@ -25,6 +25,7 @@ const SELECT_EMPRESA_ADMIN = {
   id: true,
   nombre: true,
   dbName: true,
+  diasAvisoVencimiento: true,
   padre: { select: { id: true, nombre: true } },
   _count: {
     select: {
@@ -41,6 +42,7 @@ function aEmpresaAdminDto(empresa: EmpresaAdminFila): EmpresaAdminDto {
     id: empresa.id,
     nombre: empresa.nombre,
     dbName: empresa.dbName,
+    diasAvisoVencimiento: empresa.diasAvisoVencimiento,
     padre: empresa.padre,
     usuariosCount: empresa._count.usuarios,
     hijasCount: empresa._count.hijas,
@@ -112,6 +114,7 @@ export class AdminEmpresasService {
           nombre: dto.nombre.trim(),
           dbName: dto.dbName?.trim() || null,
           empresaId: dto.empresaId ?? null,
+          diasAvisoVencimiento: dto.diasAvisoVencimiento,
         },
         select: SELECT_EMPRESA_ADMIN,
       });
@@ -139,6 +142,7 @@ export class AdminEmpresasService {
           dbName:
             dto.dbName === undefined ? undefined : dto.dbName?.trim() || null,
           empresaId: dto.empresaId,
+          diasAvisoVencimiento: dto.diasAvisoVencimiento,
         },
         select: SELECT_EMPRESA_ADMIN,
       });

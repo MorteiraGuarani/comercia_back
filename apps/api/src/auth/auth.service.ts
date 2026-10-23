@@ -11,6 +11,7 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { hashPassword, verifyPassword } from './utils/password';
 import {
+  MENSAJES_DUPLICADO,
   normalizarCelular,
   normalizarNumeroSim,
   normalizarRucUsuario,
@@ -25,11 +26,6 @@ import {
   esErrorDuplicado,
 } from '../common/utils/error-prisma';
 
-const MENSAJES_DUPLICADO: Record<string, string> = {
-  correo: 'Ya existe un usuario registrado con ese correo',
-  nombre_login: 'Ese nombre de usuario ya está en uso',
-  ruc: 'Ya existe un usuario registrado con ese RUC',
-};
 
 @Injectable()
 export class AuthService {
@@ -40,7 +36,7 @@ export class AuthService {
   ) {}
 
   async crearUsuario(
-    dto: RegisterDto,
+    dto: RegisterDto & { legajo?: string | null },
     asignacion: AsignacionUsuario,
   ): Promise<UsuarioSesion> {
     const celularE164 = normalizarCelular(dto.celular, dto.celularPais);
@@ -85,6 +81,7 @@ export class AuthService {
           esSuperadmin: asignacion.esSuperadmin ?? false,
           ruc,
           celular: celularE164,
+          legajo: dto.legajo ?? null,
           passwordHash,
         },
         include: { empresa: true, rol: { include: { equipoCampo: true } } },

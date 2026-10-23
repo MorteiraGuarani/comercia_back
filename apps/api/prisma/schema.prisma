@@ -229,8 +229,11 @@ model Producto {
   iva Int? @map("TaxCodeAR") @db.SmallInt
   itmsgrpcode Int? @default(-1) @map("ItmsGrpCod") @db.SmallInt
   inventory String? @default("N") @map("QryInventario") @db.VarChar(1)
+  peso Decimal? @map("SWeight1") @db.Decimal(21, 6)
+  almacen String? @map("DfltWH") @db.VarChar(10)
   validFor String? @default("Y") @db.VarChar(1)
   frozenFor String? @default("N") @db.VarChar(1)
+  cantidadItem Decimal? @map("U_ItemQty") @db.Decimal(21, 6)
   tipo String? @map("TIPO") @db.VarChar(50)
   precios ProductoPrecio[]
   localesInventario ProductoLocalCampo[]
@@ -455,6 +458,7 @@ model Usuario {
   passwordHash            String                    @map("password_hash")
   ruc                     String                    @unique
   celular                 String
+  legajo                  String?                   @db.VarChar(64)
   rolId                   Int?                      @map("rol_id")
   rol                     Rol?                      @relation(fields: [rolId, empresaId], references: [id, empresaId], onDelete: NoAction, onUpdate: NoAction)
   superiorId              Int?                      @map("superior_id")

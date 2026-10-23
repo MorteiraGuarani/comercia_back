@@ -1,6 +1,7 @@
 // Reglas puras del organigrama: armado del árbol y textos de estado.
 import type {
   AlertaOrganigrama,
+  FiltrosOrganigrama,
   NodoOrganigrama,
   PersonaOrganigrama,
 } from "@/types/organigrama";
@@ -77,4 +78,37 @@ export function caminoHasta(personas: PersonaOrganigrama[], id: number): number[
   for (let p = porId.get(id); p && !camino.includes(p.id); p = p.superiorId === null ? undefined : porId.get(p.superiorId))
     camino.unshift(p.id);
   return camino;
+}
+
+export const SIN_FILTROS: FiltrosOrganigrama = { equipo: "", rol: "", hoy: "", alertas: false };
+
+export function cumpleFiltros(p: PersonaOrganigrama, f: FiltrosOrganigrama): boolean {
+  const hoy =
+    f.hoy === "marco"
+      ? p.activo && p.hoy.entrada !== null
+      : f.hoy === "curso"
+        ? p.activo && p.hoy.enCurso
+        : f.hoy === "sin"
+          ? p.activo && p.equipo !== null && p.hoy.entrada === null
+          : f.hoy === "baja"
+            ? !p.activo
+            : true;
+  return (
+    hoy &&
+    (!f.equipo || (f.equipo === "-" ? p.equipo === null : p.equipo?.nombre === f.equipo)) &&
+    (!f.rol || (p.rol ?? "") === f.rol) &&
+    (!f.alertas || p.alertas.length > 0)
+  );
+}
+
+/** Deja a quien coincide y su línea de mando, marcada como contexto. */
+export function filtrarArbol(
+  nodos: NodoOrganigrama[],
+  coincide: (p: PersonaOrganigrama) => boolean,
+): NodoOrganigrama[] {
+  return nodos.flatMap((n) => {
+    const hijos = filtrarArbol(n.hijos, coincide);
+    const propio = coincide(n.persona);
+    return propio || hijos.length ? [{ ...n, hijos, contexto: !propio }] : [];
+  });
 }

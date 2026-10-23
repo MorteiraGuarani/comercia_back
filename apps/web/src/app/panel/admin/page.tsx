@@ -9,8 +9,9 @@ import { EmpresasAbmPanel } from "@/components/admin/empresas-abm-panel";
 import { RolesPanel } from "@/components/admin/roles-panel";
 import { UsuariosPanel } from "@/components/usuarios/usuarios-panel";
 import { ProductosPanel } from "@/components/admin/productos-panel";
+import { ConexionesPanel } from "@/components/admin/conexiones-panel";
 
-type Tab = "usuarios" | "roles" | "empresas" | "modulos" | "accesos" | "productos";
+type Tab = "usuarios" | "roles" | "empresas" | "modulos" | "conexiones" | "accesos" | "productos";
 
 export default function AdminPage() {
   const router = useRouter();
@@ -74,6 +75,13 @@ export default function AdminPage() {
         </button>
         <button
           type="button"
+          onClick={() => setTab("conexiones")}
+          className={`${tabClase("conexiones")} whitespace-nowrap`}
+        >
+          Conexiones
+        </button>
+        <button
+          type="button"
           onClick={() => setTab("accesos")}
           className={`${tabClase("accesos")} whitespace-nowrap`}
         >
@@ -87,6 +95,7 @@ export default function AdminPage() {
         {tab === "roles" && <RolesPanel />}
         {tab === "empresas" && <EmpresasAbmPanel />}
         {tab === "modulos" && <ModulosPanel />}
+        {tab === "conexiones" && <ConexionesPanel />}
         {tab === "accesos" && <EmpresasPanel />}
         {tab === "productos" && <ProductosPanel />}
       </div>

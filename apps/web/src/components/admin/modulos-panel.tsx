@@ -404,7 +404,7 @@ function FormModulo({
       } else {
         await apiFetch(`${BASE}/modulos/${inicial.id}`, {
           method: "PATCH",
-          body: JSON.stringify(body),
+          body: JSON.stringify({ ...body, icono }),
         });
       }
       onGuardado();
@@ -498,6 +498,7 @@ function FormPagina({
   const esNuevo = p === null;
   const [nombre, setNombre] = useState(p?.nombre ?? "");
   const [ruta, setRuta] = useState(p?.ruta ?? "");
+  const [icono, setIcono] = useState(p?.icono ?? "");
   const [orden, setOrden] = useState(p?.orden ?? 0);
   const [activo, setActivo] = useState(p?.activo ?? true);
   const [error, setError] = useState<string | null>(null);
@@ -515,6 +516,7 @@ function FormPagina({
             moduloId: data.moduloId,
             nombre,
             ruta,
+            icono: icono || undefined,
             orden,
             activo,
           }),
@@ -522,7 +524,7 @@ function FormPagina({
       } else {
         await apiFetch(`${BASE}/paginas/${p.id}`, {
           method: "PATCH",
-          body: JSON.stringify({ nombre, ruta, orden, activo }),
+          body: JSON.stringify({ nombre, ruta, icono, orden, activo }),
         });
       }
       onGuardado();
@@ -557,6 +559,15 @@ function FormPagina({
             onChange={(e) => setRuta(e.target.value)}
             placeholder="ej: listado"
             required
+          />
+        </label>
+        <label className={labelBase}>
+          Ícono (opcional)
+          <input
+            className={inputBase}
+            value={icono}
+            onChange={(e) => setIcono(e.target.value)}
+            placeholder="ventas, clientes..."
           />
         </label>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

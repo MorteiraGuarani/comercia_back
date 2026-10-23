@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { Modal } from "@/components/modal";
 import { PantallaCarga } from "@/components/pantalla-carga";
@@ -11,13 +11,26 @@ import { btnGhost, errorBox, inputBase } from "@/components/ui";
 import { TopBar } from "@/components/campo/ui/top-bar";
 import { mensajeError } from "@/utils/error";
 import { normalizarBusqueda } from "@/utils/texto";
-import { ALERTAS_ORGANIGRAMA, armarArbol, caminoHasta, estadoHoy } from "@/utils/organigrama";
-import type { NodoOrganigrama, Organigrama, PersonaOrganigrama } from "@/types/organigrama";
+import {
+  ALERTAS_ORGANIGRAMA,
+  armarArbol,
+  caminoHasta,
+  cumpleFiltros,
+  estadoHoy,
+  filtrarArbol,
+  SIN_FILTROS,
+} from "@/utils/organigrama";
+import type {
+  FiltrosOrganigrama,
+  NodoOrganigrama,
+  Organigrama,
+  PersonaOrganigrama,
+} from "@/types/organigrama";
 import type { MetaUsuarios } from "@/types/usuario";
 import styles from "./organigrama.module.css";
 
-const ZOOM_MIN = 0.4;
-const ZOOM_MAX = 1.4;
+const ZOOM_MIN = 0.2;
+const ZOOM_MAX = 2.5;
 
 const fechaCorta = (iso: string) => iso.split("-").reverse().join("/");
 
@@ -51,6 +64,7 @@ function Tarjeta({
       data-inactivo={!p.activo || undefined}
       data-resaltado={resaltado || undefined}
       data-raiz={raiz || undefined}
+      data-contexto={nodo.contexto || undefined}
       onClick={() => onAbrir(p)}
       aria-label={`${p.nombre}, ${p.rol ?? "sin rol"}. ${estado.texto}. Ver ficha`}
     >
@@ -147,6 +161,57 @@ function conHijos(nodos: NodoOrganigrama[], hasta: number, nivel = 0, ids = new 
   return ids;
 }
 
+
+/** Ancho y alto reales (sin zoom) de lo desplegado: une las ramas de primer nivel. */
+function tamanoNatural(contenido: HTMLElement, zoom: number) {
+  const ramas = [...contenido.querySelectorAll<HTMLElement>(":scope > ul > li")].map((li) => li.getBoundingClientRect());
+  const caja = contenido.getBoundingClientRect();
+  const ancho = ramas.length ? Math.max(...ramas.map((r) => r.right)) - Math.min(...ramas.map((r) => r.left)) : caja.width;
+  return { ancho: ancho / zoom, alto: caja.height / zoom };
+}
+
+// Imagen del organigrama tal como está desplegado, a tamaño real.
+async function capturar(contenido: HTMLElement, zoom: number) {
+  const { toJpeg } = await import("html-to-image");
+  const caja = contenido.getBoundingClientRect();
+  const width = Math.ceil(caja.width / zoom);
+  const height = Math.ceil(caja.height / zoom);
+  // Los navegadores no dibujan lienzos de más de ~16.000 px por lado.
+  const pixelRatio = Math.max(0.5, Math.min(2, 15000 / Math.max(width, height)));
+  const fondo = getComputedStyle(document.documentElement).getPropertyValue("--surface").trim() || "#ffffff";
+  return toJpeg(contenido, { quality: 0.92, pixelRatio, width, height, backgroundColor: fondo, style: { zoom: "1" } });
+}
+
+// PDF sin librerías: la imagen en un iframe oculto y el diálogo de impresión
+// del navegador, donde se elige «Guardar como PDF».
+function imprimir(imagen: string, titulo: string) {
+  const iframe = document.createElement("iframe");
+  iframe.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0";
+  document.body.append(iframe);
+  const doc = iframe.contentDocument!;
+  doc.open();
+  doc.write(
+    "<!doctype html><meta charset=utf-8><style>@page{size:landscape;margin:8mm}html,body{margin:0}img{display:block;max-width:100%;max-height:100vh;margin:auto;object-fit:contain}</style><img alt=\"\">",
+  );
+  doc.close();
+  doc.title = titulo;
+  const img = doc.querySelector("img")!;
+  img.onload = () => {
+    iframe.contentWindow!.onafterprint = () => setTimeout(() => iframe.remove(), 500);
+    iframe.contentWindow!.print();
+    setTimeout(() => iframe.isConnected && iframe.remove(), 60_000);
+  };
+  img.src = imagen;
+}
+
+const FILTROS_HOY: [FiltrosOrganigrama["hoy"], string][] = [
+  ["", "Hoy: todos"],
+  ["marco", "Marcaron hoy"],
+  ["curso", "En un local ahora"],
+  ["sin", "Sin marcar hoy"],
+  ["baja", "Inactivos"],
+];
+
 /**
  * Organigrama de la empresa (superadmin) o del equipo propio (Presentismo):
  * quién está a cargo de quién, qué hizo cada uno hoy y qué jerarquías hacen
@@ -166,10 +231,18 @@ export function OrganigramaPanel() {
   const cargando = terminada !== consulta;
   const [abiertos, setAbiertos] = useState<Set<number>>(new Set());
   const [busqueda, setBusqueda] = useState("");
+  const [filtros, setFiltros] = useState<FiltrosOrganigrama>(SIN_FILTROS);
   // En celular arranca un poco más chico para ver más de una rama.
   const [zoom, setZoom] = useState(() => (window.matchMedia("(max-width: 639px)").matches ? 0.8 : 1));
+  const zoomRef = useRef(zoom);
+  const [completa, setCompleta] = useState(false);
+  const [verAlertas, setVerAlertas] = useState(false);
+  const [exportando, setExportando] = useState("");
   const [ficha, setFicha] = useState<PersonaOrganigrama | null>(null);
-  const arrastre = useRef<{ x: number; y: number; left: number; top: number } | null>(null);
+  const lienzoRef = useRef<HTMLDivElement>(null);
+  const contenidoRef = useRef<HTMLDivElement>(null);
+  const arrastre = useRef<{ id: number; x: number; y: number; left: number; top: number; movido: boolean } | null>(null);
+  const sinClick = useRef(false);
 
   useEffect(() => {
     if (!usuario.esSuperadmin) return;
@@ -186,6 +259,7 @@ export function OrganigramaPanel() {
       .then((d) => {
         setDatos(d);
         setError("");
+        setFiltros(SIN_FILTROS);
         const arbol = armarArbol(d.personas, d.raizId);
         setAbiertos(conHijos(arbol, d.personas.length <= 60 ? Infinity : 2));
       })
@@ -197,6 +271,67 @@ export function OrganigramaPanel() {
       });
     return () => control.abort();
   }, [empresaId, consulta]);
+
+  // Zoom que deja quieto el punto bajo el cursor (o el centro de la vista).
+  const cambiarZoom = useCallback((valor: number, foco?: { x: number; y: number }) => {
+    const el = lienzoRef.current;
+    const actual = zoomRef.current;
+    const nuevo = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(valor * 100) / 100));
+    if (!el || nuevo === actual) return;
+    const caja = el.getBoundingClientRect();
+    const fx = (foco?.x ?? caja.left + el.clientWidth / 2) - caja.left;
+    const fy = (foco?.y ?? caja.top + el.clientHeight / 2) - caja.top;
+    const x = (el.scrollLeft + fx) / actual;
+    const y = (el.scrollTop + fy) / actual;
+    zoomRef.current = nuevo;
+    setZoom(nuevo);
+    requestAnimationFrame(() => {
+      el.scrollLeft = x * nuevo - fx;
+      el.scrollTop = y * nuevo - fy;
+    });
+  }, []);
+
+  // Ctrl/⌘ + rueda (y el pellizco del trackpad) acerca y aleja el organigrama
+  // en vez de la página: necesita un listener no pasivo.
+  useEffect(() => {
+    const el = lienzoRef.current;
+    if (!el) return;
+    const rueda = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      cambiarZoom(zoomRef.current * (e.deltaY < 0 ? 1.1 : 1 / 1.1), { x: e.clientX, y: e.clientY });
+    };
+    el.addEventListener("wheel", rueda, { passive: false });
+    return () => el.removeEventListener("wheel", rueda);
+  }, [datos, cambiarZoom]);
+
+  // Pantalla completa del navegador si existe; si no (iPhone), la vista ocupa
+  // toda la ventana igual. Esc vuelve.
+  useEffect(() => {
+    if (!completa) return;
+    const cambio = () => {
+      if (!document.fullscreenElement) setCompleta(false);
+    };
+    const tecla = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !document.fullscreenElement && !ficha && !verAlertas) setCompleta(false);
+    };
+    document.addEventListener("fullscreenchange", cambio);
+    window.addEventListener("keydown", tecla);
+    return () => {
+      document.removeEventListener("fullscreenchange", cambio);
+      window.removeEventListener("keydown", tecla);
+    };
+  }, [completa, ficha, verAlertas]);
+
+  function alternarCompleta() {
+    if (completa) {
+      setCompleta(false);
+      if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);
+      return;
+    }
+    setCompleta(true);
+    void document.documentElement.requestFullscreen?.().catch(() => undefined);
+  }
 
   const personas = useMemo(() => datos?.personas ?? [], [datos]);
   const arbol = useMemo(() => (datos ? armarArbol(datos.personas, datos.raizId) : []), [datos]);
@@ -210,6 +345,23 @@ export function OrganigramaPanel() {
     arbol.forEach(contar);
     return m;
   }, [arbol]);
+  const conFiltros = !!(filtros.equipo || filtros.rol || filtros.hoy || filtros.alertas);
+  const visible = useMemo(
+    () => (conFiltros ? filtrarArbol(arbol, (p) => cumpleFiltros(p, filtros)) : arbol),
+    [arbol, filtros, conFiltros],
+  );
+  const coinciden = conFiltros ? personas.filter((p) => cumpleFiltros(p, filtros)).length : personas.length;
+  const equipos = useMemo(
+    () => [...new Set(personas.flatMap((p) => (p.equipo ? [p.equipo.nombre] : [])))].sort(),
+    [personas],
+  );
+  const roles = useMemo(() => [...new Set(personas.flatMap((p) => (p.rol ? [p.rol] : [])))].sort(), [personas]);
+
+  // Al filtrar se abre todo lo que queda, para que se vea a quien coincide.
+  function cambiarFiltros(nuevos: FiltrosOrganigrama) {
+    setFiltros(nuevos);
+    setAbiertos(conHijos(filtrarArbol(arbol, (p) => cumpleFiltros(p, nuevos)), Infinity));
+  }
 
   const texto = normalizarBusqueda(busqueda.trim());
   const coincidencias = useMemo(
@@ -225,16 +377,25 @@ export function OrganigramaPanel() {
 
   const activos = personas.filter((p) => p.activo);
   const conAlertas = personas.filter((p) => p.alertas.length);
-  const kpis = [
-    ["Personas activas", activos.length],
-    ["Marcaron hoy", activos.filter((p) => p.hoy.entrada).length],
-    ["En un local ahora", activos.filter((p) => p.hoy.enCurso).length],
-    ["Sin marcar hoy", activos.filter((p) => p.equipo && !p.hoy.entrada).length],
-    ["Con alertas", conAlertas.length],
-  ] as const;
+  // Cada número del resumen también filtra el organigrama.
+  const kpis: { titulo: string; valor: number; filtro: FiltrosOrganigrama }[] = [
+    { titulo: "Personas activas", valor: activos.length, filtro: SIN_FILTROS },
+    { titulo: "Marcaron hoy", valor: activos.filter((p) => p.hoy.entrada).length, filtro: { ...SIN_FILTROS, hoy: "marco" } },
+    { titulo: "En un local ahora", valor: activos.filter((p) => p.hoy.enCurso).length, filtro: { ...SIN_FILTROS, hoy: "curso" } },
+    {
+      titulo: "Sin marcar hoy",
+      valor: activos.filter((p) => p.equipo && !p.hoy.entrada).length,
+      filtro: { ...SIN_FILTROS, hoy: "sin" },
+    },
+    { titulo: "Con alertas", valor: conAlertas.length, filtro: { ...SIN_FILTROS, alertas: true } },
+  ];
+  const mismoFiltro = (f: FiltrosOrganigrama) =>
+    f.equipo === filtros.equipo && f.rol === filtros.rol && f.hoy === filtros.hoy && f.alertas === filtros.alertas;
 
   // Abre las ramas hasta la persona y la deja a la vista.
   function enfocar(id: number) {
+    const persona = porId.get(id);
+    if (conFiltros && persona && !cumpleFiltros(persona, filtros)) setFiltros(SIN_FILTROS);
     setAbiertos((actual) => new Set([...actual, ...caminoHasta(personas, id)]));
     requestAnimationFrame(() =>
       document.getElementById(`org-${id}`)?.scrollIntoView({ block: "center", inline: "center", behavior: "smooth" }),
@@ -251,8 +412,40 @@ export function OrganigramaPanel() {
     if (primera) enfocar(primera.id);
   }
 
+  function ajustar() {
+    const el = lienzoRef.current;
+    const contenido = contenidoRef.current;
+    if (!el || !contenido) return;
+    const { ancho, alto } = tamanoNatural(contenido, zoomRef.current);
+    cambiarZoom(Math.min(el.clientWidth / ancho, el.clientHeight / alto, 1));
+    requestAnimationFrame(() => requestAnimationFrame(() => el.scrollTo({ left: 0, top: 0 })));
+  }
+
+  async function exportar(formato: "jpg" | "pdf") {
+    const contenido = contenidoRef.current;
+    if (!contenido || !datos) return;
+    setExportando(formato === "jpg" ? "Generando imagen" : "Preparando PDF");
+    try {
+      const imagen = await capturar(contenido, zoomRef.current);
+      const nombre = `Organigrama ${datos.raizId === null ? datos.empresa.nombre : "de mi equipo"} ${datos.hoy}`;
+      if (formato === "pdf") imprimir(imagen, nombre);
+      else {
+        const enlace = document.createElement("a");
+        enlace.href = imagen;
+        enlace.download = `${nombre.replace(/[^\p{L}\p{N} _-]/gu, "").trim()}.jpg`;
+        enlace.click();
+      }
+    } catch (e) {
+      setError(mensajeError(e, "No se pudo exportar el organigrama"));
+    } finally {
+      setExportando("");
+    }
+  }
+
   const superior = ficha?.superiorId ? porId.get(ficha.superiorId) : undefined;
   const directos = ficha ? personas.filter((p) => p.superiorId === ficha.id) : [];
+  const btnHerramienta = `${btnGhost} min-h-11 whitespace-nowrap`;
+  const selectFiltro = `${inputBase} min-h-11 w-auto max-w-48`;
 
   return (
     <div className="min-w-0 w-full">
@@ -288,9 +481,9 @@ export function OrganigramaPanel() {
           </div>
         }
       />
-      <PantallaCarga visible={cargando} mensaje="Cargando organigrama" />
+      <PantallaCarga visible={cargando || !!exportando} mensaje={exportando || "Cargando organigrama"} />
 
-      <div className="mx-auto w-full min-w-0 max-w-7xl space-y-4 px-4 py-5 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full min-w-0 max-w-7xl space-y-3 px-4 py-4 sm:px-6 lg:px-8">
         {error ? (
           <div className={errorBox}>
             {error}{" "}
@@ -302,161 +495,298 @@ export function OrganigramaPanel() {
 
         {datos ? (
           <>
-            <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5" aria-label="Resumen del organigrama">
-              {kpis.map(([titulo, valor]) => (
-                <li key={titulo} className="rounded-xl border border-line bg-surface-raised p-3">
-                  <p className="text-2xl font-extrabold text-foreground">{valor}</p>
-                  <p className="text-xs font-semibold text-muted">{titulo}</p>
-                </li>
-              ))}
-            </ul>
-
-            {conAlertas.length ? (
-              <details
-                open
-                className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100"
-              >
-                <summary className="flex min-h-11 cursor-pointer items-center font-semibold hover:underline">
-                  {conAlertas.length} {conAlertas.length === 1 ? "persona necesita" : "personas necesitan"} revisar su jerarquía
-                </summary>
-                <p className="mb-2 text-xs">
-                  Estas personas no aparecen (o no ven a nadie) en Presentismo. Se corrige en Usuarios, eligiendo su superior y su rol.
-                </p>
-                <ul className="divide-y divide-amber-200 dark:divide-amber-800">
-                  {conAlertas.slice(0, 30).map((p) => (
-                    <li key={p.id}>
-                      <button
-                        type="button"
-                        onClick={() => enfocar(p.id)}
-                        className="flex min-h-11 w-full cursor-pointer flex-wrap items-center gap-x-2 rounded-md px-1 py-1.5 text-left hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:hover:bg-amber-900"
-                      >
-                        <strong>{p.nombre}</strong>
-                        <span className="text-xs">
-                          {p.alertas.map((a) => ALERTAS_ORGANIGRAMA[a].titulo).join(" · ")}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-                {conAlertas.length > 30 ? <p className="mt-1 text-xs">Se muestran las primeras 30.</p> : null}
-              </details>
-            ) : null}
-
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <label className="min-w-0 flex-1 basis-60">
-                <span className="sr-only">Buscar persona</span>
-                <input
-                  type="search"
-                  value={busqueda}
-                  onChange={(e) => buscar(e.target.value)}
-                  placeholder="Buscar por nombre, rol, usuario o equipo"
-                  className={`${inputBase} min-h-11`}
-                />
-              </label>
-              {texto ? (
-                <span className="text-sm text-muted" role="status">
-                  {coincidencias.length} {coincidencias.length === 1 ? "coincidencia" : "coincidencias"}
-                </span>
-              ) : null}
-              <div className="flex items-center gap-1" role="group" aria-label="Zoom del organigrama">
-                <button
-                  type="button"
-                  className={btnGhost}
-                  aria-label="Alejar"
-                  disabled={zoom <= ZOOM_MIN}
-                  onClick={() => setZoom((z) => Math.max(ZOOM_MIN, Math.round((z - 0.1) * 10) / 10))}
-                >
-                  −
-                </button>
-                <button type="button" className={btnGhost} onClick={() => setZoom(1)} aria-label="Tamaño normal">
-                  {Math.round(zoom * 100)}%
-                </button>
-                <button
-                  type="button"
-                  className={btnGhost}
-                  aria-label="Acercar"
-                  disabled={zoom >= ZOOM_MAX}
-                  onClick={() => setZoom((z) => Math.min(ZOOM_MAX, Math.round((z + 0.1) * 10) / 10))}
-                >
-                  +
-                </button>
-              </div>
-              <button type="button" className={btnGhost} onClick={() => setAbiertos(conHijos(arbol, Infinity))}>
-                Abrir todo
-              </button>
-              <button type="button" className={btnGhost} onClick={() => setAbiertos(new Set())}>
-                Plegar todo
-              </button>
-            </div>
-
-            <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
-              <span className="inline-flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-full bg-accent" aria-hidden /> Impulsadores
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-full bg-brand-500" aria-hidden /> Repositores
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-full bg-muted" aria-hidden /> Sin equipo operativo
-              </span>
-              <span>Arrastrá el fondo o deslizá para moverte. Tocá una persona para ver su ficha.</span>
-            </p>
-
             <div
-              className={styles.lienzo}
-              tabIndex={0}
-              aria-label="Organigrama"
-              onPointerDown={(e) => {
-                if (e.pointerType !== "mouse" || (e.target as HTMLElement).closest("button")) return;
-                const el = e.currentTarget;
-                arrastre.current = { x: e.clientX, y: e.clientY, left: el.scrollLeft, top: el.scrollTop };
-                el.setPointerCapture(e.pointerId);
-                el.dataset.arrastrando = "";
-              }}
-              onPointerMove={(e) => {
-                const a = arrastre.current;
-                if (!a) return;
-                e.currentTarget.scrollLeft = a.left - (e.clientX - a.x);
-                e.currentTarget.scrollTop = a.top - (e.clientY - a.y);
-              }}
-              onPointerUp={(e) => {
-                arrastre.current = null;
-                delete e.currentTarget.dataset.arrastrando;
-              }}
-              onPointerCancel={(e) => {
-                arrastre.current = null;
-                delete e.currentTarget.dataset.arrastrando;
-              }}
+              className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5"
+              role="group"
+              aria-label="Resumen: tocá un número para filtrar"
             >
-              <div className={styles.contenido} style={{ zoom }}>
-                {arbol.length ? (
-                  <ul className={styles.arbol}>
-                    {arbol.map((n) => (
-                      <Rama
-                        key={n.persona.id}
-                        nodo={n}
-                        raiz
-                        abiertos={abiertos}
-                        resaltados={resaltados}
-                        onPlegar={(id) =>
-                          setAbiertos((actual) => {
-                            const nuevo = new Set(actual);
-                            if (!nuevo.delete(id)) nuevo.add(id);
-                            return nuevo;
-                          })
-                        }
-                        onAbrir={setFicha}
-                      />
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="p-6 text-center text-sm text-muted">No hay personas para mostrar.</p>
-                )}
-              </div>
+              {kpis.map((k) => (
+                <button
+                  key={k.titulo}
+                  type="button"
+                  aria-pressed={mismoFiltro(k.filtro)}
+                  onClick={() => cambiarFiltros(k.filtro)}
+                  className={`min-h-11 cursor-pointer rounded-xl border p-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${
+                    mismoFiltro(k.filtro)
+                      ? "border-accent-ink bg-accent-soft"
+                      : "border-line bg-surface-raised hover:border-accent-ink hover:bg-surface-soft"
+                  }`}
+                >
+                  <span className="block text-2xl font-extrabold text-foreground">{k.valor}</span>
+                  <span className="block text-xs font-semibold text-muted">{k.titulo}</span>
+                </button>
+              ))}
             </div>
+
+            <section
+              aria-label="Organigrama"
+              className={completa ? "fixed inset-0 z-[1000] flex flex-col gap-2 bg-surface p-2 sm:p-3" : "space-y-2"}
+            >
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <label className="min-w-0 flex-1 basis-56">
+                  <span className="sr-only">Buscar persona</span>
+                  <input
+                    type="search"
+                    value={busqueda}
+                    onChange={(e) => buscar(e.target.value)}
+                    placeholder="Buscar por nombre, rol, usuario o equipo"
+                    className={`${inputBase} min-h-11`}
+                  />
+                </label>
+                <label className="min-w-0">
+                  <span className="sr-only">Equipo</span>
+                  <select
+                    value={filtros.equipo}
+                    onChange={(e) => cambiarFiltros({ ...filtros, equipo: e.target.value })}
+                    className={selectFiltro}
+                  >
+                    <option value="">Todos los equipos</option>
+                    {equipos.map((e) => (
+                      <option key={e} value={e}>
+                        {e}
+                      </option>
+                    ))}
+                    <option value="-">Sin equipo operativo</option>
+                  </select>
+                </label>
+                <label className="min-w-0">
+                  <span className="sr-only">Rol</span>
+                  <select
+                    value={filtros.rol}
+                    onChange={(e) => cambiarFiltros({ ...filtros, rol: e.target.value })}
+                    className={selectFiltro}
+                  >
+                    <option value="">Todos los roles</option>
+                    {roles.map((r) => (
+                      <option key={r} value={r}>
+                        {r}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="min-w-0">
+                  <span className="sr-only">Estado de hoy</span>
+                  <select
+                    value={filtros.hoy}
+                    onChange={(e) => cambiarFiltros({ ...filtros, hoy: e.target.value as FiltrosOrganigrama["hoy"] })}
+                    className={selectFiltro}
+                  >
+                    {FILTROS_HOY.map(([valor, etiqueta]) => (
+                      <option key={valor} value={valor}>
+                        {etiqueta}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-line bg-surface-raised px-3 text-sm hover:bg-surface-soft">
+                  <input
+                    type="checkbox"
+                    checked={filtros.alertas}
+                    onChange={(e) => cambiarFiltros({ ...filtros, alertas: e.target.checked })}
+                  />
+                  Solo con alertas
+                </label>
+                {conFiltros ? (
+                  <button type="button" className={btnHerramienta} onClick={() => setFiltros(SIN_FILTROS)}>
+                    Limpiar filtros
+                  </button>
+                ) : null}
+                <span className="text-sm text-muted" role="status">
+                  {texto
+                    ? `${coincidencias.length} ${coincidencias.length === 1 ? "coincidencia" : "coincidencias"}`
+                    : conFiltros
+                      ? `${coinciden} de ${personas.length} personas`
+                      : ""}
+                </span>
+              </div>
+
+              <div className="flex min-w-0 flex-wrap items-center gap-2" role="toolbar" aria-label="Herramientas del organigrama">
+                {conAlertas.length ? (
+                  <button
+                    type="button"
+                    onClick={() => setVerAlertas(true)}
+                    className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border border-amber-300 bg-amber-50 px-3 text-sm font-semibold text-amber-950 hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100 dark:hover:bg-amber-900"
+                  >
+                    ⚠ {conAlertas.length} {conAlertas.length === 1 ? "alerta" : "alertas"}
+                  </button>
+                ) : null}
+                <div className="flex items-center gap-1" role="group" aria-label="Zoom">
+                  <button
+                    type="button"
+                    className={btnHerramienta}
+                    aria-label="Alejar"
+                    disabled={zoom <= ZOOM_MIN}
+                    onClick={() => cambiarZoom(zoom / 1.25)}
+                  >
+                    −
+                  </button>
+                  <button type="button" className={btnHerramienta} onClick={() => cambiarZoom(1)} title="Volver al 100%">
+                    {Math.round(zoom * 100)}%
+                  </button>
+                  <button
+                    type="button"
+                    className={btnHerramienta}
+                    aria-label="Acercar"
+                    disabled={zoom >= ZOOM_MAX}
+                    onClick={() => cambiarZoom(zoom * 1.25)}
+                  >
+                    +
+                  </button>
+                  <button type="button" className={btnHerramienta} onClick={ajustar} title="Que entre todo en la vista">
+                    Ajustar
+                  </button>
+                </div>
+                <button type="button" className={btnHerramienta} onClick={() => setAbiertos(conHijos(visible, Infinity))}>
+                  Abrir todo
+                </button>
+                <button type="button" className={btnHerramienta} onClick={() => setAbiertos(new Set())}>
+                  Plegar todo
+                </button>
+                <div className="flex items-center gap-1" role="group" aria-label="Exportar lo que está desplegado">
+                  <button type="button" className={btnHerramienta} onClick={() => void exportar("jpg")} disabled={!!exportando}>
+                    JPG
+                  </button>
+                  <button type="button" className={btnHerramienta} onClick={() => void exportar("pdf")} disabled={!!exportando}>
+                    PDF
+                  </button>
+                </div>
+                <button type="button" className={`${btnHerramienta} ml-auto`} onClick={alternarCompleta} aria-pressed={completa}>
+                  {completa ? "Salir de pantalla completa" : "Pantalla completa"}
+                </button>
+              </div>
+
+              <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 rounded-full bg-accent" aria-hidden /> Impulsadores
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 rounded-full bg-brand-500" aria-hidden /> Repositores
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 rounded-full bg-muted" aria-hidden /> Sin equipo operativo
+                </span>
+                <span className="hidden sm:inline">
+                  Arrastrá para moverte · Ctrl + rueda para el zoom · Tocá una persona para ver su ficha
+                </span>
+              </p>
+
+              <div
+                ref={lienzoRef}
+                className={`${styles.lienzo} ${completa ? styles.completo : ""}`}
+                tabIndex={0}
+                aria-label="Organigrama: arrastrá para moverte"
+                onPointerDown={(e) => {
+                  sinClick.current = false;
+                  if (e.pointerType !== "mouse" || e.button !== 0) return;
+                  const el = e.currentTarget;
+                  arrastre.current = {
+                    id: e.pointerId,
+                    x: e.clientX,
+                    y: e.clientY,
+                    left: el.scrollLeft,
+                    top: el.scrollTop,
+                    movido: false,
+                  };
+                }}
+                onPointerMove={(e) => {
+                  const a = arrastre.current;
+                  if (!a) return;
+                  const dx = e.clientX - a.x;
+                  const dy = e.clientY - a.y;
+                  // Un clic con temblor no es arrastre: abre la ficha igual.
+                  if (!a.movido && Math.hypot(dx, dy) < 5) return;
+                  if (!a.movido) {
+                    a.movido = true;
+                    e.currentTarget.setPointerCapture(a.id);
+                    e.currentTarget.dataset.arrastrando = "";
+                  }
+                  e.currentTarget.scrollLeft = a.left - dx;
+                  e.currentTarget.scrollTop = a.top - dy;
+                }}
+                onPointerUp={(e) => {
+                  sinClick.current = !!arrastre.current?.movido;
+                  arrastre.current = null;
+                  delete e.currentTarget.dataset.arrastrando;
+                }}
+                onPointerCancel={(e) => {
+                  arrastre.current = null;
+                  delete e.currentTarget.dataset.arrastrando;
+                }}
+                onClickCapture={(e) => {
+                  // Soltar después de arrastrar no abre la ficha de la tarjeta.
+                  if (!sinClick.current) return;
+                  sinClick.current = false;
+                  e.stopPropagation();
+                  e.preventDefault();
+                }}
+              >
+                <div ref={contenidoRef} className={styles.contenido} style={{ zoom }}>
+                  {visible.length ? (
+                    <ul className={styles.arbol}>
+                      {visible.map((n) => (
+                        <Rama
+                          key={n.persona.id}
+                          nodo={n}
+                          raiz
+                          abiertos={abiertos}
+                          resaltados={resaltados}
+                          onPlegar={(id) =>
+                            setAbiertos((actual) => {
+                              const nuevo = new Set(actual);
+                              if (!nuevo.delete(id)) nuevo.add(id);
+                              return nuevo;
+                            })
+                          }
+                          onAbrir={setFicha}
+                        />
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="p-6 text-center text-sm text-muted">
+                      {conFiltros ? "Nadie coincide con los filtros." : "No hay personas para mostrar."}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </section>
           </>
         ) : null}
       </div>
+
+      {verAlertas ? (
+        <Modal titulo={`Alertas de jerarquía (${conAlertas.length})`} abierto onCerrar={() => setVerAlertas(false)} hojaMovil>
+          <div className="min-w-0 space-y-3 text-sm text-foreground">
+            <p className="-mt-2 text-muted">
+              Estas personas no aparecen (o no ven a nadie) en Presentismo. Se corrige en Usuarios, eligiendo su
+              superior y su rol. Tocá una para verla en el organigrama.
+            </p>
+            <ul className="divide-y divide-line">
+              {conAlertas.map((p) => (
+                <li key={p.id}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVerAlertas(false);
+                      enfocar(p.id);
+                    }}
+                    className="flex min-h-11 w-full cursor-pointer flex-col items-start gap-0.5 rounded-md px-2 py-2 text-left hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                  >
+                    <strong>{p.nombre}</strong>
+                    <span className="text-xs text-muted">
+                      {p.rol ?? "Sin rol"} · {p.alertas.map((a) => ALERTAS_ORGANIGRAMA[a].titulo).join(" · ")}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+            {usuario.puedeAdministrarUsuarios ? (
+              <Link href="/panel/usuarios" className={btnGhost}>
+                Ir a Usuarios
+              </Link>
+            ) : null}
+          </div>
+        </Modal>
+      ) : null}
 
       {ficha ? (
         <Modal titulo={ficha.nombre} abierto onCerrar={() => setFicha(null)} hojaMovil>

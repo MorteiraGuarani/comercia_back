@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -9,18 +10,110 @@ import {
   ActualizarEjecutableDto,
   CrearEjecutableDto,
 } from './dto/ejecutable.dto';
-import type { EjecutableDto } from './interfaces/plataforma.interface';
+import {
+  ActualizarConexionDto,
+  CrearConexionDto,
+} from './dto/conexion.dto';
+import type {
+  ConexionDto,
+  EjecutableDto,
+} from './interfaces/plataforma.interface';
+import { relanzarDuplicado } from '../common/utils/error-prisma';
+
+const SELECT_CONEXION = {
+  id: true,
+  nombre: true,
+  servernode: true,
+  userDb: true,
+  passwordDb: true,
+  serviceLayer: true,
+  versionTls: true,
+  _count: { select: { ejecutables: true } },
+} as const;
 
 @Injectable()
 export class EjecutablesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  // Conexiones para el <select> del ABM: solo id + nombre (nunca la password_db)
-  async listarConexiones(): Promise<{ id: number; nombre: string }[]> {
-    return this.prisma.conexion.findMany({
-      select: { id: true, nombre: true },
+  // La password_db se lee solo para saber si está cargada; nunca se devuelve.
+  private aConexionDto(c: {
+    id: number;
+    nombre: string;
+    servernode: string | null;
+    userDb: string | null;
+    passwordDb: string | null;
+    serviceLayer: string | null;
+    versionTls: string | null;
+    _count: { ejecutables: number };
+  }): ConexionDto {
+    return {
+      id: c.id,
+      nombre: c.nombre,
+      servernode: c.servernode,
+      userDb: c.userDb,
+      serviceLayer: c.serviceLayer,
+      versionTls: c.versionTls,
+      tienePassword: !!c.passwordDb,
+      ejecutables: c._count.ejecutables,
+    };
+  }
+
+  // Para el <select> de ejecutables y el ABM de conexiones (son pocas).
+  async listarConexiones(): Promise<ConexionDto[]> {
+    const filas = await this.prisma.conexion.findMany({
+      select: SELECT_CONEXION,
       orderBy: { nombre: 'asc' },
+      take: 200,
     });
+    return filas.map((c) => this.aConexionDto(c));
+  }
+
+  async crearConexion(dto: CrearConexionDto): Promise<ConexionDto> {
+    try {
+      const c = await this.prisma.conexion.create({
+        data: { ...dto, passwordDb: dto.passwordDb || null },
+        select: SELECT_CONEXION,
+      });
+      return this.aConexionDto(c);
+    } catch (error: unknown) {
+      relanzarDuplicado(error, 'Ya existe una conexión con ese nombre');
+    }
+  }
+
+  async actualizarConexion(
+    id: number,
+    dto: ActualizarConexionDto,
+  ): Promise<ConexionDto> {
+    await this.obtenerConexion(id);
+    try {
+      const c = await this.prisma.conexion.update({
+        where: { id },
+        data: { ...dto, passwordDb: dto.passwordDb || undefined },
+        select: SELECT_CONEXION,
+      });
+      return this.aConexionDto(c);
+    } catch (error: unknown) {
+      relanzarDuplicado(error, 'Ya existe una conexión con ese nombre');
+    }
+  }
+
+  async eliminarConexion(id: number): Promise<{ ok: true }> {
+    const c = await this.obtenerConexion(id);
+    if (c._count.ejecutables)
+      throw new ConflictException(
+        `La usan ${c._count.ejecutables} ejecutables: cambiales la conexión antes de eliminarla`,
+      );
+    await this.prisma.conexion.delete({ where: { id }, select: { id: true } });
+    return { ok: true };
+  }
+
+  private async obtenerConexion(id: number) {
+    const c = await this.prisma.conexion.findUnique({
+      where: { id },
+      select: { _count: { select: { ejecutables: true } } },
+    });
+    if (!c) throw new NotFoundException('La conexión no existe');
+    return c;
   }
 
   async crear(dto: CrearEjecutableDto): Promise<EjecutableDto> {

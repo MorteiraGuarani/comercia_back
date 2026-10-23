@@ -6,6 +6,8 @@ export interface Empresa {
 
 export interface EmpresaAdmin extends Empresa {
   dbName: string | null;
+  /** Días antes del vencimiento en que avisa el inventario. */
+  diasAvisoVencimiento: number;
   padre: { id: number; nombre: string } | null;
   usuariosCount: number;
   hijasCount: number;

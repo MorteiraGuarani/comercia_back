@@ -18,6 +18,8 @@
 }
 .lienzo[data-arrastrando] { cursor: grabbing; user-select: none; }
 .lienzo:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+/* Pantalla completa: el lienzo ocupa todo el alto que queda. */
+.lienzo.completo { flex: 1; max-height: none; min-height: 0; }
 
 .contenido { width: max-content; min-width: 100%; padding: 1.5rem; }
 
@@ -74,6 +76,9 @@
 .tarjeta[data-inactivo] { opacity: .55; border-top-style: dashed; }
 .tarjeta[data-resaltado] { border-color: var(--focus-ring); box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus-ring) 35%, transparent); }
 .tarjeta[data-raiz] { --ancho: 16.5rem; }
+/* Con filtros, la línea de mando que lleva a quien coincide queda atenuada. */
+.tarjeta[data-contexto] { opacity: .45; box-shadow: none; }
+.tarjeta[data-contexto]:hover { opacity: .8; }
 
 .cabeza { display: flex; align-items: center; gap: .625rem; min-width: 0; }
 .avatar { display: grid; place-items: center; flex: none; width: 2.5rem; height: 2.5rem; border-radius: 999px; background: var(--tono); color: #fff; font-size: .8125rem; font-weight: 800; letter-spacing: .02em; }

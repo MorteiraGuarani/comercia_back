@@ -30,6 +30,10 @@ const FORM_INICIAL: FormRol = {
   puedeVerSeguimiento: false,
 };
 
+// Permisos que el formulario edita y la tabla no mostraba.
+const permisosRol = (rol: RolAdmin) =>
+  `Tareas: ${rol.permisosTareas.length ? rol.permisosTareas.map((p) => p.toLowerCase()).join(", ") : "sin permisos"}${rol.puedeVerSeguimiento ? " · Ve seguimiento" : ""}`;
+
 function ListaRolesMovil({
   roles,
   onEditar,
@@ -59,6 +63,7 @@ function ListaRolesMovil({
               Equipo operativo:{" "}
               {rol.equipoCampo?.nombre ?? "Sin planificación de campo"}
             </p>
+            <p className="mt-1 break-words text-xs text-muted">{permisosRol(rol)}</p>
             <div className="mt-3 grid grid-cols-2 gap-2 border-t border-line pt-3 text-center text-xs">
               <p className="rounded-lg bg-surface-soft px-2 py-2 text-muted">
                 <strong className="block text-sm text-foreground">
@@ -316,6 +321,9 @@ export function RolesPanel() {
                         <p className="mt-1 max-w-xs break-words text-xs font-normal text-muted">
                           Equipo:{" "}
                           {rol.equipoCampo?.nombre ?? "Sin planificación"}
+                        </p>
+                        <p className="mt-1 max-w-xs break-words text-xs font-normal text-muted">
+                          {permisosRol(rol)}
                         </p>
                       </td>
                       <td className="px-4 py-3 text-muted">

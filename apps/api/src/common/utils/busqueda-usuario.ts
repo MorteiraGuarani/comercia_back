@@ -14,6 +14,8 @@ export function filtrosBusquedaUsuario(
       { apellido: { contains: termino, mode: 'insensitive' } },
       { nombreLogin: { contains: termino, mode: 'insensitive' } },
       { correo: { contains: termino, mode: 'insensitive' } },
+      { legajo: { contains: termino, mode: 'insensitive' } },
+      { ruc: { contains: termino, mode: 'insensitive' } },
     ],
   }));
 }

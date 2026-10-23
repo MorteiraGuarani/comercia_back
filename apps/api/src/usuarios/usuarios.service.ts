@@ -1,11 +1,17 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { AuthService } from '../auth/auth.service';
+import {
+  MENSAJES_DUPLICADO,
+  normalizarCelular,
+  normalizarRucUsuario,
+} from '../auth/utils/datos-usuario';
 import { hashPassword } from '../auth/utils/password';
 import {
   rangoPaginacion,
@@ -39,6 +45,7 @@ const SELECT_USUARIO_ADMIN = {
   nombreLogin: true,
   ruc: true,
   celular: true,
+  legajo: true,
   esSuperadmin: true,
   isActive: true,
   createdAt: true,
@@ -55,6 +62,7 @@ type UsuarioFila = {
   nombreLogin: string;
   ruc: string;
   celular: string;
+  legajo: string | null;
   esSuperadmin: boolean;
   isActive: boolean;
   createdAt: Date;
@@ -78,6 +86,7 @@ function aUsuarioDto(usuario: UsuarioFila): UsuarioAdminDto {
     nombreLogin: usuario.nombreLogin,
     ruc: usuario.ruc,
     celular: usuario.celular,
+    legajo: usuario.legajo,
     empresa: usuario.empresa,
     rol: usuario.rol,
     superior: usuario.superior
@@ -144,9 +153,11 @@ export class UsuariosService {
   ): Promise<RespuestaPaginada<UsuarioAdminDto>> {
     const actual = await this.contexto(usuarioId);
     const empresaId = this.empresaObjetivo(actual, query.empresaId);
-    const where = actual.esSuperadmin
-      ? { empresaId }
-      : { empresaId, esSuperadmin: false };
+    const where: Prisma.UsuarioWhereInput = {
+      empresaId,
+      ...(actual.esSuperadmin ? {} : { esSuperadmin: false }),
+      AND: filtrosBusquedaUsuario(query.buscar),
+    };
     const { skip, take, page, limit } = rangoPaginacion(query);
     const [total, usuarios] = await Promise.all([
       this.prisma.usuario.count({ where }),
@@ -514,11 +525,45 @@ export class UsuariosService {
       dto.superiorId === undefined ? objetivo.superiorId : dto.superiorId,
       id,
     );
+    // Mismas reglas que el alta: RUC con dígito verificador y celular en E.164.
+    const ruc =
+      dto.ruc === undefined
+        ? undefined
+        : normalizarRucUsuario(dto.ruc, dto.celularPais!);
+    const celular =
+      dto.celular === undefined
+        ? undefined
+        : normalizarCelular(dto.celular, dto.celularPais!);
+    const unicos = [
+      dto.correo === undefined ? null : { correo: dto.correo },
+      dto.nombreLogin === undefined ? null : { nombreLogin: dto.nombreLogin },
+      ruc === undefined ? null : { ruc },
+    ].filter((f) => f !== null);
+    const duplicado = unicos.length
+      ? await this.prisma.usuario.findFirst({
+          where: { id: { not: id }, OR: unicos },
+          select: { correo: true, nombreLogin: true, ruc: true },
+        })
+      : null;
+    if (duplicado)
+      throw new ConflictException(
+        duplicado.correo === dto.correo
+          ? MENSAJES_DUPLICADO.correo
+          : duplicado.nombreLogin === dto.nombreLogin
+            ? MENSAJES_DUPLICADO.nombre_login
+            : MENSAJES_DUPLICADO.ruc,
+      );
     try {
       const usuario = await this.prisma.usuario.update({
         where: { id },
         data: {
           correo: dto.correo,
+          nombre: dto.nombre,
+          apellido: dto.apellido,
+          nombreLogin: dto.nombreLogin,
+          ruc,
+          celular,
+          legajo: dto.legajo,
           rolId: dto.rolId,
           superiorId: dto.superiorId,
           isActive: dto.isActive,
@@ -532,7 +577,7 @@ export class UsuariosService {
     } catch (error: unknown) {
       relanzarDuplicado(
         error,
-        'Ya existe un usuario registrado con ese correo',
+        'Ya existe un usuario con ese correo, nombre de usuario o RUC',
       );
     }
   }

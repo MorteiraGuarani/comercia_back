@@ -20,9 +20,15 @@ interface FormEmpresa {
   nombre: string;
   dbName: string;
   empresaId: number | "";
+  diasAvisoVencimiento: string;
 }
 
-const FORM_INICIAL: FormEmpresa = { nombre: "", dbName: "", empresaId: "" };
+const FORM_INICIAL: FormEmpresa = {
+  nombre: "",
+  dbName: "",
+  empresaId: "",
+  diasAvisoVencimiento: "5",
+};
 
 function ListaEmpresasMovil({
   empresas,
@@ -52,6 +58,9 @@ function ListaEmpresasMovil({
             {empresa.dbName ? (
               <p className="mt-1 text-xs text-muted">Base: {empresa.dbName}</p>
             ) : null}
+            <p className="mt-1 text-xs text-muted">
+              Aviso de vencimiento: {empresa.diasAvisoVencimiento} días antes
+            </p>
             <div className="mt-3 grid grid-cols-2 gap-2 border-t border-line pt-3 text-center text-xs">
               <p className="rounded-lg bg-surface-soft px-2 py-2 text-muted">
                 <strong className="block text-sm text-foreground">
@@ -132,6 +141,7 @@ export function EmpresasAbmPanel() {
             nombre: empresa.nombre,
             dbName: empresa.dbName ?? "",
             empresaId: empresa.padre?.id ?? "",
+            diasAvisoVencimiento: String(empresa.diasAvisoVencimiento),
           },
     );
     setError(null);
@@ -154,6 +164,7 @@ export function EmpresasAbmPanel() {
             nombre: form.nombre.trim(),
             dbName: form.dbName.trim() || null,
             empresaId: form.empresaId === "" ? null : form.empresaId,
+            diasAvisoVencimiento: Number(form.diasAvisoVencimiento),
           }),
         },
       );
@@ -247,6 +258,7 @@ export function EmpresasAbmPanel() {
                     Usuarios
                   </th>
                   <th className="px-4 py-3 text-center font-medium">Accesos</th>
+                  <th className="px-4 py-3 text-center font-medium">Aviso venc.</th>
                   <th className="px-4 py-3 text-right font-medium">Acciones</th>
                 </tr>
               </thead>
@@ -279,6 +291,9 @@ export function EmpresasAbmPanel() {
                       </td>
                       <td className="px-4 py-3 text-center [font-variant-numeric:tabular-nums]">
                         {empresa.configuracionCount}
+                      </td>
+                      <td className="px-4 py-3 text-center [font-variant-numeric:tabular-nums]">
+                        {empresa.diasAvisoVencimiento} días
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-2">
@@ -352,6 +367,24 @@ export function EmpresasAbmPanel() {
                 }))
               }
               maxLength={120}
+              className={inputBase}
+            />
+          </label>
+          <label className={labelBase}>
+            Aviso de vencimiento del inventario (días antes)
+            <input
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={90}
+              required
+              value={form.diasAvisoVencimiento}
+              onChange={(evento) =>
+                setForm((actual) => ({
+                  ...actual,
+                  diasAvisoVencimiento: evento.target.value,
+                }))
+              }
               className={inputBase}
             />
           </label>

@@ -1,9 +1,8 @@
 "use client";
 
 import { calcularDvRucPy } from "@/utils/ruc";
-
-
-
+import { formatearTelefono, partesCelular } from "@/utils/telefono";
+import { formatoFecha } from "@/utils/fechas";
 import { useCallback, useEffect, useState } from "react";
 import type { CountryCode } from "libphonenumber-js";
 import { apiFetch, ApiError } from "@/lib/api";
@@ -37,6 +36,7 @@ interface FormUsuario {
   ruc: string;
   celularPais: CountryCode;
   celular: string;
+  legajo: string;
   password: string;
   rolId: number | "";
   superiorId: number | "";
@@ -56,12 +56,16 @@ const FORM_INICIAL: FormUsuario = {
   ruc: "",
   celularPais: "PY",
   celular: "",
+  legajo: "",
   password: "",
   rolId: "",
   superiorId: "",
   esSuperadmin: false,
   isActive: true,
 };
+
+// Base del RUC tal como la edita el formulario (dígitos antes del verificador).
+const baseRuc = (ruc: string) => ruc.split("-")[0].replace(/\D/g, "").slice(0, 8);
 
 function ListaUsuariosMovil({
   usuarios,
@@ -87,7 +91,10 @@ function ListaUsuariosMovil({
                 {usuario.nombre} {usuario.apellido}
               </p>
               <p className="mt-0.5 truncate text-xs text-muted">
-                {usuario.correo}
+                @{usuario.nombreLogin} · {usuario.correo}
+              </p>
+              <p className="mt-0.5 truncate text-xs text-muted">
+                Legajo {usuario.legajo ?? "—"} · {formatearTelefono(usuario.celular)}
               </p>
             </div>
             <span
@@ -170,12 +177,20 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
   const [localesUsuario, setLocalesUsuario] = useState<UsuarioAdmin | null>(
     null,
   );
+  const [texto, setTexto] = useState("");
+  const [buscar, setBuscar] = useState("");
   const base = soloSuperadmin ? "/admin/usuarios" : "/usuarios";
+
+  // Espera breve al escribir antes de consultar.
+  useEffect(() => {
+    const timer = window.setTimeout(() => setBuscar(texto.trim()), 300);
+    return () => window.clearTimeout(timer);
+  }, [texto]);
 
   const cargar = useCallback(() => {
     if (empresaId === "") return;
     apiFetch<RespuestaPaginada<UsuarioAdmin>>(
-      `${base}?page=${page}&limit=${limit}&empresaId=${empresaId}`,
+      `${base}?page=${page}&limit=${limit}&empresaId=${empresaId}${buscar ? `&${new URLSearchParams({ buscar })}` : ""}`,
     )
       .then(setDatos)
       .catch((e) =>
@@ -185,7 +200,7 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
             : "No se pudieron cargar los usuarios",
         ),
       );
-  }, [base, empresaId, page, limit]);
+  }, [base, empresaId, page, limit, buscar]);
 
   useEffect(() => {
     apiFetch<MetaUsuarios>(`${base}/meta`)
@@ -212,8 +227,16 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
   }
 
   function abrirEditar(usuario: UsuarioAdmin) {
+    const celular = partesCelular(usuario.celular);
     setForm({
       ...FORM_INICIAL,
+      nombre: usuario.nombre,
+      apellido: usuario.apellido,
+      nombreLogin: usuario.nombreLogin,
+      ruc: baseRuc(usuario.ruc),
+      celularPais: celular.pais,
+      celular: celular.numero,
+      legajo: usuario.legajo ?? "",
       correo: usuario.correo,
       rolId: usuario.rol?.id ?? "",
       superiorId: usuario.superior?.id ?? "",
@@ -242,6 +265,7 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
             ruc: `${form.ruc}-${calcularDvRucPy(form.ruc)}`,
             celularPais: form.celularPais,
             celular: form.celular.trim(),
+            legajo: form.legajo.trim() || null,
             password: form.password,
             rolId: form.rolId,
             superiorId: form.superiorId === "" ? null : form.superiorId,
@@ -249,9 +273,21 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
           }),
         });
       } else {
+        // RUC y celular viajan solo si cambiaron: se vuelven a validar.
+        const original = partesCelular(editando.celular);
+        const cambioRuc = form.ruc !== baseRuc(editando.ruc);
+        const cambioCelular =
+          form.celularPais !== original.pais || form.celular.trim() !== original.numero;
         await apiFetch(`${base}/${editando.id}`, {
           method: "PATCH",
           body: JSON.stringify({
+            nombre: form.nombre.trim(),
+            apellido: form.apellido.trim(),
+            nombreLogin: form.nombreLogin.trim().toLowerCase(),
+            legajo: form.legajo.trim() || null,
+            ...(cambioRuc ? { ruc: `${form.ruc}-${calcularDvRucPy(form.ruc)}` } : {}),
+            ...(cambioCelular ? { celular: form.celular.trim() } : {}),
+            ...(cambioRuc || cambioCelular ? { celularPais: form.celularPais } : {}),
             correo: form.correo.trim().toLowerCase(),
             rolId: form.rolId,
             superiorId: form.superiorId === "" ? null : form.superiorId,
@@ -340,6 +376,20 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
         </label>
       )}
 
+      <label className={`${labelBase} mt-5 sm:max-w-md`}>
+        Buscar
+        <input
+          type="search"
+          value={texto}
+          onChange={(e) => {
+            setTexto(e.target.value);
+            setPage(1);
+          }}
+          placeholder="Nombre, usuario, correo, legajo o RUC"
+          className={inputBase}
+        />
+      </label>
+
       {error && !editando && <p className={`${errorBox} mt-4`}>{error}</p>}
 
       <ListaUsuariosMovil
@@ -353,6 +403,8 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
           <thead className="bg-surface-soft text-left text-xs font-semibold uppercase text-foreground">
             <tr>
               <th className="px-4 py-3">Usuario</th>
+              <th className="px-4 py-3">Legajo</th>
+              <th className="px-4 py-3">Contacto</th>
               <th className="px-4 py-3">Rol</th>
               <th className="px-4 py-3">Superior</th>
               <th className="px-4 py-3">Estado</th>
@@ -367,8 +419,13 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
                     {usuario.nombre} {usuario.apellido}
                   </p>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                    {usuario.correo}
+                    @{usuario.nombreLogin} · {usuario.correo}
                   </p>
+                </td>
+                <td className="px-4 py-3">{usuario.legajo ?? "—"}</td>
+                <td className="px-4 py-3">
+                  <p className="whitespace-nowrap">{formatearTelefono(usuario.celular)}</p>
+                  <p className="text-xs text-muted">RUC {usuario.ruc}</p>
                 </td>
                 <td className="px-4 py-3">
                   {usuario.esSuperadmin
@@ -388,6 +445,7 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
                   >
                     {usuario.isActive ? "Activo" : "Inactivo"}
                   </span>
+                  <p className="text-xs text-muted">Alta {formatoFecha(usuario.createdAt)}</p>
                 </td>
                 <td className="px-4 py-3 text-right">
                   {usuario.esSuperadmin ? (
@@ -445,22 +503,24 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
         onCerrar={() => setEditando(null)}
       >
         <form onSubmit={guardar} className="flex flex-col gap-4">
-          {editando === "nuevo" && (
-            <>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Campo
-                  label="Nombre"
-                  value={form.nombre}
-                  onChange={(nombre) => setForm((f) => ({ ...f, nombre }))}
-                />
-                <Campo
-                  label="Apellido"
-                  value={form.apellido}
-                  onChange={(apellido) => setForm((f) => ({ ...f, apellido }))}
-                />
-              </div>
-            </>
-          )}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Campo
+              label="Nombre"
+              value={form.nombre}
+              onChange={(nombre) => setForm((f) => ({ ...f, nombre }))}
+            />
+            <Campo
+              label="Apellido"
+              value={form.apellido}
+              onChange={(apellido) => setForm((f) => ({ ...f, apellido }))}
+            />
+          </div>
+          <Campo
+            label="Legajo (opcional)"
+            value={form.legajo}
+            required={false}
+            onChange={(legajo) => setForm((f) => ({ ...f, legajo }))}
+          />
           <Campo
             label="Correo"
             type="email"
@@ -471,7 +531,7 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
             Si usa Ucheck con Google, el correo debe coincidir en ambos
             sistemas.
           </p>
-          {editando === "nuevo" && (
+          {editando !== null && (
             <>
               <Campo
                 label="Nombre de usuario"

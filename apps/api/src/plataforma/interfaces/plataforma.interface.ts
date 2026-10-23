@@ -3,6 +3,18 @@ import type { MotorBd, TipoEjecutable } from '../../../generated/prisma/client';
 // DTOs de SALIDA de la plataforma (forma mínima que ve el front — sin campos
 // internos). Ver reglas de exposición de datos en AGENTS.md.
 
+/** Conexión para el ABM: la contraseña nunca sale, solo si está cargada. */
+export interface ConexionDto {
+  id: number;
+  nombre: string;
+  servernode: string | null;
+  userDb: string | null;
+  serviceLayer: string | null;
+  versionTls: string | null;
+  tienePassword: boolean;
+  ejecutables: number;
+}
+
 export interface EjecutableDto {
   id: number;
   nombre: string;

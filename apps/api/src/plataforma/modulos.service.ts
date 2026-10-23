@@ -59,7 +59,8 @@ export class ModulosService {
         data: {
           nombre: dto.nombre,
           ruta: dto.ruta,
-          icono: dto.icono,
+          // Vacío quita el ícono.
+          icono: dto.icono === undefined ? undefined : dto.icono || null,
           orden: dto.orden,
           activo: dto.activo,
         },
@@ -116,7 +117,8 @@ export class ModulosService {
         data: {
           nombre: dto.nombre,
           ruta: dto.ruta,
-          icono: dto.icono,
+          // Vacío quita el ícono.
+          icono: dto.icono === undefined ? undefined : dto.icono || null,
           orden: dto.orden,
           activo: dto.activo,
         },

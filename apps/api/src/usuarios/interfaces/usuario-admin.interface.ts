@@ -6,6 +6,7 @@ export interface UsuarioAdminDto {
   nombreLogin: string;
   ruc: string;
   celular: string;
+  legajo: string | null;
   empresa: { id: number; nombre: string };
   rol: { id: number; descripcion: string } | null;
   superior: { id: number; nombre: string } | null;

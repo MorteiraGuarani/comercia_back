@@ -27,6 +27,14 @@ export class CrearEmpresaAdminDto {
   @Min(1)
   @Max(MAX_INT4)
   empresaId?: number | null;
+
+  /** Días antes del vencimiento en que avisa el inventario de los locales. */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(90)
+  diasAvisoVencimiento?: number;
 }
 
 export class ActualizarEmpresaAdminDto {
@@ -47,4 +55,12 @@ export class ActualizarEmpresaAdminDto {
   @Min(1)
   @Max(MAX_INT4)
   empresaId?: number | null;
+
+  /** Días antes del vencimiento en que avisa el inventario de los locales. */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(90)
+  diasAvisoVencimiento?: number;
 }

@@ -2,6 +2,7 @@ import {
   AsYouType,
   parsePhoneNumberFromString,
   validatePhoneNumberLength,
+  type CountryCode,
 } from "libphonenumber-js";
 
 // Sin "+" se asume Paraguay: "0991188620" → "+595991188620".
@@ -44,4 +45,10 @@ export function pistaTelefono(texto: string): {
     e164: telefono.number,
     mensaje: `✓ ${telefono.formatInternational()}`,
   };
+}
+
+/** País y número nacional de un celular guardado en E.164, para editarlo. */
+export function partesCelular(e164: string): { pais: CountryCode; numero: string } {
+  const numero = parsePhoneNumberFromString(e164);
+  return { pais: numero?.country ?? "PY", numero: numero?.formatNational() ?? e164 };
 }

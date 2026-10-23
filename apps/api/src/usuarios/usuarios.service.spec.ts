@@ -6,6 +6,7 @@ import {
 import type { AuthService } from '../auth/auth.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import { UsuariosService } from './usuarios.service';
+import { calcularDvRucPy } from '../common/utils/ruc';
 
 jest.mock('../prisma/prisma.service', () => ({
   PrismaService: class PrismaService {},
@@ -20,6 +21,7 @@ describe('UsuariosService - permiso de superadmin', () => {
       findUnique: jest.fn(),
       count: jest.fn(),
       findMany: jest.fn(),
+      findFirst: jest.fn(),
       update: jest.fn<Promise<unknown>, [unknown]>(),
     },
     rol: { findUnique: jest.fn(), findMany: jest.fn(), count: jest.fn() },
@@ -118,7 +120,7 @@ describe('UsuariosService - permiso de superadmin', () => {
     await service.listar(1, { empresaId: 20, page: 1, limit: 7 });
 
     expect(prisma.usuario.count).toHaveBeenCalledWith({
-      where: { empresaId: 20 },
+      where: { empresaId: 20, AND: [] },
     });
   });
   it('rechaza crear usuarios con un rol de otra empresa incluso para superadmin', async () => {
@@ -189,6 +191,7 @@ describe('UsuariosService - permiso de superadmin', () => {
         esSuperadmin: false,
       });
     prisma.rol.findUnique.mockResolvedValue({ id: 6, empresaId: 20 });
+    prisma.usuario.findFirst.mockResolvedValue(null);
     prisma.usuario.update.mockResolvedValue({
       id: 2,
       nombre: 'Ana',
@@ -197,6 +200,7 @@ describe('UsuariosService - permiso de superadmin', () => {
       nombreLogin: 'ana.rojas',
       ruc: '1234567-8',
       celular: '+595981123456',
+      legajo: 'L-15',
       esSuperadmin: false,
       isActive: true,
       createdAt: new Date('2026-09-30T12:00:00Z'),
@@ -223,6 +227,46 @@ describe('UsuariosService - permiso de superadmin', () => {
     await expect(
       service.actualizar(1, 2, { correo: 'ana@gmail.com' }),
     ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('edita nombre, RUC, celular y legajo con las reglas del alta', async () => {
+    prepararCambioCorreo();
+    const ruc = `80012345-${calcularDvRucPy('80012345')}`;
+    await expect(
+      service.actualizar(1, 2, {
+        nombre: 'Ana María',
+        ruc,
+        celularPais: 'PY',
+        celular: '0981 123 456',
+        legajo: 'L-15',
+      }),
+    ).resolves.toMatchObject({ legajo: 'L-15' });
+    expect(prisma.usuario.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: { not: 2 }, OR: [{ ruc }] },
+      }),
+    );
+    expect(prisma.usuario.update.mock.calls[0][0]).toMatchObject({
+      data: {
+        nombre: 'Ana María',
+        ruc,
+        celular: '+595981123456',
+        legajo: 'L-15',
+      },
+    });
+  });
+
+  it('rechaza un nombre de usuario que ya usa otra cuenta, sin escribir', async () => {
+    prepararCambioCorreo();
+    prisma.usuario.findFirst.mockResolvedValue({
+      correo: 'otro@example.com',
+      nombreLogin: 'ana.rojas',
+      ruc: '999-1',
+    });
+    await expect(
+      service.actualizar(1, 2, { nombreLogin: 'ana.rojas' }),
+    ).rejects.toThrow('Ese nombre de usuario ya está en uso');
+    expect(prisma.usuario.update).not.toHaveBeenCalled();
   });
 
   it('impide cambiar el correo de una cuenta de otra empresa', async () => {

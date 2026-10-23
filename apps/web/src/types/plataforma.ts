@@ -80,9 +80,16 @@ export interface AsignacionEmpresa {
   modulos: EmpresaModulo[];
 }
 
+// La contraseña nunca llega: solo si está cargada.
 export interface Conexion {
   id: number;
   nombre: string;
+  servernode: string | null;
+  userDb: string | null;
+  serviceLayer: string | null;
+  versionTls: string | null;
+  tienePassword: boolean;
+  ejecutables: number;
 }
 
 export const MOTORES: { valor: MotorBd; etiqueta: string }[] = [
