@@ -126,6 +126,12 @@
   (los puntos de un día para trazarlo) se entregan completos: un mapa no se
   pagina. Superadmin ve la empresa; el líder con la página Ubicaciones, su cadena
   (`obtenerEquipoCompleto`). Topes de 2000 personas y 5000 puntos, 413 en vez de truncar.
+- **Ucheck es la fuente de marcaciones y pings**: la entrada/salida de todo el
+  equipo de campo se registra en Ucheck (`POST /comercia-integracion/marcar`) y
+  Comercia trae su copia con GET (`marcaciones/pendientes` + confirmaciones,
+  `SincronizacionMarcacionesService`); los pings se guardan solo en Ucheck y
+  Comercia los consulta con GET. No volver a escribir marcaciones ni pings
+  directo en Comercia. La tabla `campo_ubicaciones` quedó en desuso.
 - El front consume esto con el componente `apps/web/src/components/paginacion.tsx`
   y el tipo `RespuestaPaginada<T>` (regla espejo en `apps/web/AGENTS.md`).
 

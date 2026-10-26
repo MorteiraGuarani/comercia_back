@@ -4,14 +4,12 @@ import {
   direccionesLocales,
   LOCAL_OCRD_SELECT,
 } from './utils/local-ocrd';
-import { cargarTolerancias } from '../tolerancias/utils/cargar-tolerancias';
 import {
   evaluarMarcaHorario,
   heredarTolerancias,
 } from '../tolerancias/utils/tolerancia-horario';
 import {
   BadRequestException,
-  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -33,14 +31,9 @@ import { prepararEvidencia, tareaParaEvidencia } from './utils/evidencia-tarea';
 import { PrismaService } from '../prisma/prisma.service';
 import { rangoPaginacion, respuestaPaginada } from '../common/utils/paginacion';
 import { CampoAccesoService } from './campo-acceso.service';
-import {
-  ConsultaCampoDto,
-  EntradaCampoDto,
-  MarcaCampoDto,
-} from './dto/campo.dto';
+import { ConsultaCampoDto, MarcaCampoDto } from './dto/campo.dto';
 import {
   fechaCampo,
-  ocurreHorario,
   ocurreHorarioEnRango,
   rangoConsulta,
   relojCampo,
@@ -59,7 +52,6 @@ import type {
   FilaAgendaId,
   TotalAgenda,
 } from './interfaces/calendario.interface';
-import { relanzarDuplicado } from '../common/utils/error-prisma';
 
 @Injectable()
 export class JornadaCampoService {
@@ -272,108 +264,6 @@ export class JornadaCampoService {
         : [];
     });
     return respuestaPaginada(items, Number(conteo[0].total), page, limit);
-  }
-  async entrada(usuarioId: number, dto: EntradaCampoDto) {
-    const u = await this.acceso.ejecutar(usuarioId);
-    const esTeamleader = ['teamleader', 'teamleaderimpulsador'].includes(
-      u.rolDescripcion?.toLowerCase().replace(/[^a-z]/g, '') ?? '',
-    );
-    const ahora = new Date();
-    const reloj = relojCampo(ahora);
-    const fecha = fechaCampo(reloj.fecha);
-    try {
-      return await this.prisma.$transaction(async (tx) => {
-        await tx.$queryRaw`SELECT id FROM usuarios WHERE id = ${usuarioId} FOR UPDATE`;
-        await tx.$queryRaw`SELECT id FROM campo_asignaciones WHERE id = ${dto.asignacionId} FOR UPDATE`;
-        const a = await this.asignacionEfectiva(
-          tx,
-          u.empresaId,
-          u.id,
-          dto.asignacionId,
-          fecha,
-          esTeamleader,
-          u.equipoCampo,
-        );
-        const distancia = comprobarMarcaEnLocal(
-          dto,
-          aLocalCampo(a.local),
-          ahora,
-        );
-        if (
-          await tx.visitaCampo.count({
-            where: { usuarioId, fecha, salida: null },
-          })
-        )
-          throw new ConflictException(
-            'Cerrá tu visita abierta antes de marcar otra entrada',
-          );
-        const horarios = await tx.horarioCampo.findMany({
-          where: {
-            localId: a.localId,
-            equipoCampoId: exigirEquipoCampo(u.equipoCampo).id,
-            destinatario: destinatarioCampo(u.equipoCampo),
-            activo: true,
-            OR: [{ asignacionId: a.id }, { asignacionId: null }],
-          },
-          select: HORARIO_CAMPO_SELECT,
-          take: 40,
-        });
-        const efectivos = horarios.some((h) => h.asignacionId === a.id)
-          ? horarios.filter((h) => h.asignacionId === a.id)
-          : horarios.filter((h) => h.asignacionId === null);
-        const h = efectivos.find((x) => x.id === dto.horarioId);
-        if (efectivos.length) {
-          if (!h || !ocurreHorario(h, fecha))
-            throw new BadRequestException(
-              'Seleccioná una franja válida para hoy',
-            );
-        } else if (dto.horarioId != null)
-          throw new BadRequestException('Horario no disponible');
-        const tolerancias = await cargarTolerancias(
-          tx,
-          u.empresaId,
-          u.id,
-          h?.id,
-        );
-        const evaluacion = h
-          ? evaluarMarcaHorario(
-              'ENTRADA',
-              ahora,
-              reloj.fecha,
-              h.entrada,
-              h.salida,
-              ZONA_CAMPO,
-              tolerancias,
-            )
-          : null;
-        const visita = await tx.visitaCampo.create({
-          data: {
-            empresaId: u.empresaId,
-            localId: a.localId,
-            asignacionId: a.id,
-            usuarioId: u.id,
-            horarioId: dto.horarioId ?? null,
-            fecha,
-            entrada: ahora,
-            esBackup: a.usuarioId !== u.id && !esTeamleader,
-            entradaLat: dto.latitud,
-            entradaLng: dto.longitud,
-            entradaPrecision: dto.precisionMetros,
-            entradaDistancia: distancia,
-            toleranciasAplicadas: { ...tolerancias },
-            entradaColor: evaluacion?.color,
-            entradaFueraHorario: evaluacion
-              ? evaluacion.color !== 'VERDE'
-              : false,
-            notaEntrada: dto.nota,
-          },
-          select: VISITA_CAMPO_SELECT,
-        });
-        return conLocalCampo(conEstadoVisita(visita, ahora));
-      });
-    } catch (error) {
-      relanzarDuplicado(error, 'Ya se registró esta visita');
-    }
   }
   async abierta(usuarioId: number) {
     const u = await this.acceso.ejecutar(usuarioId);

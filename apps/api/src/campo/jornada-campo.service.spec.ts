@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { CampoAccesoService } from './campo-acceso.service';
-import { EntradaCampoDto, MarcaCampoDto } from './dto/campo.dto';
+import { MarcaCampoDto } from './dto/campo.dto';
 import { JornadaCampoService } from './jornada-campo.service';
 import { fechaCampo, relojCampo } from './utils/calendario';
 
@@ -81,32 +81,6 @@ describe('marcaciones directas de Comercia', () => {
     jest.useFakeTimers().setSystemTime(new Date('2026-10-10T10:30:00-03:00')),
   );
   afterEach(() => jest.useRealTimers());
-
-  it('busca solo la visita de hoy y las entradas anteriores no bloquean otra fecha', async () => {
-    const { servicio, prisma, tx, marca } = contexto();
-    prisma.visitaCampo.findFirst.mockResolvedValue(null);
-    expect(await servicio.abierta(1)).toBeNull();
-    expect(prisma.visitaCampo.findFirst).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({
-          fecha: new Date('2026-10-10T00:00:00Z'),
-          salida: null,
-          usuarioId: 1,
-        }) as unknown,
-      }),
-    );
-    await servicio.entrada(
-      1,
-      Object.assign(new EntradaCampoDto(), marca, { asignacionId: 2 }),
-    );
-    expect(tx.visitaCampo.count).toHaveBeenCalledWith({
-      where: {
-        usuarioId: 1,
-        fecha: new Date('2026-10-10T00:00:00Z'),
-        salida: null,
-      },
-    });
-  });
 
   it('rechaza la salida de una jornada vencida sin cambiar registros', async () => {
     const { servicio, prisma, marca } = contexto();
@@ -231,32 +205,6 @@ describe('marcaciones directas de Comercia', () => {
     );
     expect(upsert).not.toHaveBeenCalled();
   });
-  it('guarda la distancia de entrada y bloquea una entrada fuera del radio', async () => {
-    const { servicio, tx, marca } = contexto();
-    await servicio.entrada(
-      1,
-      Object.assign(new EntradaCampoDto(), marca, { asignacionId: 2 }),
-    );
-    const llamadasEntrada = tx.visitaCampo.create.mock
-      .calls as unknown as Array<
-      [{ data: { entradaDistancia: number; entradaPrecision: number } }]
-    >;
-    const entrada = llamadasEntrada[0][0];
-    expect(entrada.data.entradaDistancia).toBe(0);
-    expect(entrada.data.entradaPrecision).toBe(20);
-
-    await expect(
-      servicio.entrada(
-        1,
-        Object.assign(new EntradaCampoDto(), marca, {
-          asignacionId: 2,
-          latitud: local.latitud + 0.001,
-        }),
-      ),
-    ).rejects.toThrow('fuera del radio');
-    expect(tx.visitaCampo.create).toHaveBeenCalledTimes(1);
-  });
-
   it('guarda la distancia de salida y bloquea una salida fuera del radio', async () => {
     const { servicio, prisma, marca } = contexto();
     await servicio.salida(1, 4, Object.assign(new MarcaCampoDto(), marca));

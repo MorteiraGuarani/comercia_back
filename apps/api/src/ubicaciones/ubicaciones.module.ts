@@ -1,3 +1,4 @@
+import { UcheckModule } from '../ucheck/ucheck.module';
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
 import { CampoModule } from '../campo/campo.module';
@@ -6,7 +7,7 @@ import { UbicacionesController } from './ubicaciones.controller';
 import { UbicacionesService } from './ubicaciones.service';
 
 @Module({
-  imports: [AuthModule, PrismaModule, CampoModule],
+  imports: [UcheckModule, AuthModule, PrismaModule, CampoModule],
   controllers: [UbicacionesController],
   providers: [UbicacionesService],
   exports: [UbicacionesService],

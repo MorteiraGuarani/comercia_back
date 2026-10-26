@@ -591,6 +591,7 @@ export class UsuariosService {
         rolId: true,
         superiorId: true,
         esSuperadmin: true,
+        correo: true,
       },
     });
     if (
@@ -655,6 +656,15 @@ export class UsuariosService {
         },
         select: SELECT_USUARIO_ADMIN,
       });
+      // El SSO de Ucheck entra por el vínculo guardado, no por el correo: si la
+      // cuenta cambia de correo, el vínculo viejo llevaría a la persona anterior.
+      if (
+        dto.correo &&
+        dto.correo.toLowerCase() !== objetivo.correo.toLowerCase()
+      )
+        await this.prisma.identidadUcheck.deleteMany({
+          where: { usuarioId: id },
+        });
       return aUsuarioDto(usuario);
     } catch (error: unknown) {
       relanzarDuplicado(

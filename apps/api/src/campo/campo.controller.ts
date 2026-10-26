@@ -332,7 +332,7 @@ export class CampoController {
   ) {
     return (await this.repositor.esRepositor(r.usuarioId))
       ? this.repositor.entrada(r.usuarioId, d)
-      : this.jornada.entrada(r.usuarioId, d);
+      : this.repositor.entradaWeb(r.usuarioId, d);
   }
   @Post('jornada/repositor/entrada') entradaRepositor(
     @Req() r: RequestConUsuario,
@@ -345,9 +345,13 @@ export class CampoController {
     @Param('id', ParseIntPipe) id: number,
     @Body() d: MarcaCampoDto,
   ) {
-    return (await this.repositor.esRepositor(r.usuarioId))
-      ? this.repositor.salida(r.usuarioId, id, d)
-      : this.jornada.salida(r.usuarioId, id, d);
+    if (await this.repositor.esRepositor(r.usuarioId))
+      return this.repositor.salida(r.usuarioId, id, d);
+    // Las visitas abiertas antes de marcar vía Ucheck se cierran en Comercia.
+    return (
+      (await this.repositor.salidaWeb(r.usuarioId, id, d)) ??
+      this.jornada.salida(r.usuarioId, id, d)
+    );
   }
   @Post('jornada/repositor/visitas/:id/salida') salidaRepositor(
     @Req() r: RequestConUsuario,
@@ -522,10 +526,7 @@ export class CampoController {
 
   @Get('organigrama')
   @Header('Cache-Control', 'private, no-store')
-  organigrama(
-    @Req() r: RequestConUsuario,
-    @Query() q: ConsultaOrganigramaDto,
-  ) {
+  organigrama(@Req() r: RequestConUsuario, @Query() q: ConsultaOrganigramaDto) {
     return this.organigramaService.organigrama(r.usuarioId, q);
   }
 

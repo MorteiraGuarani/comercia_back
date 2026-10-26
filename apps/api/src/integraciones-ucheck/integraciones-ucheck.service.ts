@@ -14,7 +14,6 @@ import { Prisma } from '../../generated/prisma/client';
 import { CampoAccesoService } from '../campo/campo-acceso.service';
 import { JornadaCampoService } from '../campo/jornada-campo.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { UbicacionesService } from '../ubicaciones/ubicaciones.service';
 import { AgendaUcheckDto } from './dto/agenda-ucheck.dto';
 import { MarcacionUcheckDto } from './dto/marcacion-ucheck.dto';
 import { SeguimientoUcheckDto } from './dto/seguimiento-ucheck.dto';
@@ -47,7 +46,6 @@ export class IntegracionesUcheckService {
     private readonly prisma: PrismaService,
     private readonly accesoCampo: CampoAccesoService,
     private readonly jornadaCampo: JornadaCampoService,
-    private readonly ubicaciones: UbicacionesService,
   ) {}
 
   private async usuarioPorCorreo(correo: string, ucheckUsuarioId?: number) {
@@ -154,7 +152,7 @@ export class IntegracionesUcheckService {
         })
       : await this.usuarioPorCorreo(dto.correo);
     if (!usuario) throw new NotFoundException('Cuenta de campo no disponible');
-    const campo = await this.accesoCampo.ejecutar(usuario.id);
+    await this.accesoCampo.ejecutar(usuario.id);
     if (
       dto.activo &&
       (dto.latitud == null ||
@@ -216,21 +214,6 @@ export class IntegracionesUcheckService {
       });
       return { ok: true };
     });
-    // También alimenta el mapa en vivo y el recorrido de Ubicaciones. Un fallo
-    // ahí no debe hacer reintentar a UCheck un seguimiento ya guardado.
-    if (dto.activo && !('omitida' in resultado))
-      await this.ubicaciones
-        .registrarSeguimientoUcheck(campo, {
-          latitud: dto.latitud!,
-          longitud: dto.longitud!,
-          precisionMetros: dto.precisionMetros!,
-          capturadaEn: new Date(dto.capturadaEn!),
-        })
-        .catch((error: unknown) =>
-          this.logger.warn(
-            `No se pudo guardar la ubicación de UCheck del usuario ${usuario.id}: ${String(error)}`,
-          ),
-        );
     return resultado;
   }
 

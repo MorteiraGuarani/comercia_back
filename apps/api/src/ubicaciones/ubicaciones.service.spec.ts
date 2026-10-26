@@ -1,6 +1,7 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { CampoAccesoService } from '../campo/campo-acceso.service';
+import type { UcheckClienteService } from '../ucheck/ucheck-cliente.service';
 
 jest.mock('../prisma/prisma.service', () => ({
   PrismaService: class PrismaService {},
@@ -14,6 +15,12 @@ const ping = (capturadaEn: string) => ({
   precisionMetros: 12,
   capturadaEn,
 });
+
+type Pedido = {
+  method?: string;
+  query?: Record<string, string>;
+  body?: unknown;
+};
 
 function armar({ superadmin = false } = {}) {
   // Líder 1 → TeamLeader 2 → impulsador 3; el 9 es de otra cadena.
@@ -30,6 +37,11 @@ function armar({ superadmin = false } = {}) {
               rol: { equipoCampoId: 4 },
             },
       ),
+      findUniqueOrThrow: jest.fn().mockResolvedValue({
+        id: 3,
+        correo: 'leo@x.com',
+        identidadUcheck: { ucheckUsuarioId: 30 },
+      }),
       findMany: jest.fn(
         ({ where }: { where: { superiorId?: { in: number[] } } }) =>
           where.superiorId
@@ -38,10 +50,21 @@ function armar({ superadmin = false } = {}) {
               : where.superiorId.in.includes(2)
                 ? [{ id: 3 }]
                 : []
-            : [{ id: 2, nombre: 'Ana', apellido: 'Paz', rol: null }],
+            : [
+                {
+                  id: 2,
+                  correo: 'ana@x.com',
+                  identidadUcheck: null,
+                  nombre: 'Ana',
+                  apellido: 'Paz',
+                  rol: null,
+                },
+              ],
       ),
       findFirst: jest.fn().mockResolvedValue({
         id: 3,
+        correo: 'leo@x.com',
+        identidadUcheck: { ucheckUsuarioId: 30 },
         nombre: 'Leo',
         apellido: 'Gómez',
       }),
@@ -58,24 +81,39 @@ function armar({ superadmin = false } = {}) {
         },
       ]),
     },
-    ubicacionCampo: {
-      groupBy: jest.fn().mockResolvedValue([]),
-      findMany: jest.fn().mockResolvedValue([]),
-      findFirst: jest.fn().mockResolvedValue(null),
-      createMany: jest.fn(({ data }: { data: unknown[] }) => ({
-        count: data.length,
-      })),
-    },
   };
   const acceso = {
     gestionar: jest.fn().mockResolvedValue({ id: 1, empresaId: 5 }),
     ejecutar: jest.fn().mockResolvedValue({ id: 3, empresaId: 5 }),
   };
+  // Ucheck guarda y devuelve los pings; acá solo se reenvían y consultan.
+  const ucheck = {
+    pedir: jest.fn((ruta: string, pedido: Pedido = {}) =>
+      Promise.resolve(
+        ruta.endsWith('/ultimas')
+          ? {
+              ubicaciones: [
+                {
+                  ucheckUsuarioId: 20,
+                  correo: 'ana@x.com',
+                  ...ping('2026-10-23T09:50:00-03:00'),
+                },
+              ],
+            }
+          : ruta.endsWith('/recorrido')
+            ? { puntos: [] }
+            : {
+                guardados: (pedido.body as { puntos: unknown[] }).puntos.length,
+              },
+      ),
+    ),
+  };
   const service = new UbicacionesService(
     prisma as unknown as PrismaService,
     acceso as unknown as CampoAccesoService,
+    ucheck as unknown as UcheckClienteService,
   );
-  return { prisma, acceso, service };
+  return { prisma, acceso, ucheck, service };
 }
 
 describe('UbicacionesService', () => {
@@ -84,15 +122,20 @@ describe('UbicacionesService', () => {
   );
   afterEach(() => jest.useRealTimers());
 
-  it('el líder ve en vivo solo su cadena, sin incluirse', async () => {
-    const { prisma, acceso, service } = armar();
-    await service.enVivo(1, {});
+  it('el líder ve en vivo solo su cadena, con la última posición de Ucheck', async () => {
+    const { prisma, acceso, ucheck, service } = armar();
+    const r = await service.enVivo(1, {});
     expect(acceso.gestionar).toHaveBeenCalledWith(1, 'ubicaciones');
     const consulta = prisma.usuario.findMany.mock.calls.find(
       ([a]) => !(a as { where: { superiorId?: unknown } }).where.superiorId,
     )![0] as { where: { empresaId: number; id: { in: number[] } } };
     expect(consulta.where.empresaId).toBe(5);
     expect(consulta.where.id.in).toEqual([2, 3]);
+    // Sin vínculo con Ucheck se la busca por correo.
+    expect(ucheck.pedir.mock.calls[0][1]).toMatchObject({
+      query: { correos: 'ana@x.com' },
+    });
+    expect(r.personas[0].ultima).toMatchObject({ latitud: -25.3 });
   });
 
   it('el líder no puede pedir otra empresa', async () => {
@@ -114,18 +157,18 @@ describe('UbicacionesService', () => {
   });
 
   it('el recorrido de alguien fuera de la cadena responde como inexistente', async () => {
-    const { prisma, service } = armar();
+    const { ucheck, service } = armar();
     await expect(service.recorrido(1, 9, {})).rejects.toBeInstanceOf(
       NotFoundException,
     );
     await expect(service.recorrido(1, 1, {})).rejects.toBeInstanceOf(
       NotFoundException,
     );
-    expect(prisma.ubicacionCampo.findMany).not.toHaveBeenCalled();
+    expect(ucheck.pedir).not.toHaveBeenCalled();
   });
 
-  it('el recorrido de alguien de la cadena se busca en la empresa del líder', async () => {
-    const { prisma, service } = armar();
+  it('el recorrido de alguien de la cadena se pide a Ucheck por su identidad', async () => {
+    const { prisma, ucheck, service } = armar();
     prisma.visitaCampo.findMany.mockResolvedValue([
       {
         id: 7,
@@ -145,19 +188,16 @@ describe('UbicacionesService', () => {
     expect(r.persona).toEqual({ id: 3, nombre: 'Leo Gómez' });
     // Local sin coordenadas en OCRD: se marca donde se registró la entrada.
     expect(r.visitas[0]).toMatchObject({ latitud: -25.31, longitud: -57.61 });
-    expect(
-      (prisma.ubicacionCampo.findMany.mock.calls[0] as unknown[])[0],
-    ).toMatchObject({
-      where: {
-        empresaId: 5,
-        usuarioId: 3,
-        fecha: new Date('2026-10-22T00:00:00.000Z'),
-      },
-    });
+    expect(ucheck.pedir).toHaveBeenCalledWith(
+      '/comercia-integracion/ubicaciones/recorrido',
+      expect.objectContaining({
+        query: expect.objectContaining({ ucheckUsuarioId: '30' }) as unknown,
+      }),
+    );
   });
 
-  it('guarda como propias solo las posiciones de la jornada y sin duplicar', async () => {
-    const { prisma, service } = armar();
+  it('manda a Ucheck solo las posiciones de la jornada', async () => {
+    const { ucheck, service } = armar();
     const r = await service.registrar(3, {
       pings: [
         ping('2026-10-23T09:59:00-03:00'),
@@ -167,22 +207,25 @@ describe('UbicacionesService', () => {
       ],
     });
     expect(r).toEqual({ guardados: 1, descartados: 3, activa: true });
-    expect(prisma.ubicacionCampo.createMany).toHaveBeenCalledWith({
-      data: [
-        expect.objectContaining({
-          empresaId: 5,
-          usuarioId: 3,
-          fecha: new Date('2026-10-23T00:00:00.000Z'),
-          capturadaEn: new Date('2026-10-23T12:59:00.000Z'),
-          velocidadMps: null,
-        }),
-      ],
-      skipDuplicates: true,
-    });
+    expect(ucheck.pedir).toHaveBeenCalledWith(
+      '/comercia-integracion/ubicaciones',
+      expect.objectContaining({
+        method: 'POST',
+        body: {
+          correo: 'leo@x.com',
+          ucheckUsuarioId: 30,
+          puntos: [
+            expect.objectContaining({
+              capturadaEn: '2026-10-23T12:59:00.000Z',
+            }),
+          ],
+        },
+      }),
+    );
   });
 
-  it('sin entrada hoy la jornada no está activa y no se guarda nada', async () => {
-    const { prisma, service } = armar();
+  it('sin entrada hoy la jornada no está activa y no se manda nada', async () => {
+    const { prisma, ucheck, service } = armar();
     prisma.visitaCampo.findMany.mockResolvedValue([]);
     expect(await service.estado(3)).toEqual({
       activa: false,
@@ -192,47 +235,6 @@ describe('UbicacionesService', () => {
       pings: [ping('2026-10-23T09:59:00-03:00')],
     });
     expect(r).toEqual({ guardados: 0, descartados: 1, activa: false });
-    expect(prisma.ubicacionCampo.createMany).not.toHaveBeenCalled();
-  });
-
-  it('del seguimiento de UCheck guarda un punto cada 30 s', async () => {
-    const { prisma, service } = armar();
-    const punto = (hora: string) => ({
-      latitud: -25.3,
-      longitud: -57.6,
-      precisionMetros: 8,
-      capturadaEn: new Date(`2026-10-23T${hora}-03:00`),
-    });
-    expect(
-      await service.registrarSeguimientoUcheck(
-        { id: 3, empresaId: 5 },
-        punto('09:00:00'),
-      ),
-    ).toBe(true);
-    prisma.ubicacionCampo.findFirst.mockResolvedValue({
-      capturadaEn: new Date('2026-10-23T09:00:00-03:00'),
-    });
-    expect(
-      await service.registrarSeguimientoUcheck(
-        { id: 3, empresaId: 5 },
-        punto('09:00:10'),
-      ),
-    ).toBe(false);
-    expect(
-      await service.registrarSeguimientoUcheck(
-        { id: 3, empresaId: 5 },
-        punto('09:00:28'),
-      ),
-    ).toBe(true);
-    expect(prisma.ubicacionCampo.createMany).toHaveBeenCalledTimes(2);
-    expect(prisma.ubicacionCampo.findFirst).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: {
-          empresaId: 5,
-          usuarioId: 3,
-          fecha: new Date('2026-10-23T00:00:00.000Z'),
-        },
-      }),
-    );
+    expect(ucheck.pedir).not.toHaveBeenCalled();
   });
 });

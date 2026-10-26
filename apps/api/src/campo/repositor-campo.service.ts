@@ -19,6 +19,22 @@ import type {
   MarcaRepositorCampoDto,
 } from './dto/campo.dto';
 import type { MarcacionRepositorUcheck } from './interfaces/marcacion-repositor.interface';
+import { UcheckSincronizacionService } from '../ucheck/ucheck-sincronizacion.service';
+import type { EntradaCampoDto, MarcaCampoDto } from './dto/campo.dto';
+
+type UbicacionMarca = {
+  latitud: number;
+  longitud: number;
+  precisionMetros: number;
+  capturadaEn: string;
+};
+
+const ubicacionDe = (dto: MarcaCampoDto): UbicacionMarca => ({
+  latitud: dto.latitud,
+  longitud: dto.longitud,
+  precisionMetros: dto.precisionMetros,
+  capturadaEn: new Date(dto.capturadaEn).toISOString(),
+});
 
 @Injectable()
 export class RepositorCampoService {
@@ -26,6 +42,7 @@ export class RepositorCampoService {
     private readonly prisma: PrismaService,
     private readonly acceso: CampoAccesoService,
     private readonly config: ConfigService,
+    private readonly sincronizacion: UcheckSincronizacionService,
   ) {}
 
   async esRepositor(usuarioId: number) {
@@ -117,6 +134,7 @@ export class RepositorCampoService {
     }
   }
 
+  // La marcación se guarda en Ucheck (fuente) y la copia local llega por GET.
   private async enviar(datos: {
     usuarioId: number;
     asignacionId: number;
@@ -124,6 +142,8 @@ export class RepositorCampoService {
     fecha: string;
     tipo: 'ENTRADA' | 'SALIDA';
     nota?: string;
+    /** Impulsadores y TeamLeaders: ubicación del navegador. Sin ella, la de la app. */
+    ubicacion?: UbicacionMarca;
   }): Promise<MarcacionRepositorUcheck> {
     const usuario = await this.prisma.usuario.findUnique({
       where: { id: datos.usuarioId },
@@ -142,8 +162,8 @@ export class RepositorCampoService {
     });
     if (
       !usuario?.isActive ||
-      usuario.rol?.equipoCampo?.tipo !== 'REPOSITOR' ||
-      !usuario.rol.equipoCampo.activo
+      !usuario.rol?.equipoCampo?.activo ||
+      (!datos.ubicacion && usuario.rol.equipoCampo.tipo !== 'REPOSITOR')
     )
       throw new ForbiddenException('Marcación no disponible');
     if (!usuario.permitirVinculoAutomatico && !usuario.identidadUcheck)
@@ -154,12 +174,12 @@ export class RepositorCampoService {
     const secreto = this.config.get<string>('integrations.ucheckSecret');
     if (!base || !secreto)
       throw new ServiceUnavailableException(
-        'Ucheck no está configurado para repositores',
+        'Ucheck no está configurado para registrar marcaciones',
       );
     let respuesta: Response;
     try {
       respuesta = await fetch(
-        `${base.replace(/\/$/, '')}/comercia-repositor/marcar`,
+        `${base.replace(/\/$/, '')}/comercia-integracion/marcar`,
         {
           method: 'POST',
           signal: AbortSignal.timeout(15_000),
@@ -174,6 +194,7 @@ export class RepositorCampoService {
             horarioId: datos.horarioId ?? undefined,
             fecha: datos.fecha,
             tipo: datos.tipo,
+            ubicacion: datos.ubicacion,
           }),
         },
       );
@@ -207,6 +228,9 @@ export class RepositorCampoService {
       (cuerpo.estado === 'PENDIENTE' && !cuerpo.operacionId)
     )
       throw new ServiceUnavailableException('Respuesta de Ucheck inválida');
+    // Trae ya la copia de Ucheck para responder con la visita; si falla, la
+    // marcación queda guardada en Ucheck y llega en la próxima sincronización.
+    await this.sincronizacion.ahora().catch(() => undefined);
     if (cuerpo.operacionId) {
       if (!/^rep-[a-f0-9]{48}$/.test(cuerpo.operacionId))
         throw new ServiceUnavailableException('Respuesta de Ucheck inválida');
@@ -263,9 +287,9 @@ export class RepositorCampoService {
   async estadoOperacion(usuarioId: number, id: string) {
     if (!/^rep-[a-f0-9]{48}$/.test(id))
       throw new BadRequestException('Identificador de operación inválido');
-    const u = await this.acceso.ejecutar(usuarioId);
-    if (exigirEquipoCampo(u.equipoCampo).tipo !== 'REPOSITOR')
-      throw new ForbiddenException('Operación no disponible');
+    await this.acceso.ejecutar(usuarioId);
+    // Si todavía está pendiente, vuelve a traer de Ucheck antes de responder.
+    await this.sincronizacion.ahora().catch(() => undefined);
     const op = await this.prisma.operacionCampo.findFirst({
       where: { id, usuarioId },
       select: { ucheckJornadaId: true, tipo: true, nota: true },
@@ -355,6 +379,14 @@ export class RepositorCampoService {
       tipo: 'ENTRADA',
       nota: dto.nota,
     });
+    return this.trasEntrada(usuarioId, resultado, dto.nota);
+  }
+
+  private async trasEntrada(
+    usuarioId: number,
+    resultado: MarcacionRepositorUcheck,
+    nota?: string,
+  ) {
     const visita = await this.prisma.visitaCampo.findFirst({
       where: { ucheckJornadaId: resultado.ucheckJornadaId, usuarioId },
       select: VISITA_CAMPO_SELECT,
@@ -364,13 +396,75 @@ export class RepositorCampoService {
       throw new ServiceUnavailableException(
         'La entrada está sincronizándose; actualizá la ruta',
       );
-    if (dto.nota)
+    if (nota)
       await this.prisma.visitaCampo.update({
         where: { id: visita.id },
-        data: { notaEntrada: dto.nota },
+        data: { notaEntrada: nota },
         select: { id: true },
       });
     return conLocalCampo(conEstadoVisita(visita));
+  }
+
+  /**
+   * Impulsadores y TeamLeaders desde la web: la marca se guarda en Ucheck con
+   * la ubicación del navegador. Ucheck valida asignación, franja, GPS y
+   * tolerancias con la agenda de Comercia.
+   */
+  async entradaWeb(usuarioId: number, dto: EntradaCampoDto) {
+    await this.acceso.ejecutar(usuarioId);
+    const resultado = await this.enviar({
+      usuarioId,
+      asignacionId: dto.asignacionId,
+      horarioId: dto.horarioId,
+      fecha: relojCampo().fecha,
+      tipo: 'ENTRADA',
+      nota: dto.nota,
+      ubicacion: ubicacionDe(dto),
+    });
+    return this.trasEntrada(usuarioId, resultado, dto.nota);
+  }
+
+  /**
+   * Salida desde la web. Devuelve null si la visita se abrió antes de pasar
+   * por Ucheck: esa se cierra como antes, en Comercia.
+   */
+  async salidaWeb(usuarioId: number, visitaId: number, dto: MarcaCampoDto) {
+    const u = await this.acceso.ejecutar(usuarioId);
+    const visita = await this.prisma.visitaCampo.findFirst({
+      where: {
+        id: visitaId,
+        usuarioId,
+        fecha: fechaCampo(relojCampo().fecha),
+        salida: null,
+        empresaId: u.empresaId,
+      },
+      select: {
+        id: true,
+        asignacionId: true,
+        horarioId: true,
+        fecha: true,
+        origen: true,
+      },
+    });
+    if (!visita) throw new NotFoundException('Visita abierta no disponible');
+    if (visita.origen !== 'UCHECK') return null;
+    const resultado = await this.enviar({
+      usuarioId,
+      asignacionId: visita.asignacionId,
+      horarioId: visita.horarioId,
+      fecha: visita.fecha.toISOString().slice(0, 10),
+      tipo: 'SALIDA',
+      nota: dto.nota,
+      ubicacion: ubicacionDe(dto),
+    });
+    if (resultado.estado === 'PENDIENTE') return resultado;
+    if (dto.nota)
+      await this.prisma.visitaCampo.update({
+        where: { id: visita.id },
+        data: { notaSalida: dto.nota },
+        select: { id: true },
+      });
+    return { ok: true };
   }
 
   async salida(

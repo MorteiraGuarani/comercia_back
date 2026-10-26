@@ -25,6 +25,7 @@ describe('UsuariosService - permiso de superadmin', () => {
       update: jest.fn<Promise<unknown>, [unknown]>(),
     },
     rol: { findUnique: jest.fn(), findMany: jest.fn(), count: jest.fn() },
+    identidadUcheck: { deleteMany: jest.fn() },
   };
   const auth = { crearUsuario: jest.fn() };
   const service = new UsuariosService(
@@ -190,6 +191,7 @@ describe('UsuariosService - permiso de superadmin', () => {
         rolId: 6,
         superiorId: null,
         esSuperadmin: false,
+        correo: 'ana@example.com',
       });
     prisma.rol.findUnique.mockResolvedValue({ id: 6, empresaId: 20 });
     prisma.usuario.findFirst.mockResolvedValue(null);
@@ -220,6 +222,16 @@ describe('UsuariosService - permiso de superadmin', () => {
       where: { id: 2 },
       data: { correo: 'ana@gmail.com' },
     });
+    // Con otro correo, el SSO de Ucheck no puede seguir entrando por el vínculo viejo.
+    expect(prisma.identidadUcheck.deleteMany).toHaveBeenCalledWith({
+      where: { usuarioId: 2 },
+    });
+  });
+
+  it('conserva el vínculo con Ucheck si el correo no cambia', async () => {
+    prepararCambioCorreo();
+    await service.actualizar(1, 2, { correo: 'ANA@example.com', nombre: 'Ana' });
+    expect(prisma.identidadUcheck.deleteMany).not.toHaveBeenCalled();
   });
 
   it('devuelve conflicto si el correo ya pertenece a otra cuenta', async () => {

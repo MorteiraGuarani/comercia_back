@@ -1,3 +1,4 @@
+import type { UcheckSincronizacionService } from '../ucheck/ucheck-sincronizacion.service';
 /* eslint-disable @typescript-eslint/no-unsafe-assignment -- Jest objectContaining returns any. */
 import { BadRequestException } from '@nestjs/common';
 import { RepositorCampoService } from './repositor-campo.service';
@@ -38,6 +39,7 @@ describe('RepositorCampoService', () => {
       prisma as unknown as PrismaService,
       acceso as unknown as CampoAccesoService,
       config as unknown as ConfigService,
+      { ahora: jest.fn() } as unknown as UcheckSincronizacionService,
     );
     await expect(servicio.salida(3, 9, { nota: '' })).rejects.toBeInstanceOf(
       BadRequestException,

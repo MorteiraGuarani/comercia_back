@@ -1,3 +1,4 @@
+import { UcheckModule } from '../ucheck/ucheck.module';
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
 import { PrismaModule } from '../prisma/prisma.module';
@@ -19,7 +20,7 @@ import { LimpiezaFotosService } from './services/limpieza-fotos.service';
 import { AdjuntoCampoService } from './services/adjunto-campo.service';
 
 @Module({
-  imports: [AuthModule, PrismaModule, PlataformaModule],
+  imports: [UcheckModule, AuthModule, PrismaModule, PlataformaModule],
   controllers: [CampoController],
   providers: [
     CampoAccesoService,

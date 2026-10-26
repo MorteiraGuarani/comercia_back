@@ -1101,9 +1101,9 @@ model CargaInventarioCampo {
   @@map("campo_inventario_cargas")
 }
 
-// Posición que manda el navegador del equipo de campo durante su jornada. La
-// clave es también el índice de consulta (empresa + usuario + día) y hace
-// idempotente el reenvío de la cola sin señal. Se borra a los 90 días.
+// En desuso: los pings ahora se guardan en Ucheck (fuente) y Comercia los
+// consulta con GET. La tabla queda porque ya está en producción con datos;
+// borrarla o pasar sus pings a Ucheck se decide aparte.
 model UbicacionCampo {
   empresaId Int @map("empresa_id")
   empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
