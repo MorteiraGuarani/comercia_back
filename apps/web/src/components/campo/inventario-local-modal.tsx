@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Modal } from "@/components/modal";
 import { Paginacion } from "@/components/paginacion";
@@ -16,6 +16,7 @@ import {
   leerCopia,
   leerLocal,
   listarPendientes,
+  productosDeInventario,
 } from "@/lib/inventario-db";
 import { diasParaVencer, hoyEquipo } from "@/utils/inventario";
 import { mensajeError } from "@/utils/error";
@@ -36,6 +37,10 @@ const fechaCorta = (iso: string) => {
 
 const campo =
   "min-h-11 w-full min-w-0 rounded-lg border border-line bg-surface px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-brand-600 disabled:cursor-not-allowed disabled:opacity-50 dark:border-line dark:bg-surface dark:text-foreground";
+
+// Cantidad y vencimiento chicos: entran más productos en la pantalla.
+const campoCompacto =
+  "h-9 w-full min-w-0 rounded-md border border-line bg-surface px-2 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:border-line dark:bg-surface dark:text-foreground";
 
 const marco = "overflow-hidden rounded-2xl border border-line bg-surface-raised";
 
@@ -68,7 +73,7 @@ function Estado({
             ]
           : ["Cargado", "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"];
   return (
-    <span className={`rounded-md px-2 py-0.5 text-xs font-semibold ${clase}`}>
+    <span className={`whitespace-nowrap rounded px-1.5 py-px text-[11px] font-semibold ${clase}`}>
       {texto}
     </span>
   );
@@ -86,23 +91,23 @@ function Cabecera({
   onQuitar?: () => void;
 }) {
   return (
-    <div className="flex min-w-0 items-start justify-between gap-2">
-      <div className="min-w-0">
-        <p className="break-words font-semibold text-foreground">{item.itemname}</p>
-        <div className="mt-1 flex flex-wrap gap-1.5">
-          <span className="rounded-md bg-surface-soft px-2 py-0.5 font-mono text-xs text-muted">
-            {item.itemcode}
-          </span>
-          <Estado item={item} editable={editable} diasAviso={diasAviso} />
-        </div>
-      </div>
+    <div className="flex min-w-0 items-start gap-2">
+      <p className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-0.5">
+        <span className="min-w-0 break-words text-sm font-semibold leading-snug text-foreground">
+          {item.itemname}
+        </span>
+        <span className="rounded bg-surface-soft px-1.5 py-px font-mono text-[11px] text-muted">
+          {item.itemcode}
+        </span>
+        <Estado item={item} editable={editable} diasAviso={diasAviso} />
+      </p>
       {onQuitar ? (
         <button
           type="button"
           aria-label={`Quitar ${item.itemname} del local`}
           title="Quitar del local"
           onClick={onQuitar}
-          className="grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-lg text-muted hover:bg-surface-soft hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+          className="-my-1 grid h-9 w-9 shrink-0 cursor-pointer place-items-center rounded-lg text-muted hover:bg-surface-soft hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
         >
           ×
         </button>
@@ -140,7 +145,7 @@ function Historial({
       ) : (
         <ul className="divide-y divide-line" aria-label="Productos cargados">
           {lista.items.map((item) => (
-            <li key={item.itemcode} className="min-w-0 space-y-3 p-4">
+            <li key={item.itemcode} className="min-w-0 space-y-1 px-3 py-2">
               <Cabecera item={item} editable={false} diasAviso={diasAviso} />
               <p className="text-sm text-foreground">
                 Cantidad: <strong>{item.cantidad ?? "—"}</strong>
@@ -193,6 +198,12 @@ export function InventarioLocalModal({
     [usuarioId, localId],
   );
   const copia = useLiveQuery(() => leerCopia(usuarioId).catch(() => null), [usuarioId]);
+  // Productos con QryInventario = 'Y', guardados en el equipo: se precargan en
+  // todos los locales (también sin señal).
+  const fijos = useLiveQuery(
+    () => productosDeInventario(usuarioId).catch(() => []),
+    [usuarioId],
+  );
   const diasAviso = copia?.diasAviso ?? 5;
   const op = useOperacionCampo();
   const [fecha, setFecha] = useState("");
@@ -201,11 +212,31 @@ export function InventarioLocalModal({
   // Cambios sin guardar por producto; sobreviven al cambiar de página.
   const [ediciones, setEdiciones] = useState<Record<string, Edicion>>({});
   const [agregando, setAgregando] = useState(false);
+  // Producto recién agregado: cuando aparece en la lista, va el foco a su cantidad.
+  const enfocar = useRef<string | null>(null);
   const sinGuardar = Object.keys(ediciones).length > 0;
   const editable = !fecha && !!local;
 
+  const fijosCodigos = new Set((fijos ?? []).map((p) => p.itemcode));
+  const guardados = new Map((local?.items ?? []).map((i) => [i.itemcode, i]));
+  // Primero los precargados (por nombre), después los agregados en su orden.
+  const fuente = local
+    ? [
+        ...(fijos ?? []).map(
+          (p) =>
+            guardados.get(p.itemcode) ?? {
+              itemcode: p.itemcode,
+              itemname: p.itemname,
+              cantidad: null,
+              vencimiento: null,
+              fecha: null,
+            },
+        ),
+        ...local.items.filter((i) => !fijosCodigos.has(i.itemcode)),
+      ]
+    : [];
   // Cantidad y vencimiento guardados valen solo para el día en que se cargaron.
-  const items: ItemInventarioLocal[] = (local?.items ?? []).map((i) => {
+  const items: ItemInventarioLocal[] = fuente.map((i) => {
     const deHoy = i.fecha === hoy && i.vencimiento !== null;
     return {
       itemcode: i.itemcode,
@@ -220,6 +251,23 @@ export function InventarioLocalModal({
   const visibles = items.slice((pagina - 1) * limit, pagina * limit);
   const cargadosHoy = items.filter((i) => i.cantidad !== null).length;
   const codigos = new Set(items.map((i) => i.itemcode));
+
+  const focoInicial = useRef(false);
+  const primero = !fecha && fijos !== undefined ? visibles[0]?.itemcode : undefined;
+  useEffect(() => {
+    if (focoInicial.current || !primero) return;
+    focoInicial.current = true;
+    document.getElementById(`cantidad-${primero}`)?.focus();
+  }, [primero]);
+
+  useEffect(() => {
+    const itemcode = enfocar.current;
+    const entrada = itemcode ? document.getElementById(`cantidad-${itemcode}`) : null;
+    if (!entrada) return;
+    enfocar.current = null;
+    entrada.focus();
+    entrada.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [local, pagina]);
 
   const valor = (item: ItemInventarioLocal): Edicion =>
     ediciones[item.itemcode] ?? {
@@ -267,7 +315,14 @@ export function InventarioLocalModal({
     const cambios: CambioInventario[] = [];
     for (let i = 0; i < cargas.length; i += 50)
       cambios.push({ tipo: "cargas", fecha: hoy, cargas: cargas.slice(i, i + 50) });
-    if (!(await guardarEnEquipo(cambios))) return;
+    const nuevos: CambioInventario[] = filas
+      .filter(([itemcode]) => !guardados.has(itemcode))
+      .map(([itemcode]) => ({
+        tipo: "agregar",
+        itemcode,
+        itemname: items.find((i) => i.itemcode === itemcode)?.itemname ?? itemcode,
+      }));
+    if (!(await guardarEnEquipo([...nuevos, ...cambios]))) return;
     setEdiciones({});
     if (navigator.onLine)
       await op.ejecutar("Enviando inventario", () => enviarPendientes(usuarioId));
@@ -301,13 +356,18 @@ export function InventarioLocalModal({
     <>
       <Modal titulo="Inventario" abierto onCerrar={cerrar} ancho="lg" hojaMovil>
         <div className="min-w-0 space-y-4">
-          <p className="-mt-2 text-sm text-muted">
-            {local
-              ? `${local.nombre} · hoy ${cargadosHoy} de ${items.length} cargados`
-              : local === undefined
-                ? "Cargando…"
-                : "Local sin datos en este equipo"}
-          </p>
+          {/* El nombre del local, completo y legible: sin margen negativo que lo corte. */}
+          <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-xl border border-line bg-surface-soft px-3 py-2">
+            <p className="min-w-0 break-words text-sm font-semibold leading-snug text-foreground">
+              {local?.nombre ??
+                (local === undefined ? "Cargando…" : "Local sin datos en este equipo")}
+            </p>
+            {local ? (
+              <span className="whitespace-nowrap rounded-full bg-surface-raised px-2 py-0.5 text-xs font-semibold text-muted">
+                Hoy {cargadosHoy} de {items.length} cargados
+              </span>
+            ) : null}
+          </div>
 
           <PendientesInventario usuarioId={usuarioId} localId={localId} />
 
@@ -384,13 +444,16 @@ export function InventarioLocalModal({
                 usuarioId={usuarioId}
                 elegidos={codigos}
                 version={copia?.sincronizadoEn ?? 0}
-                onElegir={(producto) =>
+                onElegir={(producto) => {
+                  // Se agrega al final: se muestra la última página y se enfoca su cantidad.
+                  enfocar.current = producto.itemcode;
+                  setPage(Math.floor(items.length / limit) + 1);
                   void cambiarProductos({
                     tipo: "agregar",
                     itemcode: producto.itemcode,
                     itemname: producto.itemname,
-                  })
-                }
+                  });
+                }}
               />
               <p className="mt-2 text-xs text-muted">
                 El producto queda en el inventario de este local para las próximas cargas.
@@ -420,47 +483,46 @@ export function InventarioLocalModal({
                   {visibles.map((item) => {
                     const v = valor(item);
                     return (
-                      <li key={item.itemcode} className="min-w-0 space-y-3 p-4">
+                      <li key={item.itemcode} className="min-w-0 space-y-1.5 px-3 py-2">
                         <Cabecera
                           item={item}
                           editable
                           diasAviso={diasAviso}
-                          onQuitar={() => {
-                            setEdiciones((actual) => {
-                              const resto = { ...actual };
-                              delete resto[item.itemcode];
-                              return resto;
-                            });
-                            void cambiarProductos({ tipo: "quitar", itemcode: item.itemcode });
-                          }}
+                          // Los precargados (QryInventario = 'Y') no se quitan del local.
+                          onQuitar={
+                            fijosCodigos.has(item.itemcode)
+                              ? undefined
+                              : () => {
+                                  setEdiciones((actual) => {
+                                    const resto = { ...actual };
+                                    delete resto[item.itemcode];
+                                    return resto;
+                                  });
+                                  void cambiarProductos({ tipo: "quitar", itemcode: item.itemcode });
+                                }
+                          }
                         />
-                        <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-3">
-                          <label className="min-w-0 space-y-1">
-                            <span className="block text-xs font-bold uppercase tracking-wider text-muted">
-                              Cantidad
-                            </span>
-                            <input
-                              type="number"
-                              inputMode="numeric"
-                              min={0}
-                              step={1}
-                              placeholder="0"
-                              value={v.cantidad}
-                              onChange={(e) => editar(item, { cantidad: e.target.value })}
-                              className={campo}
-                            />
-                          </label>
-                          <label className="min-w-0 space-y-1">
-                            <span className="block text-xs font-bold uppercase tracking-wider text-muted">
-                              Vencimiento
-                            </span>
-                            <input
-                              type="date"
-                              value={v.vencimiento}
-                              onChange={(e) => editar(item, { vencimiento: e.target.value })}
-                              className={campo}
-                            />
-                          </label>
+                        <div className="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-2 sm:max-w-sm">
+                          <input
+                            id={`cantidad-${item.itemcode}`}
+                            type="number"
+                            inputMode="numeric"
+                            min={0}
+                            step={1}
+                            placeholder="Cant."
+                            aria-label={`Cantidad de ${item.itemname}`}
+                            value={v.cantidad}
+                            onChange={(e) => editar(item, { cantidad: e.target.value })}
+                            className={campoCompacto}
+                          />
+                          <input
+                            type="date"
+                            aria-label={`Vencimiento de ${item.itemname}`}
+                            title="Vencimiento"
+                            value={v.vencimiento}
+                            onChange={(e) => editar(item, { vencimiento: e.target.value })}
+                            className={campoCompacto}
+                          />
                         </div>
                       </li>
                     );

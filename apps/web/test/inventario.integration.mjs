@@ -38,7 +38,7 @@ const local = {
   items: [{ itemcode: "B", itemname: "Banana", cantidad: 2, vencimiento: "2026-11-01", fecha: "2026-10-21" }],
 };
 const conAgua = aplicarCambio(local, { tipo: "agregar", itemcode: "A", itemname: "Agua" });
-assert.deepEqual(conAgua.items.map((i) => i.itemcode), ["A", "B"], "ordena por nombre");
+assert.deepEqual(conAgua.items.map((i) => i.itemcode), ["B", "A"], "el agregado va al final");
 assert.equal(aplicarCambio(conAgua, { tipo: "agregar", itemcode: "A", itemname: "Agua" }), conAgua);
 assert.equal(local.items.length, 1, "no modifica el original");
 const cargado = aplicarCambio(conAgua, {
@@ -46,14 +46,14 @@ const cargado = aplicarCambio(conAgua, {
   fecha: "2026-10-22",
   cargas: [{ itemcode: "A", cantidad: 0, vencimiento: "2026-10-30" }],
 });
-assert.deepEqual(cargado.items[0], {
+assert.deepEqual(cargado.items[1], {
   itemcode: "A",
   itemname: "Agua",
   cantidad: 0,
   vencimiento: "2026-10-30",
   fecha: "2026-10-22",
 });
-assert.equal(cargado.items[1].fecha, "2026-10-21", "lo no cargado queda igual");
+assert.equal(cargado.items[0].fecha, "2026-10-21", "lo no cargado queda igual");
 assert.deepEqual(
   aplicarCambio(cargado, { tipo: "quitar", itemcode: "B" }).items.map((i) => i.itemcode),
   ["A"],

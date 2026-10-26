@@ -90,6 +90,7 @@ export function descargarCopia(usuarioId: number): Promise<CopiaGuardada> {
       diasAviso: r.diasAviso,
       productos: r.productos.length,
       locales: r.locales.length,
+      localPrincipalId: r.localPrincipalId ?? null,
     };
     const b = db();
     await b.transaction("rw", [b.productos, b.locales, b.copias, b.pendientes], async () => {
@@ -101,6 +102,7 @@ export function descargarCopia(usuarioId: number): Promise<CopiaGuardada> {
           itemname: p.itemname,
           busqueda: normalizarBusqueda(`${p.itemcode} ${p.itemname}`),
           orden: `${normalizarBusqueda(p.itemname)}\u0000${p.itemcode}`,
+          inventario: p.inventario === true,
         })),
       );
       const pendientes = await listarPendientes(usuarioId);
@@ -129,6 +131,15 @@ export function descargarCopia(usuarioId: number): Promise<CopiaGuardada> {
 }
 
 /** Productos guardados para el selector, por nombre. */
+/** Productos con QryInventario = 'Y' guardados en el equipo, por nombre: se precargan en cada local. */
+export function productosDeInventario(usuarioId: number): Promise<ProductoGuardado[]> {
+  return db()
+    .productos.where("[usuarioId+orden]")
+    .between(...delUsuario(usuarioId))
+    .filter((p) => p.inventario)
+    .toArray();
+}
+
 export async function buscarProductos(
   usuarioId: number,
   texto: string,

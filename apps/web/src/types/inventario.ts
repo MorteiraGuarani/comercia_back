@@ -47,7 +47,10 @@ export interface CopiaInventarioRemota {
   usuarioId: number;
   hoy: string;
   diasAviso: number;
-  productos: { itemcode: string; itemname: string }[];
+  /** Local principal del usuario si está en su ruta: se abre directo. */
+  localPrincipalId: string | null;
+  /** inventario: QryInventario = 'Y', se precarga en todos los locales. */
+  productos: { itemcode: string; itemname: string; inventario?: boolean }[];
   locales: (LocalInventario & {
     /** Días anteriores con carga (último mes), del más reciente al más viejo. */
     fechas: string[];
@@ -64,6 +67,8 @@ export interface ProductoGuardado {
   busqueda: string;
   /** Nombre y código: ordena con un índice compuesto. */
   orden: string;
+  /** QryInventario = 'Y': aparece precargado en el inventario de cada local. */
+  inventario: boolean;
 }
 
 /** Producto de un local guardado; cantidad y vencimiento valen para `fecha`. */
@@ -87,6 +92,7 @@ export interface CopiaGuardada {
   diasAviso: number;
   productos: number;
   locales: number;
+  localPrincipalId: string | null;
 }
 
 export interface CargaInventario {

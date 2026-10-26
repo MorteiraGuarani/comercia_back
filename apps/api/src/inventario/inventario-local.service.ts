@@ -122,14 +122,18 @@ export class InventarioLocalService {
   async copia(usuarioId: number) {
     const u = await this.acceso(usuarioId);
     const hoy = relojCampo().fecha;
-    const [empresa, productos, locales] = await Promise.all([
+    const [empresa, yo, productos, locales] = await Promise.all([
       this.prisma.empresa.findUniqueOrThrow({
         where: { id: u.empresaId },
         select: { diasAvisoVencimiento: true },
       }),
+      this.prisma.usuario.findUniqueOrThrow({
+        where: { id: usuarioId },
+        select: { localPrincipalId: true },
+      }),
       this.prisma.producto.findMany({
         where: productosActivos(u.empresaId),
-        select: { itemcode: true, itemname: true },
+        select: { itemcode: true, itemname: true, inventory: true },
         orderBy: [{ itemname: 'asc' }, { itemcode: 'asc' }],
         take: LIMITE_PRODUCTOS_COPIA + 1,
       }),
@@ -160,7 +164,7 @@ export class InventarioLocalService {
           itemcode: true,
           producto: { select: { itemname: true } },
         },
-        orderBy: [{ producto: { itemname: 'asc' } }, { itemcode: 'asc' }],
+        orderBy: [{ creadoEn: 'asc' }, { itemcode: 'asc' }],
         take: LIMITE_PRODUCTOS_COPIA + 1,
       }),
       this.prisma.cargaInventarioCampo.findMany({
@@ -220,9 +224,15 @@ export class InventarioLocalService {
       usuarioId,
       hoy,
       diasAviso: empresa.diasAvisoVencimiento,
+      // Se abre directo en la pantalla; solo si es uno de los locales de su ruta.
+      localPrincipalId: locales.some((l) => l.CardCode === yo.localPrincipalId)
+        ? yo.localPrincipalId
+        : null,
       productos: productos.map((p) => ({
         itemcode: p.itemcode,
         itemname: p.itemname ?? p.itemcode,
+        // QryInventario = 'Y': se precarga en el inventario de todos los locales.
+        inventario: p.inventory === 'Y',
       })),
       locales: locales.map((l) => ({
         id: l.CardCode,
@@ -335,7 +345,7 @@ export class InventarioLocalService {
         this.prisma.productoLocalCampo.findMany({
           where: delLocal,
           select: { itemcode: true, producto: { select: { itemname: true } } },
-          orderBy: [{ producto: { itemname: 'asc' } }, { itemcode: 'asc' }],
+          orderBy: [{ creadoEn: 'asc' }, { itemcode: 'asc' }],
           skip,
           take,
         }),

@@ -30,9 +30,6 @@ export function coincideBusqueda(busqueda: string, palabras: string[]): boolean 
   return palabras.every((palabra) => busqueda.includes(palabra));
 }
 
-const porNombre = (a: { itemname: string; itemcode: string }, b: { itemname: string; itemcode: string }) =>
-  a.itemname.localeCompare(b.itemname, "es") || a.itemcode.localeCompare(b.itemcode);
-
 /** El local tal como queda después del cambio; no modifica el original. */
 export function aplicarCambio(local: LocalGuardado, cambio: CambioInventario): LocalGuardado {
   if (cambio.tipo === "agregar")
@@ -42,8 +39,9 @@ export function aplicarCambio(local: LocalGuardado, cambio: CambioInventario): L
           ...local,
           items: [
             ...local.items,
+            // El último agregado va al final, en el orden en que se cargan.
             { itemcode: cambio.itemcode, itemname: cambio.itemname, cantidad: null, vencimiento: null, fecha: null },
-          ].sort(porNombre),
+          ],
         };
   if (cambio.tipo === "quitar")
     return { ...local, items: local.items.filter((i) => i.itemcode !== cambio.itemcode) };

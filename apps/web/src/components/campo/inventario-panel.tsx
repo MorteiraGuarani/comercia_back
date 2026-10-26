@@ -21,7 +21,8 @@ import type { CopiaGuardada } from "@/types/inventario";
 
 /**
  * Inventario de los locales de la ruta, guardado en el equipo para trabajar
- * sin señal. Desde Mi Ruta se llega con ?local=CardCode y se abre ese local.
+ * sin señal. Desde Mi Ruta se llega con ?local=CardCode y se abre ese local;
+ * con local principal o un solo local, se abre ese directamente.
  */
 export function InventarioPanel() {
   const router = useRouter();
@@ -30,6 +31,8 @@ export function InventarioPanel() {
   const enLinea = useEnLinea();
   const desdeRuta = useSearchParams().get("local");
   const [abierto, setAbierto] = useState<string | null>(desdeRuta);
+  // Al cerrar el local que se abrió solo, no se vuelve a abrir.
+  const [autoCerrado, setAutoCerrado] = useState(false);
   const [busqueda, setBusqueda] = useState("");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(7);
@@ -50,6 +53,13 @@ export function InventarioPanel() {
     [usuarioId, busqueda, page, limit],
   );
   const copia = lectura?.copia ?? null;
+  // Con local principal en la ruta, o con un solo local, se entra directo a su inventario.
+  const automatico =
+    desdeRuta || autoCerrado || !copia
+      ? null
+      : (copia.localPrincipalId ??
+        (!busqueda && locales?.total === 1 ? (locales.items[0]?.id ?? null) : null));
+  const localAbierto = abierto ?? automatico;
 
   async function actualizar() {
     if (await op.ejecutar("Actualizando inventario", () => sincronizarInventario(usuarioId, true)))
@@ -141,13 +151,15 @@ export function InventarioPanel() {
           </>
         ) : null}
       </div>
-      {abierto ? (
+      {localAbierto ? (
         <InventarioLocalModal
-          localId={abierto}
-          textoCerrar={desdeRuta === abierto ? "Volver a la visita" : "Cerrar"}
+          key={localAbierto}
+          localId={localAbierto}
+          textoCerrar={desdeRuta === localAbierto ? "Volver a la visita" : "Cerrar"}
           onCerrar={() => {
             setAbierto(null);
-            if (desdeRuta === abierto) router.back();
+            if (!abierto) setAutoCerrado(true);
+            if (desdeRuta === localAbierto) router.back();
           }}
         />
       ) : null}

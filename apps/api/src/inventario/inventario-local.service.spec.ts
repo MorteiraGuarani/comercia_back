@@ -1,7 +1,4 @@
-import {
-  BadRequestException,
-  PayloadTooLargeException,
-} from '@nestjs/common';
+import { BadRequestException, PayloadTooLargeException } from '@nestjs/common';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { AccesoPlataformaService } from '../plataforma/acceso-plataforma.service';
 import type { VencimientosService } from './vencimientos.service';
@@ -135,6 +132,7 @@ describe('Inventario por local · copia sin conexión', () => {
         findMany: jest.fn().mockResolvedValue(
           Array.from({ length: productos }, (_, i) => ({
             itemcode: `P${i}`,
+            inventory: 'Y',
             itemname: i ? `Producto ${i}` : null,
           })),
         ),
@@ -144,6 +142,11 @@ describe('Inventario por local · copia sin conexión', () => {
           { CardCode: 'C1', CardName: 'Uno' },
           { CardCode: 'C2', CardName: 'Dos' },
         ]),
+      },
+      usuario: {
+        findUniqueOrThrow: jest
+          .fn()
+          .mockResolvedValue({ localPrincipalId: 'C2' }),
       },
       productoLocalCampo: {
         findMany: jest.fn().mockResolvedValue([
@@ -179,13 +182,24 @@ describe('Inventario por local · copia sin conexión', () => {
 
   it('arma cada local con sus productos, la carga de hoy y sus días con carga', async () => {
     const r = await copia();
-    expect(r).toMatchObject({ usuarioId: 7, diasAviso: 5 });
-    expect(r.productos).toEqual([{ itemcode: 'P0', itemname: 'P0' }]);
+    expect(r).toMatchObject({
+      usuarioId: 7,
+      diasAviso: 5,
+      localPrincipalId: 'C2',
+    });
+    expect(r.productos).toEqual([
+      { itemcode: 'P0', itemname: 'P0', inventario: true },
+    ]);
     expect(r.locales[0]).toMatchObject({
       id: 'C1',
       fechas: ['2026-10-20', '2026-10-18'],
       items: [
-        { itemcode: 'A1', itemname: 'Agua', cantidad: 4, vencimiento: '2026-11-01' },
+        {
+          itemcode: 'A1',
+          itemname: 'Agua',
+          cantidad: 4,
+          vencimiento: '2026-11-01',
+        },
         { itemcode: 'B2', itemname: 'B2', cantidad: null, vencimiento: null },
       ],
     });
