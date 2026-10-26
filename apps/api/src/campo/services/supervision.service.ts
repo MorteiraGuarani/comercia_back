@@ -80,9 +80,9 @@ export class SupervisionService {
   }
 
   // Presentismo es de consulta: el líder ve toda su cadena del mismo equipo
-  // operativo (también en repositores), aunque nadie haya marcado. Gestionar
-  // sigue limitado por obtenerColaboradoresGestionados. El propio líder no se
-  // incluye: quien llama decide si puede verse a sí mismo.
+  // operativo (también en repositores), aunque nadie haya marcado. Los ABM
+  // resuelven su personal por equipo operativo; esta consulta conserva la
+  // jerarquía. El propio líder no se incluye: quien llama decide si puede verse.
   private async idsEquipo(u: { id: number }) {
     return (await obtenerEquipoCompleto(this.prisma, u.id)).filter(
       (id) => id !== u.id,

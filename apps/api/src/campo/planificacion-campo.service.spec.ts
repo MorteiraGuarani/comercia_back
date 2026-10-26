@@ -7,7 +7,7 @@ jest.mock('../prisma/prisma.service', () => ({ PrismaService: class {} }));
 import { PlanificacionCampoService } from './planificacion-campo.service';
 
 describe('PlanificacionCampoService', () => {
-  it('muestra solo repositores directos al supervisor nuevo', async () => {
+  it('muestra repositores del equipo aunque no dependan del gestor', async () => {
     const prisma = {
       usuario: {
         count: jest.fn().mockResolvedValue(1),
@@ -36,42 +36,27 @@ describe('PlanificacionCampoService', () => {
       expect.objectContaining({
         where: expect.objectContaining({
           empresaId: 10,
-          superiorId: 3,
+          id: { not: 3 },
+          isActive: true,
+          esSuperadmin: false,
           rol: { equipoCampoId: 2 },
         }),
       }),
     );
   });
 
-  it('incluye a los impulsadores de sus TeamLeaders y busca solo en ese equipo', async () => {
-    // Supervisor 3 → TeamLeader 5 → impulsador 8.
-    const jerarquia: Record<number, number[]> = { 3: [5], 5: [8] };
+  it('busca y pagina los impulsadores del equipo sin consultar la jerarquía', async () => {
     const prisma = {
       usuario: {
-        count: jest.fn().mockResolvedValue(1),
-        findUnique: jest.fn().mockResolvedValue({
-          id: 3,
-          empresaId: 10,
-          isActive: true,
-          rol: { equipoCampoId: 1 },
-        }),
-        findMany: jest.fn(
-          ({ where }: { where: { superiorId?: { in: number[] } } }) =>
-            Promise.resolve(
-              where.superiorId
-                ? where.superiorId.in
-                    .flatMap((id) => jerarquia[id] ?? [])
-                    .map((id) => ({ id }))
-                : [
-                    {
-                      id: 8,
-                      nombre: 'Maria',
-                      apellido: 'Lopez',
-                      rol: { descripcion: 'Impulsador' },
-                    },
-                  ],
-            ),
-        ),
+        count: jest.fn().mockResolvedValue(8),
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: 8,
+            nombre: 'Maria',
+            apellido: 'Lopez',
+            rol: { descripcion: 'Impulsador' },
+          },
+        ]),
       },
     };
     const acceso = {
@@ -92,13 +77,13 @@ describe('PlanificacionCampoService', () => {
     );
 
     const respuesta = await service.equipo(3, {
-      page: 1,
+      page: 2,
       limit: 7,
       buscar: 'mari',
     });
 
     const where = {
-      id: { in: [5, 8] },
+      id: { not: 3 },
       rol: { equipoCampoId: 1 },
       empresaId: 10,
       isActive: true,
@@ -111,8 +96,9 @@ describe('PlanificacionCampoService', () => {
     };
     expect(prisma.usuario.count).toHaveBeenCalledWith({ where });
     expect(prisma.usuario.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where, skip: 0, take: 7 }),
+      expect.objectContaining({ where, skip: 7, take: 7 }),
     );
     expect(respuesta.items).toMatchObject([{ id: 8 }]);
+    expect(respuesta).toMatchObject({ total: 8, page: 2, totalPages: 2 });
   });
 });

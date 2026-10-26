@@ -19,12 +19,8 @@ import {
 } from './utils/selectores';
 import { validarHorario, vigenciaCampo } from './utils/calendario';
 import { Prisma } from '../../generated/prisma/client';
-import {
-  destinatarioCampo,
-  rolDelEquipoCampo,
-  exigirEquipoCampo,
-} from './utils/equipo-campo';
-import { obtenerColaboradoresGestionados } from './utils/autorizacion';
+import { destinatarioCampo, exigirEquipoCampo } from './utils/equipo-campo';
+import { filtroPersonalEquipoOperativo } from './utils/personal-equipo';
 
 @Injectable()
 export class PlanificacionCampoService {
@@ -37,11 +33,7 @@ export class PlanificacionCampoService {
     const u = await this.acceso.gestionar(usuarioId, 'locales');
     const buscar = query.buscar?.trim();
     const where: Prisma.UsuarioWhereInput = {
-      id: { in: await obtenerColaboradoresGestionados(this.prisma, u) },
-      empresaId: u.empresaId,
-      isActive: true,
-      esSuperadmin: false,
-      rol: rolDelEquipoCampo(u.equipoCampo),
+      ...filtroPersonalEquipoOperativo(u),
       ...(buscar
         ? {
             OR: [
@@ -266,11 +258,7 @@ export class PlanificacionCampoService {
       empresaId: u.empresaId,
       localId,
       activo: true,
-      usuario: {
-        id: { in: await obtenerColaboradoresGestionados(this.prisma, u) },
-        empresaId: u.empresaId,
-        rol: rolDelEquipoCampo(u.equipoCampo),
-      },
+      usuario: filtroPersonalEquipoOperativo(u),
     };
     const { skip, take, page, limit } = rangoPaginacion(query);
     const [total, items] = await Promise.all([
@@ -322,17 +310,13 @@ export class PlanificacionCampoService {
   }
   private async asignacionDelEquipo(usuarioId: number, id: number) {
     const u = await this.acceso.gestionar(usuarioId, 'locales');
-    const colaboradores = await obtenerColaboradoresGestionados(this.prisma, u);
+    const personal = filtroPersonalEquipoOperativo(u);
     const a = await this.prisma.asignacionCampo.findFirst({
       where: {
         id,
         activo: true,
         empresaId: u.empresaId,
-        usuario: {
-          id: { in: colaboradores },
-          empresaId: u.empresaId,
-          rol: rolDelEquipoCampo(u.equipoCampo),
-        },
+        usuario: personal,
       },
       select: {
         id: true,
@@ -343,13 +327,10 @@ export class PlanificacionCampoService {
       },
     });
     if (!a) throw new NotFoundException('Asignación no disponible');
-    return { u, a, colaboradores };
+    return { u, a, personal };
   }
   async localPrincipal(usuarioId: number, id: number, principal: boolean) {
-    const { u, a, colaboradores } = await this.asignacionDelEquipo(
-      usuarioId,
-      id,
-    );
+    const { u, a, personal } = await this.asignacionDelEquipo(usuarioId, id);
     return this.prisma.$transaction(
       async (tx) => {
         // Validación y escritura en el mismo snapshot que la asignación.
@@ -360,12 +341,7 @@ export class PlanificacionCampoService {
             usuarioId: a.usuarioId,
             empresaId: u.empresaId,
             localId: a.localId,
-            usuario: {
-              id: { in: colaboradores },
-              empresaId: u.empresaId,
-              isActive: true,
-              rol: rolDelEquipoCampo(u.equipoCampo),
-            },
+            usuario: personal,
             OR: [
               { fechaHasta: null },
               {

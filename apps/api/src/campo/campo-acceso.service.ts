@@ -6,7 +6,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { AccesoPlataformaService } from '../plataforma/acceso-plataforma.service';
 import { exigirEquipoCampo, EQUIPO_CAMPO_SELECT } from './utils/equipo-campo';
-import { obtenerColaboradoresGestionados } from './utils/autorizacion';
+import { filtroPersonalEquipoOperativo } from './utils/personal-equipo';
 
 @Injectable()
 export class CampoAccesoService {
@@ -58,13 +58,18 @@ export class CampoAccesoService {
     });
     if (!superior)
       throw new NotFoundException('Usuario no disponible en tu equipo');
-    // Un supervisor también asigna a los impulsadores de sus TeamLeaders.
-    const colaboradores = await obtenerColaboradoresGestionados(this.prisma, {
+    // El ABM administra su equipo operativo aunque el personal no dependa
+    // jerárquicamente del gestor. Conserva empresa, estado y equipo exacto.
+    const personal = filtroPersonalEquipoOperativo({
       id: superiorId,
       empresaId,
       equipoCampo: superior.rol?.equipoCampo,
     });
-    if (!colaboradores.includes(usuarioId))
+    const colaborador = await this.prisma.usuario.findFirst({
+      where: { AND: [personal, { id: usuarioId }] },
+      select: { id: true },
+    });
+    if (!colaborador)
       throw new NotFoundException('Usuario no disponible en tu equipo');
     await this.ejecutar(usuarioId);
     return { id: usuarioId };

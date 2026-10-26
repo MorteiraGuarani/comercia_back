@@ -26,17 +26,13 @@ import {
 } from './utils/local-ocrd';
 import { fechaCampo, relojCampo, vigenciaCampo } from './utils/calendario';
 import { ConsultaTareasCampoDto } from './dto/consulta-tareas.dto';
-import {
-  destinatarioCampo,
-  rolDelEquipoCampo,
-  exigirEquipoCampo,
-} from './utils/equipo-campo';
+import { destinatarioCampo, exigirEquipoCampo } from './utils/equipo-campo';
 import {
   exigirAdministracionTareas,
   permisosCatalogoTareas,
 } from './utils/permisos-tareas';
 import { detalleTarea } from './utils/version-tarea';
-import { obtenerColaboradoresGestionados } from './utils/autorizacion';
+import { filtroPersonalEquipoOperativo } from './utils/personal-equipo';
 import { CrearLocalCampoDto, EditarLocalCampoDto } from './dto/crear-local.dto';
 import { relanzarDuplicado } from '../common/utils/error-prisma';
 
@@ -58,7 +54,7 @@ export class CatalogoCampoService {
     const where = filtroLocales(u.empresaId, query.buscar);
     const { skip, take, page, limit } = rangoPaginacion(query);
     const hoy = fechaCampo(relojCampo().fecha);
-    const colaboradores = await obtenerColaboradoresGestionados(this.prisma, u);
+    const personal = filtroPersonalEquipoOperativo(u);
     const [total, filas] = await Promise.all([
       this.prisma.socioNegocio.count({ where }),
       this.prisma.socioNegocio.findMany({
@@ -68,10 +64,7 @@ export class CatalogoCampoService {
           asignaciones: {
             where: {
               activo: true,
-              usuario: {
-                id: { in: colaboradores },
-                rol: rolDelEquipoCampo(u.equipoCampo),
-              },
+              usuario: personal,
               fechaDesde: { lte: hoy },
               OR: [{ fechaHasta: null }, { fechaHasta: { gte: hoy } }],
             },
@@ -127,7 +120,7 @@ export class CatalogoCampoService {
     };
     const { skip, take, page, limit } = rangoPaginacion(query);
     const hoy = fechaCampo(relojCampo().fecha);
-    const colaboradores = await obtenerColaboradoresGestionados(this.prisma, u);
+    const personal = filtroPersonalEquipoOperativo(u);
     const [total, filas] = await Promise.all([
       this.prisma.socioNegocio.count({ where }),
       this.prisma.socioNegocio.findMany({
@@ -137,10 +130,7 @@ export class CatalogoCampoService {
           asignaciones: {
             where: {
               activo: true,
-              usuario: {
-                id: { in: colaboradores },
-                rol: rolDelEquipoCampo(u.equipoCampo),
-              },
+              usuario: personal,
               fechaDesde: { lte: hoy },
               OR: [{ fechaHasta: null }, { fechaHasta: { gte: hoy } }],
             },

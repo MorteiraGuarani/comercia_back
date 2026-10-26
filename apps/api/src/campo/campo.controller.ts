@@ -18,6 +18,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
+import { ApiOperation } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import type { RequestConUsuario } from '../auth/interfaces/request-con-usuario.interface';
@@ -156,10 +157,13 @@ export class CampoController {
     return this.catalogo.eliminarTarea(r.usuarioId, id);
   }
 
-  @Get('equipo') equipo(
-    @Req() r: RequestConUsuario,
-    @Query() q: ConsultaCampoDto,
-  ) {
+  @Get('equipo')
+  @ApiOperation({
+    summary: 'Personal disponible para la planificación',
+    description:
+      'Requiere acceso a PDV y rutas. Lista paginada y buscable del personal activo de la misma empresa y del mismo equipo operativo, sin exigir una relación de superior en el organigrama. Las asignaciones conservan las validaciones de acceso a la jornada, vigencia y solapamiento.',
+  })
+  equipo(@Req() r: RequestConUsuario, @Query() q: ConsultaCampoDto) {
     return this.plan.equipo(r.usuarioId, q);
   }
   @Get('locales/:localId/horarios') horarios(
