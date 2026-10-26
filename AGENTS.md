@@ -131,7 +131,8 @@
   Comercia trae su copia con GET (`marcaciones/pendientes` + confirmaciones,
   `SincronizacionMarcacionesService`); los pings se guardan solo en Ucheck y
   Comercia los consulta con GET. No volver a escribir marcaciones ni pings
-  directo en Comercia. La tabla `campo_ubicaciones` quedó en desuso.
+  directo en Comercia. Detalle del flujo, tablas y módulos en
+  [`docs/marcaciones-ubicaciones-ucheck.md`](docs/marcaciones-ubicaciones-ucheck.md).
 - El front consume esto con el componente `apps/web/src/components/paginacion.tsx`
   y el tipo `RespuestaPaginada<T>` (regla espejo en `apps/web/AGENTS.md`).
 
