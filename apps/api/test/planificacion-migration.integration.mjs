@@ -210,6 +210,17 @@ try {
     ).rows[0].id;
   await db.exec(await readFile(new URL('../prisma/migrations/20261014193000_borrado_catalogo_locales_sin_cliente/migration.sql', import.meta.url), 'utf8'));
   assert.deepEqual(await rows('SELECT DISTINCT empresa_id FROM campo_locales ORDER BY empresa_id'), [{ empresa_id: 10 }, { empresa_id: 20 }]);
+  // La consulta de agenda corre con el esquema actual, que identifica locales
+  // por empresa_id + CardCode. La prueba conserva las tablas legacy para probar
+  // sus migraciones anteriores y agrega aquí la clave equivalente del esquema
+  // que consume agenda-sql.ts.
+  await db.exec(`
+    ALTER TABLE campo_locales ADD COLUMN "CardCode" VARCHAR(50);
+    UPDATE campo_locales SET "CardCode" = 'LOCAL-' || id::text;
+    ALTER TABLE campo_horarios ADD COLUMN empresa_id INTEGER, ADD COLUMN "CardCode" VARCHAR(50);
+    UPDATE campo_horarios h SET empresa_id = l.empresa_id, "CardCode" = l."CardCode"
+    FROM campo_locales l WHERE h.local_id = l.id;
+  `);
   const agenda = async (usuarioId, destinatario, hasta = '2026-10-05') => {
     const sql = condicionAgenda(
       10,
@@ -223,7 +234,7 @@ try {
     const result = await db.query(
       `SELECT DISTINCT l.id FROM campo_asignaciones a
       JOIN campo_locales l ON l.id=a.local_id LEFT JOIN campo_clientes c ON c.id=l.cliente_id
-      WHERE ${sql.text} ORDER BY l.id`,
+      WHERE ${sql.text} AND l.eliminado_en IS NULL ORDER BY l.id`,
       sql.values,
     );
     return result.rows.map((x) => x.id);
@@ -267,6 +278,10 @@ try {
     "INSERT INTO campo_horarios(local_id,destinatario,equipo_campo_id,dias_semana) VALUES(4,'IMPULSADOR',$1,'{1}'),(4,'IMPULSADOR',$2,'{2}')",
     [equipoA, equipoB],
   );
+  await db.exec(`
+    UPDATE campo_horarios h SET empresa_id = l.empresa_id, "CardCode" = l."CardCode"
+    FROM campo_locales l WHERE h.local_id = l.id AND h.empresa_id IS NULL;
+  `);
   await db.query(
     "INSERT INTO campo_tareas(empresa_id,nombre,destinatario,equipo_campo_id) VALUES(10,'Solo A','IMPULSADOR',$1),(10,'Solo B','IMPULSADOR',$2)",
     [equipoA, equipoB],
