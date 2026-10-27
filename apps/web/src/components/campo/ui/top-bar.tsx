@@ -17,9 +17,9 @@ export function TopBar({
 }: TopBarProps) {
   return (
     <div
-      className={`flex min-w-0 flex-wrap items-start justify-between gap-3 border-b border-line bg-surface-raised px-4 py-3 sm:items-center sm:px-6 sm:py-4 lg:px-8 ${className}`}
+      className={`flex w-full min-w-0 flex-col gap-3 border-b border-line bg-surface-raised px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-6 sm:py-4 lg:px-8 ${className}`}
     >
-      <div className="flex w-full min-w-0 flex-1 items-center gap-3 sm:w-auto">
+      <div className="flex w-full min-w-0 items-start gap-3 sm:w-auto sm:flex-[1_1_16rem] sm:items-center">
         {onBack && (
           <button
             type="button"
@@ -43,7 +43,7 @@ export function TopBar({
             </svg>
           </button>
         )}
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <h1 className="ft-display break-words text-xl font-semibold leading-tight text-foreground sm:text-3xl">
             {title}
           </h1>
@@ -55,7 +55,7 @@ export function TopBar({
         </div>
       </div>
       {right && (
-        <div className="flex max-w-full min-w-0 flex-wrap items-center gap-2 self-start sm:self-auto">{right}</div>
+        <div className="flex w-full max-w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:self-auto">{right}</div>
       )}
     </div>
   );

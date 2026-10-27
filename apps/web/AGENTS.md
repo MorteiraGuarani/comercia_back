@@ -138,10 +138,13 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Modales
 
-- Un modal se cierra **SOLO de tres maneras**: el botón **X** (arriba a la
-  derecha), la tecla **Escape**, y el botón **Cancelar**.
-- **NUNCA se cierra al hacer clic en el fondo/backdrop** — un clic accidental no
-  puede tirar a la basura un formulario a medio llenar.
+- Los modales centrados se cierran con **X**, **Escape** o **Cancelar**; el fondo
+  no los cierra.
+- Por pedido del usuario, las **hojas que suben desde abajo en móvil** también
+  se minimizan al tocar el fondo o arrastrar su tirador/encabezado hacia abajo.
+  Mientras se arrastran pueden volver a subirse; el cierre se decide al soltar.
+  Usar `useHojaDeslizable` y el mismo callback de cierre para conservar las
+  confirmaciones de cambios pendientes. El contenido conserva su scroll normal.
 - Al abrir, el foco pasa al modal; al cerrar, vuelve al elemento que lo abrió.
 - Si el modal tiene un formulario con cambios sin guardar, "Cancelar"/X/Esc
   pueden pedir confirmación antes de descartar.

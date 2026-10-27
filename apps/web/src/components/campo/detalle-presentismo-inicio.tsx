@@ -5,7 +5,7 @@ import { Paginacion } from "@/components/paginacion";
 import type { ColaboradorResumen, SupervisionResumenData } from "@/types/campo";
 import type { EstadoPresentismo } from "@/types/estado-jornada";
 import { pct } from "@/utils/hoy-en-campo";
-import { PRESENTISMO_UI, enfoqueTablero } from "./ui/tablero-campo";
+import { ConteosFiltro, PRESENTISMO_UI, enfoqueTablero } from "./ui/tablero-campo";
 import { IconoTelefono } from "./ui/iconos-campo";
 
 const ESTADOS = ["PRESENTE", "TARDE", "INCOMPLETO", "AUSENTE"] as const;
@@ -32,45 +32,27 @@ export function DetallePresentismoInicio({
 
   return (
     <div className="min-w-0 space-y-3">
-      <div
-        role="group"
-        aria-label="Filtrar marcaciones por estado"
-        className="grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-4"
-      >
-        {ESTADOS.map((estado) => {
+      <ConteosFiltro
+        etiqueta="Filtrar marcaciones por estado"
+        activo={filtro}
+        onFiltro={(clave) => {
+          setFiltro(ESTADOS.find((e) => e === clave) ?? null);
+          setPagina(1);
+        }}
+        items={ESTADOS.map((estado) => {
           const cantidad = resumen.presentismo.estados[estado];
           const porcentaje = pct(cantidad, totalEquipo);
           const ui = PRESENTISMO_UI[estado];
-          return (
-            <button
-              key={estado}
-              type="button"
-              aria-pressed={filtro === estado}
-              aria-label={`${ui.etiqueta}: ${porcentaje}%, ${cantidad} de ${totalEquipo} personas. Filtrar marcaciones`}
-              onClick={() => {
-                setFiltro(filtro === estado ? null : estado);
-                setPagina(1);
-              }}
-              className={`min-h-11 min-w-0 cursor-pointer rounded-lg border border-line bg-surface-raised p-3 text-left transition-colors hover:bg-surface-soft ${enfoqueTablero} ${filtro === estado ? "ring-2 ring-focus" : ""}`}
-            >
-              <span className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-                <span
-                  aria-hidden="true"
-                  className={`h-2 w-2 shrink-0 rounded-full ${ui.barra}`}
-                />
-                {ui.etiqueta}
-              </span>
-              <span className="ft-display mt-1 block text-3xl font-bold tabular-nums text-foreground">
-                {porcentaje}
-                <small className="text-base">%</small>
-              </span>
-              <span className="block text-xs tabular-nums text-muted">
-                {cantidad} de {totalEquipo} personas
-              </span>
-            </button>
-          );
+          return {
+            clave: estado,
+            etiqueta: ui.etiqueta,
+            valor: cantidad,
+            detalle: `${porcentaje}%`,
+            punto: ui.barra,
+            descripcion: `${ui.etiqueta}: ${porcentaje}%, ${cantidad} de ${totalEquipo} personas. Filtrar marcaciones`,
+          };
         })}
-      </div>
+      />
       <section
         aria-label="Marcaciones del equipo"
         className="rounded-xl border border-line bg-surface-raised p-3 sm:p-4"

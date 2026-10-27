@@ -51,6 +51,32 @@ export function filtrarEquipo(
   return equipo;
 }
 
+/** Quién entra en cada KPI del detalle "Mi Ruta" de Inicio. */
+export const FILTROS_RUTA: Record<string, (c: ColaboradorResumen) => boolean> = {
+  hechas: (c) => c.ruta.completadas > 0,
+  en_curso: (c) => c.ruta.enCurso > 0,
+  pendientes: (c) =>
+    c.ruta.total - c.ruta.completadas - c.ruta.enCurso - c.ruta.incompletas - c.ruta.ausentes > 0,
+  sin_visitar: (c) => c.ruta.ausentes + c.ruta.incompletas > 0,
+};
+
+/** Quién entra en cada KPI del detalle "Tareas" de Inicio. */
+export const FILTROS_TAREAS: Record<string, (c: ColaboradorResumen) => boolean> = {
+  hechas: (c) => c.tareas.completadas > 0,
+  pendientes: (c) => c.tareas.total > c.tareas.completadas,
+  obligatorias: (c) => c.tareas.obligPendientes > 0,
+};
+
+/** Sin KPI elegido (o con uno desconocido) devuelve el equipo completo. */
+export function filtrarPorConteo(
+  equipo: ColaboradorResumen[],
+  filtros: Record<string, (c: ColaboradorResumen) => boolean>,
+  clave: string | null,
+) {
+  const cumple = clave ? filtros[clave] : undefined;
+  return cumple ? equipo.filter(cumple) : equipo;
+}
+
 export function ordenarEquipo(equipo: ColaboradorResumen[]) {
   return [...equipo].sort(
     (a, b) =>

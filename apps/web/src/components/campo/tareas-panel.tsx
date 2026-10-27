@@ -18,7 +18,7 @@ import {
   TarjetaTareaCatalogo,
 } from "./tarjeta-tarea-catalogo";
 import type { RespuestaPaginada } from "@/types/paginacion";
-import { TOKENS } from "./tokens";
+import { TOKENS, btnMasCampo } from "./tokens";
 import { StatusStamp } from "./ui/status-stamp";
 import {
   BuscadorCatalogo,
@@ -188,8 +188,7 @@ export function TareasPanel() {
               disabled={!destinatario}
               aria-label="Crear tarea"
               title="Crear tarea"
-              className="grid h-11 w-11 place-items-center rounded-lg text-white transition-colors hover:brightness-110"
-              style={{ backgroundColor: TOKENS.carne }}
+              className={btnMasCampo}
             >
               <IconoMas className="w-4 h-4" />
             </button>

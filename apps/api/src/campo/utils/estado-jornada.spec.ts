@@ -9,7 +9,7 @@ import {
 const fecha = new Date('2026-10-09T00:00:00Z');
 const hora = (h: string) => new Date(`2026-10-09T${h}:00-03:00`);
 
-it('respeta tolerancias guardadas y conserva el comportamiento histórico sin configuración', () => {
+it('respeta la tolerancia de entrada; salir antes del fin no vuelve Incompleta la visita', () => {
   const base = {
     fecha,
     horaDesde: '10:30',
@@ -18,7 +18,7 @@ it('respeta tolerancias guardadas y conserva el comportamiento histórico sin co
     entrada: hora('10:44'),
     salida: hora('17:46'),
   };
-  expect(evaluarPresentismo(base)).toBe('INCOMPLETO');
+  expect(evaluarPresentismo(base)).toBe('TARDE');
   expect(
     evaluarPresentismo({
       ...base,
@@ -57,7 +57,7 @@ const horario = {
   salida: '18:00',
 };
 
-describe('Estados de Comercia equivalentes a Presentismo UWeb', () => {
+describe('Estados de las visitas de campo en Comercia', () => {
   it('sin marcas es Sin registro hasta finalizar el turno y luego Ausente', () => {
     expect(evaluarPresentismo(turno, hora('10:00'))).toBe('SIN_REGISTRO');
     expect(evaluarPresentismo(turno, hora('17:59'))).toBe('SIN_REGISTRO');
@@ -80,16 +80,69 @@ describe('Estados de Comercia equivalentes a Presentismo UWeb', () => {
       ),
     ).toBe('TARDE');
   });
-  it('sin salida al vencer o salida anticipada es Incompleto, aunque haya entrado tarde', () => {
-    expect(
-      evaluarPresentismo({ ...turno, entrada: hora('10:30') }, hora('18:00')),
-    ).toBe('INCOMPLETO');
+  it('una visita iniciada y finalizada nunca es Incompleta: llegar después del inicio es Tarde', () => {
+    // Visita corta dentro de la ventana del local.
     expect(
       evaluarPresentismo(
-        { ...turno, entrada: hora('11:00'), salida: hora('17:59') },
-        hora('18:00'),
+        { ...turno, entrada: hora('10:30'), salida: hora('10:45') },
+        hora('19:00'),
       ),
-    ).toBe('INCOMPLETO');
+    ).toBe('PRESENTE');
+    // Llegó tarde y se quedó media hora.
+    expect(
+      evaluarPresentismo(
+        { ...turno, entrada: hora('11:00'), salida: hora('11:30') },
+        hora('19:00'),
+      ),
+    ).toBe('TARDE');
+    // Visitó después del fin del horario: solo llegada tardía.
+    expect(
+      evaluarPresentismo(
+        { ...turno, entrada: hora('18:30'), salida: hora('19:00') },
+        hora('19:30'),
+      ),
+    ).toBe('TARDE');
+  });
+  it('una visita abierta sigue en curso hasta el fin del día aunque termine el horario', () => {
+    expect(
+      evaluarPresentismo({ ...turno, entrada: hora('10:30') }, hora('18:00')),
+    ).toBe('PRESENTE');
+    expect(
+      estadoAgenda(
+        [
+          {
+            fecha,
+            entrada: hora('17:50'),
+            salida: null,
+            horarioId: 2,
+            horario: { entrada: '10:30', salida: '18:00' },
+          },
+        ],
+        [horario],
+        'America/Asuncion',
+        '2026-10-09',
+        '2026-10-09',
+        hora('18:30'),
+      ),
+    ).toEqual({ estado: 'en_curso', estadoPresentismo: 'TARDE' });
+    expect(
+      estadoAgenda(
+        [
+          {
+            fecha,
+            entrada: hora('11:00'),
+            salida: hora('11:30'),
+            horarioId: 2,
+            horario: { entrada: '10:30', salida: '18:00' },
+          },
+        ],
+        [horario],
+        'America/Asuncion',
+        '2026-10-09',
+        '2026-10-09',
+        hora('19:00'),
+      ),
+    ).toEqual({ estado: 'completado', estadoPresentismo: 'TARDE' });
   });
   it('la entrada del 9 deja de ser operable exactamente a medianoche del 10 sin inventar salida', () => {
     const visita = {

@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, type ReactNode } from "react";
 import { apiFetch } from "@/lib/api";
 import { ToleranciasHorario } from "@/components/tolerancias-horario";
 import { useListaCampo, useOperacionCampo } from "@/hooks/use-lista-campo";
@@ -7,7 +7,8 @@ import { fechaEnZonaIso } from "@/utils/fechas";
 import { Modal } from "@/components/modal";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { SelectorPaginado } from "@/components/selector-paginado";
-import { TOKENS } from "./tokens";
+import { TOKENS, btnMasCampo } from "./tokens";
+import { EncabezadoSeccion } from "./ui/encabezado-seccion";
 import { StatusStamp } from "./ui/status-stamp";
 import { IconoMas } from "@/components/icono-mas";
 import { IconoRefrescar, IconoCruz } from "./ui/iconos-campo";
@@ -18,9 +19,12 @@ import { HorariosLocal } from "./horarios-local";
 
 export function AsignacionesLocal({
   localId,
+  nota,
   onPendiente,
 }: {
   localId: string;
+  /** Aclaración extra para el botón de información (ej.: el equipo). */
+  nota?: ReactNode;
   /** Avisa si eligieron un colaborador y falta confirmar la asignación. */
   onPendiente?: (pendiente: boolean) => void;
 }) {
@@ -41,29 +45,29 @@ export function AsignacionesLocal({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h4 className="text-sm font-bold uppercase tracking-wider text-foreground">
-            Colaboradores asignados ({lista.items.length})
-          </h4>
-          <p className="text-xs text-muted">
-            Colaboradores titulares encargados de atender este punto de venta.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => {
-            setCrear(true);
-            setUsuarioId("");
-          }}
-          aria-label="Asignar colaborador"
-          title="Asignar colaborador"
-          className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-white dark:text-[#3b1219] transition-all hover:brightness-110"
-          style={{ backgroundColor: TOKENS.carne }}
-        >
-          <IconoMas />
-        </button>
-      </div>
+      <EncabezadoSeccion
+        titulo={`Colaboradores asignados (${lista.items.length})`}
+        info={
+          <>
+            <p>Colaboradores titulares encargados de atender este punto de venta.</p>
+            {nota ? <p>{nota}</p> : null}
+          </>
+        }
+        accion={
+          <button
+            type="button"
+            onClick={() => {
+              setCrear(true);
+              setUsuarioId("");
+            }}
+            aria-label="Asignar colaborador"
+            title="Asignar colaborador"
+            className={btnMasCampo}
+          >
+            <IconoMas />
+          </button>
+        }
+      />
 
       {lista.items.length === 0 ? (
         <div

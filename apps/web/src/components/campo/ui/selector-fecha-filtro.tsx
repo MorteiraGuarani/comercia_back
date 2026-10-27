@@ -4,6 +4,7 @@ import React, { useId, useState, useRef, useEffect } from "react";
 import { fechaEnZonaIso } from "@/utils/fechas";
 import { periodosDesdeHoy } from "@/utils/periodo-inicio";
 import type { PeriodoFiltro } from "@/types/periodo-filtro";
+import { useHojaDeslizable } from "@/hooks/use-hoja-deslizable";
 
 interface SelectorFechaFiltroProps {
   valorActual: PeriodoFiltro;
@@ -27,11 +28,15 @@ export function SelectorFechaFiltro({ valorActual, onChange }: SelectorFechaFilt
     seleccion.fechaFin ?? seleccion.fecha ?? hoyStr,
   );
   const popoverRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const fondoRef = useRef<HTMLDivElement>(null);
+  const { activa: hojaActiva, minimizar: minimizarHoja, arrastre } = useHojaDeslizable({ abierto, panelRef, fondoRef, onMinimizar: () => setAbierto(false) });
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
-        setAbierto(false);
+        if (hojaActiva) minimizarHoja();
+        else setAbierto(false);
       }
     }
     function cerrarConEscape(e: KeyboardEvent) {
@@ -45,7 +50,7 @@ export function SelectorFechaFiltro({ valorActual, onChange }: SelectorFechaFilt
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("keydown", cerrarConEscape);
     };
-  }, [abierto]);
+  }, [abierto, hojaActiva, minimizarHoja]);
 
   const alternar = () => {
     const caja = popoverRef.current?.getBoundingClientRect();
@@ -139,11 +144,13 @@ export function SelectorFechaFiltro({ valorActual, onChange }: SelectorFechaFilt
         <>
         {/* En celular es una hoja desde abajo: nunca queda fuera de la pantalla. */}
         <div
+          ref={fondoRef}
           aria-hidden="true"
-          onClick={() => setAbierto(false)}
+          onClick={minimizarHoja}
           className="fixed inset-0 z-[60] bg-black/40 sm:hidden"
         />
         <div
+          ref={panelRef}
           id={panelId}
           role="dialog"
           aria-label="Elegir período"
@@ -151,16 +158,17 @@ export function SelectorFechaFiltro({ valorActual, onChange }: SelectorFechaFilt
             alinearIzquierda ? "sm:left-0" : "sm:right-0"
           }`}
         >
-          <span aria-hidden="true" className="mx-auto mb-3 block h-1 w-10 rounded-full bg-line sm:hidden" />
-          <div className="mb-2 flex flex-wrap items-center justify-between gap-1 border-b border-line pb-2">
-            <span className="ft-display text-xs font-bold uppercase tracking-wider text-accent-ink">
-              Filtro Temporal
-            </span>
-            <span className="min-w-0 break-all text-right font-mono text-[11px] text-muted">
-              {rangoVisible}
-            </span>
+          <div {...arrastre} className="max-sm:touch-none max-sm:select-none max-sm:cursor-grab max-sm:active:cursor-grabbing">
+            <span aria-hidden="true" className="mx-auto mb-3 block h-1 w-10 rounded-full bg-line sm:hidden" />
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-1 border-b border-line pb-2">
+              <span className="ft-display text-xs font-bold uppercase tracking-wider text-accent-ink">
+                Filtro Temporal
+              </span>
+              <span className="min-w-0 break-all text-right font-mono text-[11px] text-muted">
+                {rangoVisible}
+              </span>
+            </div>
           </div>
-
           <div>
             <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted">
               Fechas predefinidas

@@ -12,8 +12,6 @@ interface KpisRutaProps {
   visitadas: number;
   enCurso: number;
   pendientes: number;
-  incompletas?: number;
-  ausentes?: number;
   /** Período consultado ("hoy", "en el período"...). */
   sufijo: string;
   /** Los conteos por estado salen de la página visible, no de toda la agenda. */
@@ -39,8 +37,6 @@ export function KpisRuta({
   visitadas,
   enCurso,
   pendientes,
-  incompletas = 0,
-  ausentes = 0,
   sufijo,
   porPagina = false,
   filtro,
@@ -135,20 +131,6 @@ export function KpisRuta({
           );
         })}
       </div>
-      {incompletas > 0 || ausentes > 0 ? (
-        <p className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 px-1 text-xs font-medium">
-          {incompletas > 0 ? (
-            <span className="text-amber-700 dark:text-amber-300">
-              {incompletas} {incompletas === 1 ? "incompleta" : "incompletas"}
-            </span>
-          ) : null}
-          {ausentes > 0 ? (
-            <span className="text-red-700 dark:text-red-300">
-              {ausentes} {ausentes === 1 ? "ausente" : "ausentes"}
-            </span>
-          ) : null}
-        </p>
-      ) : null}
     </div>
   );
 }

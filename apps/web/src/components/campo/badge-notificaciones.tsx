@@ -21,6 +21,18 @@ import { DetalleAviso } from "./detalle-aviso";
 import { DetalleNotificacionInventario } from "./detalle-notificacion-inventario";
 import { IconoAlerta, IconoAvisos, IconoMegafono } from "./ui/iconos-campo";
 
+function IconoPestana({
+  clave,
+  className,
+}: {
+  clave: "notificaciones" | "avisos" | "novedades";
+  className: string;
+}) {
+  if (clave === "avisos") return <IconoMegafono className={className} />;
+  if (clave === "novedades") return <IconoAlerta className={className} />;
+  return <IconoAvisos className={className} />;
+}
+
 export function BadgeNotificaciones() {
   const [noLeidas, setNoLeidas] = useState(0);
   const [mostrarPanel, setMostrarPanel] = useState(false);
@@ -478,30 +490,32 @@ function PanelNotificaciones({
       hojaMovil
       encabezado={
         !referenciaSeleccionada ? (
-          <div className="flex min-w-0 items-center gap-1.5">
+          <div className="flex min-w-0 items-center gap-1">
             <div
               role="tablist"
               aria-label="Secciones de notificaciones"
-              className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-surface-soft p-0.5"
+              className="relative inline-flex shrink-0 items-center gap-0.5 rounded-lg bg-surface-soft p-0.5"
             >
+              {/* Fondo de la pestaña activa: se desliza hasta la elegida (w-10 + gap-0.5). */}
+              <span
+                aria-hidden="true"
+                className="absolute left-0.5 top-0.5 h-11 w-10 rounded-md bg-surface-raised shadow-sm transition-transform duration-200 ease-out motion-reduce:transition-none"
+                style={{
+                  transform: `translateX(calc(${Math.max(0, pestanas.findIndex((p) => p.clave === pestana))} * 2.625rem))`,
+                }}
+              />
               {pestanas.map((p) => (
                 <button
                   key={p.clave}
                   type="button"
                   role="tab"
-                    aria-label={p.clave === "notificaciones" && noLeidas > 0 ? `${p.etiqueta} (${noLeidas} sin leer)` : p.etiqueta}
+                  aria-label={p.clave === "notificaciones" && noLeidas > 0 ? `${p.etiqueta} (${noLeidas} sin leer)` : p.etiqueta}
                   title={p.etiqueta}
                   aria-selected={pestana === p.clave}
                   onClick={() => setPestana(p.clave)}
-                  className={`relative grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${pestana === p.clave ? "bg-surface-raised text-foreground shadow-sm" : "text-muted hover:bg-surface-raised/60 hover:text-foreground"}`}
+                  className={`relative grid h-11 w-10 shrink-0 cursor-pointer place-items-center rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${pestana === p.clave ? "text-brand-700 dark:text-brand-200" : "text-muted hover:bg-surface-raised/60 hover:text-foreground"}`}
                 >
-                  {p.clave === "notificaciones" ? (
-                    <IconoAvisos className="h-5 w-5" />
-                  ) : p.clave === "avisos" ? (
-                    <IconoMegafono className="h-5 w-5" />
-                  ) : (
-                    <IconoAlerta className="h-5 w-5" />
-                  )}
+                  <IconoPestana clave={p.clave} className="h-5 w-5" />
                   {p.clave === "notificaciones" && noLeidas > 0 ? (
                     <span
                       aria-hidden="true"
@@ -513,6 +527,70 @@ function PanelNotificaciones({
                 </button>
               ))}
             </div>
+            {pestana === "notificaciones" ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFiltro(filtro === "no_leidas" ? "todas" : "no_leidas");
+                    setPage(1);
+                  }}
+                  aria-pressed={filtro === "no_leidas"}
+                  aria-label={`Solo sin leer${noLeidas > 0 ? ` (${noLeidas})` : ""}`}
+                  title={filtro === "no_leidas" ? "Ver todas" : "Ver solo sin leer"}
+                  className={`inline-flex h-11 shrink-0 cursor-pointer items-center gap-1 whitespace-nowrap rounded-lg border px-2.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${
+                    filtro === "no_leidas"
+                      ? "border-brand-600 bg-brand-50 text-brand-800 dark:border-brand-400 dark:bg-brand-950 dark:text-brand-100"
+                      : "border-line text-muted hover:bg-surface-soft hover:text-foreground dark:border-line dark:text-muted dark:hover:bg-surface-soft dark:hover:text-foreground"
+                  }`}
+                >
+                  Sin leer
+                  {noLeidas > 0 ? (
+                    <span
+                      aria-hidden="true"
+                      className="grid h-4 min-w-4 place-items-center rounded-full bg-red-600 px-1 text-[9px] font-bold text-white dark:bg-red-500"
+                    >
+                      {noLeidas > 99 ? "99+" : noLeidas}
+                    </span>
+                  ) : null}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleMarcarTodasLeidas}
+                  disabled={marcandoTodas || noLeidas === 0}
+                  aria-label={
+                    marcandoTodas
+                      ? "Marcando notificaciones como leídas"
+                      : "Marcar todas como leídas"
+                  }
+                  title={
+                    marcandoTodas ? "Marcando…" : "Marcar todas como leídas"
+                  }
+                  aria-busy={marcandoTodas || undefined}
+                  className="ml-auto grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-lg text-brand-700 transition-colors hover:bg-surface-soft hover:text-brand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50 dark:text-brand-200 dark:hover:bg-surface-soft dark:hover:text-brand-100"
+                >
+                  {marcandoTodas ? (
+                    <span
+                      aria-hidden="true"
+                      className="h-4 w-4 rounded-full border-2 border-current border-t-transparent motion-safe:animate-spin"
+                    />
+                  ) : (
+                    <svg
+                      aria-hidden="true"
+                      className="h-5 w-5"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="m3 12 4 4L17 6M11 16l2 2L23 8" />
+                    </svg>
+                  )}
+                </button>
+              </>
+            ) : null}
             {crear ? (
               <Link
                 href={crear.href}
@@ -579,7 +657,28 @@ function PanelNotificaciones({
           )}
         </div>
       ) : (
-        <div className="flex min-w-0 flex-col space-y-2">
+        <div
+          key={pestana}
+          className="flex min-w-0 flex-col space-y-2 motion-safe:animate-aparecer"
+        >
+          {/* Qué se está viendo: la sección activa y, en notificaciones, el filtro. */}
+          <p className="flex min-w-0 items-center gap-1.5 text-sm font-bold text-foreground">
+            <IconoPestana
+              clave={pestana}
+              className="h-4 w-4 shrink-0 text-brand-700 dark:text-brand-200"
+            />
+            <span className="truncate">
+              {pestanas.find((p) => p.clave === pestana)?.etiqueta}
+            </span>
+            {pestana === "notificaciones" ? (
+              <span
+                key={filtro}
+                className="whitespace-nowrap font-medium text-muted motion-safe:animate-aparecer"
+              >
+                · {filtro === "no_leidas" ? "Solo sin leer" : "Todas"}
+              </span>
+            ) : null}
+          </p>
           {pestana === "avisos" ? (
             <ListaAvisosCampana
               esLider={avisosLider}
@@ -599,117 +698,6 @@ function PanelNotificaciones({
             />
           ) : (
             <div className="flex min-w-0 flex-col space-y-2">
-              {/* Barra superior de filtros y acción "Marcar leídas" */}
-              <div
-                className="inline-flex min-w-0 max-w-full flex-nowrap self-start items-center gap-1.5"
-                aria-label="Filtros y acciones de notificaciones"
-              >
-                <div className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-surface-soft p-0.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFiltro("todas");
-                      setPage(1);
-                    }}
-                    aria-pressed={filtro === "todas"}
-                    aria-label="Mostrar todas las notificaciones"
-                    title="Todas las notificaciones"
-                    className={`inline-flex min-h-11 cursor-pointer items-center gap-1 whitespace-nowrap rounded-md px-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${
-                      filtro === "todas"
-                        ? "bg-surface-raised text-foreground shadow-sm dark:bg-surface-raised dark:text-foreground"
-                        : "text-muted hover:bg-surface-raised hover:text-foreground dark:text-muted dark:hover:bg-surface-raised dark:hover:text-foreground"
-                    }`}
-                  >
-                    <svg
-                      aria-hidden="true"
-                      className="h-4 w-4"
-                      viewBox="0 0 20 20"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                    >
-                      <path
-                        d="M7 5h10M7 10h10M7 15h10M3 5h.01M3 10h.01M3 15h.01"
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                    Todas
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFiltro("no_leidas");
-                      setPage(1);
-                    }}
-                    aria-pressed={filtro === "no_leidas"}
-                    aria-label={`Mostrar notificaciones sin leer${noLeidas > 0 ? ` (${noLeidas})` : ""}`}
-                    title="Notificaciones sin leer"
-                    className={`inline-flex min-h-11 cursor-pointer items-center gap-1 whitespace-nowrap rounded-md px-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${
-                      filtro === "no_leidas"
-                        ? "bg-surface-raised text-foreground shadow-sm dark:bg-surface-raised dark:text-foreground"
-                        : "text-muted hover:bg-surface-raised hover:text-foreground dark:text-muted dark:hover:bg-surface-raised dark:hover:text-foreground"
-                    }`}
-                  >
-                    <svg
-                      aria-hidden="true"
-                      className="h-4 w-4"
-                      viewBox="0 0 20 20"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                    >
-                      <rect x="2" y="4" width="16" height="12" rx="2" />
-                      <path d="m3 5 7 5 7-5" />
-                    </svg>
-                    <span>Sin leer</span>
-                    {noLeidas > 0 && (
-                      <span
-                        aria-hidden="true"
-                        className="flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[9px] font-bold text-white dark:bg-red-500"
-                      >
-                        {noLeidas > 99 ? "99+" : noLeidas}
-                      </span>
-                    )}
-                  </button>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleMarcarTodasLeidas}
-                  disabled={marcandoTodas || noLeidas === 0}
-                  aria-label={
-                    marcandoTodas
-                      ? "Marcando notificaciones como leídas"
-                      : "Marcar todas como leídas"
-                  }
-                  title={
-                    marcandoTodas ? "Marcando…" : "Marcar todas como leídas"
-                  }
-                  aria-busy={marcandoTodas || undefined}
-                  className="grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-lg text-brand-700 transition-colors hover:bg-surface-soft hover:text-brand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50 dark:text-brand-200 dark:hover:bg-surface-soft dark:hover:text-brand-100"
-                >
-                  {marcandoTodas ? (
-                    <span
-                      aria-hidden="true"
-                      className="h-4 w-4 rounded-full border-2 border-current border-t-transparent motion-safe:animate-spin"
-                    />
-                  ) : (
-                    <svg
-                      aria-hidden="true"
-                      className="h-5 w-5"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="m3 12 4 4L17 6M11 16l2 2L23 8" />
-                    </svg>
-                  )}
-                </button>
-              </div>
-
               {/* Lista de Notificaciones */}
               <div className="min-w-0">
                 {cargando ? (

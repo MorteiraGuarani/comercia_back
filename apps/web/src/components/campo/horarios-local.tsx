@@ -1,12 +1,14 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, type ReactNode } from "react";
 import { apiFetch } from "@/lib/api";
 import { ToleranciasHorario } from "@/components/tolerancias-horario";
 import { useListaCampo, useOperacionCampo } from "@/hooks/use-lista-campo";
 import { fechaEnZonaIso } from "@/utils/fechas";
 import { BotonEditar } from "@/components/boton-editar";
 import { PantallaCarga } from "@/components/pantalla-carga";
-import { TOKENS } from "./tokens";
+import { TOKENS, btnMasCampo } from "./tokens";
+import { BotonEliminarCampo } from "./boton-eliminar-campo";
+import { EncabezadoSeccion } from "./ui/encabezado-seccion";
 import { StatusStamp } from "./ui/status-stamp";
 import { IconoMas } from "@/components/icono-mas";
 import { IconoCruz } from "./ui/iconos-campo";
@@ -19,10 +21,13 @@ import type { FormHorarioCampo, HorarioCampo } from "@/types/campo";
 export function HorariosLocal({
   localId,
   asignacionId,
+  nota,
   onPendiente,
 }: {
   localId: string;
   asignacionId?: number;
+  /** Aclaración extra para el botón de información (ej.: el equipo). */
+  nota?: ReactNode;
   /** Avisa si hay una franja abierta sin guardar. */
   onPendiente?: (pendiente: boolean) => void;
 }) {
@@ -55,29 +60,30 @@ export function HorariosLocal({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h4 className="text-sm font-bold uppercase tracking-wider text-foreground">
-            {asignacionId ? "Franjas propias" : "Franjas predeterminadas"} (
-            {lista.items.length})
-          </h4>
-          <p className="text-xs text-muted">
-            {asignacionId
-              ? "Estas franjas se aplican solo a este colaborador. Sin ellas se usan las predeterminadas del local."
-              : "Se aplican a todos los colaboradores sin franjas propias."}
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => abrir()}
-          aria-label="Agregar franja"
-          title="Agregar franja"
-          className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-white dark:text-[#3b1219] transition-all hover:brightness-110"
-          style={{ backgroundColor: TOKENS.carne }}
-        >
-          <IconoMas />
-        </button>
-      </div>
+      <EncabezadoSeccion
+        titulo={`${asignacionId ? "Franjas propias" : "Franjas predeterminadas"} (${lista.items.length})`}
+        info={
+          <>
+            <p>
+              {asignacionId
+                ? "Estas franjas se aplican solo a este colaborador. Sin ellas se usan las predeterminadas del local."
+                : "Se aplican a todos los colaboradores sin franjas propias."}
+            </p>
+            {nota ? <p>{nota}</p> : null}
+          </>
+        }
+        accion={
+          <button
+            type="button"
+            onClick={() => abrir()}
+            aria-label="Agregar franja"
+            title="Agregar franja"
+            className={btnMasCampo}
+          >
+            <IconoMas />
+          </button>
+        }
+      />
 
       {/* Lista de Franjas */}
       {lista.items.length === 0 ? (
@@ -113,8 +119,8 @@ export function HorariosLocal({
               }}
             >
               <div>
-                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex min-w-0 items-center gap-2">
+                <div className="mb-2 flex min-w-0 items-start justify-between gap-2">
+                  <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 pt-2">
                     <span className="font-mono text-lg font-bold tracking-tight text-foreground">
                       {h.entrada} — {h.salida}
                     </span>
@@ -122,50 +128,51 @@ export function HorariosLocal({
                       {h.frecuencia}
                     </StatusStamp>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {quitando === h.id ? (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => setQuitando(null)}
-                          className="min-h-11 cursor-pointer whitespace-nowrap rounded-lg border border-line px-3 text-xs font-semibold text-foreground hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-                        >
-                          Cancelar
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            void op.ejecutar("Quitando horario", async () => {
-                              await apiFetch(`${ruta}/${h.id}`, {
-                                method: "DELETE",
-                              });
-                              setQuitando(null);
-                              lista.refrescar();
-                            })
-                          }
-                          className="min-h-11 cursor-pointer whitespace-nowrap rounded-lg bg-red-700 px-3 text-xs font-semibold text-white hover:bg-red-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:bg-red-500 dark:text-red-950 dark:hover:bg-red-400"
-                        >
-                          Sí, quitar
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <BotonEditar
-                          onClick={() => abrir(h)}
-                          etiqueta={`Editar franja ${h.entrada} a ${h.salida}`}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setQuitando(h.id)}
-                          aria-label={`Quitar franja ${h.entrada} a ${h.salida}`}
-                          className="min-h-11 cursor-pointer whitespace-nowrap rounded-lg border border-red-200 bg-red-50 px-3 text-xs font-semibold text-red-700 hover:bg-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:border-red-900 dark:bg-red-950/60 dark:text-red-300 dark:hover:bg-red-900"
-                        >
-                          Quitar
-                        </button>
-                      </>
-                    )}
-                  </div>
+                  {quitando === h.id ? null : (
+                    <div className="flex shrink-0 items-center">
+                      <BotonEditar
+                        onClick={() => abrir(h)}
+                        etiqueta={`Editar franja ${h.entrada} a ${h.salida}`}
+                        className="md:h-11 md:w-11"
+                      />
+                      <BotonEliminarCampo
+                        onClick={() => setQuitando(h.id)}
+                        etiqueta={`Quitar franja ${h.entrada} a ${h.salida}`}
+                      />
+                    </div>
+                  )}
                 </div>
+                {quitando === h.id ? (
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 dark:border-red-900 dark:bg-red-950/50">
+                    <p className="text-xs font-semibold text-red-800 dark:text-red-200">
+                      ¿Quitar esta franja?
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setQuitando(null)}
+                        className="min-h-11 cursor-pointer whitespace-nowrap rounded-lg border border-line bg-surface-raised px-3 text-xs font-semibold text-foreground hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          void op.ejecutar("Quitando horario", async () => {
+                            await apiFetch(`${ruta}/${h.id}`, {
+                              method: "DELETE",
+                            });
+                            setQuitando(null);
+                            lista.refrescar();
+                          })
+                        }
+                        className="min-h-11 cursor-pointer whitespace-nowrap rounded-lg bg-red-700 px-3 text-xs font-semibold text-white hover:bg-red-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:bg-red-800 dark:hover:bg-red-700"
+                      >
+                        Sí, quitar
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
 
                 {/* Días activos */}
                 <div className="flex flex-wrap gap-1 mb-2">

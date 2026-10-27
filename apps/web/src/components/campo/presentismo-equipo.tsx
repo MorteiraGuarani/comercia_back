@@ -42,7 +42,7 @@ export function ResumenPresentismo({ resumen, onFiltrar }: {
     </section>
     <details className={styles.howto}>
       <summary>¿Cómo se calcula cada estado?</summary>
-      <p>Al vencer el turno: sin marcas es Ausente; una entrada sin salida es Incompleto. Sin horario no se deduce ausencia ni tardanza. En períodos de varios días se priorizan las incidencias.</p>
+      <p>El horario del local es la ventana para visitarlo: iniciar la visita después del inicio es Tarde (aunque sea pasado el fin) y salir antes del fin no cuenta. Al vencer el horario sin visita es Ausente; una visita que no se finalizó en el día es Incompleto. Sin horario no se deduce ausencia ni tardanza. En períodos de varios días se priorizan las incidencias.</p>
     </details>
   </aside>;
 }
@@ -134,7 +134,7 @@ export function EquipoPresentismo({ colaboradores, metric = "presentismo", filtr
       <div className={styles.table}><table><caption className="sr-only">Estado y avance de los colaboradores</caption>
         <thead><tr>{[
           ['Persona / zona', 'Persona del equipo y su zona asignada. Ver ficha permite consultar sus marcaciones y datos del dispositivo.'],
-          ['Estado', 'Presente: entrada a tiempo. Tarde: entrada después del inicio. Incompleto: turno vencido sin salida o salida anticipada. Ausente: turno vencido sin marcas. Sin registro: aún sin marcas. En períodos se prioriza Incompleto, Ausente, Tarde y Presente.'],
+          ['Estado', 'Presente: inició la visita dentro del horario del local. Tarde: la inició después del inicio, aunque sea pasado el fin. Salir antes del fin no cuenta: el horario es la ventana para visitar. Incompleto: visita iniciada que no se finalizó en el día. Ausente: horario vencido sin visita. Sin registro: aún sin marcas. En períodos se prioriza Incompleto, Ausente, Tarde y Presente.'],
           ['Entrada', 'Primera entrada registrada en el período. La pestaña Marcaciones de la ficha muestra cada visita y sus señales técnicas.'],
           ['Salida', 'Salida del último registro del período cuando las visitas están finalizadas. Consultá Marcaciones en la ficha para ver cada visita.'],
           ['Visitas', 'Visitas completadas sobre el total del período y cantidad de visitas en curso.'],

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
-import { TOKENS } from "./tokens";
+import { TOKENS, btnMasCampo } from "./tokens";
 import { StatusStamp } from "./ui/status-stamp";
 import { TopBar } from "./ui/top-bar";
 import { Modal } from "@/components/modal";
@@ -156,8 +156,7 @@ export function NovedadesPanel({
               }}
               aria-label="Crear novedad"
               title="Crear novedad"
-              className="grid h-11 w-11 place-items-center rounded-lg text-white transition hover:brightness-110"
-              style={{ background: TOKENS.carne }}
+              className={btnMasCampo}
             >
               <IconoMas />
             </button>

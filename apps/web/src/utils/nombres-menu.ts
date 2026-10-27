@@ -1,3 +1,5 @@
+import type { ModuloMenu } from "@/types/plataforma";
+
 export function etiquetaPaginaMenu(
   moduloRuta: string,
   paginaRuta: string,
@@ -10,4 +12,14 @@ export function etiquetaPaginaMenu(
   if (paginaRuta === "novedades") return "Novedades";
   if (paginaRuta === "avisos") return "Avisos";
   return nombre;
+}
+
+// Las tareas se hacen desde el modal del local en Mi Ruta (fotos, comentarios
+// y terminar): la página Mis tareas queda deshabilitada para todos.
+export function sinMisTareas(modulos: ModuloMenu[]): ModuloMenu[] {
+  return modulos.map((m) =>
+    m.ruta === "mi-jornada"
+      ? { ...m, paginas: m.paginas.filter((p) => p.ruta !== "tareas") }
+      : m,
+  );
 }

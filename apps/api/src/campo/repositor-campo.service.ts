@@ -532,7 +532,9 @@ export class RepositorCampoService {
     });
     if (pendientes)
       throw new BadRequestException(
-        `Completá las ${pendientes} tareas pendientes antes de salir`,
+        pendientes === 1
+          ? 'Completá la tarea pendiente antes de finalizar la visita'
+          : `Completá las ${pendientes} tareas pendientes antes de finalizar la visita`,
       );
     const resultado = await this.enviar({
       usuarioId,

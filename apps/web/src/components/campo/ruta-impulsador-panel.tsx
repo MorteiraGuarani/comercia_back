@@ -337,8 +337,6 @@ function RutaImpulsadorDelPeriodo({
           visitadas={visitadas}
           enCurso={enCurso}
           pendientes={pendientes}
-          incompletas={incompletas}
-          ausentes={ausentes}
           sufijo={hoy ? "hoy" : "en el período"}
           filtro={filtro}
           onFiltro={(valor) => {
@@ -550,6 +548,10 @@ function RutaImpulsadorDelPeriodo({
                   {ultima?.salida ? (
                     <p className="text-muted">
                       Salida {formatoHora(ultima.salida)}
+                    </p>
+                  ) : ultima?.estado === "INCOMPLETA" ? (
+                    <p className="text-amber-700 dark:text-amber-300">
+                      Salida — · sin finalizar
                     </p>
                   ) : null}
                   {a.esBackup ? (

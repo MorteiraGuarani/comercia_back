@@ -3,10 +3,10 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useDestinoPortal } from "@/hooks/use-destino-portal";
+import { useHojaDeslizable } from "@/hooks/use-hoja-deslizable";
 
-// Modal de comercIA — sigue las reglas de apps/web/AGENTS.md:
-// se cierra SOLO con la X, con Escape o con el botón Cancelar/Cerrar.
-// El clic en el fondo NO cierra (evita perder formularios por accidente).
+// Las hojas móviles también se minimizan desde el fondo o arrastrando su cabecera.
+// Usan el mismo cierre que la X para conservar las confirmaciones del formulario.
 export function Modal({
   titulo,
   abierto,
@@ -35,10 +35,12 @@ export function Modal({
   const destinoPortal = useDestinoPortal();
   const capaRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const fondoRef = useRef<HTMLDivElement>(null);
   const disparadorRef = useRef<HTMLElement | null>(null);
   const onCerrarRef = useRef(onCerrar);
   const anchoClase =
     ancho === "xl" ? "max-w-5xl" : ancho === "lg" ? "max-w-2xl" : "max-w-md";
+  const hoja = useHojaDeslizable({ abierto, habilitada: hojaMovil, panelRef, fondoRef, onMinimizar: onCerrar });
 
   useEffect(() => {
     onCerrarRef.current = onCerrar;
@@ -98,9 +100,11 @@ export function Modal({
           : "items-center pb-[max(1rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))]"
       }`}
     >
-      {/* Fondo oscurecido: NO cierra el modal a propósito */}
+      {/* Solo las hojas móviles responden al toque exterior. */}
       <div
+        ref={fondoRef}
         aria-hidden
+        onClick={hoja.minimizar}
         className="absolute inset-0 bg-[#0d1f19]/78"
       />
       <div
@@ -115,27 +119,32 @@ export function Modal({
             : "max-h-full rounded-[1.4rem]"
         }`}
       >
-        {hojaMovil ? (
-          <div aria-hidden className="mx-auto mb-1 h-1.5 w-10 shrink-0 rounded-full bg-line sm:hidden" />
-        ) : null}
-        <header className="flex shrink-0 items-start justify-between gap-2 sm:gap-4">
-          <h2 className={encabezado ? "sr-only" : `min-w-0 flex-1 break-words font-extrabold tracking-[-0.025em] ${hojaMovil ? "self-center text-base sm:text-lg" : "text-lg"}`}>
-            {titulo}
-          </h2>
-          {encabezado ? (
-            <div className="min-w-0 flex-1 self-center">{encabezado}</div>
+        <div
+          {...hoja.arrastre}
+          className={`shrink-0 ${hojaMovil ? "max-sm:touch-none max-sm:select-none max-sm:cursor-grab max-sm:active:cursor-grabbing" : ""}`}
+        >
+          {hojaMovil ? (
+            <div aria-hidden className="mx-auto mb-1 h-1.5 w-10 shrink-0 rounded-full bg-line sm:hidden" />
           ) : null}
-          <button
-            type="button"
-            onClick={onCerrar}
-            aria-label="Cerrar"
-            className="grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-xl text-muted transition-colors hover:bg-surface-soft hover:text-foreground active:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40 dark:text-muted dark:hover:bg-surface-soft dark:hover:text-foreground dark:active:bg-surface-soft"
-          >
-            <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5" aria-hidden>
-              <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
-            </svg>
-          </button>
-        </header>
+          <header className="flex shrink-0 items-start justify-between gap-2 sm:gap-4">
+            <h2 className={encabezado ? "sr-only" : `min-w-0 flex-1 break-words font-extrabold tracking-[-0.025em] ${hojaMovil ? "self-center text-base sm:text-lg" : "text-lg"}`}>
+              {titulo}
+            </h2>
+            {encabezado ? (
+              <div className="min-w-0 flex-1 self-center">{encabezado}</div>
+            ) : null}
+            <button
+              type="button"
+              onClick={onCerrar}
+              aria-label="Cerrar"
+              className="grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-xl text-muted transition-colors hover:bg-surface-soft hover:text-foreground active:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40 dark:text-muted dark:hover:bg-surface-soft dark:hover:text-foreground dark:active:bg-surface-soft"
+            >
+              <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5" aria-hidden>
+                <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+              </svg>
+            </button>
+          </header>
+        </div>
         <div className={`${hojaMovil ? "mt-2 sm:mt-4" : "mt-4"} min-h-0 min-w-0 w-full overflow-y-auto overscroll-contain`}>{children}</div>
         {pie ? <footer className="mt-3 shrink-0 border-t border-line dark:border-line">{pie}</footer> : null}
       </div>

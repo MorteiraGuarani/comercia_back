@@ -1,12 +1,10 @@
 "use client";
 import type { PeriodoFiltro } from "@/types/periodo-filtro";
 import dynamic from "next/dynamic";
-import Link from "next/link";
 import { EstadoTelefono } from "./estado-telefono";
 import {
   ETIQUETA_FILTRO,
   ORDEN_RUTA,
-  PRESENTISMO,
   RUTA,
 } from "@/utils/estado-jornada";
 import type { FiltroRuta } from "@/types/estado-jornada";
@@ -36,14 +34,13 @@ import {
 import { mensajeError } from "@/utils/error";
 import type { MarcacionPendiente } from "@/types/seguimiento";
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { apiFetch } from "@/lib/api";
+import { ApiError, apiFetch } from "@/lib/api";
+import { mostrarToast } from "@/components/toast/toast-controller";
 import { notificarJornadaMarcada } from "@/lib/eventos-plataforma";
 import { usePanel } from "@/components/panel/contexto";
 import { useListaCampo } from "@/hooks/use-lista-campo";
 import { useFechaCampo } from "@/hooks/use-fecha-campo";
 import {
-  formatoFechaHora,
   formatoHora,
   queryFechasCampo,
   textoRangoFechas,
@@ -59,6 +56,7 @@ import { TablaCampo } from "./tabla-campo";
 import type { AgendaCampo, LocalCampo, VisitaCampo } from "@/types/campo";
 import { ModalMarca } from "./modal-marca";
 import { TareasDeLocal } from "./tareas-de-local";
+import { InventarioLocalModal } from "./inventario-local-modal";
 
 // Leaflet solo se descarga al abrir un mapa.
 const MapaLocal = dynamic(
@@ -103,7 +101,6 @@ function AgendaDelDia({
   periodo: PeriodoFiltro;
   onPeriodo: (periodo: PeriodoFiltro) => void;
 }) {
-  const router = useRouter();
   const { usuario, modulos } = usePanel();
   const hoyStr = useFechaCampo();
   const lista = useListaCampo<AgendaCampo>(`/campo/jornada?${qsFecha}`);
@@ -115,6 +112,8 @@ function AgendaDelDia({
   const [mapa, setMapa] = useState<LocalCampo | null>(null);
   const [tareas, setTareas] = useState<AgendaCampo | null>(null);
   const [novedadDe, setNovedadDe] = useState<AgendaCampo | null>(null);
+  // El inventario se abre acá mismo: sin ir a otra página ni recargar Mi Ruta.
+  const [inventarioDe, setInventarioDe] = useState<string | null>(null);
   // Sube al cerrar el modal de tareas para refrescar el "2/5" de la tarjeta.
   const [revisionTareas, setRevisionTareas] = useState(0);
   const [busqueda, setBusqueda] = useState("");
@@ -153,6 +152,48 @@ function AgendaDelDia({
   function actualizar() {
     lista.refrescar();
     setRevision((n) => n + 1);
+  }
+
+  // Finalizar Visita no abre formulario: registra la salida con el teléfono en
+  // Ucheck y el resultado llega en un toast. Sin Ucheck sigue el modal con GPS.
+  const [finalizando, setFinalizando] = useState("");
+  async function finalizarVisita(v: VisitaCampo) {
+    if (!esRepositor) {
+      setMarca({
+        asignacionId: v.asignacionId,
+        visitaId: v.id,
+        nombre: v.local.nombre,
+        radioMetros: v.local.radioMetros,
+      });
+      return;
+    }
+    if (finalizando) return;
+    setFinalizando(v.local.nombre);
+    try {
+      const r = await apiFetch<{ estado?: "CONFIRMADA" | "PENDIENTE"; mensaje?: string }>(
+        `/campo/jornada/repositor/visitas/${v.id}/salida`,
+        { method: "POST", body: JSON.stringify({ nota: "" }) },
+      );
+      if (r.estado === "PENDIENTE")
+        mostrarToast(
+          "alerta",
+          r.mensaje ?? "Salida guardada en Ucheck, pendiente de sincronización.",
+          "Visita finalizada",
+        );
+      else
+        mostrarToast("exito", `Finalizaste la visita a ${v.local.nombre}.`, "Visita finalizada");
+      actualizar();
+    } catch (e) {
+      // 4xx: falta algo de tu lado (tareas, teléfono, radio); lo demás es un error.
+      const aviso = e instanceof ApiError && e.status >= 400 && e.status < 500;
+      mostrarToast(
+        aviso ? "alerta" : "error",
+        mensajeError(e, "No se pudo finalizar la visita."),
+        "No se finalizó la visita",
+      );
+    } finally {
+      setFinalizando("");
+    }
   }
 
   const hoy = new URLSearchParams(qsFecha).get("fecha") === hoyStr;
@@ -300,12 +341,7 @@ function AgendaDelDia({
 
   const paginasJornada =
     modulos.find((m) => m.ruta === "mi-jornada")?.paginas ?? [];
-  const rutaTareas = paginasJornada.some((p) => p.ruta === "tareas")
-    ? "/panel/mi-jornada/tareas"
-    : null;
-  const rutaInventario = paginasJornada.some((p) => p.ruta === "inventario")
-    ? "/panel/mi-jornada/inventario"
-    : null;
+  const conInventario = paginasJornada.some((p) => p.ruta === "inventario");
 
   // Métricas del día
   const visitadas = lista.items.filter((a) =>
@@ -345,58 +381,12 @@ function AgendaDelDia({
           visitadas={visitadas}
           enCurso={enCurso}
           pendientes={pendientes}
-          incompletas={lista.items.filter(a => a.estado === "incompleto").length}
-          ausentes={lista.items.filter(a => a.estado === "ausente").length}
           sufijo={hoy ? "hoy" : "en el período"}
           porPagina={porPagina}
           filtro={filtro}
           onFiltro={setFiltro}
         />
       </div>
-
-      {/* Banner de visita en curso */}
-      {abierta ? (
-        <div className="mb-2 flex min-w-0 items-center gap-2 rounded-lg border border-sky-500 bg-sky-50/60 px-3 py-1 sm:mb-3 dark:border-sky-700 dark:bg-sky-950/40">
-          <div className="flex min-w-0 flex-1 items-center gap-2">
-            <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full bg-sky-600 dark:bg-sky-400" />
-            <div className="min-w-0">
-              <p className="truncate text-xs font-semibold text-foreground" title={`Visita en curso · ${abierta.local.nombre}`}>
-                En curso · {abierta.local.nombre}
-              </p>
-              <p className="truncate text-[11px] text-muted font-mono">
-                Entrada: {formatoFechaHora(abierta.entrada)}
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            aria-label={`Marcar salida de ${abierta.local.nombre}`}
-            className="flex min-h-11 shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-line bg-surface-raised px-3 text-xs font-semibold text-foreground transition hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:border-line dark:bg-surface-raised dark:text-foreground dark:hover:bg-surface-soft"
-            onClick={() =>
-              setMarca({
-                asignacionId: abierta.asignacionId,
-                visitaId: abierta.id,
-                nombre: abierta.local.nombre,
-                radioMetros: abierta.local.radioMetros,
-              })
-            }
-          >
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              strokeWidth="2"
-              aria-hidden="true"
-            >
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <polyline points="16 17 21 12 16 7" />
-              <line x1="21" y1="12" x2="9" y2="12" />
-            </svg>
-            Salida
-          </button>
-        </div>
-      ) : null}
 
       {/* Buscador de locales de la agenda */}
       <div className={`mb-2 flex min-w-0 w-full items-center gap-2 sm:mb-3 ${esRepositor ? "" : "flex-wrap sm:justify-between"}`}>
@@ -607,8 +597,10 @@ function AgendaDelDia({
                   <p className="font-semibold text-foreground">
                     {enCurso
                       ? `En el local desde ${formatoHora(enCurso)}`
-                      : a.estado === "completado" && ultima
-                        ? `Visitado ${formatoHora(ultima.entrada)}–${formatoHora(ultima.salida)}`
+                      : ultima
+                        ? ultima.salida
+                          ? `Visitado ${formatoHora(ultima.entrada)}–${formatoHora(ultima.salida)}`
+                          : `Entrada ${formatoHora(ultima.entrada)} · salida — sin finalizar`
                         : ruta && parada && conUbicacion(a.local)
                           ? `Parada ${parada} · a ${formatoDistancia(metrosEntre(ruta.origen, a.local))}`
                           : "Sin visita todavía"}
@@ -652,8 +644,7 @@ function AgendaDelDia({
           {
             titulo: "Estado",
             valor: (a) => {
-              return <div className="flex flex-wrap gap-1"><StatusStamp tone={RUTA[a.estado].tone}>{RUTA[a.estado].etiqueta}</StatusStamp>
-                <StatusStamp tone={PRESENTISMO[a.estadoPresentismo].tone}>{PRESENTISMO[a.estadoPresentismo].etiqueta}</StatusStamp></div>;
+              return <StatusStamp tone={RUTA[a.estado].tone}>{RUTA[a.estado].etiqueta}</StatusStamp>;
             },
           },
         ]}
@@ -672,8 +663,7 @@ function AgendaDelDia({
             qsFecha={qsFecha}
             revisionTareas={revisionTareas}
             visitaAbierta={abierta}
-            rutaTareas={rutaTareas}
-            rutaInventario={rutaInventario}
+            onInventario={conInventario ? () => setInventarioDe(a.local.id) : undefined}
             onEntrada={(horarioId) =>
               setMarca({
                 asignacionId: a.id,
@@ -682,14 +672,7 @@ function AgendaDelDia({
                 radioMetros: a.local.radioMetros,
               })
             }
-            onSalida={(v) =>
-              setMarca({
-                asignacionId: v.asignacionId,
-                visitaId: v.id,
-                nombre: v.local.nombre,
-                radioMetros: v.local.radioMetros,
-              })
-            }
+            onSalida={(v) => void finalizarVisita(v)}
             onTareas={() => setTareas(a)}
             onMapa={() => setMapa(a.local)}
             onNovedad={() => setNovedadDe(a)}
@@ -710,16 +693,10 @@ function AgendaDelDia({
               {aqui ? (
                 <button
                   className={btnPrimary}
-                  onClick={() =>
-                    setMarca({
-                      asignacionId: abierta.asignacionId,
-                      visitaId: abierta.id,
-                      nombre: abierta.local.nombre,
-                      radioMetros: abierta.local.radioMetros,
-                    })
-                  }
+                  disabled={!!finalizando}
+                  onClick={() => void finalizarVisita(abierta)}
                 >
-                  Marcar salida
+                  Finalizar Visita
                 </button>
               ) : proximo !== undefined ? (
                 <button
@@ -733,7 +710,7 @@ function AgendaDelDia({
                     })
                   }
                 >
-                  Marcar entrada
+                  Iniciar Visita
                 </button>
               ) : null}
               <div className="flex flex-wrap gap-1.5">
@@ -748,30 +725,21 @@ function AgendaDelDia({
                   className={btnAccion}
                   onClick={() => setTareas(a)}
                   disabled={!aqui}
-                  title={aqui ? undefined : "Marcá entrada para ver las tareas"}
+                  title={aqui ? undefined : "Iniciá la visita para ver las tareas"}
                 >
                   <IconoTareas className="h-4 w-4" />
                   Tareas
                 </button>
-                {rutaInventario ? (
-                  aqui ? (
-                    <Link
-                      href={`${rutaInventario}?local=${encodeURIComponent(a.local.id)}`}
-                      className={btnAccion}
-                    >
-                      <IconoCaja className="h-4 w-4" />
-                      Inventario
-                    </Link>
-                  ) : (
-                    <button
-                      className={btnAccion}
-                      disabled
-                      title="Marcá entrada para usar el inventario"
-                    >
-                      <IconoCaja className="h-4 w-4" />
-                      Inventario
-                    </button>
-                  )
+                {conInventario ? (
+                  <button
+                    className={btnAccion}
+                    onClick={() => setInventarioDe(a.local.id)}
+                    disabled={!aqui}
+                    title={aqui ? undefined : "Iniciá la visita para usar el inventario"}
+                  >
+                    <IconoCaja className="h-4 w-4" />
+                    Inventario
+                  </button>
                 ) : null}
                 <button
                   className={btnAccion}
@@ -790,6 +758,11 @@ function AgendaDelDia({
         mensaje="Calculando mejor ruta"
         detalle="Usamos tu GPS, los horarios y la distancia entre locales."
       />
+      <PantallaCarga
+        visible={!!finalizando}
+        mensaje="Finalizando visita"
+        detalle={`Registrando la salida de ${finalizando} en Ucheck.`}
+      />
       {mapa ? <MapaLocal local={mapa} cerrar={() => setMapa(null)} /> : null}
       {novedadDe ? (
         <ModalNovedadLocal
@@ -798,6 +771,14 @@ function AgendaDelDia({
             abierta?.asignacionId === novedadDe.id ? abierta.id : undefined
           }
           cerrar={() => setNovedadDe(null)}
+        />
+      ) : null}
+      {inventarioDe ? (
+        <InventarioLocalModal
+          key={inventarioDe}
+          localId={inventarioDe}
+          textoCerrar="Volver a la visita"
+          onCerrar={() => setInventarioDe(null)}
         />
       ) : null}
       {tareas ? (
@@ -859,8 +840,6 @@ function AgendaDelDia({
             actualizar();
             setMarca(null);
             if (!marca.visitaId) notificarJornadaMarcada();
-            if (esRepositor && !marca.visitaId)
-              router.push("/panel/mi-jornada/tareas");
           }}
         />
       ) : null}

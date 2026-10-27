@@ -25,7 +25,7 @@ import { IconoModulo, resolverIconoPagina } from "@/components/panel/iconos";
 import { btnGhost } from "@/components/ui";
 import { EVENTO_PLATAFORMA_ACTUALIZADA } from "@/lib/eventos-plataforma";
 import { BotonSubir } from "@/components/boton-subir";
-import { etiquetaPaginaMenu } from "@/utils/nombres-menu";
+import { etiquetaPaginaMenu, sinMisTareas } from "@/utils/nombres-menu";
 import { EnlacePanel } from "@/components/panel/enlace-panel";
 import { useDisponibilidadTareas } from "@/hooks/use-disponibilidad-tareas";
 
@@ -57,7 +57,7 @@ export default function PanelLayout({
     ])
       .then(([me, menu]) => {
         setUsuario(me.usuario);
-        setModulos(menu?.modulos ?? []);
+        setModulos(sinMisTareas(menu?.modulos ?? []));
         if (menu)
           guardarSesionSinConexion({
             usuario: me.usuario,
@@ -72,7 +72,7 @@ export default function PanelLayout({
             : null;
         if (guardada) {
           setUsuario(guardada.usuario);
-          setModulos(guardada.modulos);
+          setModulos(sinMisTareas(guardada.modulos));
           return;
         }
         borrarSesionSinConexion();
@@ -86,7 +86,7 @@ export default function PanelLayout({
     const actualizarMenu = () => {
       void apiFetch<{ modulos: ModuloMenu[] }>("/mi-plataforma")
         .then((menu) => {
-          if (vigente) setModulos(menu.modulos);
+          if (vigente) setModulos(sinMisTareas(menu.modulos));
         })
         .catch(() => undefined);
     };

@@ -20,3 +20,7 @@ export const TOKENS = {
 } as const;
 
 export type TokenColor = keyof typeof TOKENS;
+
+/** Botón "+" de alta del módulo: en modo oscuro va rojo oscuro, no rosado. */
+export const btnMasCampo =
+  "grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-lg bg-[#8B2635] text-white transition-colors hover:bg-[#741f2c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:bg-red-800 dark:hover:bg-red-700";

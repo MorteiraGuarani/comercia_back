@@ -233,47 +233,101 @@ export function SeccionTablero({
 }
 
 /** Encabezado del tablero con el botón de actualizar. */
-export function EncabezadoTablero({
-  rotulo,
-  titulo,
-  subtitulo,
+/** "Actualizado hh:mm": vuelve a pedir los datos del tablero. */
+export function BotonActualizarTablero({
   cargando,
   actualizado,
   onActualizar,
 }: {
-  rotulo: string;
-  titulo: string;
-  subtitulo: string;
   cargando: boolean;
   actualizado: string | null;
   onActualizar: () => void;
 }) {
   return (
-    <header className="min-w-0">
-      <p className="truncate text-[11px] font-semibold uppercase tracking-wide text-muted">{rotulo}</p>
-      <h1 className="ft-display mt-0.5 text-2xl font-bold leading-tight text-foreground sm:text-3xl">{titulo}</h1>
-      <p className="text-xs text-muted sm:text-sm">{subtitulo}</p>
-      <button
-        type="button"
-        onClick={onActualizar}
-        disabled={cargando}
-        aria-label="Actualizar datos del tablero"
-        className={`-ml-1 mt-0.5 inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-lg px-1 text-xs text-muted transition-colors hover:text-foreground disabled:cursor-wait ${enfoqueTablero}`}
-      >
-        <span
-          aria-hidden="true"
-          className={`h-2 w-2 rounded-full bg-emerald-600 dark:bg-emerald-400 ${cargando ? "motion-safe:animate-pulse" : "motion-safe:animate-ping [animation-duration:2.4s]"}`}
-        />
-        {cargando ? (
-          "Actualizando…"
-        ) : actualizado ? (
-          <>
-            Actualizado <b className="font-mono font-medium text-foreground">{actualizado}</b>
-          </>
-        ) : (
-          "Actualizar"
-        )}
-      </button>
-    </header>
+    <button
+      type="button"
+      onClick={onActualizar}
+      disabled={cargando}
+      aria-label="Actualizar datos del tablero"
+      className={`inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg px-1 text-xs text-muted transition-colors hover:text-foreground disabled:cursor-wait ${enfoqueTablero}`}
+    >
+      <span
+        aria-hidden="true"
+        className={`h-2 w-2 rounded-full bg-emerald-600 dark:bg-emerald-400 ${cargando ? "motion-safe:animate-pulse" : "motion-safe:animate-ping [animation-duration:2.4s]"}`}
+      />
+      {cargando ? (
+        "Actualizando…"
+      ) : actualizado ? (
+        <>
+          Actualizado <b className="font-mono font-medium text-foreground">{actualizado}</b>
+        </>
+      ) : (
+        "Actualizar"
+      )}
+    </button>
+  );
+}
+
+/**
+ * KPIs de un detalle de Inicio, todos en una fila. Tocar uno filtra la lista
+ * de abajo; tocarlo otra vez vuelve a mostrar todo.
+ */
+export function ConteosFiltro({
+  etiqueta,
+  items,
+  activo,
+  onFiltro,
+}: {
+  etiqueta: string;
+  items: {
+    clave: string;
+    etiqueta: string;
+    valor: number;
+    detalle?: string;
+    clase?: string;
+    punto?: string;
+    descripcion?: string;
+  }[];
+  activo: string | null;
+  onFiltro: (clave: string | null) => void;
+}) {
+  return (
+    <div
+      role="group"
+      aria-label={etiqueta}
+      className="grid min-w-0 gap-1.5"
+      style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
+    >
+      {items.map((i) => {
+        const elegido = activo === i.clave;
+        return (
+          <button
+            key={i.clave}
+            type="button"
+            aria-pressed={elegido}
+            aria-label={i.descripcion}
+            onClick={() => onFiltro(elegido ? null : i.clave)}
+            className={`min-h-11 min-w-0 cursor-pointer rounded-lg border px-1.5 py-1.5 text-left transition-[border-color,box-shadow,opacity] sm:px-2 ${enfoqueTablero} ${
+              elegido
+                ? "border-brand-600 bg-surface-raised ring-2 ring-brand-600/25 dark:border-brand-400 dark:ring-brand-400/30"
+                : `border-transparent bg-surface-soft hover:border-line ${activo ? "opacity-60 hover:opacity-100" : ""}`
+            }`}
+          >
+            <b className={`ft-display block text-xl leading-tight tabular-nums ${i.clase ?? "text-foreground"}`}>
+              {i.valor}
+            </b>
+            <span className="flex min-w-0 items-center gap-1 text-[10px] text-muted sm:text-[11px]">
+              {i.punto ? (
+                <i aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-full ${i.punto}`} />
+              ) : null}
+              <span className="truncate">{i.etiqueta}</span>
+            </span>
+            {i.detalle ? (
+              <span className="block truncate text-[10px] tabular-nums text-muted">{i.detalle}</span>
+            ) : null}
+          </button>
+        );
+      })}
+    </div>
   );
 }

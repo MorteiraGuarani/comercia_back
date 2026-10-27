@@ -1,11 +1,9 @@
 "use client";
-import Link from "next/link";
-import { PRESENTISMO, RUTA } from "@/utils/estado-jornada";
+import { RUTA } from "@/utils/estado-jornada";
 import { formatoFechaCalendario, formatoHora } from "@/utils/fechas";
 import { useResumenTareasLocal } from "@/hooks/use-resumen-tareas-local";
 import type { EstadoRuta } from "@/types/estado-jornada";
 import type { AgendaCampo, VisitaCampo } from "@/types/campo";
-import { StatusStamp } from "./ui/status-stamp";
 import { EstadoRutaSimple } from "./ui/estado-ruta-simple";
 import { FotoLocal } from "./ui/foto-local";
 import {
@@ -46,8 +44,8 @@ interface AccionesRepositorProps {
   hoy: boolean;
   /** Cambia al cerrar el modal de tareas para refrescar el "2/5". */
   revisionTareas: number;
-  rutaTareas: string | null;
-  rutaInventario: string | null;
+  /** Abre el inventario del local; sin la página de inventario no se muestra. */
+  onInventario?: () => void;
   onEntrada: (horarioId?: number) => void;
   onSalida: (visita: VisitaCampo) => void;
   onTareas: () => void;
@@ -58,8 +56,7 @@ interface ConsultaImpulsadorProps {
   soloConsulta: true;
   hoy?: never;
   revisionTareas?: never;
-  rutaTareas?: never;
-  rutaInventario?: never;
+  onInventario?: never;
   onEntrada?: never;
   onSalida?: never;
   onTareas?: never;
@@ -158,8 +155,7 @@ export function TarjetaAgendaRepositor({
   qsFecha,
   revisionTareas,
   visitaAbierta,
-  rutaTareas,
-  rutaInventario,
+  onInventario,
   onEntrada,
   onSalida,
   onTareas,
@@ -192,8 +188,10 @@ export function TarjetaAgendaRepositor({
       ]
         .filter(Boolean)
         .join(" · ")
-    : a.estado === "completado" && ultima
-      ? `Visitado ${formatoHora(ultima.entrada)}–${formatoHora(ultima.salida)}`
+    : ultima
+      ? ultima.salida
+        ? `Visitado ${formatoHora(ultima.entrada)}–${formatoHora(ultima.salida)}`
+        : `Entrada ${formatoHora(ultima.entrada)} · sin finalizar`
       : [a.local.direccion || a.local.id, distancia]
           .filter(Boolean)
           .join(" · ");
@@ -261,7 +259,7 @@ export function TarjetaAgendaRepositor({
           <IconoMapa className="h-4 w-4" />
         </button>
         <IconoChevronAbajo
-          className={`h-4 w-4 shrink-0 text-muted motion-safe:transition-transform ${abierta ? "rotate-180" : ""}`}
+          className={`pointer-events-none h-4 w-4 shrink-0 text-muted motion-safe:transition-transform ${abierta ? "rotate-180" : ""}`}
         />
       </div>
 
@@ -292,12 +290,6 @@ export function TarjetaAgendaRepositor({
                   </span>
                 </p>
               ) : null}
-              {/* "Sin registro" repetía el estado de la ruta; solo se muestra el presentismo real. */}
-              {!soloConsulta && a.estadoPresentismo !== "SIN_REGISTRO" ? (
-                <StatusStamp tone={PRESENTISMO[a.estadoPresentismo].tone}>
-                  {PRESENTISMO[a.estadoPresentismo].etiqueta}
-                </StatusStamp>
-              ) : null}
 
               {soloConsulta ? (
                 <div
@@ -325,7 +317,7 @@ export function TarjetaAgendaRepositor({
                     title={
                       visitaAqui
                         ? undefined
-                        : "Marcá entrada para ver las tareas"
+                        : "Iniciá la visita para ver las tareas"
                     }
                     aria-label={
                       tareas
@@ -349,26 +341,17 @@ export function TarjetaAgendaRepositor({
                     ) : null}
                   </button>
                 ) : null}
-                {!soloConsulta && rutaInventario ? (
-                  visitaAqui ? (
-                    <Link
-                      href={`${rutaInventario}?local=${encodeURIComponent(a.local.id)}`}
-                      className={btnInfo}
-                    >
-                      <IconoCaja className="h-3.5 w-3.5 shrink-0" />
-                      Inventario
-                    </Link>
-                  ) : (
-                    <button
-                      type="button"
-                      disabled
-                      title="Marcá entrada para usar el inventario"
-                      className={btnInfo}
-                    >
-                      <IconoCaja className="h-3.5 w-3.5 shrink-0" />
-                      Inventario
-                    </button>
-                  )
+                {!soloConsulta && onInventario ? (
+                  <button
+                    type="button"
+                    onClick={onInventario}
+                    disabled={!visitaAqui}
+                    title={visitaAqui ? undefined : "Iniciá la visita para usar el inventario"}
+                    className={btnInfo}
+                  >
+                    <IconoCaja className="h-3.5 w-3.5 shrink-0" />
+                    Inventario
+                  </button>
                 ) : null}
                 <button
                   type="button"
@@ -403,55 +386,36 @@ export function TarjetaAgendaRepositor({
                     Entrada{" "}
                     <b className="font-mono">{formatoHora(v.entrada)}</b>
                   </span>
-                  <span className="inline-flex items-center gap-1 text-foreground">
-                    <IconoSalida className="h-3.5 w-3.5 shrink-0 text-muted" />
-                    {v.salida ? (
-                      <>
-                        Salida{" "}
-                        <b className="font-mono">{formatoHora(v.salida)}</b>
-                      </>
-                    ) : v.estado === "EN_CURSO" ? (
-                      <span className="font-semibold text-sky-700 dark:text-sky-300">
-                        En curso
+                  {v.salida ? (
+                    <span className="inline-flex items-center gap-1 text-foreground">
+                      <IconoSalida className="h-3.5 w-3.5 shrink-0 text-muted" />
+                      Salida <b className="font-mono">{formatoHora(v.salida)}</b>
+                    </span>
+                  ) : v.estado === "INCOMPLETA" ? (
+                    // Se inició otro día y nunca se finalizó: la salida queda vacía.
+                    <span className="inline-flex items-center gap-1 text-foreground">
+                      <IconoSalida className="h-3.5 w-3.5 shrink-0 text-muted" />
+                      Salida <b className="font-mono text-muted">—</b>
+                      <span className="font-semibold text-amber-700 dark:text-amber-300">
+                        · sin finalizar
                       </span>
-                    ) : (
-                      <span className="text-amber-700 dark:text-amber-300">
-                        Sin salida registrada
-                      </span>
-                    )}
-                  </span>
+                    </span>
+                  ) : null}
                 </li>
               ))}
             </ul>
           ) : null}
 
           {!soloConsulta && visitaAqui ? (
-            <div className="flex flex-wrap gap-2">
-              {rutaTareas ? (
-                <Link href={rutaTareas} className={btnPrincipal}>
-                  <IconoPlay className="h-3.5 w-3.5 shrink-0" />
-                  Continuar visita
-                </Link>
-              ) : (
-                <button
-                  type="button"
-                  onClick={onTareas}
-                  className={btnPrincipal}
-                >
-                  <IconoPlay className="h-3.5 w-3.5 shrink-0" />
-                  Continuar visita
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => onSalida?.(visitaAqui)}
-                aria-label={`Marcar salida de ${a.local.nombre}`}
-                className={btnSalida}
-              >
-                <IconoSalida className="h-4 w-4 shrink-0" />
-                Marcar salida
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => onSalida?.(visitaAqui)}
+              aria-label={`Finalizar la visita a ${a.local.nombre}`}
+              className={`${btnSalida} w-full`}
+            >
+              <IconoSalida className="h-4 w-4 shrink-0" />
+              Finalizar Visita
+            </button>
           ) : entradasPendientes.length ? (
             <div className="space-y-2">
               {entradasPendientes.map((h) => (
@@ -462,12 +426,12 @@ export function TarjetaAgendaRepositor({
                   className={`${btnPrincipal} w-full`}
                 >
                   <IconoEntrada className="h-4 w-4 shrink-0" />
-                  Marcar entrada
+                  Iniciar Visita
                 </button>
               ))}
               <p className="flex items-center justify-center gap-1 text-[11px] text-muted sm:text-xs">
                 <IconoCandado className="h-3 w-3 shrink-0" />
-                Tareas e inventario se habilitan al marcar entrada.
+                Tareas e inventario se habilitan al iniciar la visita.
               </p>
             </div>
           ) : null}
@@ -477,7 +441,7 @@ export function TarjetaAgendaRepositor({
               <IconoCandado className="mt-px h-3.5 w-3.5 shrink-0" />
               <span>
                 Tenés una visita en curso en <b>{otraVisita.local.nombre}</b>.
-                Marcá la salida para entrar acá.
+                Finalizala para iniciar la visita acá.
               </span>
             </p>
           ) : null}

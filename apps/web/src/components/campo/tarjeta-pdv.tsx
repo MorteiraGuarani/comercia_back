@@ -4,6 +4,7 @@ import type { LocalCampo } from "@/types/campo";
 import { FotoLocal } from "./ui/foto-local";
 import { IconoPin } from "./ui/iconos-campo";
 import { AccionesItinerario } from "./acciones-itinerario";
+import { TextoExpandible } from "./ui/texto-expandible";
 
 // Tarjeta de punto de venta (vista celular de PDV y rutas): imagen del local,
 // CardCode, ubicación en OCRD y quién lo atiende.
@@ -37,18 +38,21 @@ export function TarjetaPdv({
             className="w-20 shrink-0 self-start sm:w-24"
           />
           <div className="min-w-0 flex-1">
-            <h3 className="min-w-0 break-words text-sm font-bold leading-snug text-foreground">
-              {local.nombre}
+            <h3 className="min-w-0 text-sm font-bold leading-snug text-foreground">
+              <TextoExpandible texto={local.nombre} />
             </h3>
             <p className="truncate font-mono text-xs text-muted">{local.id}</p>
             <p
               className={`mt-0.5 flex min-w-0 items-start gap-1 text-xs ${ubicado ? "text-muted" : "font-semibold text-amber-700 dark:text-amber-300"}`}
             >
               <IconoPin className="mt-px h-3.5 w-3.5 shrink-0" />
-              <span className="min-w-0 break-words">
-                {local.direccion ||
-                  (ubicado ? "Sin dirección en CRD1" : "Sin ubicación cargada")}
-              </span>
+              {local.direccion ? (
+                <TextoExpandible texto={local.direccion} />
+              ) : (
+                <span className="min-w-0">
+                  {ubicado ? "Sin dirección en CRD1" : "Sin ubicación cargada"}
+                </span>
+              )}
             </p>
           </div>
         </div>

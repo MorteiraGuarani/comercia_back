@@ -12,6 +12,7 @@ import { TopBar } from "./ui/top-bar";
 import { TarjetaPdv } from "./tarjeta-pdv";
 import { AccionesItinerario } from "./acciones-itinerario";
 import { FotoLocal } from "./ui/foto-local";
+import { TextoExpandible } from "./ui/texto-expandible";
 import { IconoCalendario, IconoTienda, IconoMapa } from "./ui/iconos-campo";
 import { ConfigVencimientosModal } from "./config-vencimientos-modal";
 import type { ClientePdv } from "@/types/campo";
@@ -228,14 +229,18 @@ export function LocalesPanel() {
                               nombre={local.nombre}
                               className="w-16 shrink-0"
                             />
-                            <div className="min-w-0">
+                            <div className="min-w-0 max-w-xs">
                               <p className="text-sm font-bold text-foreground">
-                                {local.nombre}
+                                <TextoExpandible texto={local.nombre} />
                               </p>
-                              <p className="mt-0.5 break-words text-[11px] text-muted">
-                                <span className="font-mono">{local.id}</span>
-                                {local.direccion ? ` · ${local.direccion}` : ""}
+                              <p className="mt-0.5 font-mono text-[11px] text-muted">
+                                {local.id}
                               </p>
+                              {local.direccion ? (
+                                <p className="text-[11px] text-muted">
+                                  <TextoExpandible texto={local.direccion} />
+                                </p>
+                              ) : null}
                               {local.latitud === null && (
                                 <p className="mt-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-300">
                                   Sin ubicación cargada

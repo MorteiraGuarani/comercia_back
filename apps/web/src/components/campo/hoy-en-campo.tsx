@@ -11,7 +11,8 @@ import { HiloNovedad } from "./hilo-novedad";
 import { DetallePresentismoInicio } from "./detalle-presentismo-inicio";
 import { BarraSegmentos, RAYADO_EN_CURSO } from "./ui/barra-segmentos";
 import {
-  EncabezadoTablero,
+  BotonActualizarTablero,
+  ConteosFiltro,
   FilaAtencion,
   ListaAtencion,
   ORDEN_PRESENTISMO,
@@ -37,9 +38,13 @@ import {
   rangoPeriodoInicio,
 } from "@/utils/periodo-inicio";
 import { SelectorPeriodoInicio } from "./ui/periodo-inicio";
+import { SaludoRuta } from "./ui/saludo-ruta";
 import {
+  FILTROS_RUTA,
+  FILTROS_TAREAS,
   conAlertas,
   filtrarEquipo,
+  filtrarPorConteo,
   itemsAtenderAhora,
   ordenarEquipo,
   pct,
@@ -211,15 +216,17 @@ export function HoyEnCampo() {
 
   return (
     <section aria-label="Inicio del equipo" className="min-w-0 space-y-4 sm:space-y-5">
-      <EncabezadoTablero
-        rotulo={`${usuario.rol?.descripcion ?? "Supervisión"} · ${usuario.empresa.nombre}`}
-        titulo={`${cuando.charAt(0).toUpperCase()}${cuando.slice(1)} en campo`}
-        subtitulo={`${textoRangoFechas(rango.desde, rango.hasta)}${resumen ? ` · ${resumen.presentismo.totalEquipo} personas en tu equipo · ${resumen.rutas.total} visitas` : ""}`}
-        cargando={cargando}
-        actualizado={datos ? formatoHora(datos.actualizado) : null}
-        onActualizar={actualizar}
-      />
-      <SelectorPeriodoInicio valor={periodo} onCambiar={cambiarPeriodo} />
+      <SaludoRuta
+        nombre={primerNombre(usuario.nombre)}
+        fechaTexto={textoRangoFechas(rango.desde, rango.hasta)}
+        resumen={
+          resumen
+            ? `${resumen.presentismo.totalEquipo} personas en tu equipo · ${resumen.rutas.total} visitas`
+            : "Cargando los datos de tu equipo…"
+        }
+      >
+        <SelectorPeriodoInicio valor={periodo} onCambiar={cambiarPeriodo} />
+      </SaludoRuta>
 
       {error ? (
         <p role="alert" className="rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-100">
@@ -239,12 +246,17 @@ export function HoyEnCampo() {
       ) : (
         <>
           <div>
-            <p className="mb-2 flex items-baseline justify-between gap-2 px-0.5">
-              <span className="text-[11px] font-bold uppercase tracking-wide text-muted">
+            <div className="mb-1 flex min-w-0 items-center justify-between gap-2 px-0.5">
+              <span className="min-w-0 truncate text-[11px] font-bold uppercase tracking-wide text-muted">
                 {periodo.clave === "hoy" ? "Indicadores del día" : `Indicadores · ${cuando}`}
+                <span className="hidden font-normal normal-case tracking-normal sm:inline"> · tocá para ver el detalle</span>
               </span>
-              <span className="text-[11px] text-muted sm:text-xs">Tocá para ver el detalle</span>
-            </p>
+              <BotonActualizarTablero
+                cargando={cargando}
+                actualizado={datos ? formatoHora(datos.actualizado) : null}
+                onActualizar={actualizar}
+              />
+            </div>
             <Indicadores
               resumen={resumen}
               novedades={datos?.novedades ?? []}
@@ -322,6 +334,7 @@ export function HoyEnCampo() {
             ) : null}
             {hoja.tipo === "indicador" ? (
               <DetalleIndicador
+                key={hoja.indicador}
                 indicador={hoja.indicador}
                 presentismoImpulsador={usuario.rol?.equipoCampo?.tipo === "IMPULSADOR"}
                 resumen={resumen}
@@ -645,18 +658,43 @@ function ListaEquipo({
   );
 }
 
-function Conteos({ items }: { items: { etiqueta: string; valor: number; clase?: string }[] }) {
+const tituloLista = "text-[11px] font-bold uppercase tracking-wide text-muted";
+
+/** Título de la lista de un detalle: dice qué KPI la está filtrando. */
+function TituloLista({
+  titulo,
+  filtro,
+  cantidad,
+  onLimpiar,
+}: {
+  titulo: string;
+  filtro?: string;
+  cantidad: number;
+  onLimpiar: () => void;
+}) {
   return (
-    <div className={`grid gap-1.5 ${items.length > 4 ? "grid-cols-3 sm:grid-cols-5" : items.length === 4 ? "grid-cols-4" : "grid-cols-3"}`}>
-      {items.map((i) => (
-        <div key={i.etiqueta} className="min-w-0 rounded-lg bg-surface-soft px-2 py-1.5">
-          <b className={`ft-display block text-xl leading-tight tabular-nums ${i.clase ?? "text-foreground"}`}>{i.valor}</b>
-          <span className="block truncate text-[11px] text-muted">{i.etiqueta}</span>
-        </div>
-      ))}
+    <div className="mb-1 flex min-h-11 min-w-0 items-center justify-between gap-2">
+      <h3 className={`min-w-0 truncate ${tituloLista}`}>
+        {titulo}
+        {filtro ? ` · ${filtro}` : ""}{" "}
+        <span className="font-normal tabular-nums">({cantidad})</span>
+      </h3>
+      {filtro ? (
+        <button
+          type="button"
+          onClick={onLimpiar}
+          className={`min-h-11 shrink-0 cursor-pointer whitespace-nowrap rounded px-2 text-xs font-semibold text-accent-ink hover:bg-surface-soft ${enfoque}`}
+        >
+          Ver todos
+        </button>
+      ) : null}
     </div>
   );
 }
+
+const sinResultados = (
+  <p className="py-4 text-center text-sm text-muted">Nadie en este estado.</p>
+);
 
 function FilaPersona({
   c,
@@ -703,7 +741,12 @@ function DetalleIndicador({
   abiertas: number | null;
   onAbrir: (h: HojaHoy) => void;
 }) {
+  // El KPI tocado filtra la lista de abajo; tocarlo otra vez muestra todo.
+  const [filtro, setFiltro] = useState<string | null>(null);
   const persona = (c: ColaboradorResumen) => () => onAbrir({ tipo: "persona", id: c.id });
+  const etiquetaDe = (items: { clave: string; etiqueta: string }[]) =>
+    items.find((i) => i.clave === filtro)?.etiqueta;
+  const limpiar = () => setFiltro(null);
 
   if (indicador === "presentismo" && presentismoImpulsador) {
     return <DetallePresentismoInicio resumen={resumen} equipo={equipo} onAbrir={(id) => onAbrir({ tipo: "persona", id })} />;
@@ -711,25 +754,17 @@ function DetalleIndicador({
 
   if (indicador === "presentismo") {
     const e = resumen.presentismo.estados;
+    const conteos = ORDEN_PRESENTISMO.map((estado) => ({
+      clave: estado,
+      etiqueta: PRESENTISMO_UI[estado].etiqueta,
+      valor: e[estado],
+      punto: PRESENTISMO_UI[estado].barra,
+    }));
+    const visibles = filtro ? equipo.filter((c) => c.estadoPresentismo === filtro) : equipo;
     return (
       <>
         <div className={`${panel} space-y-2.5`}>
-          <Conteos
-            items={ORDEN_PRESENTISMO.map((estado) => ({
-              etiqueta: PRESENTISMO_UI[estado].etiqueta,
-              valor: e[estado],
-              clase:
-                estado === "PRESENTE"
-                  ? "text-emerald-700 dark:text-emerald-300"
-                  : estado === "TARDE"
-                    ? "text-amber-700 dark:text-amber-300"
-                    : estado === "AUSENTE"
-                      ? "text-red-700 dark:text-red-300"
-                      : estado === "INCOMPLETO"
-                        ? "text-orange-700 dark:text-orange-300"
-                        : undefined,
-            }))}
-          />
+          <ConteosFiltro etiqueta="Filtrar marcaciones por estado" items={conteos} activo={filtro} onFiltro={setFiltro} />
           <BarraSegmentos
             total={resumen.presentismo.totalEquipo}
             segmentos={ORDEN_PRESENTISMO.map((estado) => ({
@@ -743,30 +778,32 @@ function DetalleIndicador({
           </p>
         </div>
         <div className={panel}>
-          <h3 className={tituloPanel}>Marcaciones</h3>
-          {equipo.map((c) => (
-            <FilaPersona
-              key={c.id}
-              c={c}
-              onAbrir={persona(c)}
-              derecha={
-                <span className={`whitespace-nowrap rounded-md px-1.5 text-[11px] font-bold ${PRESENTISMO_UI[c.estadoPresentismo].pill}`}>
-                  {PRESENTISMO_UI[c.estadoPresentismo].etiqueta}
-                  {c.inicioJornada ? ` · ${c.inicioJornada}` : ""}
-                </span>
-              }
-            >
-              {c.estadoPresentismo === "AUSENTE" && telefonoValido(c.telefono) ? (
-                <a
-                  href={hrefTelefono(c.telefono)}
-                  className={`mt-1.5 inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-brand-700 px-3 text-xs font-semibold text-white hover:bg-brand-800 dark:bg-brand-500 dark:text-brand-950 dark:hover:brightness-110 ${enfoque}`}
+          <TituloLista titulo="Marcaciones" filtro={etiquetaDe(conteos)} cantidad={visibles.length} onLimpiar={limpiar} />
+          {visibles.length
+            ? visibles.map((c) => (
+                <FilaPersona
+                  key={c.id}
+                  c={c}
+                  onAbrir={persona(c)}
+                  derecha={
+                    <span className={`whitespace-nowrap rounded-md px-1.5 text-[11px] font-bold ${PRESENTISMO_UI[c.estadoPresentismo].pill}`}>
+                      {PRESENTISMO_UI[c.estadoPresentismo].etiqueta}
+                      {c.inicioJornada ? ` · ${c.inicioJornada}` : ""}
+                    </span>
+                  }
                 >
-                  <IconoTelefono className="h-3.5 w-3.5" />
-                  Llamar a {primerNombre(c.nombre)}
-                </a>
-              ) : null}
-            </FilaPersona>
-          ))}
+                  {c.estadoPresentismo === "AUSENTE" && telefonoValido(c.telefono) ? (
+                    <a
+                      href={hrefTelefono(c.telefono)}
+                      className={`mt-1.5 inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-brand-700 px-3 text-xs font-semibold text-white hover:bg-brand-800 dark:bg-brand-500 dark:text-brand-950 dark:hover:brightness-110 ${enfoque}`}
+                    >
+                      <IconoTelefono className="h-3.5 w-3.5" />
+                      Llamar a {primerNombre(c.nombre)}
+                    </a>
+                  ) : null}
+                </FilaPersona>
+              ))
+            : sinResultados}
         </div>
       </>
     );
@@ -774,17 +811,17 @@ function DetalleIndicador({
 
   if (indicador === "visitas") {
     const r = resumen.rutas;
+    const conteos = [
+      { clave: "hechas", etiqueta: "Hechas", valor: r.completadas, clase: "text-emerald-700 dark:text-emerald-300" },
+      { clave: "en_curso", etiqueta: "En curso", valor: r.enCurso, clase: "text-sky-700 dark:text-sky-300" },
+      { clave: "pendientes", etiqueta: "Pendientes", valor: r.pendientes },
+      { clave: "sin_visitar", etiqueta: "Sin visitar", valor: r.ausentes + r.incompletas, clase: "text-red-700 dark:text-red-300" },
+    ];
+    const visibles = filtrarPorConteo(equipo, FILTROS_RUTA, filtro);
     return (
       <>
         <div className={`${panel} space-y-2.5`}>
-          <Conteos
-            items={[
-              { etiqueta: "Hechas", valor: r.completadas, clase: "text-emerald-700 dark:text-emerald-300" },
-              { etiqueta: "En curso", valor: r.enCurso, clase: "text-sky-700 dark:text-sky-300" },
-              { etiqueta: "Pendientes", valor: r.pendientes },
-              { etiqueta: "Sin visitar", valor: r.ausentes + r.incompletas, clase: "text-red-700 dark:text-red-300" },
-            ]}
-          />
+          <ConteosFiltro etiqueta="Filtrar avance por estado de la ruta" items={conteos} activo={filtro} onFiltro={setFiltro} />
           <p className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted">
             <span className="inline-flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-sm bg-emerald-600 dark:bg-emerald-500" />Hecha</span>
             <span className="inline-flex items-center gap-1"><i className={`h-2.5 w-2.5 rounded-sm ${RAYADO_EN_CURSO}`} />En curso</span>
@@ -793,28 +830,30 @@ function DetalleIndicador({
           </p>
         </div>
         <div className={panel}>
-          <h3 className={tituloPanel}>Avance por repositor</h3>
-          {equipo.map((c) => (
-            <FilaPersona
-              key={c.id}
-              c={c}
-              onAbrir={persona(c)}
-              derecha={<span className="text-xs tabular-nums text-muted"><b className="text-foreground">{c.ruta.completadas}</b>/{c.ruta.total}</span>}
-            >
-              <span className="mt-1 block">
-                <BarraSegmentos
-                  total={c.ruta.total}
-                  alto="h-1.5"
-                  segmentos={[
-                    { valor: c.ruta.completadas, clase: "bg-emerald-600 dark:bg-emerald-500", etiqueta: "hechas" },
-                    { valor: c.ruta.enCurso, clase: RAYADO_EN_CURSO, etiqueta: "en curso" },
-                    { valor: c.ruta.incompletas, clase: "bg-orange-500 dark:bg-orange-400", etiqueta: "sin salida" },
-                    { valor: c.ruta.ausentes, clase: "bg-red-600 dark:bg-red-500", etiqueta: "sin visitar" },
-                  ]}
-                />
-              </span>
-            </FilaPersona>
-          ))}
+          <TituloLista titulo="Avance por repositor" filtro={etiquetaDe(conteos)} cantidad={visibles.length} onLimpiar={limpiar} />
+          {visibles.length
+            ? visibles.map((c) => (
+                <FilaPersona
+                  key={c.id}
+                  c={c}
+                  onAbrir={persona(c)}
+                  derecha={<span className="text-xs tabular-nums text-muted"><b className="text-foreground">{c.ruta.completadas}</b>/{c.ruta.total}</span>}
+                >
+                  <span className="mt-1 block">
+                    <BarraSegmentos
+                      total={c.ruta.total}
+                      alto="h-1.5"
+                      segmentos={[
+                        { valor: c.ruta.completadas, clase: "bg-emerald-600 dark:bg-emerald-500", etiqueta: "hechas" },
+                        { valor: c.ruta.enCurso, clase: RAYADO_EN_CURSO, etiqueta: "en curso" },
+                        { valor: c.ruta.incompletas, clase: "bg-orange-500 dark:bg-orange-400", etiqueta: "sin salida" },
+                        { valor: c.ruta.ausentes, clase: "bg-red-600 dark:bg-red-500", etiqueta: "sin visitar" },
+                      ]}
+                    />
+                  </span>
+                </FilaPersona>
+              ))
+            : sinResultados}
         </div>
       </>
     );
@@ -825,50 +864,52 @@ function DetalleIndicador({
     const porObligatorias = [...equipo].sort(
       (a, b) => b.tareas.obligPendientes - a.tareas.obligPendientes || a.tareas.pct - b.tareas.pct,
     );
+    const conteos = [
+      { clave: "hechas", etiqueta: "Hechas", valor: t.completadas, clase: "text-brand-700 dark:text-brand-200" },
+      { clave: "pendientes", etiqueta: "Pendientes", valor: Math.max(0, t.total - t.completadas) },
+      { clave: "obligatorias", etiqueta: "Obligatorias", valor: t.obligatoriasPendientes, clase: "text-red-700 dark:text-red-300" },
+    ];
+    const visibles = filtrarPorConteo(porObligatorias, FILTROS_TAREAS, filtro);
     return (
       <>
         <div className={panel}>
-          <Conteos
-            items={[
-              { etiqueta: "Hechas", valor: t.completadas, clase: "text-brand-700 dark:text-brand-200" },
-              { etiqueta: "Pendientes", valor: Math.max(0, t.total - t.completadas) },
-              { etiqueta: "Obligatorias", valor: t.obligatoriasPendientes, clase: "text-red-700 dark:text-red-300" },
-            ]}
-          />
+          <ConteosFiltro etiqueta="Filtrar tareas por estado" items={conteos} activo={filtro} onFiltro={setFiltro} />
         </div>
         <div className={panel}>
-          <h3 className={tituloPanel}>Por repositor</h3>
-          {porObligatorias.map((c) => (
-            <FilaPersona
-              key={c.id}
-              c={c}
-              onAbrir={persona(c)}
-              derecha={
-                <span className="text-xs tabular-nums text-muted">
-                  <b className="text-foreground">{c.tareas.completadas}</b>/{c.tareas.total} · {c.tareas.pct}%
-                </span>
-              }
-            >
-              <span className="mt-1 block">
-                <BarraSegmentos
-                  total={c.tareas.total}
-                  alto="h-1.5"
-                  segmentos={[
-                    {
-                      valor: c.tareas.completadas,
-                      clase: c.tareas.pct < 50 ? "bg-amber-500 dark:bg-amber-400" : "bg-brand-600 dark:bg-brand-500",
-                      etiqueta: "hechas",
-                    },
-                  ]}
-                />
-              </span>
-              {c.tareas.obligPendientes ? (
-                <span className="mt-1 block text-[11px] font-semibold text-red-700 dark:text-red-300">
-                  {c.tareas.obligPendientes} obligatoria{c.tareas.obligPendientes > 1 ? "s" : ""} pendiente{c.tareas.obligPendientes > 1 ? "s" : ""}
-                </span>
-              ) : null}
-            </FilaPersona>
-          ))}
+          <TituloLista titulo="Por repositor" filtro={etiquetaDe(conteos)} cantidad={visibles.length} onLimpiar={limpiar} />
+          {visibles.length
+            ? visibles.map((c) => (
+                <FilaPersona
+                  key={c.id}
+                  c={c}
+                  onAbrir={persona(c)}
+                  derecha={
+                    <span className="text-xs tabular-nums text-muted">
+                      <b className="text-foreground">{c.tareas.completadas}</b>/{c.tareas.total} · {c.tareas.pct}%
+                    </span>
+                  }
+                >
+                  <span className="mt-1 block">
+                    <BarraSegmentos
+                      total={c.tareas.total}
+                      alto="h-1.5"
+                      segmentos={[
+                        {
+                          valor: c.tareas.completadas,
+                          clase: c.tareas.pct < 50 ? "bg-amber-500 dark:bg-amber-400" : "bg-brand-600 dark:bg-brand-500",
+                          etiqueta: "hechas",
+                        },
+                      ]}
+                    />
+                  </span>
+                  {c.tareas.obligPendientes ? (
+                    <span className="mt-1 block text-[11px] font-semibold text-red-700 dark:text-red-300">
+                      {c.tareas.obligPendientes} obligatoria{c.tareas.obligPendientes > 1 ? "s" : ""} pendiente{c.tareas.obligPendientes > 1 ? "s" : ""}
+                    </span>
+                  ) : null}
+                </FilaPersona>
+              ))
+            : sinResultados}
         </div>
       </>
     );
@@ -882,19 +923,20 @@ function DetalleIndicador({
         {resumen.colaboradores.reduce((s, c) => s + c.novedadesCount, 0)}.
       </p>
     );
+  const conteos = (["CRITICA", "ALTA", "NORMAL"] as const).map((p) => ({
+    clave: p,
+    etiqueta: PRIORIDAD_UI[p].etiqueta,
+    valor: novedades.filter((n) => n.prioridad === p).length,
+    punto: PRIORIDAD_UI[p].punto,
+  }));
+  const visibles = filtro ? novedades.filter((n) => n.prioridad === filtro) : novedades;
   return (
     <>
-      <p className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted">
-        {(["CRITICA", "ALTA", "NORMAL"] as const).map((p) => (
-          <span key={p} className="inline-flex items-center gap-1">
-            <i className={`h-2 w-2 rounded-full ${PRIORIDAD_UI[p].punto}`} />
-            {PRIORIDAD_UI[p].etiqueta}
-          </span>
-        ))}
-      </p>
+      <ConteosFiltro etiqueta="Filtrar novedades por prioridad" items={conteos} activo={filtro} onFiltro={setFiltro} />
       <div className={panel}>
-        {novedades.length ? (
-          novedades.map((n) => (
+        <TituloLista titulo="Novedades abiertas" filtro={etiquetaDe(conteos)} cantidad={visibles.length} onLimpiar={limpiar} />
+        {visibles.length ? (
+          visibles.map((n) => (
             <button
               key={n.id}
               type="button"
@@ -911,7 +953,9 @@ function DetalleIndicador({
             </button>
           ))
         ) : (
-          <p className="text-sm text-muted">No hay novedades abiertas.</p>
+          <p className="text-sm text-muted">
+            {filtro ? "No hay novedades abiertas con esta prioridad." : "No hay novedades abiertas."}
+          </p>
         )}
       </div>
       <Link

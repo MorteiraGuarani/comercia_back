@@ -45,6 +45,7 @@ let consultarTareas = null;
 let novedades = 0;
 let entradas = 0;
 let salidas = 0;
+let inventarios = 0;
 const { TarjetaAgendaRepositor } = cargar("components/campo/tarjeta-agenda-repositor.tsx", {
   "next/link": { default: stub }, "@/utils/estado-jornada": estados, "@/utils/fechas": fechas,
   "@/hooks/use-resumen-tareas-local": { useResumenTareasLocal: (...args) => { consultarTareas = args[3]; return args[3] ? { hechas: 1, total: 3 } : null; } },
@@ -53,26 +54,29 @@ const { TarjetaAgendaRepositor } = cargar("components/campo/tarjeta-agenda-repos
 const base = { agenda: agenda(1), orden: 1, abierta: true, alternar: stub, qsFecha: `fecha=${hoy}`, visitaAbierta: null, onMapa: stub, onNovedad: () => { novedades++; } };
 let tarjeta = TarjetaAgendaRepositor({ ...base, soloConsulta: true });
 assert.equal(consultarTareas, false, "El impulsador no hace consultas de tareas al desplegar el local");
-assert.equal(boton(tarjeta, "Marcar entrada"), undefined);
-assert.equal(boton(tarjeta, "Marcar salida"), undefined);
+assert.equal(boton(tarjeta, "Iniciar Visita"), undefined);
+assert.equal(boton(tarjeta, "Finalizar Visita"), undefined);
 assert.equal(boton(tarjeta, "Tareas"), undefined);
 assert.equal(boton(tarjeta, "Inventario"), undefined);
 assert.ok(texto(tarjeta).includes("08:00–18:00"), "Conserva los horarios del impulsador");
 boton(tarjeta, "Novedad").props.onClick();
 assert.equal(novedades, 1);
-const operativa = { ...base, hoy: true, revisionTareas: 0, rutaTareas: "/tareas", rutaInventario: "/inventario", onEntrada: () => { entradas++; }, onSalida: () => { salidas++; }, onTareas: stub };
+const operativa = { ...base, hoy: true, revisionTareas: 0, onInventario: () => { inventarios++; }, onEntrada: () => { entradas++; }, onSalida: () => { salidas++; }, onTareas: stub };
 tarjeta = TarjetaAgendaRepositor(operativa);
 assert.equal(consultarTareas, true);
-boton(tarjeta, "Marcar entrada").props.onClick();
+assert.equal(boton(tarjeta, "Inventario").props.disabled, true, "El inventario espera a que se inicie la visita");
+boton(tarjeta, "Iniciar Visita").props.onClick();
 assert.equal(entradas, 1, "El repositor mantiene su entrada");
 const visita = { id: 33, asignacionId: 1, fecha: hoy, entrada: `${hoy}T11:00:00Z`, local: base.agenda.local };
 tarjeta = TarjetaAgendaRepositor({ ...operativa, visitaAbierta: visita });
-boton(tarjeta, "Marcar salida").props.onClick();
+boton(tarjeta, "Finalizar Visita").props.onClick();
 assert.equal(salidas, 1, "El repositor mantiene su salida");
+boton(tarjeta, "Inventario").props.onClick();
+assert.equal(inventarios, 1, "El inventario se abre en Mi Ruta, sin cambiar de página");
 assert.ok(botones(tarjeta).some((b) => texto(b).includes("Tareas") && !b.props.disabled));
 tarjeta = TarjetaAgendaRepositor({ ...base, visitaAbierta: visita, soloConsulta: true });
 assert.equal(consultarTareas, false);
-assert.equal(boton(tarjeta, "Marcar salida"), undefined, "Una visita abierta no habilita marcaciones en la variante impulsador");
+assert.equal(boton(tarjeta, "Finalizar Visita"), undefined, "Una visita abierta no habilita marcaciones en la variante impulsador");
 
 let indice = 0;
 const valores = [];

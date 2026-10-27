@@ -6,7 +6,7 @@ import { apiFetch } from "@/lib/api";
 import { usePanel } from "@/components/panel/contexto";
 import { BarraSegmentos, RAYADO_EN_CURSO } from "./ui/barra-segmentos";
 import {
-  EncabezadoTablero,
+  BotonActualizarTablero,
   FilaAtencion,
   ListaAtencion,
   PRESENTISMO_UI,
@@ -33,6 +33,7 @@ import {
   rangoPeriodoInicio,
 } from "@/utils/periodo-inicio";
 import { SelectorPeriodoInicio } from "./ui/periodo-inicio";
+import { SaludoRuta } from "./ui/saludo-ruta";
 import { pct, resumenMiDia } from "@/utils/hoy-en-campo";
 import { tareaCumplidaEnVisita } from "@/utils/tareas-campo";
 import { hayTareasAsignadas } from "@/lib/disponibilidad-tareas";
@@ -174,15 +175,13 @@ export function MiDiaCampo() {
 
   return (
     <section aria-label="Tu día" className="min-w-0 space-y-4 sm:space-y-5">
-      <EncabezadoTablero
-        rotulo={`${usuario.rol?.descripcion ?? "Mi jornada"} · ${usuario.empresa.nombre}`}
-        titulo={nombre ? `¡Hola, ${nombre}!` : "Tu día"}
-        subtitulo={`${textoRangoFechas(rango.desde, rango.hasta)}${datos ? ` · ${r.total} ${r.total === 1 ? "local" : "locales"} en tu ruta` : ""}`}
-        cargando={cargando}
-        actualizado={datos ? formatoHora(datos.actualizado) : null}
-        onActualizar={actualizar}
-      />
-      <SelectorPeriodoInicio valor={periodo} onCambiar={cambiarPeriodo} />
+      <SaludoRuta
+        nombre={nombre}
+        fechaTexto={textoRangoFechas(rango.desde, rango.hasta)}
+        resumen={datos ? `${r.total} ${r.total === 1 ? "local" : "locales"} en tu ruta` : "Cargando tu día…"}
+      >
+        <SelectorPeriodoInicio valor={periodo} onCambiar={cambiarPeriodo} />
+      </SaludoRuta>
 
       {error ? (
         <p role="alert" className="rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-100">
@@ -202,10 +201,17 @@ export function MiDiaCampo() {
       ) : (
         <>
           <div>
-            <p className="mb-2 flex items-baseline justify-between gap-2 px-0.5">
-              <span className="text-[11px] font-bold uppercase tracking-wide text-muted">Tus indicadores de {cuando}</span>
-              <span className="text-[11px] text-muted sm:text-xs">Tocá para ir al detalle</span>
-            </p>
+            <div className="mb-1 flex min-w-0 items-center justify-between gap-2 px-0.5">
+              <span className="min-w-0 truncate text-[11px] font-bold uppercase tracking-wide text-muted">
+                Tus indicadores de {cuando}
+                <span className="hidden font-normal normal-case tracking-normal sm:inline"> · tocá para ir al detalle</span>
+              </span>
+              <BotonActualizarTablero
+                cargando={cargando}
+                actualizado={formatoHora(datos.actualizado)}
+                onActualizar={actualizar}
+              />
+            </div>
             <div className="grid min-w-0 grid-cols-2 gap-2.5 lg:grid-cols-4 lg:gap-3">
               <TarjetaIndicador
                 letra="A"

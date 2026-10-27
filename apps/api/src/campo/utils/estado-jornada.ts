@@ -19,7 +19,11 @@ import {
   ZONA_CAMPO,
 } from './calendario';
 
-// Misma precedencia y precisión de minutos que evaluarPresentismo de UWeb.
+// Visitas de campo: el horario del local es la ventana para llegar, no un turno
+// que haya que cumplir entero como en UWeb. Iniciar y finalizar la visita nunca
+// es Incompleto: salir antes del fin es normal (se visita 10 o 30 minutos) y
+// llegar después del inicio, aun pasado el fin, es Tarde. Incompleto queda para
+// la visita que no se finalizó en el día (o una salida sin entrada).
 export function evaluarPresentismo(
   r: RegistroPresentismoCampo,
   ahora = new Date(),
@@ -33,36 +37,19 @@ export function evaluarPresentismo(
     const reloj = relojCampo(new Date(d), zona);
     return `${reloj.fecha}T${reloj.hora}`;
   };
-  if (!r.horaDesde || !r.horaHasta) {
-    if (!r.entrada) return 'SIN_REGISTRO';
-    return !r.salida && relojCampo(ahora, zona).fecha > fecha
-      ? 'INCOMPLETO'
-      : 'PRESENTE';
+  if (!r.entrada) {
+    if (!r.horaDesde || !r.horaHasta) return 'SIN_REGISTRO';
+    if (r.salida) return 'INCOMPLETO';
+    return instante(ahora) >= `${fecha}T${r.horaHasta}`
+      ? 'AUSENTE'
+      : 'SIN_REGISTRO';
   }
+  if (!r.salida && relojCampo(ahora, zona).fecha > fecha) return 'INCOMPLETO';
+  if (!r.horaDesde || !r.horaHasta) return 'PRESENTE';
   const inicio = `${fecha}T${r.horaDesde}`;
-  const fin = `${fecha}T${r.horaHasta}`;
-  const termino = instante(ahora) >= fin;
-  if (!r.entrada)
-    return r.salida ? 'INCOMPLETO' : termino ? 'AUSENTE' : 'SIN_REGISTRO';
   const t = r.toleranciasAplicadas
     ? heredarTolerancias(r.toleranciasAplicadas)
     : null;
-  if (
-    r.salida &&
-    (t
-      ? evaluarMarcaHorario(
-          'SALIDA',
-          new Date(r.salida),
-          fecha,
-          r.horaDesde,
-          r.horaHasta,
-          zona,
-          t,
-        ).desvioMinutos < -t.toleranciaSalidaAntes
-      : instante(r.salida) < fin)
-  )
-    return 'INCOMPLETO';
-  if (!r.salida && termino) return 'INCOMPLETO';
   return (
     t
       ? evaluarMarcaHorario(

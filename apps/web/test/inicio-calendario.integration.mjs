@@ -67,6 +67,7 @@ const estado = estadoReact();
 let elegido = null;
 const { SelectorFechaFiltro } = cargar("components/campo/ui/selector-fecha-filtro.tsx", {
   react: estado.react, "@/utils/fechas": { ...fechas, fechaEnZonaIso: () => hoy }, "@/utils/periodo-inicio": periodos,
+  "@/hooks/use-hoja-deslizable": { useHojaDeslizable: () => ({ activa: false, minimizar() {}, arrastre: {} }) },
 });
 const render = () => { estado.iniciar(); return SelectorFechaFiltro({ valorActual: presets[0], onChange: (p) => { elegido = p; } }); };
 const boton = (arbol, nombre) => nodos(arbol).find((n) => n.type === "button" && texto(n).startsWith(nombre));
@@ -145,7 +146,8 @@ const renderPresentismo = () => {
   });
 };
 let detallePresentismo = renderPresentismo();
-const filtrosPresentismo = (arbol) => nodos(arbol).filter((n) => n.type === "button" && "aria-pressed" in n.props);
+const expandir = (arbol) => nodos(arbol).flatMap((n) => (n.type === ui.ConteosFiltro ? [n, ...nodos(n.type(n.props))] : [n]));
+const filtrosPresentismo = (arbol) => expandir(arbol).filter((n) => n.type === "button" && "aria-pressed" in n.props);
 assert.equal(filtrosPresentismo(detallePresentismo).length, 4);
 assert.ok(filtrosPresentismo(detallePresentismo).every((n) => n.props["aria-label"].includes("20%, 1 de 5")));
 filtrosPresentismo(detallePresentismo)[2].props.onClick();
@@ -172,14 +174,28 @@ const comun = {
   "next/link": { default: Link }, "@/components/panel/contexto": { usePanel: () => panel },
   "@/lib/api": {}, "@/utils/fechas": { ...fechas, fechaEnZonaIso: () => hoy }, "@/utils/periodo-inicio": periodos,
   "./ui/tablero-campo": ui, "./ui/barra-segmentos": { BarraSegmentos: stub }, "./ui/iconos-campo": {},
-  "./ui/periodo-inicio": { SelectorPeriodoInicio: stub }, "@/utils/hoy-en-campo": calculos, "@/utils/estado-jornada": { RUTA: {} },
+  "./ui/periodo-inicio": { SelectorPeriodoInicio: stub }, "./ui/saludo-ruta": { SaludoRuta: stub }, "@/utils/hoy-en-campo": calculos, "@/utils/estado-jornada": { RUTA: {} },
 };
+const estadoHoy = estadoReact();
 const { Indicadores, DetalleIndicador } = cargar("components/campo/hoy-en-campo.tsx", {
-  ...comun, react: estadoReact().react, "@/lib/cache-sesion": {}, "@/components/modal": {}, "./hilo-novedad": {}, "./detalle-presentismo-inicio": { DetallePresentismoInicio },
+  ...comun, react: estadoHoy.react, "@/lib/cache-sesion": {}, "@/components/modal": {}, "./hilo-novedad": {}, "./detalle-presentismo-inicio": { DetallePresentismoInicio },
 }, "module.exports.Indicadores = Indicadores; module.exports.DetalleIndicador = DetalleIndicador;");
 const propsIndicador = { indicador: "presentismo", resumen, equipo: [], novedades: [], abiertas: 0, onAbrir: stub };
 assert.equal(DetalleIndicador({ ...propsIndicador, presentismoImpulsador: true }).type, DetallePresentismoInicio);
 assert.notEqual(DetalleIndicador(propsIndicador).type, DetallePresentismoInicio, "Conserva la vista de Presentismo de los demás equipos");
+// Cada KPI del detalle filtra la lista de abajo; tocarlo otra vez muestra todo.
+const colaborador = (id, ruta) => ({ id, nombre: `P${id}`, estadoPresentismo: "PRESENTE", telefono: "", inicioJornada: null, novedadesCount: 0,
+  ruta: { total: 2, completadas: 0, enCurso: 0, incompletas: 0, ausentes: 0, pct: 0, ...ruta }, tareas: { total: 0, completadas: 0, obligPendientes: 0, pct: 0 } });
+const propsVisitas = { ...propsIndicador, indicador: "visitas", equipo: [colaborador(1, { enCurso: 1 }), colaborador(2, { completadas: 2 })] };
+const renderVisitas = () => { estadoHoy.iniciar(); return DetalleIndicador(propsVisitas); };
+const filas = (arbol) => nodos(arbol).filter((n) => n.props?.c);
+assert.equal(filas(renderVisitas()).length, 2);
+const kpiVisitas = () => nodos(renderVisitas()).find((n) => n.type === ui.ConteosFiltro);
+assert.equal(kpiVisitas().props.items.length, 4, "Los cuatro KPI van en una fila");
+kpiVisitas().props.onFiltro("en_curso");
+assert.deepEqual(filas(renderVisitas()).map((n) => n.props.c.id), [1]);
+kpiVisitas().props.onFiltro(null);
+assert.equal(filas(renderVisitas()).length, 2);
 const tarjetasEquipo = nodos(Indicadores({ resumen, novedades: [], abiertas: 0, cuando: "hoy", onAbrir: stub })).filter((n) => n.type === ui.TarjetaIndicador);
 assert.deepEqual(tarjetasEquipo.map((n) => n.props.nombre), ["Presentismo", "Mi Ruta", "Tareas", "Novedades"]);
 assert.equal(tarjetasEquipo[2].props.disabled, true);

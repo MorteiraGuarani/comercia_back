@@ -179,9 +179,9 @@ export function UbicacionesPanel() {
         }
         onBack={persona ? volver : undefined}
         right={
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto">
             {usuario.esSuperadmin && empresas.length > 1 && !persona ? (
-              <label className="flex min-w-0 items-center gap-2 text-sm">
+              <label className="flex min-w-0 flex-1 items-center gap-2 text-sm sm:flex-none">
                 <span className="sr-only">Empresa</span>
                 <select
                   value={empresaId ?? equipo?.empresa.id ?? ""}
@@ -189,7 +189,7 @@ export function UbicacionesPanel() {
                     setEmpresaId(Number(e.target.value));
                     setPage(1);
                   }}
-                  className={`${inputBase} min-h-11 w-auto max-w-56`}
+                  className={`${inputBase} min-h-11 min-w-0 max-w-56 sm:w-auto`}
                 >
                   {empresas.map((e) => (
                     <option key={e.id} value={e.id}>
@@ -200,19 +200,31 @@ export function UbicacionesPanel() {
               </label>
             ) : null}
             {persona ? (
-              <label className="flex min-w-0 items-center gap-2 text-sm font-semibold text-foreground">
+              <label className="flex min-w-0 flex-1 items-center gap-2 text-sm font-semibold text-foreground sm:flex-none">
                 Día
                 <input
                   type="date"
                   value={fecha}
                   max={new Date().toLocaleDateString("en-CA")}
                   onChange={(e) => e.target.value && setFecha(e.target.value)}
-                  className={`${inputBase} min-h-11 w-auto`}
+                  className={`${inputBase} min-h-11 min-w-0 sm:w-auto`}
                 />
               </label>
             ) : null}
-            <button type="button" className={btnGhost} onClick={() => setRecarga((n) => n + 1)} disabled={cargando}>
-              Actualizar
+            <button
+              type="button"
+              className={`${btnGhost} inline-flex min-h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap`}
+              onClick={() => setRecarga((n) => n + 1)}
+              disabled={cargando}
+              aria-label={persona ? "Actualizar recorrido" : "Actualizar ubicaciones"}
+              title={persona ? "Actualizar recorrido" : "Actualizar ubicaciones"}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M20 7v5h-5" />
+                <path d="M4 17v-5h5" />
+                <path d="M6.1 7a7 7 0 0 1 11.6-1L20 9M4 15l2.3 3A7 7 0 0 0 17.9 17" />
+              </svg>
+              <span className="hidden sm:inline">Actualizar</span>
             </button>
           </div>
         }

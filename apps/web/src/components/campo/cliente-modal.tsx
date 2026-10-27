@@ -184,6 +184,16 @@ export function ClienteModal({
     else cerrar();
   }
 
+  const notaEquipo = (
+    <>
+      Equipo:{" "}
+      <strong className="text-foreground">
+        {usuario.rol?.equipoCampo?.nombre ?? "Sin equipo operativo"}
+      </strong>
+      . Los horarios y el personal se configuran para este equipo.
+    </>
+  );
+
   return (
     <>
       <Modal
@@ -425,17 +435,11 @@ export function ClienteModal({
           {/* Los accesos separados montan únicamente la sección solicitada. */}
           {cliente && (!seccionUnica || vista !== "datos") && (
             <div hidden={vista === "datos"} className="min-w-0 space-y-4">
-              <p className="text-sm text-muted">
-                Equipo:{" "}
-                <strong className="text-foreground">
-                  {usuario.rol?.equipoCampo?.nombre ?? "Sin equipo operativo"}
-                </strong>
-                . Los horarios y el personal se configuran para este equipo.
-              </p>
               {(!seccionUnica || vista === "horarios") && (
                 <div hidden={vista !== "horarios"}>
                   <HorariosLocal
                     localId={cliente.id}
+                    nota={notaEquipo}
                     onPendiente={marcarHorarios}
                   />
                 </div>
@@ -444,6 +448,7 @@ export function ClienteModal({
                 <div hidden={vista !== "personal"}>
                   <AsignacionesLocal
                     localId={cliente.id}
+                    nota={notaEquipo}
                     onPendiente={marcarPersonal}
                   />
                 </div>

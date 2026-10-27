@@ -132,6 +132,19 @@
       transform: translateY(0);
     }
   }
+
+  /* Contenido que cambia de sección (pestañas de la campana). */
+  --animate-aparecer: aparecer 0.2s ease-out;
+  @keyframes aparecer {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 }
 
 /* Regla de UX de Comercia: todo lo clickeable muestra la manito
