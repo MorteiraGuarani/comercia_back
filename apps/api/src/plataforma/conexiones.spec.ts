@@ -37,9 +37,12 @@ describe('Conexiones (ABM de superadmin)', () => {
 
   it('una contraseña vacía al editar conserva la actual', async () => {
     await servicio.actualizarConexion(3, { nombre: 'HANA 2', passwordDb: '' });
-    expect(prisma.conexion.update.mock.calls[0][0]).toMatchObject({
-      data: { nombre: 'HANA 2', passwordDb: undefined },
-    });
+    expect(prisma.conexion.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 3 },
+        data: { nombre: 'HANA 2', passwordDb: undefined },
+      }),
+    );
   });
 
   it('no elimina una conexión que usan ejecutables', async () => {
