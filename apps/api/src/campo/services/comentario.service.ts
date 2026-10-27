@@ -73,10 +73,18 @@ export class ComentarioService {
       },
     });
 
-    // Verificar que el usuario es el dueño de la visita
-    if (cumplimiento && cumplimiento.visita.usuarioId !== usuarioId) {
+    // El dueño de la visita comenta y su líder responde en el mismo hilo.
+    const respondeLider =
+      !!cumplimiento &&
+      cumplimiento.visita.usuarioId !== usuarioId &&
+      (await esLiderDe(this.prisma, usuarioId, cumplimiento.visita.usuarioId));
+    if (
+      cumplimiento &&
+      cumplimiento.visita.usuarioId !== usuarioId &&
+      !respondeLider
+    ) {
       throw new ForbiddenException(
-        'Solo puedes comentar en tus propias tareas',
+        'Solo puedes comentar en tus propias tareas o en las de tu equipo',
       );
     }
     let nombreTarea = cumplimiento?.nombreTarea;
@@ -129,14 +137,23 @@ export class ComentarioService {
       },
     });
 
-    // Crear notificación para el líder
+    // Comenta el dueño: avisa a sus líderes. Responde un líder: avisa al dueño (y a sus otros líderes).
     try {
-      await this.notificacionService.crearNotificacionComentario(
-        empresaId,
-        usuarioId,
-        comentario.id,
-        nombreTarea!,
-      );
+      if (respondeLider)
+        await this.notificacionService.crearNotificacionRespuestaComentario(
+          empresaId,
+          usuarioId,
+          cumplimiento.visita.usuarioId,
+          comentario.id,
+          nombreTarea!,
+        );
+      else
+        await this.notificacionService.crearNotificacionComentario(
+          empresaId,
+          usuarioId,
+          comentario.id,
+          nombreTarea!,
+        );
     } catch {
       this.logger.warn(
         'Comentario guardado; no se pudo generar su notificación',
@@ -150,6 +167,33 @@ export class ComentarioService {
       creadoAt: comentario.creadoAt,
       leidoPorLider: comentario.leidoPorLider,
       leidoAt: comentario.leidoAt ?? undefined,
+    };
+  }
+
+  /**
+   * Dónde está un comentario (visita y tarea) para abrir su hilo desde la
+   * notificación. Lo ve quien puede ver ese hilo: el dueño o su líder.
+   */
+  async ubicar(usuarioId: number, comentarioId: number) {
+    const comentario = await this.prisma.comentarioTareaCampo.findUnique({
+      where: { id: comentarioId },
+      select: {
+        cumplimientoVisitaId: true,
+        cumplimientoTareaId: true,
+        cumplimiento: { select: { visita: { select: { usuarioId: true } } } },
+      },
+    });
+    if (!comentario) throw new NotFoundException('Comentario no encontrado');
+    await verificarAccesoCumplimiento(
+      this.prisma,
+      usuarioId,
+      comentario.cumplimientoVisitaId,
+      comentario.cumplimientoTareaId,
+    );
+    return {
+      visitaId: comentario.cumplimientoVisitaId,
+      tareaId: comentario.cumplimientoTareaId,
+      esPropia: comentario.cumplimiento.visita.usuarioId === usuarioId,
     };
   }
 

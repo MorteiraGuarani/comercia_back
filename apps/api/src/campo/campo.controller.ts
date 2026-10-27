@@ -412,6 +412,19 @@ export class CampoController {
     return this.comentarioService.listar(r.usuarioId, visitaId, tareaId);
   }
 
+  @Get('jornada/comentarios/:id')
+  @ApiOperation({
+    summary: 'Ubicar un comentario de tarea',
+    description:
+      'Visita y tarea del comentario, para abrir su hilo desde la notificación. Solo el dueño de la visita o su líder.',
+  })
+  ubicarComentario(
+    @Req() r: RequestConUsuario,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.comentarioService.ubicar(r.usuarioId, id);
+  }
+
   @Put('jornada/comentarios/:id/marcar-leido')
   marcarComentarioLeido(
     @Req() r: RequestConUsuario,

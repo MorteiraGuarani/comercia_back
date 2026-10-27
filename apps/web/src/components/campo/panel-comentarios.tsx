@@ -176,50 +176,53 @@ export function PanelComentarios({
         </div>
       )}
 
-      {/* Formulario para nuevo comentario */}
-      {!esLider && (
-        <form onSubmit={handleEnviar} className="space-y-3">
-          <textarea
-            value={texto}
-            onChange={(e) => {
-              const nuevo = e.target.value;
-              setTexto(nuevo);
-              if (borradorListo.current)
-                void guardarBorrador(usuario.id, claveBorrador, nuevo).catch(
-                  () =>
-                    mostrarToast(
-                      "error",
-                      "No se pudo conservar el borrador en este dispositivo",
-                    ),
-                );
-            }}
-            placeholder="Escribe un comentario..."
-            maxLength={500}
-            rows={3}
-            disabled={enviando}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
+      {/* Formulario: el dueño comenta y el líder responde en el mismo hilo. */}
+      <form onSubmit={handleEnviar} className="space-y-3">
+        <textarea
+          value={texto}
+          onChange={(e) => {
+            const nuevo = e.target.value;
+            setTexto(nuevo);
+            if (borradorListo.current)
+              void guardarBorrador(usuario.id, claveBorrador, nuevo).catch(() =>
+                mostrarToast(
+                  "error",
+                  "No se pudo conservar el borrador en este dispositivo",
+                ),
+              );
+          }}
+          placeholder={
+            esLider ? "Respondé en el hilo..." : "Escribe un comentario..."
+          }
+          maxLength={500}
+          rows={3}
+          disabled={enviando}
+          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
               bg-white dark:bg-gray-800 text-gray-900 dark:text-white
               placeholder-gray-400 dark:placeholder-gray-500
               focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400
               disabled:opacity-50 disabled:cursor-not-allowed"
-          />
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              {texto.length}/500
-            </p>
-            <button
-              type="submit"
-              disabled={enviando || !texto.trim()}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600
+        />
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            {texto.length}/500
+          </p>
+          <button
+            type="submit"
+            disabled={enviando || !texto.trim()}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600
                 text-white rounded-lg text-sm font-medium
                 disabled:opacity-50 disabled:cursor-not-allowed
                 transition-colors"
-            >
-              {enviando ? "Enviando..." : "Enviar comentario"}
-            </button>
-          </div>
-        </form>
-      )}
+          >
+            {enviando
+              ? "Enviando..."
+              : esLider
+                ? "Responder"
+                : "Enviar comentario"}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

@@ -893,7 +893,7 @@ function AsignacionesUsuario({
   }
 
   return (
-    <Modal
+    <Modal textoCerrar="Cerrar"
       titulo={`Locales de ${usuario.nombre} ${usuario.apellido}`}
       abierto
       onCerrar={onCerrar}

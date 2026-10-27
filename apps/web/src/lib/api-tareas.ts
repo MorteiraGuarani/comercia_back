@@ -35,6 +35,13 @@ export async function listarComentarios(
   );
 }
 
+/** Visita y tarea de un comentario, para abrir su hilo desde la campana. */
+export async function ubicarComentario(
+  comentarioId: number,
+): Promise<{ visitaId: number; tareaId: number; esPropia: boolean }> {
+  return apiFetch(`/campo/jornada/comentarios/${comentarioId}`);
+}
+
 export async function marcarComentarioLeido(
   comentarioId: number,
 ): Promise<ComentarioTarea> {

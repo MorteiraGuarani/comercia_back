@@ -15,6 +15,7 @@ import {
   ConteosFiltro,
   FilaAtencion,
   LineaJornada,
+  PuntoEstado,
   ListaAtencion,
   ORDEN_PRESENTISMO,
   PRESENTISMO_UI,
@@ -316,7 +317,7 @@ export function HoyEnCampo() {
       )}
 
       {hoja && resumen ? (
-        <Modal
+        <Modal textoCerrar="Cerrar"
           titulo={tituloHoja}
           abierto
           hojaMovil
@@ -792,12 +793,12 @@ function DetalleIndicador({
                   c={c}
                   onAbrir={persona(c)}
                   derecha={
-                    <span className={`whitespace-nowrap rounded-md px-1.5 text-[11px] font-bold ${PRESENTISMO_UI[c.estadoPresentismo].pill}`}>
-                      {PRESENTISMO_UI[c.estadoPresentismo].etiqueta}
+                    <span className="flex items-center gap-2">
+                      {unDia ? <LineaJornada inicio={c.inicioJornada} fin={c.finJornada} /> : null}
+                      <PuntoEstado estado={c.estadoPresentismo} />
                     </span>
                   }
                 >
-                  {unDia ? <LineaJornada inicio={c.inicioJornada} fin={c.finJornada} /> : null}
                   {c.estadoPresentismo === "AUSENTE" && telefonoValido(c.telefono) ? (
                     <a
                       href={hrefTelefono(c.telefono)}

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Modal } from "@/components/modal";
+import { IconoPaqueteMas } from "./ui/iconos-campo";
 import { Paginacion } from "@/components/paginacion";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { usePanel } from "@/components/panel/contexto";
@@ -421,9 +422,11 @@ export function InventarioLocalModal({
                   type="button"
                   onClick={() => setAgregando((a) => !a)}
                   aria-expanded={agregando}
-                  className={btnMarca}
+                  aria-label="Agregar productos"
+                  className={`${btnMarca} inline-flex items-center gap-1.5`}
                 >
-                  + Agregar productos
+                  <IconoPaqueteMas className="h-5 w-5 shrink-0" />
+                  Agregar
                 </button>
               ) : null}
             </div>
@@ -467,7 +470,7 @@ export function InventarioLocalModal({
             <div className={marco}>
               {items.length === 0 ? (
                 <p className="p-6 text-center text-sm text-muted">
-                  Todavía no hay productos en este local. Agregalos con «+ Agregar productos».
+                  Todavía no hay productos en este local. Agregalos con «+ Agregar».
                 </p>
               ) : (
                 <ul className="divide-y divide-line" aria-label="Productos del local">

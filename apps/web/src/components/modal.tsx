@@ -14,6 +14,7 @@ export function Modal({
   children,
   encabezado,
   pie,
+  textoCerrar,
   ancho = "md",
   hojaMovil = false,
 }: {
@@ -24,6 +25,8 @@ export function Modal({
   /** Controles compactos en lugar del título visible; el título sigue siendo accesible. */
   encabezado?: ReactNode;
   pie?: ReactNode;
+  /** Botón al pie que cierra igual que la X ("Cerrar", "Listo"…), para modales sin formulario propio. */
+  textoCerrar?: string;
   // "lg"/"xl" para formularios anchos; "md" es el default historico
   ancho?: "md" | "lg" | "xl";
   // En celular se abre como hoja que sube desde abajo y queda pegada al borde.
@@ -146,7 +149,22 @@ export function Modal({
           </header>
         </div>
         <div className={`${hojaMovil ? "mt-2 sm:mt-4" : "mt-4"} min-h-0 min-w-0 w-full overflow-y-auto overscroll-contain`}>{children}</div>
-        {pie ? <footer className="mt-3 shrink-0 border-t border-line dark:border-line">{pie}</footer> : null}
+        {pie || textoCerrar ? (
+          <footer className="mt-3 shrink-0 border-t border-line dark:border-line">
+            {pie}
+            {textoCerrar ? (
+              <div className="flex justify-end pt-3">
+                <button
+                  type="button"
+                  onClick={onCerrar}
+                  className="min-h-11 w-full cursor-pointer whitespace-nowrap rounded-lg border border-line bg-surface-raised px-5 text-sm font-semibold text-foreground transition-colors hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:w-auto dark:border-line dark:bg-surface-raised dark:text-foreground dark:hover:bg-surface-soft"
+                >
+                  {textoCerrar}
+                </button>
+              </div>
+            ) : null}
+          </footer>
+        ) : null}
       </div>
     </div>,
     destinoPortal,

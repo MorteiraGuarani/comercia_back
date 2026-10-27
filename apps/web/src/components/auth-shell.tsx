@@ -7,13 +7,13 @@ export function AuthShell({ children }: { children: ReactNode }) {
         <BrandMark claro />
         <div>
           <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-[#efb37f]">
-            Plataforma configurable
+            Plataforma de gestión comercial
           </p>
           <h2 className="mt-3 max-w-sm text-[clamp(2rem,3vw,3rem)] font-extrabold leading-[1.04] tracking-[-0.05em] text-white">
-            Tu plataforma, a tu medida.
+            Tu negocio. Más inteligente.
           </h2>
-          <p className="mt-3 max-w-sm text-sm font-medium leading-relaxed text-[#c7d5d0]">
-            Configurá módulos, páginas y accesos para cada empresa.
+          <p className="mt-3 max-w-md text-sm font-medium leading-relaxed text-[#c7d5d0]">
+            Gestioná tu equipo, optimizá tus ventas y tomá mejores decisiones con inteligencia artificial.
           </p>
           <div aria-hidden className="mt-6 h-1 w-14 rounded-full bg-[#d9955d]" />
         </div>

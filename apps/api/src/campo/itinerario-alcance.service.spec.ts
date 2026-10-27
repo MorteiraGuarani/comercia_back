@@ -3,6 +3,7 @@ import type { CampoAccesoService } from './campo-acceso.service';
 
 jest.mock('../prisma/prisma.service', () => ({ PrismaService: class {} }));
 import { CatalogoCampoService } from './catalogo-campo.service';
+import { restringirItinerarioAlEquipo } from './utils/alcance-itinerario';
 
 function preparar(
   rolDescripcion = 'supervisor.impulsador',
@@ -135,6 +136,33 @@ describe('Alcance de Itinerario del supervisor impulsador', () => {
       where: { empresaId: 10 },
     });
     expect(prisma.usuario.findUnique).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['Supervisor', 'REPOSITOR', true],
+    ['teamleader', 'REPOSITOR', true],
+    ['supervisor.impulsador', 'IMPULSADOR', true],
+    ['SUPERVISOR_BACKOFFICE', 'REPOSITOR', false],
+    ['Administrador', 'REPOSITOR', false],
+  ] as const)(
+    '%s de un equipo %s ve solo los locales de su equipo: %s',
+    (rolDescripcion, tipo, restringido) => {
+      expect(
+        restringirItinerarioAlEquipo({
+          rolDescripcion,
+          equipoCampo: { id: 4, nombre: 'Equipo', tipo, activo: true },
+        }),
+      ).toBe(restringido);
+    },
+  );
+
+  it('sin equipo de campo conserva el catálogo completo', () => {
+    expect(
+      restringirItinerarioAlEquipo({
+        rolDescripcion: 'Supervisor',
+        equipoCampo: null,
+      }),
+    ).toBe(false);
   });
 
   it('el superadmin lista los locales de la empresa elegida sin recorte por equipo', async () => {

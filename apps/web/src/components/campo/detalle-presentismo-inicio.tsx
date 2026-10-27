@@ -5,7 +5,7 @@ import { Paginacion } from "@/components/paginacion";
 import type { ColaboradorResumen, SupervisionResumenData } from "@/types/campo";
 import type { EstadoPresentismo } from "@/types/estado-jornada";
 import { pct } from "@/utils/hoy-en-campo";
-import { ConteosFiltro, LineaJornada, PRESENTISMO_UI, enfoqueTablero } from "./ui/tablero-campo";
+import { ConteosFiltro, LineaJornada, PRESENTISMO_UI, PuntoEstado, enfoqueTablero } from "./ui/tablero-campo";
 import { IconoTelefono } from "./ui/iconos-campo";
 
 const ESTADOS = ["PRESENTE", "TARDE", "INCOMPLETO", "AUSENTE"] as const;
@@ -85,21 +85,15 @@ export function DetallePresentismoInicio({
                 key={c.id}
                 className="flex min-w-0 items-center gap-2 py-2 first:pt-0"
               >
-                <div className="min-w-0 flex-1">
-                  <button
-                    type="button"
-                    onClick={() => onAbrir(c.id)}
-                    className={`block min-h-11 w-full min-w-0 cursor-pointer truncate rounded text-left text-sm font-semibold text-foreground hover:underline ${enfoqueTablero}`}
-                  >
-                    {c.nombre}
-                  </button>
-                  {unDia ? <LineaJornada inicio={c.inicioJornada} fin={c.finJornada} /> : null}
-                </div>
-                <span
-                  className={`shrink-0 whitespace-nowrap rounded-md px-1.5 text-[11px] font-bold ${PRESENTISMO_UI[c.estadoPresentismo].pill}`}
+                <button
+                  type="button"
+                  onClick={() => onAbrir(c.id)}
+                  className={`min-h-11 min-w-0 flex-1 cursor-pointer truncate rounded text-left text-sm font-semibold text-foreground hover:underline ${enfoqueTablero}`}
                 >
-                  {PRESENTISMO_UI[c.estadoPresentismo].etiqueta}
-                </span>
+                  {c.nombre}
+                </button>
+                {unDia ? <LineaJornada inicio={c.inicioJornada} fin={c.finJornada} /> : null}
+                <PuntoEstado estado={c.estadoPresentismo} />
                 {c.estadoPresentismo === "AUSENTE" &&
                 c.telefono.replace(/[^\d+]/g, "").length >= 6 ? (
                   <a

@@ -53,14 +53,11 @@ const fechas = cargar("utils/fechas.ts");
 const periodos = cargar("utils/periodo-inicio.ts", { "./fechas": fechas });
 const hoy = "2026-10-27";
 const presets = periodos.periodosDesdeHoy(hoy);
-assert.deepEqual(presets.map((p) => p.etiqueta), ["Hoy", "Ayer", "7 días", "Mes", "Mes Pasado"]);
+assert.deepEqual(presets.map((p) => p.etiqueta), ["Hoy", "Ayer", "7 días", "Mes"]);
 assert.deepEqual(presets.map((p) => periodos.consultaPeriodoInicio(p, hoy)), [
   "fecha=2026-10-27", "fecha=2026-10-26", "fechaInicio=2026-10-21&fechaFin=2026-10-27",
-  "fechaInicio=2026-10-01&fechaFin=2026-10-27", "fechaInicio=2026-09-01&fechaFin=2026-09-30",
+  "fechaInicio=2026-10-01&fechaFin=2026-10-27",
 ]);
-for (const [fecha, inicio, fin] of [["2026-01-01", "2025-12-01", "2025-12-31"], ["2024-03-01", "2024-02-01", "2024-02-29"]]) {
-  assert.equal(periodos.consultaPeriodoInicio(periodos.periodosDesdeHoy(fecha)[4], fecha), `fechaInicio=${inicio}&fechaFin=${fin}`);
-}
 assert.equal(periodos.consultaPeriodoInicio(presets[0], "2026-10-28"), "fecha=2026-10-28", "Hoy se actualiza al cambiar de día");
 
 const estado = estadoReact();
@@ -79,28 +76,15 @@ boton(arbol, "7 días").props.onClick();
 assert.equal(elegido.clave, "ultimos_7");
 calendario(arbol).props.onClick();
 arbol = render();
-// El calendario abre todos los períodos y la fecha personalizada.
-assert.deepEqual(nodos(arbol).filter((n) => n.type === "button" && "aria-pressed" in n.props).map(texto).slice(4), presets.map((p) => p.etiqueta));
-let acordeon = boton(arbol, "Fecha personalizada");
-assert.equal(acordeon.props["aria-expanded"], false);
-assert.equal(nodos(arbol).find((n) => n.props?.id === acordeon.props["aria-controls"]).props.hidden, true);
-const orden = nodos(arbol);
-assert.ok(orden.indexOf(boton(arbol, "Mes Pasado")) < orden.indexOf(acordeon));
-acordeon.props.onClick();
-arbol = render();
-assert.equal(boton(arbol, "Fecha personalizada").props["aria-expanded"], true);
+// El calendario solo trae el rango personalizado: sin repetir los chips.
+assert.equal(nodos(arbol).filter((n) => n.type === "button" && "aria-pressed" in n.props).length, 4);
+assert.ok(boton(arbol, "Cancelar"), "Se puede salir sin aplicar");
 const inputs = nodos(arbol).filter((n) => n.type === "input");
 inputs[0].props.onChange({ target: { value: "2026-10-18" } });
 inputs[1].props.onChange({ target: { value: "2026-10-05" } });
 arbol = render();
 boton(arbol, "Aplicar rango").props.onClick();
 assert.equal(periodos.consultaPeriodoInicio(elegido, hoy), "fechaInicio=2026-10-05&fechaFin=2026-10-18");
-arbol = render();
-calendario(arbol).props.onClick();
-arbol = render();
-assert.equal(boton(arbol, "Fecha personalizada").props["aria-expanded"], false, "El rango vuelve a estar plegado al abrir");
-boton(arbol, "Mes Pasado").props.onClick();
-assert.equal(elegido.clave, "mes_pasado");
 
 async function disponibilidad(responder) {
   const pedidos = [];
@@ -126,7 +110,7 @@ assert.equal(sinEnlace.type, "button");
 assert.equal(sinEnlace.props.disabled, true);
 assert.equal(sinEnlace.props.href, undefined);
 assert.equal(EnlacePanel({ href: "/panel/mi-jornada/tareas", children: "Mis tareas" }).props.href, "/panel/mi-jornada/tareas");
-const ui = cargar("components/campo/ui/tablero-campo.tsx", { "next/link": { default: Link }, "./iconos-campo": {}, "@/utils/duracion": cargar("utils/duracion.ts") });
+const ui = cargar("components/campo/ui/tablero-campo.tsx", { "next/link": { default: Link }, "./iconos-campo": {} });
 assert.equal(ui.TarjetaIndicador({ letra: "C", nombre: "Tareas", tono: "info", valor: 0, nota: "Sin tareas", href: "/tareas", disabled: true }).props.disabled, true);
 
 const resumen = {
@@ -189,10 +173,12 @@ const { Indicadores, DetalleIndicador } = cargar("components/campo/hoy-en-campo.
 const propsIndicador = { indicador: "presentismo", resumen, equipo: [], novedades: [], abiertas: 0, onAbrir: stub };
 // Un solo día: inicio, final y duración de la jornada; en un período de varios días, no.
 const conJornada = { ...propsIndicador, equipo: [{ id: 7, nombre: "Ana", estadoPresentismo: "PRESENTE", telefono: "", inicioJornada: "08:05", finJornada: "12:35", ruta: {}, tareas: {} }] };
-const lineas = (props) => nodos(DetalleIndicador(props)).filter((n) => n.type === ui.LineaJornada);
+const lineas = (props) => nodos(DetalleIndicador(props)).flatMap((n) => [n, ...nodos(n.props?.derecha)]).filter((n) => n.type === ui.LineaJornada);
 assert.equal(lineas({ ...conJornada, unDia: false }).length, 0);
 const linea = lineas({ ...conJornada, unDia: true })[0];
-assert.ok(texto(ui.LineaJornada(linea.props)).includes("4 h 30 min"), "Muestra la duración de la jornada");
+const textoJornada = texto(ui.LineaJornada(linea.props));
+assert.ok(textoJornada.includes("08:05") && textoJornada.includes("12:35"), "Muestra inicio y final de la jornada");
+assert.ok(!textoJornada.includes(" min"), "Sin la duración");
 assert.equal(DetalleIndicador({ ...propsIndicador, presentismoImpulsador: true }).type, DetallePresentismoInicio);
 assert.notEqual(DetalleIndicador(propsIndicador).type, DetallePresentismoInicio, "Conserva la vista de Presentismo de los demás equipos");
 // Cada KPI del detalle filtra la lista de abajo; tocarlo otra vez muestra todo.

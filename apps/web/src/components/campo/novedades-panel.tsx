@@ -460,7 +460,7 @@ export function NovedadesPanel({
       )}
 
       {novedadAbiertaId && (
-        <Modal titulo="Novedad" abierto onCerrar={() => setNovedadAbiertaId(null)} ancho="lg">
+        <Modal textoCerrar="Cerrar" titulo="Novedad" abierto onCerrar={() => setNovedadAbiertaId(null)} ancho="lg">
           <HiloNovedad id={novedadAbiertaId} onActualizado={cargar} />
         </Modal>
       )}

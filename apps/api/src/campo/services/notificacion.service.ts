@@ -178,6 +178,42 @@ export class NotificacionService {
     });
   }
 
+  /** Un líder respondió en el hilo de comentarios de una tarea: avisa al dueño y a sus otros líderes. */
+  async crearNotificacionRespuestaComentario(
+    empresaId: number,
+    emisorId: number,
+    autorId: number,
+    comentarioId: number,
+    nombreTarea: string,
+  ): Promise<void> {
+    const destinatarios = new Set([
+      autorId,
+      ...(await obtenerSuperioresActivos(this.prisma, empresaId, [autorId])),
+    ]);
+    destinatarios.delete(emisorId);
+    if (!destinatarios.size) return;
+    const emisor = await this.prisma.usuario.findUnique({
+      where: { id: emisorId },
+      select: { nombre: true, apellido: true },
+    });
+    if (!emisor) return;
+    await this.prisma.notificacionCampo.createMany({
+      data: [...destinatarios].map((destinatarioId) => ({
+        empresaId,
+        usuarioDestinatarioId: destinatarioId,
+        usuarioEmisorId: emisorId,
+        tipo: TipoNotificacionCampo.COMENTARIO_TAREA,
+        referenciaId: comentarioId,
+        titulo: 'Nueva respuesta en tarea',
+        mensaje:
+          `${emisor.nombre} ${emisor.apellido} respondió en '${nombreTarea}'`.slice(
+            0,
+            250,
+          ),
+      })),
+    });
+  }
+
   async crearNotificacionRespuestaNovedad(
     empresaId: number,
     emisorId: number,

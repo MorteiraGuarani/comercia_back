@@ -26,6 +26,7 @@ import { FotoService } from './foto.service';
 import { JornadaCampoService } from '../jornada-campo.service';
 import { ComentarioService } from './comentario.service';
 import { MomentoFotoDto } from '../dto/foto-tarea.dto';
+import * as autorizacion from '../utils/autorizacion';
 
 describe('Evidencias antes de completar una tarea', () => {
   beforeEach(() =>
@@ -172,6 +173,72 @@ describe('Evidencias antes de completar una tarea', () => {
     );
   });
 
+  it('el líder responde en el hilo y le avisa al dueño; alguien ajeno no puede comentar', async () => {
+    const { prisma } = contexto();
+    prisma.cumplimientoCampo.findUnique.mockResolvedValue({
+      nombreTarea: 'Visicooler',
+      visita: { usuarioId: 2 },
+    });
+    Object.assign(prisma, {
+      comentarioTareaCampo: {
+        create: jest.fn().mockResolvedValue({
+          id: 7,
+          comentario: 'Revisá la temperatura',
+          usuario: { id: 1 },
+          creadoAt: new Date(),
+          leidoPorLider: false,
+        }),
+      },
+    });
+    const notificaciones = {
+      crearNotificacionComentario: jest.fn(),
+      crearNotificacionRespuestaComentario: jest.fn(),
+    };
+    const service = new ComentarioService(
+      prisma as unknown as PrismaService,
+      notificaciones as unknown as NotificacionService,
+    );
+    const lider = jest.spyOn(autorizacion, 'esLiderDe').mockResolvedValue(true);
+    await service.crear(1, 10, 20, 40, { comentario: 'Revisá la temperatura' });
+    expect(
+      notificaciones.crearNotificacionRespuestaComentario,
+    ).toHaveBeenCalledWith(10, 1, 2, 7, 'Visicooler');
+    expect(notificaciones.crearNotificacionComentario).not.toHaveBeenCalled();
+
+    lider.mockResolvedValue(false);
+    await expect(
+      service.crear(1, 10, 20, 40, { comentario: 'Hola' }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    lider.mockRestore();
+  });
+
+  it('ubica el hilo de un comentario para abrirlo desde la notificación', async () => {
+    const { prisma } = contexto();
+    Object.assign(prisma, {
+      comentarioTareaCampo: {
+        findUnique: jest.fn().mockResolvedValue({
+          cumplimientoVisitaId: 20,
+          cumplimientoTareaId: 40,
+          cumplimiento: { visita: { usuarioId: 2 } },
+        }),
+      },
+    });
+    const acceso = jest
+      .spyOn(autorizacion, 'verificarAccesoCumplimiento')
+      .mockResolvedValue(undefined);
+    const service = new ComentarioService(
+      prisma as unknown as PrismaService,
+      {} as NotificacionService,
+    );
+    await expect(service.ubicar(1, 7)).resolves.toEqual({
+      visitaId: 20,
+      tareaId: 40,
+      esPropia: false,
+    });
+    expect(acceso).toHaveBeenCalledWith(prisma, 1, 20, 40);
+    acceso.mockRestore();
+  });
+
   it('rechaza subir fotos fuera de una visita propia abierta y de la empresa', async () => {
     const { prisma, servicioFotos, archivo } = contexto();
     prisma.visitaCampo.findFirst.mockResolvedValue(null);
@@ -208,5 +275,31 @@ describe('Evidencias antes de completar una tarea', () => {
     await expect(servicioFotos.obtenerPorId(1, 10, 1)).rejects.toBeInstanceOf(
       ForbiddenException,
     );
+  });
+
+  it('deja quitar fotos obligatorias hasta terminar la tarea', async () => {
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    const { prisma, servicioFotos } = contexto();
+    const borrar = jest.fn();
+    Object.assign(prisma.fotoTareaCampo, { delete: borrar });
+    prisma.fotoTareaCampo.findUnique.mockResolvedValue({
+      id: 5,
+      rutaArchivo: 'no-existe.jpg',
+    });
+    const cumplimiento = (completadaAt: Date | null) => ({
+      visita: { usuarioId: 1 },
+      tarea: { fotosObligatorias: true },
+      completadaAt,
+    });
+    prisma.cumplimientoCampo.findUnique.mockResolvedValue(cumplimiento(null));
+    await servicioFotos.eliminar(1, 20, 40, MomentoFotoDto.ANTES);
+    expect(borrar).toHaveBeenCalledWith({ where: { id: 5 } });
+
+    prisma.cumplimientoCampo.findUnique.mockResolvedValue(
+      cumplimiento(new Date()),
+    );
+    await expect(
+      servicioFotos.eliminar(1, 20, 40, MomentoFotoDto.ANTES),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 });

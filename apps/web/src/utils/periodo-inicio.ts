@@ -5,13 +5,11 @@ import { agregarDiasIso } from "./fechas";
 export function periodosDesdeHoy(hoy: string): PeriodoFiltro[] {
   const ayer = agregarDiasIso(hoy, -1);
   const primerDiaMes = `${hoy.slice(0, 7)}-01`;
-  const ultimoDiaMesPasado = agregarDiasIso(primerDiaMes, -1);
   return [
     { clave: "hoy", etiqueta: "Hoy", fecha: hoy, fechaInicio: hoy, fechaFin: hoy },
     { clave: "ayer", etiqueta: "Ayer", fecha: ayer, fechaInicio: ayer, fechaFin: ayer },
     { clave: "ultimos_7", etiqueta: "7 días", fechaInicio: agregarDiasIso(hoy, -6), fechaFin: hoy },
     { clave: "este_mes", etiqueta: "Mes", fechaInicio: primerDiaMes, fechaFin: hoy },
-    { clave: "mes_pasado", etiqueta: "Mes Pasado", fechaInicio: `${ultimoDiaMesPasado.slice(0, 7)}-01`, fechaFin: ultimoDiaMesPasado },
   ];
 }
 
@@ -40,7 +38,7 @@ export function consultaPeriodoInicio(periodo: PeriodoFiltro, hoy: string): stri
 /** "hoy", "ayer", "los últimos 7 días", "este mes": para armar frases. */
 export function cuandoPeriodoInicio(periodo: PeriodoFiltro): string {
   const etiquetas: Record<string, string> = {
-    hoy: "hoy", ayer: "ayer", ultimos_7: "los últimos 7 días", este_mes: "este mes", mes_pasado: "el mes pasado",
+    hoy: "hoy", ayer: "ayer", ultimos_7: "los últimos 7 días", este_mes: "este mes",
   };
   return etiquetas[periodo.clave] ?? "en el período seleccionado";
 }

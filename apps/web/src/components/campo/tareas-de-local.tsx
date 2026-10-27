@@ -97,7 +97,7 @@ export function TareasDeLocal({
     ) : null;
 
   return (
-    <Modal
+    <Modal textoCerrar="Cerrar"
       titulo={`Tareas · ${agenda.local.nombre}`}
       abierto
       onCerrar={cerrar}
@@ -175,18 +175,19 @@ export function TareasDeLocal({
       <PantallaCarga visible={!!op.mensaje} mensaje={op.mensaje} />
 
       {fotos && visita ? (
-        <Modal titulo={`Fotos · ${fotos.nombre}`} abierto onCerrar={() => setFotos(null)} ancho="md">
+        <Modal textoCerrar="Listo" titulo={`Fotos · ${fotos.nombre}`} abierto onCerrar={() => setFotos(null)} ancho="md">
           <SubidorFotos
             key={`${visita.id}-${fotos.id}`}
             visitaId={visita.id}
             tareaId={fotos.id}
             obligatorio={fotos.fotosObligatorias}
+            completada={hecha(fotos)}
             onFotosActualizadas={lista.refrescar}
           />
         </Modal>
       ) : null}
       {comentarios && visita ? (
-        <Modal
+        <Modal textoCerrar="Cerrar"
           titulo={`Comentarios · ${comentarios.nombre}`}
           abierto
           onCerrar={() => setComentarios(null)}

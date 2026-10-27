@@ -687,7 +687,7 @@ export function TareasImpulsadorPanel({
 
       {/* Modal de Fotos */}
       {fotoModal && (
-        <Modal
+        <Modal textoCerrar="Listo"
           titulo={`Fotos · ${fotoModal.nombreTarea}`}
           abierto={!!fotoModal}
           onCerrar={() => setFotoModal(null)}
@@ -705,7 +705,7 @@ export function TareasImpulsadorPanel({
 
       {/* Modal de Comentarios */}
       {comentarioModal && (
-        <Modal
+        <Modal textoCerrar="Cerrar"
           titulo={`Comentarios · ${comentarioModal.nombreTarea}`}
           abierto={!!comentarioModal}
           onCerrar={() => setComentarioModal(null)}

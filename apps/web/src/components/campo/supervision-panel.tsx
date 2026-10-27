@@ -4,7 +4,7 @@ import type { PeriodoFiltro } from "@/types/periodo-filtro";
 import Link from "next/link";
 import { PRESENTISMO, RUTA } from "@/utils/estado-jornada";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { apiFetch } from "@/lib/api";
 import { guardarCacheSesion, leerCacheSesion } from "@/lib/cache-sesion";
 import { usePanel } from "@/components/panel/contexto";
@@ -605,6 +605,21 @@ export function SupervisionPanel({
     );
   }
 
+  // Actualizar va en la primera card de cada pestaña: arriba ya no entra junto a los chips de fecha.
+  const botonActualizar = (
+    <button
+      type="button"
+      className={styles.refresh}
+      onClick={cargarResumen}
+      disabled={cargando}
+      aria-busy={cargando}
+      aria-label="Actualizar presentismo"
+      title="Actualizar presentismo"
+    >
+      <IconoRefrescar />
+    </button>
+  );
+
   return (
     <div className={`campo-screen ${styles.screen}`}>
       <header className={styles.header}>
@@ -647,17 +662,6 @@ export function SupervisionPanel({
             </svg>
             <span className="sr-only">Organigrama</span>
           </Link>
-          <button
-            type="button"
-            className={styles.refresh}
-            onClick={cargarResumen}
-            disabled={cargando}
-            aria-busy={cargando}
-            aria-label="Actualizar presentismo"
-            title="Actualizar presentismo"
-          >
-            <IconoRefrescar />
-          </button>
         </div>
       </header>
 
@@ -701,6 +705,7 @@ export function SupervisionPanel({
               <div className={styles.body}>
                 <ResumenPresentismo
                   resumen={resumen}
+                  accion={botonActualizar}
                   onFiltrar={(valor) => {
                     setFiltroEquipo(valor);
                     equipoRef.current?.scrollIntoView({
@@ -729,6 +734,7 @@ export function SupervisionPanel({
             {tab === "rutas" && resumen && (
               <div className="mx-auto w-full max-w-7xl flex-1 space-y-4 px-4 py-4 sm:px-6 sm:py-6 lg:px-8">
                 <ResumenAvance
+                  accion={botonActualizar}
                   titulo="Visitas a locales del equipo"
                   porcentaje={resumen.rutas.pct}
                   total={resumen.rutas.total}
@@ -788,6 +794,7 @@ export function SupervisionPanel({
             {tab === "tareas" && resumen && (
               <div className="mx-auto w-full max-w-7xl flex-1 space-y-4 px-4 py-4 sm:px-6 sm:py-6 lg:px-8">
                 <ResumenAvance
+                  accion={botonActualizar}
                   titulo="Tareas del equipo"
                   porcentaje={resumen.tareas.pct}
                   total={resumen.tareas.total}
@@ -852,7 +859,9 @@ function ResumenAvance({
   segmentos,
   conteos,
   aviso,
+  accion,
 }: {
+  accion?: ReactNode;
   titulo: string;
   porcentaje: number;
   total: number;
@@ -869,10 +878,13 @@ function ResumenAvance({
           </p>
           <p className="text-xs text-muted">{total} en el período</p>
         </div>
-        <p className="ft-display shrink-0 text-4xl font-bold leading-none tabular-nums text-foreground">
-          {porcentaje}
-          <small className="text-lg font-semibold text-muted">%</small>
-        </p>
+        <div className="flex shrink-0 items-end gap-2">
+          <p className="ft-display text-4xl font-bold leading-none tabular-nums text-foreground">
+            {porcentaje}
+            <small className="text-lg font-semibold text-muted">%</small>
+          </p>
+          {accion}
+        </div>
       </div>
       <div className="mt-3">
         <BarraSegmentos total={total} segmentos={segmentos} alto="h-2.5" />

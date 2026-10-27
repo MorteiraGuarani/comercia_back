@@ -308,7 +308,7 @@ export function AsignacionesLocal({
         />
       )}
       {horariosDe && (
-        <Modal
+        <Modal textoCerrar="Cerrar"
           titulo={`Horarios · ${horariosDe.usuario.nombre} ${horariosDe.usuario.apellido}`}
           abierto
           onCerrar={() => setHorariosDe(null)}

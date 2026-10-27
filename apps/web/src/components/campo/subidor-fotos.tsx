@@ -21,12 +21,15 @@ interface SubidorFotosProps {
   tareaId: number;
   obligatorio: boolean;
   onFotosActualizadas: () => void;
+  /** Tarea ya terminada: sus fotos ya no se quitan. */
+  completada?: boolean;
 }
 
 export function SubidorFotos({
   visitaId,
   tareaId,
   obligatorio,
+  completada = false,
   onFotosActualizadas,
 }: SubidorFotosProps) {
   const { usuario } = usePanel();
@@ -110,6 +113,36 @@ export function SubidorFotos({
       vigente = false;
     };
   }, [visitaId, tareaId, intento]);
+
+  // Quita las dos fotos subidas de una vez (no las pendientes de envío del equipo).
+  async function limpiar() {
+    if (operacion || !fotos) return;
+    const subidas = (["ANTES", "DESPUES"] as const).filter((m) =>
+      m === "ANTES" ? fotos.antes : fotos.despues,
+    );
+    if (
+      !subidas.length ||
+      !(await confirmar({
+        titulo: "Limpiar fotos",
+        mensaje: "¿Quitar las fotos del antes y del después?",
+        textoConfirmar: "Limpiar",
+        peligro: true,
+      }))
+    )
+      return;
+    setOperacion("Quitando fotos");
+    setError("");
+    try {
+      for (const m of subidas) await eliminarFoto(visitaId, tareaId, m);
+      setFotos({});
+      mostrarToast("exito", "Fotos quitadas");
+      onFotosActualizadas();
+    } catch (problema) {
+      setError(problema instanceof Error ? problema.message : "No se pudieron quitar las fotos");
+    } finally {
+      setOperacion("");
+    }
+  }
 
   async function actualizar(momento: MomentoFoto, archivo?: File) {
     if (operacion) return;
@@ -290,7 +323,7 @@ export function SubidorFotos({
                     <IconoCamara className="h-5 w-5" />
                   </button>
                 </div>
-                {foto && !obligatorio && (
+                {foto && !completada && (
                   <button
                     type="button"
                     disabled={!!operacion}
@@ -305,6 +338,16 @@ export function SubidorFotos({
           })}
         </div>
       )}
+      {fotos && !completada && (fotos.antes || fotos.despues) ? (
+        <button
+          type="button"
+          disabled={!!operacion}
+          onClick={() => void limpiar()}
+          className="min-h-11 w-full cursor-pointer rounded-lg border border-red-200 bg-red-50 px-4 text-sm font-semibold text-red-700 transition-colors hover:bg-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900 dark:bg-red-950/60 dark:text-red-300 dark:hover:bg-red-900"
+        >
+          Limpiar fotos
+        </button>
+      ) : null}
     </div>
   );
 }

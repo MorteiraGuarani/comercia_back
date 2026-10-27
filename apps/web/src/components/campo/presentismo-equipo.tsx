@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Paginacion } from "@/components/paginacion";
 import type { ColaboradorResumenItem, SupervisionResumenData } from "@/types/campo";
 import styles from "./presentismo.module.css";
@@ -13,9 +13,11 @@ const FILTROS = [["todos", "Todos"], ...ESTADOS.map(e => [e, PRESENTISMO[e].etiq
 
 // Cada estado del resumen filtra la lista del equipo: en celular el resumen y
 // la lista quedan lejos, así que tocar un número lleva directo a esas personas.
-export function ResumenPresentismo({ resumen, onFiltrar }: {
+export function ResumenPresentismo({ resumen, onFiltrar, accion }: {
   resumen: SupervisionResumenData;
   onFiltrar: (filtro: string) => void;
+  /** Botón de actualizar, al lado de la cantidad de personas. */
+  accion?: ReactNode;
 }) {
   const { presentismo: p } = resumen;
   const marcaciones = resumen.colaboradores.filter(c => c.inicioJornada !== null).length;
@@ -23,7 +25,7 @@ export function ResumenPresentismo({ resumen, onFiltrar }: {
   const porcentaje = p.totalEquipo ? Math.round(marcaciones / p.totalEquipo * 100) : null;
   return <aside className={styles.balance} aria-label="Balance del equipo">
     <section className={styles.summary}>
-      <div className={styles.sectionHead}><h2>Tu equipo</h2><span>{p.totalEquipo} {p.totalEquipo === 1 ? "persona" : "personas"}</span></div>
+      <div className={styles.sectionHead}><h2>Tu equipo</h2><span className="flex items-center gap-2">{p.totalEquipo} {p.totalEquipo === 1 ? "persona" : "personas"}{accion}</span></div>
       <div className={styles.headline}><strong>{porcentaje ?? "—"}{porcentaje !== null && <small>%</small>}</strong>
         <div><b>Con marcación</b><span>{marcaciones} de {p.totalEquipo} en el período</span></div></div>
       <div className={styles.distribution} role="img" aria-label={ESTADOS.map(e => `${p.estados[e]} ${PRESENTISMO[e].etiqueta}`).join(", ")}>

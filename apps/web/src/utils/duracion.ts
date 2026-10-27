@@ -11,10 +11,3 @@ export function formatoDuracionSegundos(segundos: number): string {
   return formatoDuracionMinutos(segundos / 60);
 }
 
-/** Minutos entre dos horas "HH:MM" del mismo día; null si falta alguna o el fin es anterior. */
-export function minutosEntreHoras(desde: string | null, hasta: string | null): number | null {
-  if (!desde || !hasta) return null;
-  const minutos = (h: string) => Number(h.slice(0, 2)) * 60 + Number(h.slice(3, 5));
-  const diferencia = minutos(hasta) - minutos(desde);
-  return Number.isFinite(diferencia) && diferencia >= 0 ? diferencia : null;
-}

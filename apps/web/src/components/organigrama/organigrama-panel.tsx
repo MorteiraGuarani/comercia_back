@@ -1004,7 +1004,7 @@ export function OrganigramaPanel() {
       </div>
 
       {verAlertas ? (
-        <Modal
+        <Modal textoCerrar="Cerrar"
           titulo={`Alertas de jerarquía (${conAlertas.length})`}
           abierto
           onCerrar={() => setVerAlertas(false)}
@@ -1048,7 +1048,7 @@ export function OrganigramaPanel() {
       ) : null}
 
       {ficha ? (
-        <Modal
+        <Modal textoCerrar="Cerrar"
           titulo={ficha.nombre}
           abierto
           onCerrar={() => setFicha(null)}

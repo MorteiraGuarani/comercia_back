@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 import type { EstadoPresentismo, EstadoRuta } from "@/types/estado-jornada";
 import type { TonoHoy } from "@/types/hoy-en-campo";
 import { IconoChevronAbajo } from "./iconos-campo";
-import { formatoDuracionMinutos, minutosEntreHoras } from "@/utils/duracion";
 
 // Piezas de los tableros de inicio (supervisor "Hoy en campo" y repositor
 // "Tu día"): indicador con semáforo, filas de "Atender ahora" y secciones.
@@ -233,23 +232,37 @@ export function SeccionTablero({
   );
 }
 
-/** Encabezado del tablero con el botón de actualizar. */
-/** Inicio (primera entrada del día), final (última salida) y cuánto duró la jornada. */
+/** "11:10 → 17:02": inicio (primera entrada) y final (última salida) de la jornada, al lado del nombre. */
 export function LineaJornada({ inicio, fin }: { inicio: string | null; fin: string | null }) {
   if (!inicio) return null;
-  const minutos = minutosEntreHoras(inicio, fin);
   return (
-    <span className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-2 text-[11px] text-muted">
+    <span
+      title={`Inicio ${inicio}${fin ? ` · Final ${fin}` : " · sin final todavía"}`}
+      className="inline-flex shrink-0 items-center gap-2.5 whitespace-nowrap font-mono text-[11px] font-semibold tabular-nums text-foreground sm:text-xs"
+    >
       <span>
-        Inicio <b className="font-mono font-semibold text-foreground">{inicio}</b>
+        <span className="sr-only">Inicio </span>
+        {inicio}
       </span>
-      <span>
-        Final <b className="font-mono font-semibold text-foreground">{fin ?? "—"}</b>
+      <span aria-hidden="true" className="font-sans font-normal text-muted">→</span>
+      <span className={fin ? undefined : "text-muted"}>
+        <span className="sr-only">Final </span>
+        {fin ?? "—"}
       </span>
-      {minutos !== null ? (
-        <span className="font-semibold text-foreground">· {formatoDuracionMinutos(minutos)}</span>
-      ) : null}
     </span>
+  );
+}
+
+/** Estado de presentismo como un punto de color (el nombre queda para lectores y al pasar el mouse). */
+export function PuntoEstado({ estado }: { estado: EstadoPresentismo }) {
+  const ui = PRESENTISMO_UI[estado];
+  return (
+    <span
+      role="img"
+      aria-label={ui.etiqueta}
+      title={ui.etiqueta}
+      className={`inline-block h-3 w-3 shrink-0 rounded-full ${ui.barra}`}
+    />
   );
 }
 

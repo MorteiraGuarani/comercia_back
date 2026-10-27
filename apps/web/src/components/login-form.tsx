@@ -35,15 +35,16 @@ export function LoginForm() {
   return (
     <>
       <div>
-        <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-[#efb37f] lg:hidden">
-          Acceso seguro
+        <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-[#efb37f]">
+          Plataforma de gestión comercial
         </p>
-        <h1 className="mt-2 text-2xl font-extrabold tracking-[-0.035em] text-white sm:text-[1.75rem] lg:mt-0 lg:text-[1.45rem]">
-          Bienvenido de nuevo
+        <h1 className="mt-2 text-2xl font-extrabold tracking-[-0.035em] text-white sm:text-[1.75rem] lg:text-[1.45rem]">
+          Tu negocio. Más inteligente.
         </h1>
         <p className="mt-1.5 text-sm leading-relaxed text-[#b9c9c3]">
-          Ingresá para organizar tu jornada comercial.
+          Gestioná tu equipo, optimizá tus ventas y tomá mejores decisiones con inteligencia artificial.
         </p>
+        <div aria-hidden className="mt-4 h-1 w-14 rounded-full bg-[#d9955d]" />
       </div>
 
       <form onSubmit={onSubmit} className="mt-6 flex flex-col gap-4.5">

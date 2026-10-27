@@ -15,13 +15,10 @@ export function SelectorFechaFiltro({ valorActual, onChange }: SelectorFechaFilt
   const hoyStr = fechaEnZonaIso(new Date());
   const presets = periodosDesdeHoy(hoyStr);
   const seleccion = presets.find((p) => p.clave === valorActual.clave) ?? valorActual;
-  // A la vista van Hoy, Ayer, 7 días y Mes; el calendario abre el resto y la fecha personalizada.
-  const rapidos = presets.slice(0, 4);
-  const otroPeriodo = !rapidos.some((p) => p.clave === valorActual.clave);
+  // A la vista van Hoy, Ayer, 7 días y Mes; el calendario es solo para un rango personalizado.
+  const otroPeriodo = !presets.some((p) => p.clave === valorActual.clave);
   const [abierto, setAbierto] = useState(false);
-  const [personalizadoAbierto, setPersonalizadoAbierto] = useState(false);
   const panelId = useId();
-  const personalizadoId = useId();
   // Desde `sm` el panel flota junto al botón, del lado donde hay lugar.
   const [alinearIzquierda, setAlinearIzquierda] = useState(false);
   const [desdePersonalizado, setDesdePersonalizado] = useState(
@@ -61,7 +58,6 @@ export function SelectorFechaFiltro({ valorActual, onChange }: SelectorFechaFilt
     if (caja) setAlinearIzquierda(caja.right < 336);
     setDesdePersonalizado(seleccion.fechaInicio ?? seleccion.fecha ?? hoyStr);
     setHastaPersonalizado(seleccion.fechaFin ?? seleccion.fecha ?? hoyStr);
-    setPersonalizadoAbierto(false);
     setAbierto((prev) => !prev);
   };
 
@@ -106,7 +102,7 @@ export function SelectorFechaFiltro({ valorActual, onChange }: SelectorFechaFilt
   return (
     <div className="relative flex min-w-0 flex-wrap items-center gap-1.5 text-left" ref={popoverRef}>
       <div role="group" aria-label="Período" className="flex min-w-0 items-center gap-1.5">
-        {rapidos.map((p) => {
+        {presets.map((p) => {
           const activo = valorActual.clave === p.clave;
           return (
             <button
@@ -162,7 +158,7 @@ export function SelectorFechaFiltro({ valorActual, onChange }: SelectorFechaFilt
           ref={panelRef}
           id={panelId}
           role="dialog"
-          aria-label="Elegir período"
+          aria-label="Fecha personalizada"
           className={`fixed inset-x-0 bottom-0 z-[61] max-h-[85dvh] overflow-y-auto rounded-t-2xl border border-line bg-surface-raised p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] text-foreground shadow-2xl max-sm:motion-safe:animate-hoja-subir sm:absolute sm:inset-x-auto sm:bottom-auto sm:z-50 sm:mt-2 sm:max-h-[70dvh] sm:w-80 sm:rounded-xl sm:p-3 ${
             alinearIzquierda ? "sm:left-0" : "sm:right-0"
           }`}
@@ -171,85 +167,50 @@ export function SelectorFechaFiltro({ valorActual, onChange }: SelectorFechaFilt
             <span aria-hidden="true" className="mx-auto mb-3 block h-1 w-10 rounded-full bg-line sm:hidden" />
             <div className="mb-2 flex flex-wrap items-center justify-between gap-1 border-b border-line pb-2">
               <span className="ft-display text-xs font-bold uppercase tracking-wider text-accent-ink">
-                Filtro Temporal
+                Fecha personalizada
               </span>
               <span className="min-w-0 break-all text-right font-mono text-[11px] text-muted">
                 {rangoVisible}
               </span>
             </div>
           </div>
-          <div>
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted">
-              Fechas predefinidas
-            </p>
-            <div className="grid grid-cols-2 gap-1.5">
-              {presets.map((p) => {
-                const esActivo = valorActual.clave === p.clave;
-                return (
-                  <button
-                    key={p.clave}
-                    type="button"
-                    onClick={() => seleccionarPreset(p)}
-                    aria-pressed={esActivo}
-                    className={`flex min-h-11 cursor-pointer items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-xs font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40 ${
-                      esActivo
-                        ? "bg-accent-ink text-background font-bold shadow"
-                        : "border border-line bg-surface-raised text-foreground hover:bg-surface-soft"
-                    }`}
-                  >
-                    <span>{p.etiqueta}</span>
-                    {esActivo && (
-                      <svg className="h-3 w-3 shrink-0 text-background" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
-                      </svg>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="block min-w-0 text-[10px] uppercase tracking-wider text-muted">
+              Desde
+              <input
+                type="date"
+                value={desdePersonalizado}
+                onChange={(e) => setDesdePersonalizado(e.target.value)}
+                className="mt-1 min-h-11 w-full min-w-0 cursor-pointer rounded border border-line bg-surface-raised px-2 py-1.5 text-xs text-foreground outline-none focus:border-accent-ink focus:ring-2 focus:ring-brand-600/30 ft-mono"
+              />
+            </label>
+            <label className="block min-w-0 text-[10px] uppercase tracking-wider text-muted">
+              Hasta
+              <input
+                type="date"
+                value={hastaPersonalizado}
+                min={desdePersonalizado}
+                onChange={(e) => setHastaPersonalizado(e.target.value)}
+                className="mt-1 min-h-11 w-full min-w-0 cursor-pointer rounded border border-line bg-surface-raised px-2 py-1.5 text-xs text-foreground outline-none focus:border-accent-ink focus:ring-2 focus:ring-brand-600/30 ft-mono"
+              />
+            </label>
           </div>
-          <div className="mt-3 rounded-lg border border-line bg-surface-soft p-2">
+          <div className="mt-3 grid grid-cols-2 gap-2">
             <button
               type="button"
-              aria-expanded={personalizadoAbierto}
-              aria-controls={personalizadoId}
-              onClick={() => setPersonalizadoAbierto((prev) => !prev)}
-              className="flex min-h-11 w-full items-center justify-between gap-2 rounded px-1 text-left text-xs font-semibold text-foreground hover:bg-surface-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+              onClick={() => setAbierto(false)}
+              className="min-h-11 cursor-pointer rounded-lg border border-line bg-surface-raised px-2 text-xs font-semibold text-foreground hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
             >
-              Fecha personalizada
-              <span aria-hidden="true">{personalizadoAbierto ? "−" : "+"}</span>
+              Cancelar
             </button>
-            <div id={personalizadoId} hidden={!personalizadoAbierto}>
-              <div className="grid grid-cols-1 gap-2">
-                <label className="block min-w-0 text-[10px] uppercase tracking-wider text-muted">
-                  Desde
-                  <input
-                    type="date"
-                    value={desdePersonalizado}
-                    onChange={(e) => setDesdePersonalizado(e.target.value)}
-                    className="mt-1 min-h-11 w-full min-w-0 cursor-pointer rounded border border-line bg-surface-raised px-2 py-1.5 text-xs text-foreground outline-none focus:border-accent-ink focus:ring-2 focus:ring-brand-600/30 ft-mono"
-                  />
-                </label>
-                <label className="block min-w-0 text-[10px] uppercase tracking-wider text-muted">
-                  Hasta
-                  <input
-                    type="date"
-                    value={hastaPersonalizado}
-                    min={desdePersonalizado}
-                    onChange={(e) => setHastaPersonalizado(e.target.value)}
-                    className="mt-1 min-h-11 w-full min-w-0 cursor-pointer rounded border border-line bg-surface-raised px-2 py-1.5 text-xs text-foreground outline-none focus:border-accent-ink focus:ring-2 focus:ring-brand-600/30 ft-mono"
-                  />
-                </label>
-              </div>
-              <button
-                type="button"
-                onClick={aplicarRango}
-                disabled={!desdePersonalizado || !hastaPersonalizado}
-                className="disabled:cursor-not-allowed disabled:opacity-50 mt-2 min-h-11 w-full cursor-pointer rounded-lg border border-line bg-surface-raised px-2 py-1.5 text-xs font-semibold text-foreground hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40"
-              >
-                Aplicar rango
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={aplicarRango}
+              disabled={!desdePersonalizado || !hastaPersonalizado}
+              className="min-h-11 cursor-pointer rounded-lg bg-brand-700 px-2 text-xs font-semibold text-white hover:bg-brand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50 dark:bg-brand-500 dark:text-brand-950 dark:hover:bg-brand-400"
+            >
+              Aplicar rango
+            </button>
           </div>
         </div>
         </>

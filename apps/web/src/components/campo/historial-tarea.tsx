@@ -54,7 +54,7 @@ export function HistorialTarea({
     };
   }, [tareaId, page, limit]);
   return (
-    <Modal
+    <Modal textoCerrar="Cerrar"
       abierto
       titulo={`Historial · ${nombre}`}
       onCerrar={cerrar}

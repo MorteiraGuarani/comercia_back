@@ -26,7 +26,7 @@ export function MapaLocal({
   const { latitud, longitud } = local;
   if (latitud === null || longitud === null)
     return (
-      <Modal titulo={local.nombre} abierto onCerrar={cerrar} ancho="md">
+      <Modal textoCerrar="Cerrar" titulo={local.nombre} abierto onCerrar={cerrar} ancho="md">
         <p className="text-sm text-foreground">
           Este local todavía no tiene ubicación cargada. Marcala desde{" "}
           <b>Itinerario</b>.
@@ -122,7 +122,7 @@ function MapaLocalUbicado({
   const minutos = metros !== null ? Math.max(1, Math.round((metros / 1000 / 25) * 60)) : null;
 
   return (
-    <Modal titulo={local.nombre} abierto onCerrar={cerrar} ancho="xl" hojaMovil>
+    <Modal textoCerrar="Cerrar" titulo={local.nombre} abierto onCerrar={cerrar} ancho="xl" hojaMovil>
       <div className="campo-screen space-y-3">
         <div className="campo-map relative overflow-hidden rounded-xl border border-line bg-surface-soft">
           <div

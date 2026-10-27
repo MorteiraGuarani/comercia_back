@@ -22,7 +22,7 @@ export function JornadasPropias({
 }) {
   const dias = jornadasPorDia(agenda);
   return (
-    <Modal titulo="Tus jornadas" abierto hojaMovil ancho="lg" onCerrar={cerrar}>
+    <Modal textoCerrar="Cerrar" titulo="Tus jornadas" abierto hojaMovil ancho="lg" onCerrar={cerrar}>
       {dias.length ? (
         <div className="min-w-0 space-y-3">
           {dias.map((d) => {

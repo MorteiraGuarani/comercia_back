@@ -17,6 +17,7 @@ import { mostrarToast } from "@/components/toast/toast-controller";
 import { Modal } from "@/components/modal";
 import { Paginacion } from "@/components/paginacion";
 import { HiloNovedad } from "./hilo-novedad";
+import { HiloComentarioTarea } from "./hilo-comentario-tarea";
 import { DetalleAviso } from "./detalle-aviso";
 import { DetalleNotificacionInventario } from "./detalle-notificacion-inventario";
 import { IconoAlerta, IconoAvisos, IconoMegafono } from "./ui/iconos-campo";
@@ -309,7 +310,7 @@ function PanelNotificaciones({
   const [filtro, setFiltro] = useState<"todas" | "no_leidas">("todas");
   const [marcandoTodas, setMarcandoTodas] = useState(false);
   const [referenciaSeleccionada, setReferenciaSeleccionada] = useState<{
-    tipo: "novedad" | "aviso" | "inventario";
+    tipo: "novedad" | "aviso" | "inventario" | "comentario";
     id: number;
   } | null>(null);
   const [pestana, setPestana] = useState<
@@ -439,6 +440,9 @@ function PanelNotificaciones({
         setReferenciaSeleccionada({ tipo: "novedad", id: n.referenciaId });
       } else if (n.tipo === "AVISO_RECIBIDO") {
         setReferenciaSeleccionada({ tipo: "aviso", id: n.referenciaId });
+      } else if (n.tipo === "COMENTARIO_TAREA") {
+        // Abre la conversación de la tarea para leer y responder.
+        setReferenciaSeleccionada({ tipo: "comentario", id: n.referenciaId });
       }
     }
     if (!n.leido) void handleMarcarLeida(n);
@@ -484,6 +488,7 @@ function PanelNotificaciones({
   return (
     <Modal
       titulo="Notificaciones"
+      textoCerrar="Cerrar"
       abierto
       onCerrar={onCerrar}
       ancho="lg"
@@ -647,6 +652,8 @@ function PanelNotificaciones({
               key={referenciaSeleccionada.id}
               id={referenciaSeleccionada.id}
             />
+          ) : referenciaSeleccionada.tipo === "comentario" ? (
+            <HiloComentarioTarea comentarioId={referenciaSeleccionada.id} />
           ) : referenciaSeleccionada.tipo === "novedad" ? (
             <HiloNovedad
               id={referenciaSeleccionada.id}

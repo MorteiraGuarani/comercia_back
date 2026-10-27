@@ -310,6 +310,7 @@ export class FotoService {
             fotosObligatorias: true,
           },
         },
+        completadaAt: true,
       },
     });
 
@@ -324,7 +325,7 @@ export class FotoService {
     }
 
     // Si las fotos son obligatorias, no permitir eliminar después de completar
-    if (cumplimiento.tarea.fotosObligatorias) {
+    if (cumplimiento.tarea.fotosObligatorias && cumplimiento.completadaAt) {
       throw new BadRequestException(
         'No puedes eliminar fotos obligatorias de una tarea ya completada',
       );
