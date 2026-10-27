@@ -47,7 +47,7 @@ let entradas = 0;
 let salidas = 0;
 let inventarios = 0;
 const { TarjetaAgendaRepositor } = cargar("components/campo/tarjeta-agenda-repositor.tsx", {
-  "next/link": { default: stub }, "@/utils/estado-jornada": estados, "@/utils/fechas": fechas,
+  "next/link": { default: stub }, "@/utils/estado-jornada": estados, "@/utils/fechas": fechas, "@/utils/duracion": cargar("utils/duracion.ts"),
   "@/hooks/use-resumen-tareas-local": { useResumenTareasLocal: (...args) => { consultarTareas = args[3]; return args[3] ? { hechas: 1, total: 3 } : null; } },
   "./ui/status-stamp": { StatusStamp: stub }, "./ui/estado-ruta-simple": { EstadoRutaSimple }, "./ui/foto-local": { FotoLocal: stub }, "./ui/iconos-campo": iconos,
 });
@@ -59,8 +59,15 @@ assert.equal(boton(tarjeta, "Finalizar Visita"), undefined);
 assert.equal(boton(tarjeta, "Tareas"), undefined);
 assert.equal(boton(tarjeta, "Inventario"), undefined);
 assert.ok(texto(tarjeta).includes("08:00–18:00"), "Conserva los horarios del impulsador");
+assert.equal(boton(tarjeta, "Novedad").props.disabled, true, "Sin visita iniciada no se reporta novedad");
+const enCurso = { ...base.agenda, visitas: [{ id: 9, estado: "EN_CURSO", entrada: `${hoy}T11:00:00Z`, salida: null }] };
+tarjeta = TarjetaAgendaRepositor({ ...base, agenda: enCurso, soloConsulta: true });
+assert.equal(boton(tarjeta, "Novedad").props.disabled, false);
 boton(tarjeta, "Novedad").props.onClick();
 assert.equal(novedades, 1);
+const cerrada = { ...base.agenda, visitas: [{ id: 8, estado: "CERRADA", entrada: `${hoy}T11:10:00Z`, salida: `${hoy}T11:26:00Z` }] };
+assert.ok(texto(TarjetaAgendaRepositor({ ...base, agenda: cerrada, soloConsulta: true })).includes("16 min"), "Muestra cuánto duró la visita");
+tarjeta = TarjetaAgendaRepositor({ ...base, soloConsulta: true });
 const operativa = { ...base, hoy: true, revisionTareas: 0, onInventario: () => { inventarios++; }, onEntrada: () => { entradas++; }, onSalida: () => { salidas++; }, onTareas: stub };
 tarjeta = TarjetaAgendaRepositor(operativa);
 assert.equal(consultarTareas, true);

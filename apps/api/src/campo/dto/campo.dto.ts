@@ -63,6 +63,15 @@ export class ConsultaCampoDto extends PaginacionDto {
   fechaFin?: string;
 }
 
+/** Pestaña Locales del superadmin: empresa elegida, búsqueda y paginación. */
+export class ConsultaLocalesEmpresaDto extends ConsultaCampoDto {
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(MAX_INT4)
+  empresaId!: number;
+}
+
 function fechaHastaCalendario(value: unknown): string | null {
   if (value == null) return null;
   if (value instanceof Date && !Number.isNaN(value.getTime())) {

@@ -7,14 +7,8 @@ import { crearNovedadCampo } from "@/lib/api-adjuntos-campo";
 import { mensajeError } from "@/utils/error";
 import { SelectorFotosCampo } from "./selector-fotos-campo";
 import { IconoCheck } from "./ui/iconos-campo";
+import { SelectorTipoNovedad } from "./ui/selector-tipo-novedad";
 import type { TipoNovedad } from "@/types/campo";
-
-const TIPOS: { valor: TipoNovedad; etiqueta: string }[] = [
-  { valor: "INCIDENCIA", etiqueta: "Incidencia" },
-  { valor: "RECLAMO", etiqueta: "Reclamo" },
-  { valor: "CONSULTA", etiqueta: "Consulta" },
-  { valor: "SUGERENCIA", etiqueta: "Sugerencia" },
-];
 
 const campo =
   "w-full min-h-11 rounded-lg border border-line bg-surface-raised px-3 py-2 text-sm text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus";
@@ -108,23 +102,7 @@ export function ModalNovedadLocal({
 
           <fieldset disabled={enviando} className="min-w-0">
             <legend className="mb-1 text-xs font-semibold text-foreground">Tipo</legend>
-            <div className="grid grid-cols-2 gap-1.5">
-              {TIPOS.map((t) => (
-                <button
-                  key={t.valor}
-                  type="button"
-                  aria-pressed={tipo === t.valor}
-                  onClick={() => setTipo(t.valor)}
-                  className={`min-h-11 cursor-pointer rounded-lg border px-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${
-                    tipo === t.valor
-                      ? "border-foreground bg-foreground text-background"
-                      : "border-line bg-surface-raised text-foreground hover:bg-surface-soft"
-                  }`}
-                >
-                  {t.etiqueta}
-                </button>
-              ))}
-            </div>
+            <SelectorTipoNovedad valor={tipo} onCambiar={setTipo} />
           </fieldset>
 
           <div>

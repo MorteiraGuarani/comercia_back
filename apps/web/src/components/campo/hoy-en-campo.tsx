@@ -14,6 +14,7 @@ import {
   BotonActualizarTablero,
   ConteosFiltro,
   FilaAtencion,
+  LineaJornada,
   ListaAtencion,
   ORDEN_PRESENTISMO,
   PRESENTISMO_UI,
@@ -80,7 +81,7 @@ const PRIORIDAD_UI: Record<PrioridadNovedad, { punto: string; barra: string; eti
 
 const TITULO_INDICADOR: Record<IndicadorHoy, string> = {
   presentismo: "Presentismo",
-  visitas: "Mi Ruta",
+  visitas: "Itinerario",
   tareas: "Realización de tareas",
   novedades: "Novedades abiertas",
 };
@@ -337,6 +338,7 @@ export function HoyEnCampo() {
                 key={hoja.indicador}
                 indicador={hoja.indicador}
                 presentismoImpulsador={usuario.rol?.equipoCampo?.tipo === "IMPULSADOR"}
+                unDia={rango.desde === rango.hasta}
                 resumen={resumen}
                 equipo={equipo}
                 novedades={datos?.novedades ?? []}
@@ -423,7 +425,7 @@ function Indicadores({
     {
       clave: "visitas",
       letra: "B",
-      nombre: "Mi Ruta",
+      nombre: "Itinerario",
       tono: r.ausentes ? "bad" : r.incompletas ? "warn" : "ok",
       valor: (
         <>
@@ -732,9 +734,12 @@ function DetalleIndicador({
   abiertas,
   onAbrir,
   presentismoImpulsador = false,
+  unDia = false,
 }: {
   indicador: IndicadorHoy;
   presentismoImpulsador?: boolean;
+  /** Período de un solo día (hoy, ayer o una fecha): muestra inicio, final y duración de la jornada. */
+  unDia?: boolean;
   resumen: SupervisionResumenData;
   equipo: ColaboradorResumen[];
   novedades: NovedadCampoItem[];
@@ -749,7 +754,7 @@ function DetalleIndicador({
   const limpiar = () => setFiltro(null);
 
   if (indicador === "presentismo" && presentismoImpulsador) {
-    return <DetallePresentismoInicio resumen={resumen} equipo={equipo} onAbrir={(id) => onAbrir({ tipo: "persona", id })} />;
+    return <DetallePresentismoInicio resumen={resumen} equipo={equipo} unDia={unDia} onAbrir={(id) => onAbrir({ tipo: "persona", id })} />;
   }
 
   if (indicador === "presentismo") {
@@ -758,6 +763,7 @@ function DetalleIndicador({
       clave: estado,
       etiqueta: PRESENTISMO_UI[estado].etiqueta,
       valor: e[estado],
+      detalle: `${pct(e[estado], resumen.presentismo.totalEquipo)}%`,
       punto: PRESENTISMO_UI[estado].barra,
     }));
     const visibles = filtro ? equipo.filter((c) => c.estadoPresentismo === filtro) : equipo;
@@ -788,10 +794,10 @@ function DetalleIndicador({
                   derecha={
                     <span className={`whitespace-nowrap rounded-md px-1.5 text-[11px] font-bold ${PRESENTISMO_UI[c.estadoPresentismo].pill}`}>
                       {PRESENTISMO_UI[c.estadoPresentismo].etiqueta}
-                      {c.inicioJornada ? ` · ${c.inicioJornada}` : ""}
                     </span>
                   }
                 >
+                  {unDia ? <LineaJornada inicio={c.inicioJornada} fin={c.finJornada} /> : null}
                   {c.estadoPresentismo === "AUSENTE" && telefonoValido(c.telefono) ? (
                     <a
                       href={hrefTelefono(c.telefono)}
@@ -816,7 +822,7 @@ function DetalleIndicador({
       { clave: "en_curso", etiqueta: "En curso", valor: r.enCurso, clase: "text-sky-700 dark:text-sky-300" },
       { clave: "pendientes", etiqueta: "Pendientes", valor: r.pendientes },
       { clave: "sin_visitar", etiqueta: "Sin visitar", valor: r.ausentes + r.incompletas, clase: "text-red-700 dark:text-red-300" },
-    ];
+    ].map((k) => ({ ...k, detalle: `${pct(k.valor, r.total)}%` }));
     const visibles = filtrarPorConteo(equipo, FILTROS_RUTA, filtro);
     return (
       <>
@@ -868,7 +874,7 @@ function DetalleIndicador({
       { clave: "hechas", etiqueta: "Hechas", valor: t.completadas, clase: "text-brand-700 dark:text-brand-200" },
       { clave: "pendientes", etiqueta: "Pendientes", valor: Math.max(0, t.total - t.completadas) },
       { clave: "obligatorias", etiqueta: "Obligatorias", valor: t.obligatoriasPendientes, clase: "text-red-700 dark:text-red-300" },
-    ];
+    ].map((k) => ({ ...k, detalle: `${pct(k.valor, t.total)}%` }));
     const visibles = filtrarPorConteo(porObligatorias, FILTROS_TAREAS, filtro);
     return (
       <>
@@ -927,6 +933,7 @@ function DetalleIndicador({
     clave: p,
     etiqueta: PRIORIDAD_UI[p].etiqueta,
     valor: novedades.filter((n) => n.prioridad === p).length,
+    detalle: `${pct(novedades.filter((n) => n.prioridad === p).length, novedades.length)}%`,
     punto: PRIORIDAD_UI[p].punto,
   }));
   const visibles = filtro ? novedades.filter((n) => n.prioridad === filtro) : novedades;
@@ -1045,8 +1052,18 @@ function HojaColaborador({
           <div className={panel}>
             <h3 className={tituloPanel}>Agenda del día</h3>
             {detalle.ruta.length ? (
-              detalle.ruta.map((p) => (
-                <div key={p.id} className="flex min-w-0 items-center justify-between gap-2 border-t border-line py-2 first:border-t-0 first:pt-0 last:pb-0">
+              detalle.ruta.map((p) => {
+                // Llegó tarde a este local: la fila se pinta para verlo de un vistazo.
+                const tarde = p.estadoPresentismo === "TARDE";
+                return (
+                <div
+                  key={p.id}
+                  className={`flex min-w-0 items-center justify-between gap-2 ${
+                    tarde
+                      ? "-mx-2 my-1 rounded-lg border border-amber-300 bg-amber-50 px-2 py-2 dark:border-amber-800 dark:bg-amber-950/50"
+                      : "border-t border-line py-2 first:border-t-0 first:pt-0 last:pb-0"
+                  }`}
+                >
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-semibold text-foreground">{p.local}</span>
                     <span className="block truncate text-[11px] text-muted">
@@ -1054,12 +1071,18 @@ function HojaColaborador({
                         .filter(Boolean)
                         .join(" · ")}
                     </span>
+                    {tarde ? (
+                      <span className="mt-0.5 block text-[11px] font-semibold text-amber-800 dark:text-amber-300">
+                        Llegó tarde
+                      </span>
+                    ) : null}
                   </span>
                   <span className={`shrink-0 whitespace-nowrap rounded-md px-1.5 text-[11px] font-bold ${RUTA_PILL[p.estado]}`}>
                     {RUTA[p.estado].etiqueta}
                   </span>
                 </div>
-              ))
+                );
+              })
             ) : (
               <p className="text-sm text-muted">Sin locales en la agenda de {cuando}.</p>
             )}

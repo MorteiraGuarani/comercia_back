@@ -1,5 +1,5 @@
 import type { PeriodoFiltro } from "@/types/periodo-filtro";
-import { agregarDiasIso, lunesDeIso } from "./fechas";
+import { agregarDiasIso } from "./fechas";
 
 /** Rangos compartidos por Inicio, Mi Ruta, Presentismo y Tareas. */
 export function periodosDesdeHoy(hoy: string): PeriodoFiltro[] {
@@ -9,7 +9,7 @@ export function periodosDesdeHoy(hoy: string): PeriodoFiltro[] {
   return [
     { clave: "hoy", etiqueta: "Hoy", fecha: hoy, fechaInicio: hoy, fechaFin: hoy },
     { clave: "ayer", etiqueta: "Ayer", fecha: ayer, fechaInicio: ayer, fechaFin: ayer },
-    { clave: "esta_semana", etiqueta: "Semana", fechaInicio: lunesDeIso(hoy), fechaFin: hoy },
+    { clave: "ultimos_7", etiqueta: "7 días", fechaInicio: agregarDiasIso(hoy, -6), fechaFin: hoy },
     { clave: "este_mes", etiqueta: "Mes", fechaInicio: primerDiaMes, fechaFin: hoy },
     { clave: "mes_pasado", etiqueta: "Mes Pasado", fechaInicio: `${ultimoDiaMesPasado.slice(0, 7)}-01`, fechaFin: ultimoDiaMesPasado },
   ];
@@ -37,10 +37,10 @@ export function consultaPeriodoInicio(periodo: PeriodoFiltro, hoy: string): stri
   return desde === hasta ? `fecha=${desde}` : `fechaInicio=${desde}&fechaFin=${hasta}`;
 }
 
-/** "hoy", "ayer", "esta semana", "este mes": para armar frases. */
+/** "hoy", "ayer", "los últimos 7 días", "este mes": para armar frases. */
 export function cuandoPeriodoInicio(periodo: PeriodoFiltro): string {
   const etiquetas: Record<string, string> = {
-    hoy: "hoy", ayer: "ayer", esta_semana: "esta semana", este_mes: "este mes", mes_pasado: "el mes pasado",
+    hoy: "hoy", ayer: "ayer", ultimos_7: "los últimos 7 días", este_mes: "este mes", mes_pasado: "el mes pasado",
   };
   return etiquetas[periodo.clave] ?? "en el período seleccionado";
 }

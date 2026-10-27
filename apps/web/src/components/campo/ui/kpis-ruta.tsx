@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { FiltroRuta } from "@/types/estado-jornada";
+import { pct } from "@/utils/hoy-en-campo";
 import {
   IconoCheck,
   IconoPlay,
@@ -26,6 +27,8 @@ interface Kpi {
   etiqueta: string;
   valor: number | string;
   detalle: string;
+  /** Parte del total de locales; sin total confiable no se muestra. */
+  porcentaje: number | null;
   icono: ReactNode;
   tarjeta: string;
   circulo: string;
@@ -43,12 +46,17 @@ export function KpisRuta({
   onFiltro,
 }: KpisRutaProps) {
   const detalle = porPagina ? "en esta página" : sufijo;
+  // Con la agenda paginada los conteos son de la página: el % saldría mal.
+  const base = typeof total === "number" && total > 0 && !porPagina ? total : null;
+  const porcentaje = (n: number) => (base === null ? null : pct(n, base));
   const kpis: Kpi[] = [
     {
       filtro: "todos",
       etiqueta: "Locales",
       valor: total,
-      detalle: "en tu ruta",
+      // En Locales el % es el avance: cuántos ya se visitaron.
+      detalle: base === null ? "en tu ruta" : `${pct(visitadas, base)}% visitado`,
+      porcentaje: null,
       icono: <IconoTienda className="h-4 w-4 sm:h-5 sm:w-5" />,
       tarjeta:
         "border-brand-100 bg-brand-50 hover:border-brand-500 dark:border-brand-900 dark:bg-brand-950/50 dark:hover:border-brand-500",
@@ -60,6 +68,7 @@ export function KpisRuta({
       etiqueta: "Pendientes",
       valor: pendientes,
       detalle: !porPagina && sufijo === "hoy" ? "para hoy" : detalle,
+      porcentaje: porcentaje(pendientes),
       icono: <IconoReloj className="h-4 w-4 sm:h-5 sm:w-5" />,
       tarjeta:
         "border-stone-200 bg-stone-50 hover:border-stone-400 dark:border-stone-800 dark:bg-stone-900/40 dark:hover:border-stone-500",
@@ -71,6 +80,7 @@ export function KpisRuta({
       etiqueta: "En curso",
       valor: enCurso,
       detalle: porPagina ? detalle : "ahora",
+      porcentaje: porcentaje(enCurso),
       icono: <IconoPlay className="h-3.5 w-3.5 sm:h-4 sm:w-4" />,
       tarjeta:
         "border-sky-100 bg-sky-50 hover:border-sky-400 dark:border-sky-900 dark:bg-sky-950/40 dark:hover:border-sky-600",
@@ -82,6 +92,7 @@ export function KpisRuta({
       etiqueta: "Visitados",
       valor: visitadas,
       detalle,
+      porcentaje: porcentaje(visitadas),
       icono: <IconoCheck className="h-4 w-4 sm:h-5 sm:w-5" />,
       tarjeta:
         "border-emerald-100 bg-emerald-50 hover:border-emerald-400 dark:border-emerald-900 dark:bg-emerald-950/40 dark:hover:border-emerald-600",
@@ -120,6 +131,11 @@ export function KpisRuta({
                 <span className="ft-display truncate text-xl font-bold leading-none tabular-nums text-foreground sm:text-3xl">
                   {k.valor}
                 </span>
+                {k.porcentaje !== null ? (
+                  <span className="truncate text-[11px] font-semibold tabular-nums text-muted sm:text-sm">
+                    {k.porcentaje}%
+                  </span>
+                ) : null}
               </span>
               <span className="ft-display mt-1 truncate text-xs font-semibold leading-tight text-foreground sm:mt-1.5 sm:text-sm">
                 {k.etiqueta}

@@ -324,7 +324,7 @@ function InicioResumen({
                 />
                 <KpiInicio
                   href={href("visitas")}
-                  label="Mi Ruta"
+                  label="Itinerario"
                   value={
                     !errores.includes("Equipo") && resumen
                       ? `${resumen.rutas.pct}%`
@@ -365,7 +365,7 @@ function InicioResumen({
                 />
                 <KpiInicio
                   href={href(rutaPagina)}
-                  label="Mi Ruta"
+                  label="Itinerario"
                   value={errores.includes("Locales") ? "—" : (locales ?? "—")}
                   detail="Locales asignados en el período"
                   tone="fresco"

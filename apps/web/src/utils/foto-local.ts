@@ -1,14 +1,15 @@
 // Datos de la ilustración del frente de un local cuando no hay imagen cargada.
 
+// Tonos apagados: la ilustración acompaña, no compite con los estados de la tarjeta.
 const COLORES_CARTEL = [
-  "#2f6b2a",
-  "#1d4fa0",
-  "#c4161c",
-  "#8a3b1e",
-  "#c96a0c",
-  "#5a4a8a",
-  "#0b6b5f",
-  "#9b1c4a",
+  "#5f7a5c",
+  "#5a7090",
+  "#97605b",
+  "#86695a",
+  "#9e8460",
+  "#6f6886",
+  "#5b7d76",
+  "#8a6573",
 ] as const;
 
 /** Color estable del cartel: el mismo local siempre se dibuja igual. */

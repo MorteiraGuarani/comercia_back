@@ -5,7 +5,7 @@ export function etiquetaPaginaMenu(
   paginaRuta: string,
   nombre: string,
 ) {
-  if (moduloRuta === "mi-jornada" && paginaRuta === "locales") return "Mi Ruta";
+  if (moduloRuta === "mi-jornada" && paginaRuta === "locales") return "Itinerario";
   if (moduloRuta === "mi-jornada" && paginaRuta === "tareas") return "Mis tareas";
   if (moduloRuta === "gestion-campo" && paginaRuta === "locales") return "Itinerario";
   if (moduloRuta === "gestion-campo" && paginaRuta === "visitas") return "Presentismo";
@@ -14,7 +14,7 @@ export function etiquetaPaginaMenu(
   return nombre;
 }
 
-// Las tareas se hacen desde el modal del local en Mi Ruta (fotos, comentarios
+// Las tareas se hacen desde el modal del local en Itinerario (fotos, comentarios
 // y terminar): la página Mis tareas queda deshabilitada para todos.
 export function sinMisTareas(modulos: ModuloMenu[]): ModuloMenu[] {
   return modulos.map((m) =>

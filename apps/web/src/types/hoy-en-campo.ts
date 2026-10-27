@@ -25,6 +25,24 @@ export interface ResumenMiDia {
   primeraEntrada: string | null;
 }
 
+/** Una visita propia en el modal de Presentismo de "Tu día". */
+export interface VisitaPropia {
+  id: number;
+  local: string;
+  entrada: string;
+  salida: string | null;
+  estado: import("./estado-jornada").EstadoVisita;
+  estadoPresentismo: import("./estado-jornada").EstadoPresentismo;
+  /** Duración en minutos; null si la visita no se finalizó. */
+  minutos: number | null;
+}
+
+/** Las visitas de un día (YYYY-MM-DD), ordenadas por hora de entrada. */
+export interface DiaJornadas {
+  fecha: string;
+  visitas: VisitaPropia[];
+}
+
 /** Fila de "Atender ahora". */
 export interface ItemAtencionHoy {
   clave: string;

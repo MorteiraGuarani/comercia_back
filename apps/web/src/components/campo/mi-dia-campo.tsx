@@ -34,6 +34,7 @@ import {
 } from "@/utils/periodo-inicio";
 import { SelectorPeriodoInicio } from "./ui/periodo-inicio";
 import { SaludoRuta } from "./ui/saludo-ruta";
+import { JornadasPropias } from "./jornadas-propias";
 import { pct, resumenMiDia } from "@/utils/hoy-en-campo";
 import { tareaCumplidaEnVisita } from "@/utils/tareas-campo";
 import { hayTareasAsignadas } from "@/lib/disponibilidad-tareas";
@@ -73,7 +74,8 @@ export function MiDiaCampo() {
     : pagina("agenda")
       ? "/panel/mi-jornada/agenda"
       : null;
-  const rutaTareas = pagina("tareas") ? "/panel/mi-jornada/tareas" : null;
+  // Mis tareas ya no existe: las tareas se hacen en el modal del local, en Itinerario.
+  const rutaTareas = rutaRuta;
   const rutaNovedades = pagina("novedades") ? "/panel/mi-jornada/novedades" : null;
   const rutaAvisos = pagina("avisos") ? "/panel/mi-jornada/avisos" : null;
   const hoy = fechaEnZonaIso(new Date());
@@ -93,6 +95,8 @@ export function MiDiaCampo() {
     setDatos(null);
   };
   const [error, setError] = useState("");
+  // Presentismo abre "Tus jornadas" (visitas del período por día) en vez de ir a Itinerario.
+  const [verJornadas, setVerJornadas] = useState(false);
   const cargando = terminada !== claveCarga;
   const actualizar = () => setRevision((n) => n + 1);
 
@@ -161,6 +165,7 @@ export function MiDiaCampo() {
   const visitaHoy = datos?.abierta && datos.abierta.fecha.slice(0, 10) === hoy ? datos.abierta : null;
   const visitaVieja = datos?.abierta && !visitaHoy ? datos.abierta : null;
   const localVisita = visitaHoy ? agenda.find((a) => a.id === visitaHoy.asignacionId) : undefined;
+  const hrefTareas = rutaRuta && localVisita ? `${rutaRuta}?tareas=${localVisita.id}` : rutaRuta;
   const tareas = datos?.tareas ?? null;
   const hechas = tareas ? tareas.filter((t) => tareaCumplidaEnVisita(t, visitaHoy?.id)).length : 0;
   const obligPend = tareas
@@ -216,8 +221,8 @@ export function MiDiaCampo() {
               <TarjetaIndicador
                 letra="A"
                 nombre="Presentismo"
-                etiqueta="Ir a Mi Ruta"
-                href={rutaRuta ?? undefined}
+                etiqueta="Ver tus jornadas"
+                onClick={() => setVerJornadas(true)}
                 tono={ui.tono}
                 valor={<span className="text-2xl sm:text-3xl">{ui.etiqueta}</span>}
                 barra={
@@ -235,8 +240,8 @@ export function MiDiaCampo() {
               />
               <TarjetaIndicador
                 letra="B"
-                nombre="Mi Ruta"
-                etiqueta="Ir a Mi Ruta"
+                nombre="Itinerario"
+                etiqueta="Ir a Itinerario"
                 href={rutaRuta ?? undefined}
                 tono={r.ausentes ? "bad" : r.incompletas ? "warn" : "ok"}
                 valor={
@@ -266,8 +271,8 @@ export function MiDiaCampo() {
               <TarjetaIndicador
                 letra="C"
                 nombre="Tareas"
-                etiqueta="Ir a Mis tareas"
-                href={rutaTareas ?? undefined}
+                etiqueta="Ver tareas en Itinerario"
+                href={hrefTareas ?? undefined}
                 disabled={sinTareas}
                 tono={!tareas ? "info" : obligPend ? "warn" : "ok"}
                 valor={
@@ -389,7 +394,7 @@ export function MiDiaCampo() {
                     titulo={`${obligPend} ${obligPend === 1 ? "tarea obligatoria pendiente" : "tareas obligatorias pendientes"}`}
                     detalle={localVisita ? `En ${localVisita.local.nombre}` : "De la visita en curso"}
                     accion="Ver"
-                    href={rutaTareas ?? undefined}
+                    href={hrefTareas ?? undefined}
                   />
                 ) : null}
                 {avisosSinLeer.length ? (
@@ -446,13 +451,16 @@ export function MiDiaCampo() {
                   href={rutaRuta}
                   className={`flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg border border-line bg-surface-raised px-3 text-sm font-semibold text-foreground transition-colors hover:border-brand-500 hover:bg-surface-soft ${enfoqueTablero}`}
                 >
-                  Ver todo en Mi Ruta <span aria-hidden="true">→</span>
+                  Ver todo en Itinerario <span aria-hidden="true">→</span>
                 </Link>
               ) : null}
             </SeccionTablero>
           </div>
         </>
       )}
+      {verJornadas && datos ? (
+        <JornadasPropias agenda={agenda} cuando={cuando} cerrar={() => setVerJornadas(false)} />
+      ) : null}
     </section>
   );
 }

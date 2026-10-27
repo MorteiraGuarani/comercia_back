@@ -17,7 +17,8 @@ import type {
 } from "@/types/toast";
 import { registrarListenerToast } from "./toast-controller";
 
-const DURACION_EXITO_MS = 7_000;
+// Todos los mensajes (éxito, aviso o error) se van solos; la X los cierra antes.
+const DURACION_MS = 7_000;
 const ContextoToast = createContext<ToastContexto | null>(null);
 
 const estilos: Record<
@@ -173,13 +174,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         clavesPorId.current.set(id, entrada.clave);
       }
 
-      if (entrada.tipo === "exito") {
-        const temporizador = window.setTimeout(
-          () => cerrarToast(id),
-          DURACION_EXITO_MS,
-        );
-        temporizadores.current.set(id, temporizador);
-      }
+      temporizadores.current.set(
+        id,
+        window.setTimeout(() => cerrarToast(id), DURACION_MS),
+      );
 
       return id;
     },

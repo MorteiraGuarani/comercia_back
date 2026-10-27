@@ -135,16 +135,15 @@ export function TareasDeLocal({
         tarjetaMovil={(t) => (
           <div className="min-w-0 space-y-2 rounded-xl border border-line bg-surface-raised px-3 py-2.5">
             <div className="flex min-w-0 items-start gap-3">
-              <span
-                aria-hidden="true"
-                className={`mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-md border-2 ${
-                  hecha(t)
-                    ? "border-emerald-600 bg-emerald-600 text-white dark:border-emerald-500 dark:bg-emerald-500 dark:text-emerald-950"
-                    : "border-line bg-surface-raised"
-                }`}
-              >
-                {hecha(t) ? <IconoCheck className="h-3.5 w-3.5" /> : null}
-              </span>
+              {/* Tilde solo al terminarla: un cuadro vacío parecía un checkbox que no hacía nada. */}
+              {hecha(t) ? (
+                <span
+                  aria-hidden="true"
+                  className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-emerald-600 text-white motion-safe:animate-aparecer dark:bg-emerald-500 dark:text-emerald-950"
+                >
+                  <IconoCheck className="h-3.5 w-3.5" />
+                </span>
+              ) : null}
               <div className="min-w-0 flex-1">
                 <p
                   className={`text-[13px] font-semibold leading-snug ${hecha(t) ? "text-muted line-through" : "text-foreground"}`}

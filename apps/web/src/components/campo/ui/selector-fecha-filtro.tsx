@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useId, useState, useRef, useEffect } from "react";
-import { fechaEnZonaIso } from "@/utils/fechas";
+import { fechaEnZonaIso, textoRangoFechas } from "@/utils/fechas";
 import { periodosDesdeHoy } from "@/utils/periodo-inicio";
 import type { PeriodoFiltro } from "@/types/periodo-filtro";
 import { useHojaDeslizable } from "@/hooks/use-hoja-deslizable";
@@ -15,6 +15,9 @@ export function SelectorFechaFiltro({ valorActual, onChange }: SelectorFechaFilt
   const hoyStr = fechaEnZonaIso(new Date());
   const presets = periodosDesdeHoy(hoyStr);
   const seleccion = presets.find((p) => p.clave === valorActual.clave) ?? valorActual;
+  // A la vista van Hoy, Ayer, 7 días y Mes; el calendario abre el resto y la fecha personalizada.
+  const rapidos = presets.slice(0, 4);
+  const otroPeriodo = !rapidos.some((p) => p.clave === valorActual.clave);
   const [abierto, setAbierto] = useState(false);
   const [personalizadoAbierto, setPersonalizadoAbierto] = useState(false);
   const panelId = useId();
@@ -87,7 +90,7 @@ export function SelectorFechaFiltro({ valorActual, onChange }: SelectorFechaFilt
               day: "numeric",
               month: "short",
             })
-          : `${inicio} — ${fin}`,
+          : textoRangoFechas(inicio, fin),
       fecha: inicio === fin ? inicio : undefined,
       fechaInicio: inicio,
       fechaFin: fin,
@@ -101,43 +104,49 @@ export function SelectorFechaFiltro({ valorActual, onChange }: SelectorFechaFilt
       : (seleccion.fecha ?? hoyStr);
 
   return (
-    <div className="relative inline-block text-left" ref={popoverRef}>
+    <div className="relative flex min-w-0 flex-wrap items-center gap-1.5 text-left" ref={popoverRef}>
+      <div role="group" aria-label="Período" className="flex min-w-0 items-center gap-1.5">
+        {rapidos.map((p) => {
+          const activo = valorActual.clave === p.clave;
+          return (
+            <button
+              key={p.clave}
+              type="button"
+              aria-pressed={activo}
+              onClick={() => seleccionarPreset(p)}
+              className={`min-h-11 shrink-0 cursor-pointer whitespace-nowrap rounded-full border px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${
+                activo
+                  ? "border-brand-700 bg-brand-700 text-white dark:border-brand-500 dark:bg-brand-500 dark:text-brand-950"
+                  : "border-line bg-surface-raised text-foreground hover:bg-surface-soft"
+              }`}
+            >
+              {p.etiqueta}
+            </button>
+          );
+        })}
+      </div>
       <button
         type="button"
         onClick={alternar}
         aria-expanded={abierto}
         aria-controls={panelId}
         aria-haspopup="dialog"
-        className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-line bg-surface-raised px-3 py-2 text-xs text-foreground shadow-sm transition-colors hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40"
-        title="Cambiar fecha o período de visualización"
+        aria-label={otroPeriodo ? `Período: ${valorActual.etiqueta}. Personalizar fecha` : "Personalizar fecha"}
+        title="Personalizar fecha"
+        className={`ml-auto flex min-h-11 min-w-11 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-full border px-2.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${
+          otroPeriodo
+            ? "border-brand-700 bg-brand-700 text-white dark:border-brand-500 dark:bg-brand-500 dark:text-brand-950"
+            : "border-line bg-surface-raised text-accent-ink hover:bg-surface-soft"
+        }`}
       >
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent-ink">
+        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
           <line x1="16" y1="2" x2="16" y2="6" />
           <line x1="8" y1="2" x2="8" y2="6" />
           <line x1="3" y1="10" x2="21" y2="10" />
         </svg>
-
-        <div className="flex flex-col text-left">
-          <span className="text-[10px] uppercase font-bold tracking-wider text-muted leading-none">
-            Período:
-          </span>
-          <span className="ft-mono font-bold text-xs text-foreground leading-tight mt-0.5">
-            {valorActual.etiqueta}
-          </span>
-        </div>
-
-        <svg
-          width="12"
-          height="12"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          className={`text-muted transition-transform ${abierto ? "rotate-180" : ""}`}
-        >
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
+        {/* Con un período fuera de los chips, el calendario dice cuál es. */}
+        {otroPeriodo ? <span className="max-w-[9rem] truncate">{valorActual.etiqueta}</span> : null}
       </button>
 
       {abierto && (

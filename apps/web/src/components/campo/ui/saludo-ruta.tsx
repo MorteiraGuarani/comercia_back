@@ -5,7 +5,7 @@ interface SaludoRutaProps {
   /** Día o rango consultado, a la izquierda debajo del saludo. */
   fechaTexto: string;
   resumen: string;
-  /** Selector de período, a la derecha. */
+  /** Selector de período, debajo del saludo y a todo el ancho. */
   children: ReactNode;
 }
 
@@ -54,7 +54,7 @@ export function SaludoRuta({
         </svg>
       </div>
 
-      <div className="relative flex min-w-0 items-center justify-between gap-3">
+      <div className="relative min-w-0">
         <div className="min-w-0">
           <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-200 sm:text-[11px]">
             {fechaTexto}
@@ -64,7 +64,7 @@ export function SaludoRuta({
           </h1>
           <p className="mt-0.5 text-xs text-muted sm:text-sm">{resumen}</p>
         </div>
-        <div className="shrink-0">{children}</div>
+        <div className="mt-2.5 min-w-0">{children}</div>
       </div>
     </section>
   );

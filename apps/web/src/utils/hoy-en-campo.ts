@@ -7,6 +7,7 @@ import type {
 } from "@/types/campo";
 import type { EstadoPresentismo } from "@/types/estado-jornada";
 import type {
+  DiaJornadas,
   FiltroEquipoHoy,
   ItemAtencionHoy,
   ResumenMiDia,
@@ -85,6 +86,33 @@ export function ordenarEquipo(equipo: ColaboradorResumen[]) {
       a.ruta.pct - b.ruta.pct ||
       a.nombre.localeCompare(b.nombre),
   );
+}
+
+/** Visitas propias del período agrupadas por día (el más reciente primero), con su duración. */
+export function jornadasPorDia(agendas: AgendaCampo[]): DiaJornadas[] {
+  const dias = new Map<string, DiaJornadas["visitas"]>();
+  for (const a of agendas)
+    for (const v of a.visitas) {
+      const fecha = v.fecha.slice(0, 10);
+      dias.set(fecha, [
+        ...(dias.get(fecha) ?? []),
+        {
+          id: v.id,
+          local: a.local.nombre,
+          entrada: v.entrada,
+          salida: v.salida,
+          estado: v.estado,
+          estadoPresentismo: v.estadoPresentismo,
+          minutos: v.salida ? (Date.parse(v.salida) - Date.parse(v.entrada)) / 60_000 : null,
+        },
+      ]);
+    }
+  return [...dias.entries()]
+    .sort(([a], [b]) => b.localeCompare(a))
+    .map(([fecha, visitas]) => ({
+      fecha,
+      visitas: visitas.sort((x, y) => x.entrada.localeCompare(y.entrada)),
+    }));
 }
 
 /** Totales del día propio a partir de la agenda (inicio del personal de campo). */

@@ -161,6 +161,11 @@ export default function PanelLayout({
         })),
     ),
   ];
+  // Presentismo va segundo, después de Inicio (supervisores y team leaders).
+  const presentismo = enlaces.findIndex(
+    (e) => e.href === "/panel/gestion-campo/visitas",
+  );
+  if (presentismo > 1) enlaces.splice(1, 0, ...enlaces.splice(presentismo, 1));
   const tieneInventario = modulos.some(
     (m) =>
       m.ruta === "mi-jornada" && m.paginas.some((p) => p.ruta === "inventario"),

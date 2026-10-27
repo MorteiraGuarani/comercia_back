@@ -1,6 +1,7 @@
 "use client";
 import { RUTA } from "@/utils/estado-jornada";
 import { formatoFechaCalendario, formatoHora } from "@/utils/fechas";
+import { formatoDuracionMinutos } from "@/utils/duracion";
 import { useResumenTareasLocal } from "@/hooks/use-resumen-tareas-local";
 import type { EstadoRuta } from "@/types/estado-jornada";
 import type { AgendaCampo, VisitaCampo } from "@/types/campo";
@@ -94,8 +95,9 @@ const btnBase =
 const btnPrincipal = `${btnBase} bg-brand-700 text-white shadow-sm hover:bg-brand-800 dark:bg-brand-500 dark:text-brand-950 dark:hover:brightness-110`;
 const btnSalida = `${btnBase} border border-red-300 bg-red-50 text-red-700 hover:bg-red-100 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300 dark:hover:bg-red-950/70`;
 // Tareas e inventario, dentro del bloque de información del local.
+// En el celular, ícono arriba y texto abajo: así Tareas, Inventario y Novedad entran en una fila.
 const btnInfo =
-  "flex min-h-11 min-w-0 grow cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-lg border border-line bg-surface-raised px-2 text-xs font-semibold text-foreground transition-colors hover:border-brand-500 hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-line disabled:hover:bg-surface-raised";
+  "flex min-h-11 min-w-0 cursor-pointer flex-col items-center justify-center gap-0.5 whitespace-nowrap rounded-lg border border-line bg-surface-raised px-1 py-1.5 text-xs font-semibold text-foreground sm:flex-row sm:gap-1 sm:px-2 transition-colors hover:border-brand-500 hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-line disabled:hover:bg-surface-raised";
 
 function Marcador({ estado, orden }: { estado: EstadoRuta; orden: number }) {
   const base =
@@ -168,6 +170,9 @@ export function TarjetaAgendaRepositor({
   const horarios = a.local.horarios;
   const visitaAqui =
     visitaAbierta?.asignacionId === a.id ? visitaAbierta : null;
+  // Novedad solo con la visita iniciada (la del impulsador llega de UCheck como EN_CURSO).
+  const enVisita =
+    !!visitaAqui || a.visitas.some((v) => v.estado === "EN_CURSO");
   // Las tareas solo se trabajan con la entrada marcada en este local.
   const tareas = useResumenTareasLocal(
     a.id,
@@ -306,64 +311,72 @@ export function TarjetaAgendaRepositor({
                     : "Sin horario fijado"}
                 </div>
               ) : null}
-
-              <div className="mt-auto flex flex-wrap gap-1.5 pt-1">
-                {/* Tareas e inventario se usan dentro del local: con la entrada marcada. */}
-                {!soloConsulta ? (
-                  <button
-                    type="button"
-                    onClick={onTareas}
-                    disabled={!visitaAqui}
-                    title={
-                      visitaAqui
-                        ? undefined
-                        : "Iniciá la visita para ver las tareas"
-                    }
-                    aria-label={
-                      tareas
-                        ? `Tareas de ${a.local.nombre}: ${tareas.hechas} de ${tareas.total} hechas`
-                        : `Tareas de ${a.local.nombre}`
-                    }
-                    className={btnInfo}
-                  >
-                    <IconoTareas className="h-3.5 w-3.5 shrink-0" />
-                    Tareas
-                    {tareas ? (
-                      <span
-                        className={`rounded-md px-1.5 text-[11px] font-bold tabular-nums ${
-                          tareasCompletas
-                            ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-                            : "bg-brand-100 text-brand-800 dark:bg-brand-900 dark:text-brand-100"
-                        }`}
-                      >
-                        {tareas.hechas}/{tareas.total}
-                      </span>
-                    ) : null}
-                  </button>
-                ) : null}
-                {!soloConsulta && onInventario ? (
-                  <button
-                    type="button"
-                    onClick={onInventario}
-                    disabled={!visitaAqui}
-                    title={visitaAqui ? undefined : "Iniciá la visita para usar el inventario"}
-                    className={btnInfo}
-                  >
-                    <IconoCaja className="h-3.5 w-3.5 shrink-0" />
-                    Inventario
-                  </button>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={onNovedad}
-                  aria-label={`Reportar una novedad de ${a.local.nombre}`}
-                  className={btnInfo}
-                >
-                  <IconoAlerta className="h-3.5 w-3.5 shrink-0" />
-                  Novedad
-                </button>
-              </div>
             </div>
+          </div>
+
+          <div className="grid auto-cols-fr grid-flow-col gap-1.5">
+            {/* Tareas e inventario se usan dentro del local: con la entrada marcada. */}
+            {!soloConsulta ? (
+              <button
+                type="button"
+                onClick={onTareas}
+                disabled={!visitaAqui}
+                title={
+                  visitaAqui
+                    ? undefined
+                    : "Iniciá la visita para ver las tareas"
+                }
+                aria-label={
+                  tareas
+                    ? `Tareas de ${a.local.nombre}: ${tareas.hechas} de ${tareas.total} hechas`
+                    : `Tareas de ${a.local.nombre}`
+                }
+                className={btnInfo}
+              >
+                <IconoTareas className="h-3.5 w-3.5 shrink-0" />
+                <span className="inline-flex items-center gap-1">
+                  Tareas
+                  {tareas ? (
+                    <span
+                      className={`rounded-md px-1.5 text-[11px] font-bold tabular-nums ${
+                        tareasCompletas
+                          ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                          : "bg-brand-100 text-brand-800 dark:bg-brand-900 dark:text-brand-100"
+                      }`}
+                    >
+                      {tareas.hechas}/{tareas.total}
+                    </span>
+                  ) : null}
+                </span>
+              </button>
+            ) : null}
+            {!soloConsulta && onInventario ? (
+              <button
+                type="button"
+                onClick={onInventario}
+                disabled={!visitaAqui}
+                title={
+                  visitaAqui
+                    ? undefined
+                    : "Iniciá la visita para usar el inventario"
+                }
+                className={btnInfo}
+              >
+                <IconoCaja className="h-3.5 w-3.5 shrink-0" />
+                Inventario
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={onNovedad}
+              disabled={!enVisita}
+              title={enVisita ? undefined : "Iniciá la visita para reportar una novedad"}
+              aria-label={`Reportar una novedad de ${a.local.nombre}`}
+              className={btnInfo}
+            >
+              <IconoAlerta className="h-3.5 w-3.5 shrink-0" />
+              Novedad
+            </button>
           </div>
 
           {a.visitas.length ? (
@@ -389,7 +402,20 @@ export function TarjetaAgendaRepositor({
                   {v.salida ? (
                     <span className="inline-flex items-center gap-1 text-foreground">
                       <IconoSalida className="h-3.5 w-3.5 shrink-0 text-muted" />
-                      Salida <b className="font-mono">{formatoHora(v.salida)}</b>
+                      Salida{" "}
+                      <b className="font-mono">{formatoHora(v.salida)}</b>
+                    </span>
+                  ) : null}
+                  {v.salida ? (
+                    // Cuánto duró la visita, a la derecha de la entrada y la salida.
+                    <span
+                      className="ml-auto inline-flex items-center gap-1 font-semibold text-foreground"
+                      title="Duración de la visita"
+                    >
+                      <IconoReloj className="h-3.5 w-3.5 shrink-0 text-muted" />
+                      {formatoDuracionMinutos(
+                        (Date.parse(v.salida) - Date.parse(v.entrada)) / 60_000,
+                      )}
                     </span>
                   ) : v.estado === "INCOMPLETA" ? (
                     // Se inició otro día y nunca se finalizó: la salida queda vacía.

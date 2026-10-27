@@ -74,13 +74,41 @@ export class CatalogoCampoService {
         if (!(error instanceof ForbiddenException)) throw error;
         return this.acceso.gestionar(usuarioId, 'tareas');
       });
-    const { skip, take, page, limit } = rangoPaginacion(query);
     const hoy = fechaCampo(relojCampo().fecha);
     const alcance = await this.alcanceItinerario(u, hoy);
-    const where = {
-      ...filtroLocales(u.empresaId, query.buscar),
-      ...alcance.locales,
-    };
+    return this.paginaLocales(
+      u.empresaId,
+      { ...filtroLocales(u.empresaId, query.buscar), ...alcance.locales },
+      alcance.asignacion,
+      query,
+    );
+  }
+
+  /**
+   * Superadmin (pestaña Locales de Administración): los locales de cualquier
+   * empresa y quién los atiende hoy, sin el recorte por equipo del Itinerario.
+   */
+  async localesEmpresa(empresaId: number, query: ConsultaCampoDto) {
+    const hoy = fechaCampo(relojCampo().fecha);
+    return this.paginaLocales(
+      empresaId,
+      filtroLocales(empresaId, query.buscar),
+      {
+        activo: true,
+        fechaDesde: { lte: hoy },
+        OR: [{ fechaHasta: null }, { fechaHasta: { gte: hoy } }],
+      },
+      query,
+    );
+  }
+
+  private async paginaLocales(
+    empresaId: number,
+    where: Prisma.SocioNegocioWhereInput,
+    asignacion: Prisma.AsignacionCampoWhereInput,
+    query: ConsultaCampoDto,
+  ) {
+    const { skip, take, page, limit } = rangoPaginacion(query);
     const [total, filas] = await Promise.all([
       this.prisma.socioNegocio.count({ where }),
       this.prisma.socioNegocio.findMany({
@@ -88,7 +116,7 @@ export class CatalogoCampoService {
         select: {
           ...CLIENTE_OCRD_SELECT,
           asignaciones: {
-            where: alcance.asignacion,
+            where: asignacion,
             select: {
               id: true,
               usuario: {
@@ -111,7 +139,7 @@ export class CatalogoCampoService {
     ]);
     const direcciones = await direccionesLocales(
       this.prisma,
-      u.empresaId,
+      empresaId,
       filas.map((l) => l.CardCode),
     );
     return respuestaPaginada(

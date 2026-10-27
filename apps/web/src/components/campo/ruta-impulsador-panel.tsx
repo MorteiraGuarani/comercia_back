@@ -319,7 +319,7 @@ function RutaImpulsadorDelPeriodo({
   };
   const rutaActual = rutaCalc?.qs === qsFecha ? rutaCalc : null;
   const btnAccion =
-    "inline-flex min-h-11 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border border-control-line bg-surface-raised px-3 text-xs font-semibold text-foreground transition-colors hover:border-brand-500 hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus";
+    "inline-flex min-h-11 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border border-control-line bg-surface-raised px-3 text-xs font-semibold text-foreground transition-colors hover:border-brand-500 hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-control-line disabled:hover:bg-surface-raised";
 
   return (
     <>
@@ -615,6 +615,12 @@ function RutaImpulsadorDelPeriodo({
             <button
               type="button"
               onClick={() => setNovedadLocal(a.local)}
+              disabled={!a.visitas.some((v) => v.estado === "EN_CURSO")}
+              title={
+                a.visitas.some((v) => v.estado === "EN_CURSO")
+                  ? undefined
+                  : "Iniciá la visita para reportar una novedad"
+              }
               className={btnAccion}
               aria-label={`Reportar novedad en ${a.local.nombre}`}
             >

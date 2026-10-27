@@ -21,6 +21,7 @@ import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { ApiOperation } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { SuperadminGuard } from '../auth/superadmin.guard';
 import type { RequestConUsuario } from '../auth/interfaces/request-con-usuario.interface';
 import { CatalogoCampoService } from './catalogo-campo.service';
 import { CardCodePipe } from '../common/pipes/card-code.pipe';
@@ -42,6 +43,7 @@ import {
   AsignacionCampoDto,
   BackupCampoDto,
   ConsultaCampoDto,
+  ConsultaLocalesEmpresaDto,
   EntradaCampoDto,
   EntradaRepositorCampoDto,
   HorarioCampoDto,
@@ -99,6 +101,17 @@ export class CampoController {
     @Query() q: ConsultaCampoDto,
   ) {
     return this.catalogo.locales(r.usuarioId, q);
+  }
+  // Solo superadmin: locales de cualquier empresa (pestaña Locales de Administración).
+  @Get('superadmin/locales')
+  @UseGuards(SuperadminGuard)
+  @ApiOperation({
+    summary: 'Locales de una empresa (superadmin)',
+    description:
+      'Socios de negocio de la empresa elegida con dirección, ubicación y quién los atiende hoy. Paginado; admite buscar por nombre o CardCode.',
+  })
+  localesEmpresa(@Query() q: ConsultaLocalesEmpresaDto) {
+    return this.catalogo.localesEmpresa(q.empresaId, q);
   }
   @Post('locales') crearLocal(
     @Req() r: RequestConUsuario,
@@ -501,14 +514,20 @@ export class CampoController {
 
   @Get('notificaciones/:id/inventario')
   @ApiOperation({
-    summary: 'Detalle completo de la carga de inventario de una notificación propia',
-    description: 'Incluye producto, local, dirección, cantidad, vencimiento, autor y fechas de carga. Solo para el destinatario de la misma empresa; no exige acceso de edición al inventario.',
+    summary:
+      'Detalle completo de la carga de inventario de una notificación propia',
+    description:
+      'Incluye producto, local, dirección, cantidad, vencimiento, autor y fechas de carga. Solo para el destinatario de la misma empresa; no exige acceso de edición al inventario.',
   })
   detalleNotificacionInventario(
     @Req() r: RequestConUsuario,
     @Param('id', ParseIntPipe) id: number,
   ) {
-    return this.notificacionService.detalleInventario(r.usuarioId, r.empresaId, id);
+    return this.notificacionService.detalleInventario(
+      r.usuarioId,
+      r.empresaId,
+      id,
+    );
   }
 
   // ========== SUPERVISIÓN Y PRESENTISMO ==========

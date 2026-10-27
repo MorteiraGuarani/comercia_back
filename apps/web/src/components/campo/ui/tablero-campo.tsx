@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { EstadoPresentismo, EstadoRuta } from "@/types/estado-jornada";
 import type { TonoHoy } from "@/types/hoy-en-campo";
 import { IconoChevronAbajo } from "./iconos-campo";
+import { formatoDuracionMinutos, minutosEntreHoras } from "@/utils/duracion";
 
 // Piezas de los tableros de inicio (supervisor "Hoy en campo" y repositor
 // "Tu día"): indicador con semáforo, filas de "Atender ahora" y secciones.
@@ -233,6 +234,25 @@ export function SeccionTablero({
 }
 
 /** Encabezado del tablero con el botón de actualizar. */
+/** Inicio (primera entrada del día), final (última salida) y cuánto duró la jornada. */
+export function LineaJornada({ inicio, fin }: { inicio: string | null; fin: string | null }) {
+  if (!inicio) return null;
+  const minutos = minutosEntreHoras(inicio, fin);
+  return (
+    <span className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-2 text-[11px] text-muted">
+      <span>
+        Inicio <b className="font-mono font-semibold text-foreground">{inicio}</b>
+      </span>
+      <span>
+        Final <b className="font-mono font-semibold text-foreground">{fin ?? "—"}</b>
+      </span>
+      {minutos !== null ? (
+        <span className="font-semibold text-foreground">· {formatoDuracionMinutos(minutos)}</span>
+      ) : null}
+    </span>
+  );
+}
+
 /** "Actualizado hh:mm": vuelve a pedir los datos del tablero. */
 export function BotonActualizarTablero({
   cargando,

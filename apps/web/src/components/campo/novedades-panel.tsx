@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { TOKENS, btnMasCampo } from "./tokens";
+import { SelectorTipoNovedad } from "./ui/selector-tipo-novedad";
 import { StatusStamp } from "./ui/status-stamp";
 import { TopBar } from "./ui/top-bar";
 import { Modal } from "@/components/modal";
@@ -392,24 +393,7 @@ export function NovedadesPanel({
               <label className="block text-xs font-semibold text-foreground mb-1">
                 Tipo:
               </label>
-              <div className="grid grid-cols-2 gap-1.5">
-                {(
-                  ["INCIDENCIA", "RECLAMO", "CONSULTA", "SUGERENCIA"] as const
-                ).map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => setTipo(t)}
-                    className={`py-1.5 px-2 rounded-md text-xs font-semibold border transition cursor-pointer ${
-                      tipo === t
-                        ? "bg-zinc-900 text-white border-zinc-900"
-                        : "bg-surface-raised text-foreground border-line"
-                    }`}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
+              <SelectorTipoNovedad valor={tipo} onCambiar={setTipo} />
             </div>
 
             <div>

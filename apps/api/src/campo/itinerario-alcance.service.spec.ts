@@ -136,4 +136,30 @@ describe('Alcance de Itinerario del supervisor impulsador', () => {
     });
     expect(prisma.usuario.findUnique).not.toHaveBeenCalled();
   });
+
+  it('el superadmin lista los locales de la empresa elegida sin recorte por equipo', async () => {
+    const { prisma, service } = preparar();
+    await service.localesEmpresa(25, { buscar: 'norte' });
+    const where = {
+      empresaId: 25,
+      OR: [
+        { CardName: { contains: 'norte', mode: 'insensitive' } },
+        { CardCode: { contains: 'norte', mode: 'insensitive' } },
+      ],
+    };
+    expect(prisma.socioNegocio.count).toHaveBeenCalledWith({ where });
+    expect(prisma.socioNegocio.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where,
+        select: expect.objectContaining({
+          asignaciones: expect.objectContaining({
+            where: expect.not.objectContaining({
+              usuario: expect.anything() as unknown,
+            }) as unknown,
+          }) as unknown,
+        }) as unknown,
+      }),
+    );
+    expect(prisma.usuario.findMany).not.toHaveBeenCalled();
+  });
 });

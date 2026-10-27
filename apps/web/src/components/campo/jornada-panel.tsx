@@ -24,6 +24,7 @@ import {
   IconoTareas,
 } from "./ui/iconos-campo";
 import { formatoDistancia, metrosEntre } from "@/utils/distancia";
+import { formatoDuracionMinutos } from "@/utils/duracion";
 import {
   metrosRecorrido,
   ordenarParadasPorRuta,
@@ -34,6 +35,7 @@ import {
 import { mensajeError } from "@/utils/error";
 import type { MarcacionPendiente } from "@/types/seguimiento";
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { ApiError, apiFetch } from "@/lib/api";
 import { mostrarToast } from "@/components/toast/toast-controller";
 import { notificarJornadaMarcada } from "@/lib/eventos-plataforma";
@@ -111,6 +113,10 @@ function AgendaDelDia({
   const [error, setError] = useState("");
   const [mapa, setMapa] = useState<LocalCampo | null>(null);
   const [tareas, setTareas] = useState<AgendaCampo | null>(null);
+  // Desde Inicio ("Ver" tareas) se llega con ?tareas=<asignación> y se abre ese modal.
+  const pedidoTareas = Number(useSearchParams().get("tareas")) || null;
+  const tareasDe =
+    tareas ?? lista.items.find((a) => pedidoTareas !== null && a.id === pedidoTareas) ?? null;
   const [novedadDe, setNovedadDe] = useState<AgendaCampo | null>(null);
   // El inventario se abre acá mismo: sin ir a otra página ni recargar Mi Ruta.
   const [inventarioDe, setInventarioDe] = useState<string | null>(null);
@@ -599,7 +605,7 @@ function AgendaDelDia({
                       ? `En el local desde ${formatoHora(enCurso)}`
                       : ultima
                         ? ultima.salida
-                          ? `Visitado ${formatoHora(ultima.entrada)}–${formatoHora(ultima.salida)}`
+                          ? `Visitado ${formatoHora(ultima.entrada)}–${formatoHora(ultima.salida)} · ${formatoDuracionMinutos((Date.parse(ultima.salida) - Date.parse(ultima.entrada)) / 60_000)}`
                           : `Entrada ${formatoHora(ultima.entrada)} · salida — sin finalizar`
                         : ruta && parada && conUbicacion(a.local)
                           ? `Parada ${parada} · a ${formatoDistancia(metrosEntre(ruta.origen, a.local))}`
@@ -744,6 +750,8 @@ function AgendaDelDia({
                 <button
                   className={btnAccion}
                   onClick={() => setNovedadDe(a)}
+                  disabled={!aqui}
+                  title={aqui ? undefined : "Iniciá la visita para reportar una novedad"}
                 >
                   <IconoMensaje className="h-4 w-4" />
                   Novedad
@@ -781,13 +789,15 @@ function AgendaDelDia({
           onCerrar={() => setInventarioDe(null)}
         />
       ) : null}
-      {tareas ? (
+      {tareasDe ? (
         <TareasDeLocal
-          agenda={tareas}
+          agenda={tareasDe}
           qsFecha={qsFecha}
           abierta={abierta}
           cerrar={() => {
             setTareas(null);
+            // Sin el ?tareas= el modal no se vuelve a abrir solo.
+            if (pedidoTareas) window.history.replaceState(null, "", window.location.pathname);
             setRevisionTareas((n) => n + 1);
           }}
         />

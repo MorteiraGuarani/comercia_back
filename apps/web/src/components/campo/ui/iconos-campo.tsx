@@ -421,3 +421,23 @@ export function IconoRefrescar({ className }: Props) {
   );
 }
 
+
+export function IconoPregunta({ className }: Props) {
+  return (
+    <Base className={className}>
+      <path
+        fillRule="evenodd"
+        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM8.94 6.94a1.5 1.5 0 112.12 2.12c-.3.3-.66.5-1.03.74-.47.3-1.03.75-1.03 1.7v.25a.75.75 0 001.5 0v-.25c0-.13.06-.2.34-.38.36-.23.86-.53 1.28-.95a3 3 0 10-4.24-4.24.75.75 0 001.06 1.06zM10 15a1 1 0 100-2 1 1 0 000 2z"
+        clipRule="evenodd"
+      />
+    </Base>
+  );
+}
+
+export function IconoIdea({ className }: Props) {
+  return (
+    <Base className={className}>
+      <path d="M10 1.5a5.5 5.5 0 00-3.3 9.9c.5.37.8.86.8 1.38v.47h5v-.47c0-.52.3-1.01.8-1.38A5.5 5.5 0 0010 1.5zM7.5 14.5h5v.75A2.75 2.75 0 019.75 18h-.5A2.75 2.75 0 017.5 15.25v-.75z" />
+    </Base>
+  );
+}

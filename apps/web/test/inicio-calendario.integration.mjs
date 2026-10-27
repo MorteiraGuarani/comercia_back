@@ -53,9 +53,9 @@ const fechas = cargar("utils/fechas.ts");
 const periodos = cargar("utils/periodo-inicio.ts", { "./fechas": fechas });
 const hoy = "2026-10-27";
 const presets = periodos.periodosDesdeHoy(hoy);
-assert.deepEqual(presets.map((p) => p.etiqueta), ["Hoy", "Ayer", "Semana", "Mes", "Mes Pasado"]);
+assert.deepEqual(presets.map((p) => p.etiqueta), ["Hoy", "Ayer", "7 días", "Mes", "Mes Pasado"]);
 assert.deepEqual(presets.map((p) => periodos.consultaPeriodoInicio(p, hoy)), [
-  "fecha=2026-10-27", "fecha=2026-10-26", "fechaInicio=2026-10-26&fechaFin=2026-10-27",
+  "fecha=2026-10-27", "fecha=2026-10-26", "fechaInicio=2026-10-21&fechaFin=2026-10-27",
   "fechaInicio=2026-10-01&fechaFin=2026-10-27", "fechaInicio=2026-09-01&fechaFin=2026-09-30",
 ]);
 for (const [fecha, inicio, fin] of [["2026-01-01", "2025-12-01", "2025-12-31"], ["2024-03-01", "2024-02-01", "2024-02-29"]]) {
@@ -71,10 +71,16 @@ const { SelectorFechaFiltro } = cargar("components/campo/ui/selector-fecha-filtr
 });
 const render = () => { estado.iniciar(); return SelectorFechaFiltro({ valorActual: presets[0], onChange: (p) => { elegido = p; } }); };
 const boton = (arbol, nombre) => nodos(arbol).find((n) => n.type === "button" && texto(n).startsWith(nombre));
+const calendario = (arbol) => nodos(arbol).find((n) => n.type === "button" && n.props["aria-haspopup"] === "dialog");
 let arbol = render();
-boton(arbol, "Período:").props.onClick();
+// A la vista: Hoy, Ayer, 7 días y Mes como chips; tocar uno elige el período sin abrir nada.
+assert.deepEqual(nodos(arbol).filter((n) => n.type === "button" && "aria-pressed" in n.props).map(texto), ["Hoy", "Ayer", "7 días", "Mes"]);
+boton(arbol, "7 días").props.onClick();
+assert.equal(elegido.clave, "ultimos_7");
+calendario(arbol).props.onClick();
 arbol = render();
-assert.deepEqual(nodos(arbol).filter((n) => n.type === "button" && "aria-pressed" in n.props).map(texto), presets.map((p) => p.etiqueta));
+// El calendario abre todos los períodos y la fecha personalizada.
+assert.deepEqual(nodos(arbol).filter((n) => n.type === "button" && "aria-pressed" in n.props).map(texto).slice(4), presets.map((p) => p.etiqueta));
 let acordeon = boton(arbol, "Fecha personalizada");
 assert.equal(acordeon.props["aria-expanded"], false);
 assert.equal(nodos(arbol).find((n) => n.props?.id === acordeon.props["aria-controls"]).props.hidden, true);
@@ -90,7 +96,7 @@ arbol = render();
 boton(arbol, "Aplicar rango").props.onClick();
 assert.equal(periodos.consultaPeriodoInicio(elegido, hoy), "fechaInicio=2026-10-05&fechaFin=2026-10-18");
 arbol = render();
-boton(arbol, "Período:").props.onClick();
+calendario(arbol).props.onClick();
 arbol = render();
 assert.equal(boton(arbol, "Fecha personalizada").props["aria-expanded"], false, "El rango vuelve a estar plegado al abrir");
 boton(arbol, "Mes Pasado").props.onClick();
@@ -120,7 +126,7 @@ assert.equal(sinEnlace.type, "button");
 assert.equal(sinEnlace.props.disabled, true);
 assert.equal(sinEnlace.props.href, undefined);
 assert.equal(EnlacePanel({ href: "/panel/mi-jornada/tareas", children: "Mis tareas" }).props.href, "/panel/mi-jornada/tareas");
-const ui = cargar("components/campo/ui/tablero-campo.tsx", { "next/link": { default: Link }, "./iconos-campo": {} });
+const ui = cargar("components/campo/ui/tablero-campo.tsx", { "next/link": { default: Link }, "./iconos-campo": {}, "@/utils/duracion": cargar("utils/duracion.ts") });
 assert.equal(ui.TarjetaIndicador({ letra: "C", nombre: "Tareas", tono: "info", valor: 0, nota: "Sin tareas", href: "/tareas", disabled: true }).props.disabled, true);
 
 const resumen = {
@@ -181,6 +187,12 @@ const { Indicadores, DetalleIndicador } = cargar("components/campo/hoy-en-campo.
   ...comun, react: estadoHoy.react, "@/lib/cache-sesion": {}, "@/components/modal": {}, "./hilo-novedad": {}, "./detalle-presentismo-inicio": { DetallePresentismoInicio },
 }, "module.exports.Indicadores = Indicadores; module.exports.DetalleIndicador = DetalleIndicador;");
 const propsIndicador = { indicador: "presentismo", resumen, equipo: [], novedades: [], abiertas: 0, onAbrir: stub };
+// Un solo día: inicio, final y duración de la jornada; en un período de varios días, no.
+const conJornada = { ...propsIndicador, equipo: [{ id: 7, nombre: "Ana", estadoPresentismo: "PRESENTE", telefono: "", inicioJornada: "08:05", finJornada: "12:35", ruta: {}, tareas: {} }] };
+const lineas = (props) => nodos(DetalleIndicador(props)).filter((n) => n.type === ui.LineaJornada);
+assert.equal(lineas({ ...conJornada, unDia: false }).length, 0);
+const linea = lineas({ ...conJornada, unDia: true })[0];
+assert.ok(texto(ui.LineaJornada(linea.props)).includes("4 h 30 min"), "Muestra la duración de la jornada");
 assert.equal(DetalleIndicador({ ...propsIndicador, presentismoImpulsador: true }).type, DetallePresentismoInicio);
 assert.notEqual(DetalleIndicador(propsIndicador).type, DetallePresentismoInicio, "Conserva la vista de Presentismo de los demás equipos");
 // Cada KPI del detalle filtra la lista de abajo; tocarlo otra vez muestra todo.
@@ -197,17 +209,28 @@ assert.deepEqual(filas(renderVisitas()).map((n) => n.props.c.id), [1]);
 kpiVisitas().props.onFiltro(null);
 assert.equal(filas(renderVisitas()).length, 2);
 const tarjetasEquipo = nodos(Indicadores({ resumen, novedades: [], abiertas: 0, cuando: "hoy", onAbrir: stub })).filter((n) => n.type === ui.TarjetaIndicador);
-assert.deepEqual(tarjetasEquipo.map((n) => n.props.nombre), ["Presentismo", "Mi Ruta", "Tareas", "Novedades"]);
+assert.deepEqual(tarjetasEquipo.map((n) => n.props.nombre), ["Presentismo", "Itinerario", "Tareas", "Novedades"]);
 assert.equal(tarjetasEquipo[2].props.disabled, true);
 resumen.tareas.total = 1;
 assert.equal(nodos(Indicadores({ resumen, novedades: [], abiertas: 0, cuando: "hoy", onAbrir: stub })).find((n) => n.props?.nombre === "Tareas").props.disabled, false);
 
 const estadoMiDia = estadoReact({ 3: { agenda: [], abierta: null, tareas: null, hayTareas: null, novedadesAbiertas: 0, avisos: null, actualizado: "2026-10-27T12:00:00Z" } });
 const { MiDiaCampo } = cargar("components/campo/mi-dia-campo.tsx", {
-  ...comun, react: estadoMiDia.react, "@/utils/tareas-campo": {}, "@/lib/disponibilidad-tareas": {},
+  ...comun, react: estadoMiDia.react, "@/utils/tareas-campo": {}, "@/lib/disponibilidad-tareas": {}, "./jornadas-propias": { JornadasPropias: stub },
 });
+// Presentismo de "Tu día" abre las jornadas en un modal, no navega.
+assert.equal(typeof nodos(MiDiaCampo()).find((n) => n.props?.nombre === "Presentismo").props.onClick, "function");
+estadoMiDia.iniciar();
+// Las visitas del período se agrupan por día, del más reciente al más viejo, con su duración.
+const visita = (id, fecha, entrada, salida) => ({ id, fecha, entrada: `${fecha}T${entrada}:00Z`, salida: salida && `${fecha}T${salida}:00Z`, estado: salida ? "CERRADA" : "EN_CURSO", estadoPresentismo: "PRESENTE" });
+const dias = calculos.jornadasPorDia([
+  { local: { nombre: "Local A" }, visitas: [visita(1, "2026-10-26", "09:00", "09:30"), visita(2, "2026-10-27", "11:00", null)] },
+  { local: { nombre: "Local B" }, visitas: [visita(3, "2026-10-27", "08:00", "08:16")] },
+]);
+assert.deepEqual(dias.map((d) => d.fecha), ["2026-10-27", "2026-10-26"]);
+assert.deepEqual(dias[0].visitas.map((v) => [v.local, v.minutos]), [["Local B", 16], ["Local A", null]]);
 const tarjetasPropias = nodos(MiDiaCampo()).filter((n) => n.type === ui.TarjetaIndicador);
-assert.deepEqual(tarjetasPropias.map((n) => n.props.nombre), ["Presentismo", "Mi Ruta", "Tareas", "Novedades"]);
+assert.deepEqual(tarjetasPropias.map((n) => n.props.nombre), ["Presentismo", "Itinerario", "Tareas", "Novedades"]);
 assert.equal(tarjetasPropias[2].props.disabled, true);
 panel.tareasDisponibles["mi-jornada"] = true;
 estadoMiDia.iniciar();
@@ -226,9 +249,9 @@ const general = (ruta, paginas) => {
   estadoGeneral.iniciar();
   return nodos(InicioResumen({ modulo: { ruta, paginas: paginas.map((ruta) => ({ ruta })) } })).filter((n) => n.props?.label);
 };
-assert.deepEqual(general("gestion-campo", ["visitas", "tareas", "novedades"]).map((n) => n.props.label), ["Presentismo", "Mi Ruta", "Tareas", "Novedades"]);
+assert.deepEqual(general("gestion-campo", ["visitas", "tareas", "novedades"]).map((n) => n.props.label), ["Presentismo", "Itinerario", "Tareas", "Novedades"]);
 const generalPropio = general("mi-jornada", ["locales", "tareas", "novedades"]);
-assert.deepEqual(generalPropio.map((n) => n.props.label), ["Presentismo", "Mi Ruta", "Tareas", "Novedades"]);
+assert.deepEqual(generalPropio.map((n) => n.props.label), ["Presentismo", "Itinerario", "Tareas", "Novedades"]);
 assert.equal(generalPropio[2].props.disabled, true);
 
 // La disponibilidad sigue permisos y empresa/usuario de la sesión, para cualquier rol.

@@ -5,7 +5,7 @@ import { Paginacion } from "@/components/paginacion";
 import type { ColaboradorResumen, SupervisionResumenData } from "@/types/campo";
 import type { EstadoPresentismo } from "@/types/estado-jornada";
 import { pct } from "@/utils/hoy-en-campo";
-import { ConteosFiltro, PRESENTISMO_UI, enfoqueTablero } from "./ui/tablero-campo";
+import { ConteosFiltro, LineaJornada, PRESENTISMO_UI, enfoqueTablero } from "./ui/tablero-campo";
 import { IconoTelefono } from "./ui/iconos-campo";
 
 const ESTADOS = ["PRESENTE", "TARDE", "INCOMPLETO", "AUSENTE"] as const;
@@ -14,10 +14,13 @@ export function DetallePresentismoInicio({
   resumen,
   equipo,
   onAbrir,
+  unDia = false,
 }: {
   resumen: SupervisionResumenData;
   equipo: ColaboradorResumen[];
   onAbrir: (id: number) => void;
+  /** Período de un solo día: muestra inicio, final y duración de la jornada. */
+  unDia?: boolean;
 }) {
   const [filtro, setFiltro] = useState<EstadoPresentismo | null>(null);
   const [pagina, setPagina] = useState(1);
@@ -82,18 +85,20 @@ export function DetallePresentismoInicio({
                 key={c.id}
                 className="flex min-w-0 items-center gap-2 py-2 first:pt-0"
               >
-                <button
-                  type="button"
-                  onClick={() => onAbrir(c.id)}
-                  className={`min-h-11 min-w-0 flex-1 cursor-pointer truncate rounded text-left text-sm font-semibold text-foreground hover:underline ${enfoqueTablero}`}
-                >
-                  {c.nombre}
-                </button>
+                <div className="min-w-0 flex-1">
+                  <button
+                    type="button"
+                    onClick={() => onAbrir(c.id)}
+                    className={`block min-h-11 w-full min-w-0 cursor-pointer truncate rounded text-left text-sm font-semibold text-foreground hover:underline ${enfoqueTablero}`}
+                  >
+                    {c.nombre}
+                  </button>
+                  {unDia ? <LineaJornada inicio={c.inicioJornada} fin={c.finJornada} /> : null}
+                </div>
                 <span
                   className={`shrink-0 whitespace-nowrap rounded-md px-1.5 text-[11px] font-bold ${PRESENTISMO_UI[c.estadoPresentismo].pill}`}
                 >
                   {PRESENTISMO_UI[c.estadoPresentismo].etiqueta}
-                  {c.inicioJornada ? ` · ${c.inicioJornada}` : ""}
                 </span>
                 {c.estadoPresentismo === "AUSENTE" &&
                 c.telefono.replace(/[^\d+]/g, "").length >= 6 ? (
