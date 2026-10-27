@@ -1,5 +1,5 @@
 // Reglas puras del inventario sin conexión.
-import type { CambioInventario, LocalGuardado } from "@/types/inventario";
+import type { CambioInventario, CargaInventario, EdicionInventario, LocalGuardado } from "@/types/inventario";
 
 const dos = (n: number) => String(n).padStart(2, "0");
 
@@ -28,6 +28,22 @@ export function diasParaVencer(vencimiento: string, hoy: string): number {
 // Todas las palabras escritas deben aparecer en el texto normalizado.
 export function coincideBusqueda(busqueda: string, palabras: string[]): boolean {
   return palabras.every((palabra) => busqueda.includes(palabra));
+}
+
+/** Solo envía filas completas y válidas; las demás siguen en edición. */
+export function prepararCargasInventario(ediciones: Record<string, EdicionInventario>) {
+  const cargas: CargaInventario[] = [];
+  const pendientes: Record<string, EdicionInventario> = {};
+  for (const [itemcode, edicion] of Object.entries(ediciones)) {
+    const cantidad = edicion.cantidad.trim();
+    const fecha = Date.parse(`${edicion.vencimiento}T00:00:00Z`);
+    const valida = /^\d+$/.test(cantidad) && Number(cantidad) <= 1_000_000 &&
+      /^\d{4}-\d{2}-\d{2}$/.test(edicion.vencimiento) && Number.isFinite(fecha) &&
+      new Date(fecha).toISOString().slice(0, 10) === edicion.vencimiento;
+    if (valida) cargas.push({ itemcode, cantidad: Number(cantidad), vencimiento: edicion.vencimiento });
+    else pendientes[itemcode] = edicion;
+  }
+  return { cargas, pendientes };
 }
 
 /** El local tal como queda después del cambio; no modifica el original. */

@@ -102,6 +102,12 @@ export interface CargaInventario {
   vencimiento: string;
 }
 
+/** Valores en edición; una fila incompleta se conserva para completarla después. */
+export interface EdicionInventario {
+  cantidad: string;
+  vencimiento: string;
+}
+
 /** Cambio hecho en el equipo, que se envía al servidor en orden. */
 export type CambioInventario =
   | { tipo: "agregar"; itemcode: string; itemname: string }

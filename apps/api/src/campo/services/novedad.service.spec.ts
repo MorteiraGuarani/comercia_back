@@ -25,6 +25,21 @@ const adjuntosMock = () =>
   }) as unknown as AdjuntoCampoService;
 
 describe('NovedadService', () => {
+  it('permite abrir todo el detalle al superior indirecto sin equipo operativo, y excluye otras cadenas', async () => {
+    const personas = [
+      { id: 1, empresaId: 10, superiorId: null, isActive: true },
+      { id: 2, empresaId: 10, superiorId: 1, isActive: true },
+      { id: 3, empresaId: 10, superiorId: 2, isActive: true },
+    ];
+    const prisma = {
+      novedadCampo: { findUnique: jest.fn().mockResolvedValue({ id: 5, usuarioId: 3, local: { CardCode: 'L1', CardName: 'Local' }, descripcion: 'Detalle completo' }) },
+      usuario: { findMany: jest.fn(({ where }: { where: { empresaId: number; id: { in: number[] } } }) => Promise.resolve(personas.filter((u) => u.empresaId === where.empresaId && where.id.in.includes(u.id)))) },
+    };
+    const service = new NovedadService(prisma as unknown as PrismaService, {} as NotificacionService, adjuntosMock());
+    expect(await service.obtenerPorId(1, 10, 5)).toMatchObject({ descripcion: 'Detalle completo' });
+    await expect(service.obtenerPorId(99, 10, 5)).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(service.obtenerPorId(1, 20, 5)).rejects.toBeInstanceOf(ForbiddenException);
+  });
   it('lanza NotFoundException si el local no existe en la empresa', async () => {
     const prisma = {
       socioNegocio: { findFirst: jest.fn().mockResolvedValue(null) },

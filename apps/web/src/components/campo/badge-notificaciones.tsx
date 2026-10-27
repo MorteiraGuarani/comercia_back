@@ -18,6 +18,7 @@ import { Modal } from "@/components/modal";
 import { Paginacion } from "@/components/paginacion";
 import { HiloNovedad } from "./hilo-novedad";
 import { DetalleAviso } from "./detalle-aviso";
+import { DetalleNotificacionInventario } from "./detalle-notificacion-inventario";
 
 export function BadgeNotificaciones() {
   const [noLeidas, setNoLeidas] = useState(0);
@@ -294,7 +295,7 @@ function PanelNotificaciones({
   const [totalItems, setTotalItems] = useState(0);
   const [filtro, setFiltro] = useState<"todas" | "no_leidas">("todas");
   const [marcandoTodas, setMarcandoTodas] = useState(false);
-  const [referenciaSeleccionada, setReferenciaSeleccionada] = useState<{ tipo: "novedad" | "aviso"; id: number } | null>(null);
+  const [referenciaSeleccionada, setReferenciaSeleccionada] = useState<{ tipo: "novedad" | "aviso" | "inventario"; id: number } | null>(null);
   const [pestana, setPestana] = useState<"notificaciones" | "avisos" | "novedades">("notificaciones");
 
   // Avisos y novedades salieron del menú: la campana es su acceso. Cada pestaña
@@ -402,6 +403,8 @@ function PanelNotificaciones({
         setReferenciaSeleccionada({ tipo: "novedad", id: n.referenciaId });
       } else if (n.tipo === "AVISO_RECIBIDO") {
         setReferenciaSeleccionada({ tipo: "aviso", id: n.referenciaId });
+      } else if (n.tipo === "VENCIMIENTO_PROXIMO") {
+        setReferenciaSeleccionada({ tipo: "inventario", id: n.id });
       }
     }
     if (!n.leido) void handleMarcarLeida(n);
@@ -477,7 +480,9 @@ function PanelNotificaciones({
       {referenciaSeleccionada ? (
         <div className="min-w-0 space-y-4">
           <button type="button" onClick={() => setReferenciaSeleccionada(null)} className="min-h-11 cursor-pointer whitespace-nowrap rounded-lg border border-line px-3 text-sm font-semibold text-foreground transition-colors hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:border-line dark:text-foreground dark:hover:bg-surface-soft">← Volver</button>
-          {referenciaSeleccionada.tipo === "novedad"
+          {referenciaSeleccionada.tipo === "inventario"
+            ? <DetalleNotificacionInventario key={referenciaSeleccionada.id} id={referenciaSeleccionada.id} />
+            : referenciaSeleccionada.tipo === "novedad"
             ? <HiloNovedad id={referenciaSeleccionada.id} onActualizado={() => void cargarNotificaciones()} />
             : <DetalleAviso id={referenciaSeleccionada.id} />}
         </div>

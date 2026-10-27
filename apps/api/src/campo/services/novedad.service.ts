@@ -23,6 +23,7 @@ import {
   respuestaPaginada,
 } from '../../common/utils/paginacion';
 import { esLiderDe, obtenerEquipoCompleto } from '../utils/autorizacion';
+import { obtenerSuperioresActivos } from '../../common/utils/superiores';
 import { localesParaNovedad } from '../utils/locales-novedad';
 import { ConsultaCampoDto } from '../dto/campo.dto';
 import { AdjuntoCampoService } from './adjunto-campo.service';
@@ -296,8 +297,10 @@ export class NovedadService {
       throw new NotFoundException('Novedad no encontrada');
     }
 
-    const equipoIds = await obtenerEquipoCompleto(this.prisma, usuarioId);
-    if (!equipoIds.includes(novedad.usuarioId)) {
+    if (
+      usuarioId !== novedad.usuarioId &&
+      !(await obtenerSuperioresActivos(this.prisma, empresaId, [novedad.usuarioId])).includes(usuarioId)
+    ) {
       throw new ForbiddenException('No tienes acceso a esta novedad');
     }
 

@@ -1,3 +1,5 @@
+import type { EquipoCampo } from "@/types/rol";
+
 export function etiquetaPaginaMenu(
   moduloRuta: string,
   paginaRuta: string,
@@ -17,7 +19,10 @@ export function rutaInicialImpulsador(
     ruta: string;
     paginas: Array<{ ruta: string }>;
   }>,
+  equipoCampo?: Pick<EquipoCampo, "tipo"> | null,
 ) {
+  // El repositor entra a Inicio aunque tenga las mismas páginas que un impulsador.
+  if (equipoCampo?.tipo === "REPOSITOR") return null;
   const miJornada = modulos.find((modulo) => modulo.ruta === "mi-jornada");
   const esLider = modulos.some((modulo) => modulo.ruta === "gestion-campo");
   if (!miJornada || esLider) return null;

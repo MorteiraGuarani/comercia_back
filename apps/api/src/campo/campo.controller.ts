@@ -499,6 +499,18 @@ export class CampoController {
     return this.notificacionService.contadorNoLeidas(r.usuarioId);
   }
 
+  @Get('notificaciones/:id/inventario')
+  @ApiOperation({
+    summary: 'Detalle completo de la carga de inventario de una notificación propia',
+    description: 'Incluye producto, local, dirección, cantidad, vencimiento, autor y fechas de carga. Solo para el destinatario de la misma empresa; no exige acceso de edición al inventario.',
+  })
+  detalleNotificacionInventario(
+    @Req() r: RequestConUsuario,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.notificacionService.detalleInventario(r.usuarioId, r.empresaId, id);
+  }
+
   // ========== SUPERVISIÓN Y PRESENTISMO ==========
 
   @Get('supervision/resumen')

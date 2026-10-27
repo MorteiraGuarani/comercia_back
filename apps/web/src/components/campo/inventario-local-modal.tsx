@@ -18,17 +18,16 @@ import {
   listarPendientes,
   productosDeInventario,
 } from "@/lib/inventario-db";
-import { diasParaVencer, hoyEquipo } from "@/utils/inventario";
+import { diasParaVencer, hoyEquipo, prepararCargasInventario } from "@/utils/inventario";
 import { mensajeError } from "@/utils/error";
 import { SelectorProductoInventario } from "./selector-producto-inventario";
 import { PendientesInventario } from "./pendientes-inventario";
 import type {
   CambioInventario,
+  EdicionInventario,
   InventarioLocal,
   ItemInventarioLocal,
 } from "@/types/inventario";
-
-type Edicion = { cantidad: string; vencimiento: string };
 
 const fechaCorta = (iso: string) => {
   const [anio, mes, dia] = iso.split("-");
@@ -210,7 +209,7 @@ export function InventarioLocalModal({
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(7);
   // Cambios sin guardar por producto; sobreviven al cambiar de página.
-  const [ediciones, setEdiciones] = useState<Record<string, Edicion>>({});
+  const [ediciones, setEdiciones] = useState<Record<string, EdicionInventario>>({});
   const [agregando, setAgregando] = useState(false);
   // Producto recién agregado: cuando aparece en la lista, va el foco a su cantidad.
   const enfocar = useRef<string | null>(null);
@@ -269,13 +268,13 @@ export function InventarioLocalModal({
     entrada.scrollIntoView({ block: "center", behavior: "smooth" });
   }, [local, pagina]);
 
-  const valor = (item: ItemInventarioLocal): Edicion =>
+  const valor = (item: ItemInventarioLocal): EdicionInventario =>
     ediciones[item.itemcode] ?? {
       cantidad: item.cantidad === null ? "" : String(item.cantidad),
       vencimiento: item.vencimiento ?? "",
     };
 
-  function editar(item: ItemInventarioLocal, cambio: Partial<Edicion>) {
+  function editar(item: ItemInventarioLocal, cambio: Partial<EdicionInventario>) {
     setEdiciones((actual) => ({
       ...actual,
       [item.itemcode]: { ...valor(item), ...cambio },
@@ -293,48 +292,40 @@ export function InventarioLocalModal({
   }
 
   async function guardar() {
-    const filas = Object.entries(ediciones);
-    if (filas.some(([, e]) => !e.cantidad.trim() || !e.vencimiento)) {
+    const { cargas, pendientes } = prepararCargasInventario(ediciones);
+    if (!cargas.length) {
       mostrarToast(
         "alerta",
-        "Completá la cantidad y el vencimiento de cada producto que cargaste.",
+        "Completá al menos un producto con cantidad entera entre 0 y 1.000.000 y un vencimiento válido.",
       );
       return;
     }
-    // Lo que el servidor rechazaría se frena acá: sin señal no hay quien avise.
-    if (filas.some(([, e]) => !/^\d+$/.test(e.cantidad.trim()) || Number(e.cantidad) > 1_000_000)) {
-      mostrarToast("alerta", "La cantidad debe ser un número entero entre 0 y 1.000.000.");
-      return;
-    }
-    const cargas = filas.map(([itemcode, e]) => ({
-      itemcode,
-      cantidad: Number(e.cantidad),
-      vencimiento: e.vencimiento,
-    }));
     // El servidor recibe hasta 50 productos por envío.
     const cambios: CambioInventario[] = [];
     for (let i = 0; i < cargas.length; i += 50)
       cambios.push({ tipo: "cargas", fecha: hoy, cargas: cargas.slice(i, i + 50) });
-    const nuevos: CambioInventario[] = filas
-      .filter(([itemcode]) => !guardados.has(itemcode))
-      .map(([itemcode]) => ({
+    const nuevos: CambioInventario[] = cargas
+      .filter(({ itemcode }) => !guardados.has(itemcode))
+      .map(({ itemcode }) => ({
         tipo: "agregar",
         itemcode,
         itemname: items.find((i) => i.itemcode === itemcode)?.itemname ?? itemcode,
       }));
-    if (!(await guardarEnEquipo([...nuevos, ...cambios]))) return;
-    setEdiciones({});
-    if (navigator.onLine)
-      await op.ejecutar("Enviando inventario", () => enviarPendientes(usuarioId));
-    const quedan = (await listarPendientes(usuarioId).catch(() => [])).some(
-      (p) => p.localId === localId,
-    );
-    mostrarToast(
-      quedan ? "alerta" : "exito",
-      quedan
-        ? "Guardado en este equipo. Se envía solo cuando vuelva la conexión."
-        : "Inventario guardado.",
-    );
+    await op.ejecutar("Guardando inventario", async () => {
+      await guardarCambios(usuarioId, localId, [...nuevos, ...cambios]);
+      setEdiciones(pendientes);
+      if (navigator.onLine) await enviarPendientes(usuarioId);
+      const quedan = (await listarPendientes(usuarioId).catch(() => [])).some(
+        (p) => p.localId === localId,
+      );
+      const faltan = Object.keys(pendientes).length;
+      mostrarToast(
+        quedan || faltan ? "alerta" : "exito",
+        `${cargas.length} ${cargas.length === 1 ? "producto guardado" : "productos guardados"}.` +
+          (quedan ? " Guardado en este equipo. Se envía solo cuando vuelva la conexión." : "") +
+          (faltan ? ` ${faltan} ${faltan === 1 ? "producto pendiente" : "productos pendientes"}: completá o revisá su cantidad y vencimiento.` : ""),
+      );
+    });
   }
 
   // Agregar o quitar es inmediato en el equipo; el envío sigue en segundo plano.
@@ -508,6 +499,7 @@ export function InventarioLocalModal({
                             type="number"
                             inputMode="numeric"
                             min={0}
+                            max={1_000_000}
                             step={1}
                             placeholder="Cant."
                             aria-label={`Cantidad de ${item.itemname}`}
@@ -548,6 +540,7 @@ export function InventarioLocalModal({
           ) : null}
 
           <p className="text-sm text-muted">
+            {editable ? "Podés guardar una parte del inventario: solo se guardan los productos con cantidad y vencimiento completos. " : ""}
             {enLinea
               ? "Hoy se carga cantidad y fecha de vencimiento. Las fechas anteriores son de consulta."
               : "Sin conexión: lo que cargues queda guardado en este equipo y se envía solo cuando vuelva la señal."}

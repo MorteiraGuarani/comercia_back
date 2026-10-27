@@ -10,7 +10,7 @@ import {
   AdjuntoCampoDto,
   ArchivoAdjuntoCampoDto,
 } from '../dto/adjunto-campo.dto';
-import { obtenerEquipoCompleto } from '../utils/autorizacion';
+import { obtenerSuperioresActivos } from '../../common/utils/superiores';
 import { validarArchivoImagen } from '../utils/multer-config';
 
 const selectAdjunto = {
@@ -103,8 +103,13 @@ export class AdjuntoCampoService {
 
     let permitido = false;
     if (adjunto.novedad) {
-      const equipoIds = await obtenerEquipoCompleto(this.prisma, usuarioId);
-      permitido = equipoIds.includes(adjunto.novedad.usuarioId);
+      permitido =
+        usuarioId === adjunto.novedad.usuarioId ||
+        (
+          await obtenerSuperioresActivos(this.prisma, empresaId, [
+            adjunto.novedad.usuarioId,
+          ])
+        ).includes(usuarioId);
     } else if (adjunto.aviso) {
       permitido =
         adjunto.aviso.emisorId === usuarioId ||

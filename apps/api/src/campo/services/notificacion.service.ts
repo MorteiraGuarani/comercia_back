@@ -1,6 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { obtenerLiderDirecto } from '../utils/autorizacion';
+import { obtenerSuperioresActivos } from '../../common/utils/superiores';
+import { direccionesLocales, nombreLocal } from '../utils/local-ocrd';
+import { relojCampo } from '../utils/calendario';
+import { diasParaVencer } from '../../common/utils/vencimiento';
+import type { DetalleNotificacionInventario } from '../interfaces/detalle-notificacion-inventario.interface';
 import {
   ContadorNoLeidasDto,
   ListarNotificacionesDto,
@@ -20,6 +24,26 @@ import {
 export class NotificacionService {
   constructor(private prisma: PrismaService) {}
 
+  private async notificarSuperiores(
+    data: Omit<
+      Prisma.NotificacionCampoCreateManyInput,
+      'usuarioDestinatarioId'
+    >,
+  ) {
+    const superiores = await obtenerSuperioresActivos(
+      this.prisma,
+      data.empresaId,
+      [data.usuarioEmisorId],
+    );
+    if (!superiores.length) return;
+    await this.prisma.notificacionCampo.createMany({
+      data: superiores.map((usuarioDestinatarioId) => ({
+        ...data,
+        usuarioDestinatarioId,
+      })),
+    });
+  }
+
   /**
    * Crear notificación de comentario en tarea
    */
@@ -29,14 +53,6 @@ export class NotificacionService {
     comentarioId: number,
     nombreTarea: string,
   ): Promise<void> {
-    // Obtener el líder directo del usuario emisor
-    const liderId = await obtenerLiderDirecto(this.prisma, emisorId);
-
-    if (!liderId) {
-      // Si no tiene líder, no crear notificación
-      return;
-    }
-
     // Obtener datos del emisor para el mensaje
     const emisor = await this.prisma.usuario.findUnique({
       where: { id: emisorId },
@@ -53,16 +69,13 @@ export class NotificacionService {
     const titulo = 'Nuevo comentario en tarea';
     const mensaje = `${emisor.nombre} ${emisor.apellido} comentó en '${nombreTarea}'`;
 
-    await this.prisma.notificacionCampo.create({
-      data: {
-        empresaId,
-        usuarioDestinatarioId: liderId,
-        usuarioEmisorId: emisorId,
-        tipo: TipoNotificacionCampo.COMENTARIO_TAREA,
-        referenciaId: comentarioId,
-        titulo,
-        mensaje,
-      },
+    await this.notificarSuperiores({
+      empresaId,
+      usuarioEmisorId: emisorId,
+      tipo: TipoNotificacionCampo.COMENTARIO_TAREA,
+      referenciaId: comentarioId,
+      titulo: titulo.slice(0, 100),
+      mensaje: mensaje.slice(0, 250),
     });
   }
 
@@ -76,12 +89,6 @@ export class NotificacionService {
     nombreTarea: string,
     momento: 'ANTES' | 'DESPUES',
   ): Promise<void> {
-    const liderId = await obtenerLiderDirecto(this.prisma, emisorId);
-
-    if (!liderId) {
-      return;
-    }
-
     const emisor = await this.prisma.usuario.findUnique({
       where: { id: emisorId },
       select: {
@@ -97,16 +104,13 @@ export class NotificacionService {
     const titulo = 'Nueva foto en tarea';
     const mensaje = `${emisor.nombre} ${emisor.apellido} subió foto ${momento.toLowerCase()} en '${nombreTarea}'`;
 
-    await this.prisma.notificacionCampo.create({
-      data: {
-        empresaId,
-        usuarioDestinatarioId: liderId,
-        usuarioEmisorId: emisorId,
-        tipo: TipoNotificacionCampo.FOTO_SUBIDA,
-        referenciaId: fotoId,
-        titulo,
-        mensaje,
-      },
+    await this.notificarSuperiores({
+      empresaId,
+      usuarioEmisorId: emisorId,
+      tipo: TipoNotificacionCampo.FOTO_SUBIDA,
+      referenciaId: fotoId,
+      titulo: titulo.slice(0, 100),
+      mensaje: mensaje.slice(0, 250),
     });
   }
 
@@ -120,9 +124,6 @@ export class NotificacionService {
     nombreLocal: string,
     tipoNovedad: string,
   ): Promise<void> {
-    const liderId = await obtenerLiderDirecto(this.prisma, emisorId);
-    if (!liderId) return;
-
     const emisor = await this.prisma.usuario.findUnique({
       where: { id: emisorId },
       select: { nombre: true, apellido: true },
@@ -132,16 +133,13 @@ export class NotificacionService {
     const titulo = `Nueva novedad: ${tipoNovedad.toLowerCase()}`;
     const mensaje = `${emisor.nombre} ${emisor.apellido} reportó una novedad en '${nombreLocal}'`;
 
-    await this.prisma.notificacionCampo.create({
-      data: {
-        empresaId,
-        usuarioDestinatarioId: liderId,
-        usuarioEmisorId: emisorId,
-        tipo: TipoNotificacionCampo.NOVEDAD_CREADA,
-        referenciaId: novedadId,
-        titulo,
-        mensaje,
-      },
+    await this.notificarSuperiores({
+      empresaId,
+      usuarioEmisorId: emisorId,
+      tipo: TipoNotificacionCampo.NOVEDAD_CREADA,
+      referenciaId: novedadId,
+      titulo: titulo.slice(0, 100),
+      mensaje: mensaje.slice(0, 250),
     });
   }
 
@@ -157,18 +155,26 @@ export class NotificacionService {
     nuevoEstado: string,
   ): Promise<void> {
     const titulo = `Novedad ${nuevoEstado.toLowerCase()}`;
-    const mensaje = `Tu novedad en '${nombreLocal}' fue marcada como ${nuevoEstado.toLowerCase()}`;
+    const mensaje = `La novedad en '${nombreLocal}' fue marcada como ${nuevoEstado.toLowerCase()}`;
+    const destinatarios = new Set([
+      destinatarioId,
+      ...(await obtenerSuperioresActivos(this.prisma, empresaId, [
+        destinatarioId,
+      ])),
+    ]);
+    destinatarios.delete(emisorId);
+    if (!destinatarios.size) return;
 
-    await this.prisma.notificacionCampo.create({
-      data: {
+    await this.prisma.notificacionCampo.createMany({
+      data: [...destinatarios].map((usuarioDestinatarioId) => ({
         empresaId,
-        usuarioDestinatarioId: destinatarioId,
+        usuarioDestinatarioId,
         usuarioEmisorId: emisorId,
         tipo: TipoNotificacionCampo.NOVEDAD_ACTUALIZADA,
         referenciaId: novedadId,
-        titulo,
-        mensaje,
-      },
+        titulo: titulo.slice(0, 100),
+        mensaje: mensaje.slice(0, 250),
+      })),
     });
   }
 
@@ -179,18 +185,19 @@ export class NotificacionService {
     novedadId: number,
     tituloNovedad: string,
   ): Promise<void> {
-    const destinatarioId =
-      emisorId === autorId
-        ? await obtenerLiderDirecto(this.prisma, autorId)
-        : autorId;
-    if (!destinatarioId || destinatarioId === emisorId) return;
+    const destinatarios = new Set([
+      autorId,
+      ...(await obtenerSuperioresActivos(this.prisma, empresaId, [autorId])),
+    ]);
+    destinatarios.delete(emisorId);
+    if (!destinatarios.size) return;
     const emisor = await this.prisma.usuario.findUnique({
       where: { id: emisorId },
       select: { nombre: true, apellido: true },
     });
     if (!emisor) return;
-    await this.prisma.notificacionCampo.create({
-      data: {
+    await this.prisma.notificacionCampo.createMany({
+      data: [...destinatarios].map((destinatarioId) => ({
         empresaId,
         usuarioDestinatarioId: destinatarioId,
         usuarioEmisorId: emisorId,
@@ -202,8 +209,75 @@ export class NotificacionService {
             0,
             250,
           ),
+      })),
+    });
+  }
+
+  /** Solo el destinatario puede abrir el registro al que apunta su aviso. */
+  async detalleInventario(
+    usuarioId: number,
+    empresaId: number,
+    notificacionId: number,
+  ): Promise<DetalleNotificacionInventario> {
+    const aviso = await this.prisma.notificacionCampo.findFirst({
+      where: {
+        id: notificacionId,
+        empresaId,
+        usuarioDestinatarioId: usuarioId,
+        tipo: TipoNotificacionCampo.VENCIMIENTO_PROXIMO,
+      },
+      select: { referenciaId: true },
+    });
+    if (!aviso?.referenciaId)
+      throw new NotFoundException('Detalle no disponible');
+    const carga = await this.prisma.cargaInventarioCampo.findFirst({
+      where: { id: aviso.referenciaId, empresaId },
+      select: {
+        id: true,
+        fecha: true,
+        cantidad: true,
+        vencimiento: true,
+        creadaEn: true,
+        actualizadaEn: true,
+        local: { select: { CardCode: true, CardName: true } },
+        producto: { select: { itemcode: true, itemname: true } },
+        usuario: {
+          select: {
+            id: true,
+            nombre: true,
+            apellido: true,
+            rol: { select: { descripcion: true } },
+          },
+        },
       },
     });
+    if (!carga) throw new NotFoundException('Detalle no disponible');
+    const direcciones = await direccionesLocales(this.prisma, empresaId, [
+      carga.local.CardCode,
+    ]);
+    return {
+      id: carga.id,
+      fecha: carga.fecha.toISOString().slice(0, 10),
+      cantidad: carga.cantidad,
+      vencimiento: carga.vencimiento.toISOString().slice(0, 10),
+      diasParaVencer: diasParaVencer(carga.vencimiento, relojCampo().fecha),
+      creadaEn: carga.creadaEn.toISOString(),
+      actualizadaEn: carga.actualizadaEn.toISOString(),
+      producto: {
+        codigo: carga.producto.itemcode,
+        nombre: carga.producto.itemname ?? carga.producto.itemcode,
+      },
+      local: {
+        codigo: carga.local.CardCode,
+        nombre: nombreLocal(carga.local),
+        direccion: direcciones.get(carga.local.CardCode)?.direccion ?? '',
+      },
+      autor: {
+        id: carga.usuario.id,
+        nombre: `${carga.usuario.nombre} ${carga.usuario.apellido}`.trim(),
+        rol: carga.usuario.rol?.descripcion ?? null,
+      },
+    };
   }
 
   /**

@@ -1,4 +1,5 @@
-import { diasParaVencer, textoAvisoVencimiento } from './vencimiento';
+import { diasParaVencer } from '../../common/utils/vencimiento';
+import { textoAvisoVencimiento } from './vencimiento';
 
 describe('vencimiento', () => {
   it('cuenta días enteros entre hoy y el vencimiento, negativos si ya venció', () => {

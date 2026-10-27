@@ -31,7 +31,7 @@ import type {
   ConsultaInventarioLocalDto,
   GuardarCargasInventarioDto,
 } from './dto/inventario-local.dto';
-import { diasParaVencer } from './utils/vencimiento';
+import { diasParaVencer } from '../common/utils/vencimiento';
 import { VencimientosService } from './vencimientos.service';
 
 const dia = (fecha: Date) => fecha.toISOString().slice(0, 10);

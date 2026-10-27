@@ -24,14 +24,14 @@ export function LoginForm() {
     setError(null);
     setEnviando(true);
     try {
-      await apiFetch<{ usuario: UsuarioSesion }>("/auth/login", {
+      const { usuario } = await apiFetch<{ usuario: UsuarioSesion }>("/auth/login", {
         method: "POST",
         body: JSON.stringify({ identificador: identificador.trim(), password }),
       });
       const menu = await apiFetch<{ modulos: ModuloMenu[] }>("/mi-plataforma").catch(
         () => ({ modulos: [] as ModuloMenu[] }),
       );
-      router.push(rutaInicialImpulsador(menu.modulos) ?? "/panel");
+      router.push(rutaInicialImpulsador(menu.modulos, usuario.rol?.equipoCampo) ?? "/panel");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Error inesperado");
       setEnviando(false);
