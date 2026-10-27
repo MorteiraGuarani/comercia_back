@@ -1,4 +1,5 @@
 "use client";
+import type { PeriodoFiltro } from "@/types/periodo-filtro";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { EstadoTelefono } from "./estado-telefono";
@@ -47,7 +48,7 @@ import {
   queryFechasCampo,
   textoRangoFechas,
 } from "@/utils/fechas";
-import { SelectorFechaFiltro, type PeriodoFiltro } from "./ui/selector-fecha-filtro";
+import { SelectorFechaFiltro } from "./ui/selector-fecha-filtro";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { btnPrimary, errorBox } from "@/components/ui";
 

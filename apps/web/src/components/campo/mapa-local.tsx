@@ -29,7 +29,7 @@ export function MapaLocal({
       <Modal titulo={local.nombre} abierto onCerrar={cerrar} ancho="md">
         <p className="text-sm text-foreground">
           Este local todavía no tiene ubicación cargada. Marcala desde{" "}
-          <b>PDV y rutas</b>.
+          <b>Itinerario</b>.
         </p>
       </Modal>
     );

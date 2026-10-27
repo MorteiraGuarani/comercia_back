@@ -26,6 +26,8 @@ import { btnGhost } from "@/components/ui";
 import { EVENTO_PLATAFORMA_ACTUALIZADA } from "@/lib/eventos-plataforma";
 import { BotonSubir } from "@/components/boton-subir";
 import { etiquetaPaginaMenu } from "@/utils/nombres-menu";
+import { EnlacePanel } from "@/components/panel/enlace-panel";
+import { useDisponibilidadTareas } from "@/hooks/use-disponibilidad-tareas";
 
 const cargarAnimaciones = () =>
   import("@/lib/funciones-animacion").then((modulo) => modulo.default);
@@ -46,6 +48,7 @@ export default function PanelLayout({
   const [sidebarVisible, setSidebarVisible] = useState(true);
   const [cerrandoSesion, setCerrandoSesion] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const tareasDisponibles = useDisponibilidadTareas(usuario?.id, modulos, pathname);
 
   useEffect(() => {
     Promise.all([
@@ -122,8 +125,8 @@ export default function PanelLayout({
 
   // Value estable del contexto: solo cambia cuando cambian usuario o módulos
   const valorPanel = useMemo(
-    () => (usuario ? { usuario, modulos } : null),
-    [usuario, modulos],
+    () => (usuario ? { usuario, modulos, tareasDisponibles } : null),
+    [usuario, modulos, tareasDisponibles],
   );
 
   if (cargando || !usuario || !valorPanel) {
@@ -141,13 +144,14 @@ export default function PanelLayout({
     (moduloRuta === "gestion-campo" || moduloRuta === "mi-jornada") &&
     (paginaRuta === "avisos" || paginaRuta === "novedades");
   const enlaces = [
-    { href: "/panel", nombre: "Inicio", icono: "inicio" },
+    { href: "/panel", nombre: "Inicio", icono: "inicio", disabled: false },
     ...modulos.flatMap((m) =>
       m.paginas
         .filter((p) => !soloEnCampana(m.ruta, p.ruta))
         .map((p) => ({
           href: `/panel/${m.ruta}/${p.ruta}`,
           nombre: etiquetaPaginaMenu(m.ruta, p.ruta, p.nombre),
+          disabled: p.ruta === "tareas" && tareasDisponibles[m.ruta] === false,
           icono: resolverIconoPagina({
             moduloRuta: m.ruta,
             moduloIcono: m.icono,
@@ -349,9 +353,10 @@ export default function PanelLayout({
                 >
                   <nav className="flex flex-col gap-1">
                     {enlaces.map((e) => (
-                      <Link
+                      <EnlacePanel
                         key={e.href}
                         href={e.href}
+                        disabled={e.disabled}
                         className={`relative flex min-h-11 items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition focus-visible:ring-2 focus-visible:ring-[#dea06a]/60 ${
                           activo(e.href)
                             ? "bg-commercial-ink-soft font-bold text-white shadow-sm before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-[#dea06a]"
@@ -360,7 +365,7 @@ export default function PanelLayout({
                       >
                         <IconoModulo nombre={e.icono} />
                         {e.nombre}
-                      </Link>
+                      </EnlacePanel>
                     ))}
                   </nav>
                 </m.aside>
@@ -410,9 +415,10 @@ export default function PanelLayout({
                   {enlacesMas.map((enlace) => {
                     const esActivo = activo(enlace.href);
                     return (
-                      <Link
+                      <EnlacePanel
                         key={enlace.href}
                         href={enlace.href}
+                        disabled={enlace.disabled}
                         role="menuitem"
                         aria-current={esActivo ? "page" : undefined}
                         onClick={() => setMasAbierto(false)}
@@ -428,7 +434,7 @@ export default function PanelLayout({
                         <span className="min-w-0 truncate">
                           {enlace.nombre}
                         </span>
-                      </Link>
+                      </EnlacePanel>
                     );
                   })}
                 </m.div>
@@ -450,9 +456,10 @@ export default function PanelLayout({
               {enlacesBarra.map((e) => {
                 const esActivo = activo(e.href);
                 return (
-                  <Link
+                  <EnlacePanel
                     key={e.href}
                     href={e.href}
+                    disabled={e.disabled}
                     title={e.nombre}
                     aria-current={esActivo ? "page" : undefined}
                     onClick={() => setMasAbierto(false)}
@@ -477,7 +484,7 @@ export default function PanelLayout({
                     <span className="w-full truncate px-0.5 text-center text-[11px] font-semibold leading-tight">
                       {e.nombre}
                     </span>
-                  </Link>
+                  </EnlacePanel>
                 );
               })}
               {tieneMasEnlaces ? (

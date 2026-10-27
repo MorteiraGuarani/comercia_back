@@ -1,34 +1,46 @@
-import type { PeriodoInicio } from "@/types/hoy-en-campo";
+import type { PeriodoFiltro } from "@/types/periodo-filtro";
 import { agregarDiasIso, lunesDeIso } from "./fechas";
 
-export const PERIODOS_INICIO: { clave: PeriodoInicio; etiqueta: string }[] = [
-  { clave: "hoy", etiqueta: "Hoy" },
-  { clave: "ayer", etiqueta: "Ayer" },
-  { clave: "semana", etiqueta: "Semana" },
-  { clave: "mes", etiqueta: "Mes" },
-];
+/** Rangos compartidos por Inicio, Mi Ruta, Presentismo y Tareas. */
+export function periodosDesdeHoy(hoy: string): PeriodoFiltro[] {
+  const ayer = agregarDiasIso(hoy, -1);
+  const primerDiaMes = `${hoy.slice(0, 7)}-01`;
+  const ultimoDiaMesPasado = agregarDiasIso(primerDiaMes, -1);
+  return [
+    { clave: "hoy", etiqueta: "Hoy", fecha: hoy, fechaInicio: hoy, fechaFin: hoy },
+    { clave: "ayer", etiqueta: "Ayer", fecha: ayer, fechaInicio: ayer, fechaFin: ayer },
+    { clave: "esta_semana", etiqueta: "Semana", fechaInicio: lunesDeIso(hoy), fechaFin: hoy },
+    { clave: "este_mes", etiqueta: "Mes", fechaInicio: primerDiaMes, fechaFin: hoy },
+    { clave: "mes_pasado", etiqueta: "Mes Pasado", fechaInicio: `${ultimoDiaMesPasado.slice(0, 7)}-01`, fechaFin: ultimoDiaMesPasado },
+  ];
+}
+
+export function periodoInicioHoy(hoy: string): PeriodoFiltro {
+  return periodosDesdeHoy(hoy)[0];
+}
 
 /** Días que abarca el período (la semana y el mes, hasta hoy). */
 export function rangoPeriodoInicio(
-  periodo: PeriodoInicio,
+  periodo: PeriodoFiltro,
   hoy: string,
 ): { desde: string; hasta: string } {
-  if (periodo === "ayer") {
-    const ayer = agregarDiasIso(hoy, -1);
-    return { desde: ayer, hasta: ayer };
-  }
-  if (periodo === "semana") return { desde: lunesDeIso(hoy), hasta: hoy };
-  if (periodo === "mes") return { desde: `${hoy.slice(0, 7)}-01`, hasta: hoy };
-  return { desde: hoy, hasta: hoy };
+  const actual = periodosDesdeHoy(hoy).find((p) => p.clave === periodo.clave) ?? periodo;
+  return {
+    desde: actual.fechaInicio ?? actual.fecha ?? hoy,
+    hasta: actual.fechaFin ?? actual.fecha ?? hoy,
+  };
 }
 
 /** Parámetros de fecha para la API: un día o un rango. */
-export function consultaPeriodoInicio(periodo: PeriodoInicio, hoy: string): string {
+export function consultaPeriodoInicio(periodo: PeriodoFiltro, hoy: string): string {
   const { desde, hasta } = rangoPeriodoInicio(periodo, hoy);
   return desde === hasta ? `fecha=${desde}` : `fechaInicio=${desde}&fechaFin=${hasta}`;
 }
 
 /** "hoy", "ayer", "esta semana", "este mes": para armar frases. */
-export function cuandoPeriodoInicio(periodo: PeriodoInicio): string {
-  return { hoy: "hoy", ayer: "ayer", semana: "esta semana", mes: "este mes" }[periodo];
+export function cuandoPeriodoInicio(periodo: PeriodoFiltro): string {
+  const etiquetas: Record<string, string> = {
+    hoy: "hoy", ayer: "ayer", esta_semana: "esta semana", este_mes: "este mes", mes_pasado: "el mes pasado",
+  };
+  return etiquetas[periodo.clave] ?? "en el período seleccionado";
 }

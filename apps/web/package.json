@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test:inicio": "node test/inicio-sesion.integration.mjs && node test/inicio-calendario.integration.mjs",
+    "test:ruta": "node test/ruta-impulsador.integration.mjs",
     "test:pendientes": "node test/pendientes-tareas.integration.mjs",
     "test:ucheck": "node test/ucheck-seguimiento.integration.mjs",
     "test:productos": "node test/productos.integration.mjs",

@@ -5,9 +5,6 @@ import { useState } from "react";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { inputBase, labelBase } from "@/components/ui";
 import { apiFetch, ApiError } from "@/lib/api";
-import type { UsuarioSesion } from "@/types/usuario";
-import type { ModuloMenu } from "@/types/plataforma";
-import { rutaInicialImpulsador } from "@/utils/nombres-menu";
 
 export function LoginForm() {
   const router = useRouter();
@@ -24,14 +21,11 @@ export function LoginForm() {
     setError(null);
     setEnviando(true);
     try {
-      const { usuario } = await apiFetch<{ usuario: UsuarioSesion }>("/auth/login", {
+      await apiFetch("/auth/login", {
         method: "POST",
         body: JSON.stringify({ identificador: identificador.trim(), password }),
       });
-      const menu = await apiFetch<{ modulos: ModuloMenu[] }>("/mi-plataforma").catch(
-        () => ({ modulos: [] as ModuloMenu[] }),
-      );
-      router.push(rutaInicialImpulsador(menu.modulos, usuario.rol?.equipoCampo) ?? "/panel");
+      router.push("/panel");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Error inesperado");
       setEnviando(false);

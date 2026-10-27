@@ -1,11 +1,12 @@
 "use client";
 import Link from "next/link";
 import { PRESENTISMO, RUTA } from "@/utils/estado-jornada";
-import { formatoHora } from "@/utils/fechas";
+import { formatoFechaCalendario, formatoHora } from "@/utils/fechas";
 import { useResumenTareasLocal } from "@/hooks/use-resumen-tareas-local";
 import type { EstadoRuta } from "@/types/estado-jornada";
 import type { AgendaCampo, VisitaCampo } from "@/types/campo";
 import { StatusStamp } from "./ui/status-stamp";
+import { EstadoRutaSimple } from "./ui/estado-ruta-simple";
 import { FotoLocal } from "./ui/foto-local";
 import {
   IconoAlerta,
@@ -19,11 +20,12 @@ import {
   IconoMapa,
   IconoPin,
   IconoPlay,
+  IconoReloj,
   IconoSalida,
   IconoTareas,
 } from "./ui/iconos-campo";
 
-interface TarjetaAgendaRepositorProps {
+interface TarjetaAgendaBaseProps {
   agenda: AgendaCampo;
   /** Posición en la ruta; se muestra en el marcador de los pendientes. */
   orden: number;
@@ -31,21 +33,40 @@ interface TarjetaAgendaRepositorProps {
   distancia?: string;
   abierta: boolean;
   alternar: () => void;
-  /** La agenda consultada es la de hoy (solo hoy se marca entrada). */
-  hoy: boolean;
   qsFecha: string;
-  /** Cambia al cerrar el modal de tareas para refrescar el "2/5". */
-  revisionTareas: number;
   /** Visita abierta del usuario, sea en este local o en otro. */
   visitaAbierta: VisitaCampo | null;
+  onMapa: () => void;
+  onNovedad: () => void;
+}
+
+interface AccionesRepositorProps {
+  soloConsulta?: false;
+  /** La agenda consultada es la de hoy (solo hoy se marca entrada). */
+  hoy: boolean;
+  /** Cambia al cerrar el modal de tareas para refrescar el "2/5". */
+  revisionTareas: number;
   rutaTareas: string | null;
   rutaInventario: string | null;
   onEntrada: (horarioId?: number) => void;
   onSalida: (visita: VisitaCampo) => void;
   onTareas: () => void;
-  onMapa: () => void;
-  onNovedad: () => void;
 }
+
+interface ConsultaImpulsadorProps {
+  /** El impulsador consulta visitas de UCheck y reporta novedades desde esta vista. */
+  soloConsulta: true;
+  hoy?: never;
+  revisionTareas?: never;
+  rutaTareas?: never;
+  rutaInventario?: never;
+  onEntrada?: never;
+  onSalida?: never;
+  onTareas?: never;
+}
+
+type TarjetaAgendaRepositorProps = TarjetaAgendaBaseProps &
+  (AccionesRepositorProps | ConsultaImpulsadorProps);
 
 const ESTILO: Record<EstadoRuta, { franja: string; pill: string }> = {
   pendiente: {
@@ -84,13 +105,17 @@ function Marcador({ estado, orden }: { estado: EstadoRuta; orden: number }) {
     "relative grid h-7 w-7 shrink-0 place-items-center rounded-full text-[13px] font-bold sm:h-8 sm:w-8 sm:text-sm";
   if (estado === "completado")
     return (
-      <span className={`${base} bg-emerald-600 text-white dark:bg-emerald-500 dark:text-emerald-950`}>
+      <span
+        className={`${base} bg-emerald-600 text-white dark:bg-emerald-500 dark:text-emerald-950`}
+      >
         <IconoCheck className="h-4 w-4" />
       </span>
     );
   if (estado === "en_curso")
     return (
-      <span className={`${base} bg-sky-600 text-white dark:bg-sky-500 dark:text-sky-950`}>
+      <span
+        className={`${base} bg-sky-600 text-white dark:bg-sky-500 dark:text-sky-950`}
+      >
         <span
           aria-hidden="true"
           className="absolute inset-0 rounded-full bg-sky-500/40 motion-safe:animate-ping dark:bg-sky-400/30"
@@ -100,13 +125,17 @@ function Marcador({ estado, orden }: { estado: EstadoRuta; orden: number }) {
     );
   if (estado === "incompleto")
     return (
-      <span className={`${base} bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300`}>
+      <span
+        className={`${base} bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300`}
+      >
         <IconoAlerta className="h-4 w-4" />
       </span>
     );
   if (estado === "ausente")
     return (
-      <span className={`${base} bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300`}>
+      <span
+        className={`${base} bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300`}
+      >
         <IconoCruz className="h-4 w-4" />
       </span>
     );
@@ -136,6 +165,7 @@ export function TarjetaAgendaRepositor({
   onTareas,
   onMapa,
   onNovedad,
+  soloConsulta = false,
 }: TarjetaAgendaRepositorProps) {
   const estilo = ESTILO[a.estado];
   const idDetalle = `detalle-agenda-${a.id}`;
@@ -147,8 +177,8 @@ export function TarjetaAgendaRepositor({
     a.id,
     qsFecha,
     visitaAqui?.id ?? null,
-    !!visitaAqui || abierta,
-    revisionTareas,
+    !soloConsulta && (!!visitaAqui || abierta),
+    revisionTareas ?? 0,
   );
   const entradaEnCurso =
     visitaAqui?.entrada ??
@@ -170,14 +200,19 @@ export function TarjetaAgendaRepositor({
 
   // Un solo "Marcar entrada": el del próximo horario que todavía no tiene visita.
   const entradasPendientes =
-    hoy && !visitaAbierta
+    !soloConsulta && hoy && !visitaAbierta
       ? (horarios.length ? horarios : [null])
-          .filter((h) => !a.visitas.some((v) => v.horarioId === (h?.id ?? null)))
+          .filter(
+            (h) => !a.visitas.some((v) => v.horarioId === (h?.id ?? null)),
+          )
           .slice(0, 1)
       : [];
   const otraVisita =
-    hoy && !visitaAqui && a.estado === "pendiente" ? visitaAbierta : null;
-  const tareasCompletas = !!tareas && tareas.total > 0 && tareas.hechas === tareas.total;
+    !soloConsulta && hoy && !visitaAqui && a.estado === "pendiente"
+      ? visitaAbierta
+      : null;
+  const tareasCompletas =
+    !!tareas && tareas.total > 0 && tareas.hechas === tareas.total;
 
   return (
     <article
@@ -207,11 +242,15 @@ export function TarjetaAgendaRepositor({
           </button>
           <p className="truncate text-[11px] text-muted sm:text-xs">{meta}</p>
         </div>
-        <span
-          className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[10px] font-bold sm:text-[11px] ${estilo.pill}`}
-        >
-          {RUTA[a.estado].etiqueta}
-        </span>
+        {soloConsulta ? (
+          <EstadoRutaSimple estado={a.estado} />
+        ) : (
+          <span
+            className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[10px] font-bold sm:text-[11px] ${estilo.pill}`}
+          >
+            {RUTA[a.estado].etiqueta}
+          </span>
+        )}
         <button
           type="button"
           onClick={onMapa}
@@ -248,45 +287,69 @@ export function TarjetaAgendaRepositor({
               {a.esBackup ? (
                 <p className="flex min-w-0 items-start gap-1.5 text-xs text-foreground">
                   <IconoContacto className="mt-px h-3.5 w-3.5 shrink-0 text-muted" />
-                  <span className="min-w-0 break-words">Reemplazo de {a.titular}</span>
+                  <span className="min-w-0 break-words">
+                    Reemplazo de {a.titular}
+                  </span>
                 </p>
               ) : null}
               {/* "Sin registro" repetía el estado de la ruta; solo se muestra el presentismo real. */}
-              {a.estadoPresentismo !== "SIN_REGISTRO" ? (
+              {!soloConsulta && a.estadoPresentismo !== "SIN_REGISTRO" ? (
                 <StatusStamp tone={PRESENTISMO[a.estadoPresentismo].tone}>
                   {PRESENTISMO[a.estadoPresentismo].etiqueta}
                 </StatusStamp>
               ) : null}
 
+              {soloConsulta ? (
+                <div
+                  className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted sm:text-xs"
+                  aria-label="Horario de atención"
+                >
+                  <IconoReloj className="h-3.5 w-3.5 shrink-0" />
+                  {horarios.length
+                    ? horarios.map((h) => (
+                        <span key={h.id} className="font-mono">
+                          {h.entrada}–{h.salida}
+                        </span>
+                      ))
+                    : "Sin horario fijado"}
+                </div>
+              ) : null}
+
               <div className="mt-auto flex flex-wrap gap-1.5 pt-1">
                 {/* Tareas e inventario se usan dentro del local: con la entrada marcada. */}
-                <button
-                  type="button"
-                  onClick={onTareas}
-                  disabled={!visitaAqui}
-                  title={visitaAqui ? undefined : "Marcá entrada para ver las tareas"}
-                  aria-label={
-                    tareas
-                      ? `Tareas de ${a.local.nombre}: ${tareas.hechas} de ${tareas.total} hechas`
-                      : `Tareas de ${a.local.nombre}`
-                  }
-                  className={btnInfo}
-                >
-                  <IconoTareas className="h-3.5 w-3.5 shrink-0" />
-                  Tareas
-                  {tareas ? (
-                    <span
-                      className={`rounded-md px-1.5 text-[11px] font-bold tabular-nums ${
-                        tareasCompletas
-                          ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-                          : "bg-brand-100 text-brand-800 dark:bg-brand-900 dark:text-brand-100"
-                      }`}
-                    >
-                      {tareas.hechas}/{tareas.total}
-                    </span>
-                  ) : null}
-                </button>
-                {rutaInventario ? (
+                {!soloConsulta ? (
+                  <button
+                    type="button"
+                    onClick={onTareas}
+                    disabled={!visitaAqui}
+                    title={
+                      visitaAqui
+                        ? undefined
+                        : "Marcá entrada para ver las tareas"
+                    }
+                    aria-label={
+                      tareas
+                        ? `Tareas de ${a.local.nombre}: ${tareas.hechas} de ${tareas.total} hechas`
+                        : `Tareas de ${a.local.nombre}`
+                    }
+                    className={btnInfo}
+                  >
+                    <IconoTareas className="h-3.5 w-3.5 shrink-0" />
+                    Tareas
+                    {tareas ? (
+                      <span
+                        className={`rounded-md px-1.5 text-[11px] font-bold tabular-nums ${
+                          tareasCompletas
+                            ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                            : "bg-brand-100 text-brand-800 dark:bg-brand-900 dark:text-brand-100"
+                        }`}
+                      >
+                        {tareas.hechas}/{tareas.total}
+                      </span>
+                    ) : null}
+                  </button>
+                ) : null}
+                {!soloConsulta && rutaInventario ? (
                   visitaAqui ? (
                     <Link
                       href={`${rutaInventario}?local=${encodeURIComponent(a.local.id)}`}
@@ -326,16 +389,26 @@ export function TarjetaAgendaRepositor({
               className="space-y-1 rounded-lg bg-surface-soft/70 px-2.5 py-1.5 text-[11px] sm:text-xs"
             >
               {a.visitas.map((v) => (
-                <li key={v.id} className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                <li
+                  key={v.id}
+                  className="flex flex-wrap items-center gap-x-3 gap-y-0.5"
+                >
+                  {soloConsulta ? (
+                    <span className="font-mono text-muted">
+                      {formatoFechaCalendario(v.fecha)}
+                    </span>
+                  ) : null}
                   <span className="inline-flex items-center gap-1 text-foreground">
                     <IconoEntrada className="h-3.5 w-3.5 shrink-0 text-muted" />
-                    Entrada <b className="font-mono">{formatoHora(v.entrada)}</b>
+                    Entrada{" "}
+                    <b className="font-mono">{formatoHora(v.entrada)}</b>
                   </span>
                   <span className="inline-flex items-center gap-1 text-foreground">
                     <IconoSalida className="h-3.5 w-3.5 shrink-0 text-muted" />
                     {v.salida ? (
                       <>
-                        Salida <b className="font-mono">{formatoHora(v.salida)}</b>
+                        Salida{" "}
+                        <b className="font-mono">{formatoHora(v.salida)}</b>
                       </>
                     ) : v.estado === "EN_CURSO" ? (
                       <span className="font-semibold text-sky-700 dark:text-sky-300">
@@ -352,7 +425,7 @@ export function TarjetaAgendaRepositor({
             </ul>
           ) : null}
 
-          {visitaAqui ? (
+          {!soloConsulta && visitaAqui ? (
             <div className="flex flex-wrap gap-2">
               {rutaTareas ? (
                 <Link href={rutaTareas} className={btnPrincipal}>
@@ -360,14 +433,18 @@ export function TarjetaAgendaRepositor({
                   Continuar visita
                 </Link>
               ) : (
-                <button type="button" onClick={onTareas} className={btnPrincipal}>
+                <button
+                  type="button"
+                  onClick={onTareas}
+                  className={btnPrincipal}
+                >
                   <IconoPlay className="h-3.5 w-3.5 shrink-0" />
                   Continuar visita
                 </button>
               )}
               <button
                 type="button"
-                onClick={() => onSalida(visitaAqui)}
+                onClick={() => onSalida?.(visitaAqui)}
                 aria-label={`Marcar salida de ${a.local.nombre}`}
                 className={btnSalida}
               >
@@ -381,7 +458,7 @@ export function TarjetaAgendaRepositor({
                 <button
                   key={h?.id ?? 0}
                   type="button"
-                  onClick={() => onEntrada(h?.id)}
+                  onClick={() => onEntrada?.(h?.id)}
                   className={`${btnPrincipal} w-full`}
                 >
                   <IconoEntrada className="h-4 w-4 shrink-0" />

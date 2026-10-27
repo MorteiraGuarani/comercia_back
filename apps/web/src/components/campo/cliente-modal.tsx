@@ -42,11 +42,13 @@ const campoClase =
 export function ClienteModal({
   cliente: inicial,
   pestana = "datos",
+  seccionUnica = false,
   onCerrar,
   onGuardado,
 }: {
   cliente?: ClientePdv;
   pestana?: PestanaCliente;
+  seccionUnica?: boolean;
   onCerrar: () => void;
   onGuardado: (cliente: ClientePdv) => void;
 }) {
@@ -178,53 +180,65 @@ export function ClienteModal({
       return;
     }
     setAvisoPendiente("");
-    if (vista === "horarios") setVista("personal");
+    if (vista === "horarios" && !seccionUnica) setVista("personal");
     else cerrar();
   }
 
   return (
     <>
       <Modal
-        titulo={cliente ? `Cliente · ${cliente.nombre}` : "Crear cliente"}
+        titulo={
+          cliente
+            ? `${seccionUnica ? { datos: "Información", horarios: "Itinerario", personal: "Asignación" }[vista] : "Cliente"} · ${cliente.nombre}`
+            : "Crear cliente"
+        }
         abierto
         ancho="xl"
         onCerrar={cerrar}
       >
         <div className="campo-screen min-w-0 w-full space-y-4">
-          <div
-            role="tablist"
-            aria-label="Secciones del cliente"
-            className="flex min-w-0 flex-wrap gap-2 border-b border-line pb-3"
-          >
-            {PESTANAS.map(({ clave, texto }) => {
-              const bloqueada = clave !== "datos" && !cliente;
-              return (
-                <button
-                  key={clave}
-                  type="button"
-                  role="tab"
-                  aria-selected={vista === clave}
-                  disabled={bloqueada}
-                  title={bloqueada ? "Primero creá el cliente" : undefined}
-                  onClick={() => void irA(clave)}
-                  className={`min-h-11 min-w-0 flex-1 cursor-pointer whitespace-nowrap rounded-lg px-3 text-xs font-bold uppercase tracking-wider transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none sm:px-4 ${
-                    vista === clave
-                      ? "bg-foreground text-background"
-                      : "border border-line bg-surface-raised text-muted hover:bg-surface-soft hover:text-foreground"
-                  }`}
-                >
-                  {texto}
-                </button>
-              );
-            })}
-          </div>
+          {!seccionUnica ? (
+            <div
+              role="tablist"
+              aria-label="Secciones del cliente"
+              className="flex min-w-0 flex-wrap gap-2 border-b border-line pb-3"
+            >
+              {PESTANAS.map(({ clave, texto }) => {
+                const bloqueada = clave !== "datos" && !cliente;
+                return (
+                  <button
+                    key={clave}
+                    type="button"
+                    role="tab"
+                    aria-selected={vista === clave}
+                    disabled={bloqueada}
+                    title={bloqueada ? "Primero creá el cliente" : undefined}
+                    onClick={() => void irA(clave)}
+                    className={`min-h-11 min-w-0 flex-1 cursor-pointer whitespace-nowrap rounded-lg px-3 text-xs font-bold uppercase tracking-wider transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none sm:px-4 ${
+                      vista === clave
+                        ? "bg-foreground text-background"
+                        : "border border-line bg-surface-raised text-muted hover:bg-surface-soft hover:text-foreground"
+                    }`}
+                  >
+                    {texto}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
 
           {vista === "datos" ? (
             <form
               className="space-y-4"
               onSubmit={(evento) => {
                 evento.preventDefault();
-                void irA("horarios");
+                if (seccionUnica) {
+                  void guardarDatos().then((ok) => {
+                    if (ok) onCerrar();
+                  });
+                } else {
+                  void irA("horarios");
+                }
               }}
             >
               {op.error && (
@@ -403,51 +417,57 @@ export function ClienteModal({
                   }
                   className="min-h-11 cursor-pointer whitespace-nowrap rounded-lg bg-brand-700 px-4 text-sm font-semibold text-white hover:bg-brand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-brand-500 dark:text-zinc-950 dark:hover:bg-brand-400"
                 >
-                  Siguiente
+                  {seccionUnica ? "Guardar cambios" : "Siguiente"}
                 </button>
               </div>
             </form>
           ) : null}
-          {/* Montadas aunque no se vean: cambiar de pestaña no pierde lo cargado. */}
-          {cliente && (
-              <div hidden={vista === "datos"} className="min-w-0 space-y-4">
-                <p className="text-sm text-muted">
-                  Equipo:{" "}
-                  <strong className="text-foreground">
-                    {usuario.rol?.equipoCampo?.nombre ?? "Sin equipo operativo"}
-                  </strong>
-                  . Los horarios y el personal se configuran para este equipo.
-                </p>
+          {/* Los accesos separados montan únicamente la sección solicitada. */}
+          {cliente && (!seccionUnica || vista !== "datos") && (
+            <div hidden={vista === "datos"} className="min-w-0 space-y-4">
+              <p className="text-sm text-muted">
+                Equipo:{" "}
+                <strong className="text-foreground">
+                  {usuario.rol?.equipoCampo?.nombre ?? "Sin equipo operativo"}
+                </strong>
+                . Los horarios y el personal se configuran para este equipo.
+              </p>
+              {(!seccionUnica || vista === "horarios") && (
                 <div hidden={vista !== "horarios"}>
                   <HorariosLocal
                     localId={cliente.id}
                     onPendiente={marcarHorarios}
                   />
                 </div>
+              )}
+              {(!seccionUnica || vista === "personal") && (
                 <div hidden={vista !== "personal"}>
                   <AsignacionesLocal
                     localId={cliente.id}
                     onPendiente={marcarPersonal}
                   />
                 </div>
-                {avisoPendiente && (
-                  <p
-                    role="alert"
-                    className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100"
-                  >
-                    {avisoPendiente}
-                  </p>
-                )}
-                <div className="flex justify-end border-t border-line pt-4">
-                  <button
-                    type="button"
-                    onClick={avanzar}
-                    className="min-h-11 cursor-pointer whitespace-nowrap rounded-lg bg-brand-700 px-4 text-sm font-semibold text-white hover:bg-brand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:bg-brand-500 dark:text-zinc-950 dark:hover:bg-brand-400"
-                  >
-                    {vista === "horarios" ? "Siguiente" : "Listo"}
-                  </button>
-                </div>
+              )}
+              {avisoPendiente && (
+                <p
+                  role="alert"
+                  className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100"
+                >
+                  {avisoPendiente}
+                </p>
+              )}
+              <div className="flex justify-end border-t border-line pt-4">
+                <button
+                  type="button"
+                  onClick={avanzar}
+                  className="min-h-11 cursor-pointer whitespace-nowrap rounded-lg bg-brand-700 px-4 text-sm font-semibold text-white hover:bg-brand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:bg-brand-500 dark:text-zinc-950 dark:hover:bg-brand-400"
+                >
+                  {vista === "horarios" && !seccionUnica
+                    ? "Siguiente"
+                    : "Listo"}
+                </button>
               </div>
+            </div>
           )}
         </div>
       </Modal>

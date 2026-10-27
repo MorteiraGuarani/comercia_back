@@ -1,9 +1,9 @@
 "use client";
 
-import { BotonEditar } from "@/components/boton-editar";
 import type { LocalCampo } from "@/types/campo";
 import { FotoLocal } from "./ui/foto-local";
-import { IconoPin, IconoPlanificacion } from "./ui/iconos-campo";
+import { IconoPin } from "./ui/iconos-campo";
+import { AccionesItinerario } from "./acciones-itinerario";
 
 // Tarjeta de punto de venta (vista celular de PDV y rutas): imagen del local,
 // CardCode, ubicación en OCRD y quién lo atiende.
@@ -13,12 +13,14 @@ const iniciales = (nombre: string, apellido: string) =>
 
 export function TarjetaPdv({
   local,
-  onEditar,
-  onRuta,
+  onInformacion,
+  onItinerario,
+  onAsignacion,
 }: {
   local: LocalCampo;
-  onEditar: () => void;
-  onRuta: () => void;
+  onInformacion: () => void;
+  onItinerario: () => void;
+  onAsignacion: () => void;
 }) {
   const asignaciones = local.asignaciones ?? [];
   const ubicado = local.latitud !== null && local.longitud !== null;
@@ -78,20 +80,12 @@ export function TarjetaPdv({
         </div>
 
         <div className="mt-3 flex items-center gap-2 border-t border-line/70 pt-2.5">
-          <BotonEditar
-            onClick={onEditar}
-            etiqueta={`Editar cliente ${local.nombre}`}
-            modo="texto"
-            className="flex-1"
+          <AccionesItinerario
+            nombre={local.nombre}
+            onInformacion={onInformacion}
+            onItinerario={onItinerario}
+            onAsignacion={onAsignacion}
           />
-          <button
-            type="button"
-            onClick={onRuta}
-            className="inline-flex min-h-11 flex-1 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-brand-200 bg-brand-50 px-3 text-sm font-semibold text-brand-800 transition-colors hover:border-brand-500 hover:bg-brand-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:border-brand-800 dark:bg-brand-950/50 dark:text-brand-100 dark:hover:bg-brand-900"
-          >
-            <IconoPlanificacion className="h-4 w-4" />
-            Ruta
-          </button>
         </div>
       </div>
     </article>

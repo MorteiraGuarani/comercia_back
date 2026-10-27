@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { EnlacePanel } from "@/components/panel/enlace-panel";
 import { useEffect, useState } from "react";
 import { usePanel } from "@/components/panel/contexto";
 import { HoyEnCampo } from "@/components/campo/hoy-en-campo";
@@ -10,20 +11,22 @@ import {
   IconoRefrescar,
 } from "@/components/campo/ui/iconos-campo";
 import { apiFetch } from "@/lib/api";
+import { hayTareasAsignadas } from "@/lib/disponibilidad-tareas";
 import { fechaEnZonaIso, textoRangoFechas } from "@/utils/fechas";
 import {
   consultaPeriodoInicio,
+  periodoInicioHoy,
   cuandoPeriodoInicio,
   rangoPeriodoInicio,
 } from "@/utils/periodo-inicio";
 import { SelectorPeriodoInicio } from "@/components/campo/ui/periodo-inicio";
-import type { PeriodoInicio } from "@/types/hoy-en-campo";
+import type { PeriodoFiltro } from "@/types/periodo-filtro";
 import { etiquetaPaginaMenu } from "@/utils/nombres-menu";
 import type { AgendaCampo, SupervisionResumenData } from "@/types/campo";
 import type { RespuestaPaginada } from "@/types/paginacion";
 
 export default function PanelInicioPage() {
-  const { usuario, modulos } = usePanel();
+  const { usuario, modulos, tareasDisponibles } = usePanel();
   const tieneGestionCampo = modulos.some((m) => m.ruta === "gestion-campo");
   const tieneMiJornada = modulos.some((m) => m.ruta === "mi-jornada");
   // Equipos de campo (repositores o impulsadores): el líder ve "Hoy en campo"
@@ -86,6 +89,7 @@ export default function PanelInicioPage() {
                   pagina.nombre,
                 )}
                 descripcion={descripcionPagina(modulo.ruta, pagina.ruta)}
+                disabled={pagina.ruta === "tareas" && tareasDisponibles[modulo.ruta] === false}
               />
             ))}
           </div>
@@ -106,6 +110,7 @@ function InicioResumen({
 }: {
   modulo: import("@/types/plataforma").ModuloMenu;
 }) {
+  const { tareasDisponibles } = usePanel();
   const equipo = modulo.ruta === "gestion-campo";
   const tiene = (pagina: string) =>
     modulo.paginas.some((p) => p.ruta === pagina);
@@ -127,6 +132,7 @@ function InicioResumen({
     import("@/types/campo").VisitaCampo | null
   >(null);
   const [tareasActivas, setTareasActivas] = useState<number | null>(null);
+  const [hayTareasPeriodo, setHayTareasPeriodo] = useState<boolean | null>(null);
   const [avisosRecientes, setAvisosRecientes] = useState<
     import("@/types/campo").AvisoRecibidoItem[] | null
   >(null);
@@ -134,14 +140,15 @@ function InicioResumen({
     null,
   );
   const [errores, setErrores] = useState<string[]>([]);
-  const [periodo, setPeriodo] = useState<PeriodoInicio>("hoy");
   const hoy = fechaEnZonaIso(new Date());
+  const [periodo, setPeriodo] = useState<PeriodoFiltro>(() => periodoInicioHoy(hoy));
   const consulta = consultaPeriodoInicio(periodo, hoy);
   const rango = rangoPeriodoInicio(periodo, hoy);
   const cuando = cuandoPeriodoInicio(periodo);
   const [revision, setRevision] = useState(0);
-  const [terminada, setTerminada] = useState(-1);
-  const cargando = terminada !== revision;
+  const [terminada, setTerminada] = useState("");
+  const claveCarga = `${revision}|${consulta}`;
+  const cargando = terminada !== claveCarga;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -162,6 +169,12 @@ function InicioResumen({
     }
     async function cargar() {
       const solicitudes: Promise<void>[] = [];
+      if (tareas && consulta !== `fecha=${fecha}`)
+        solicitudes.push(
+          hayTareasAsignadas(consulta, controller.signal)
+            .then((valor) => { if (!controller.signal.aborted) setHayTareasPeriodo(valor); })
+            .catch(() => { if (!controller.signal.aborted) setHayTareasPeriodo(null); }),
+        );
       if (visitas)
         solicitudes.push(
           consultar<SupervisionResumenData>(
@@ -225,12 +238,12 @@ function InicioResumen({
       await Promise.all(solicitudes);
       if (!controller.signal.aborted) {
         setErrores(fallos);
-        setTerminada(revision);
+        setTerminada(claveCarga);
       }
     }
     void cargar();
     return () => controller.abort();
-  }, [visitas, novedades, avisos, jornada, tareas, revision, consulta]);
+  }, [visitas, novedades, avisos, jornada, tareas, revision, consulta, claveCarga]);
 
   const href = (pagina: string) => `/panel/${modulo.ruta}/${pagina}`;
   if (!visitas && !jornada && !avisos && !novedades) return null;
@@ -297,7 +310,7 @@ function InicioResumen({
               <>
                 <KpiInicio
                   href={href("visitas")}
-                  label="En ruta"
+                  label="Presentismo"
                   value={
                     errores.includes("Equipo")
                       ? "—"
@@ -311,18 +324,7 @@ function InicioResumen({
                 />
                 <KpiInicio
                   href={href("visitas")}
-                  label="Sin iniciar"
-                  value={
-                    errores.includes("Equipo")
-                      ? "—"
-                      : (resumen?.presentismo.sinIniciar ?? "—")
-                  }
-                  detail="Sin entrada registrada"
-                  tone="alerta"
-                />
-                <KpiInicio
-                  href={href("visitas")}
-                  label="Rutas"
+                  label="Mi Ruta"
                   value={
                     !errores.includes("Equipo") && resumen
                       ? `${resumen.rutas.pct}%`
@@ -338,6 +340,7 @@ function InicioResumen({
                 <KpiInicio
                   href={href("visitas")}
                   label="Tareas"
+                  disabled={resumen ? resumen.tareas.total === 0 : tareasDisponibles[modulo.ruta] === false}
                   value={
                     !errores.includes("Equipo") && resumen
                       ? `${resumen.tareas.pct}%`
@@ -356,25 +359,24 @@ function InicioResumen({
               <>
                 <KpiInicio
                   href={href(rutaPagina)}
-                  label={`Locales ${cuando}`}
-                  value={errores.includes("Locales") ? "—" : (locales ?? "—")}
-                  detail="Asignaciones de tu jornada"
+                  label="Presentismo"
+                  value={errores.includes("Visitas") || visitasHoy === null ? "—" : visitasHoy > 0 ? "Con entrada" : "Sin entrada"}
+                  detail="Entradas registradas en el período"
                 />
                 <KpiInicio
                   href={href(rutaPagina)}
-                  label={`Visitas ${cuando}`}
-                  value={
-                    errores.includes("Visitas") ? "—" : (visitasHoy ?? "—")
-                  }
-                  detail="Entradas registradas"
+                  label="Mi Ruta"
+                  value={errores.includes("Locales") ? "—" : (locales ?? "—")}
+                  detail="Locales asignados en el período"
                   tone="fresco"
                 />
               </>
             )}
-            {tareas && (
+            {jornada && (
               <KpiInicio
                 href={href("tareas")}
-                label="Tareas de visita"
+                label="Tareas"
+                disabled={!tareas || (consulta === `fecha=${hoy}` ? tareasDisponibles[modulo.ruta] === false : hayTareasPeriodo === false)}
                 value={
                   errores.includes("Tareas de la visita") ||
                   errores.includes("Visita activa") ||
@@ -394,7 +396,7 @@ function InicioResumen({
             {novedades && (
               <KpiInicio
                 href={href("novedades")}
-                label="Novedades abiertas"
+                label="Novedades"
                 value={
                   errores.includes("Novedades")
                     ? "—"
@@ -439,12 +441,14 @@ function KpiInicio({
   value,
   detail,
   tone = "ink",
+  disabled = false,
 }: {
   href: string;
   label: string;
   value: number | string;
   detail: string;
   tone?: "ink" | "frio" | "fresco" | "alerta";
+  disabled?: boolean;
 }) {
   const valorClase = {
     ink: "text-foreground",
@@ -454,7 +458,8 @@ function KpiInicio({
   }[tone];
 
   return (
-    <Link
+    <EnlacePanel
+      disabled={disabled}
       href={href}
       className="group min-w-0 rounded-xl border border-line bg-surface-raised p-3 shadow-sm transition hover:-translate-y-0.5 hover:border-accent-ink hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40 sm:p-4"
     >
@@ -469,7 +474,7 @@ function KpiInicio({
       <p className="mt-2 text-xs leading-relaxed text-muted group-hover:text-foreground">
         {detail}
       </p>
-    </Link>
+    </EnlacePanel>
   );
 }
 
@@ -477,13 +482,16 @@ function Acceso({
   href,
   titulo,
   descripcion,
+  disabled = false,
 }: {
   href: string;
   titulo: string;
   descripcion: string;
+  disabled?: boolean;
 }) {
   return (
-    <Link
+    <EnlacePanel
+      disabled={disabled}
       href={href}
       className="group flex min-h-16 min-w-0 items-center justify-between gap-4 p-4 transition-colors hover:bg-surface-soft focus-visible:relative sm:px-5"
     >
@@ -494,7 +502,7 @@ function Acceso({
         <p className="mt-1 text-sm leading-relaxed text-muted">{descripcion}</p>
       </div>
       <IconoFlechaDer className="h-5 w-5 shrink-0 text-muted group-hover:text-accent-ink" />
-    </Link>
+    </EnlacePanel>
   );
 }
 
@@ -507,7 +515,7 @@ function descripcionPagina(modulo: string, pagina: string) {
     "gestion-campo/avisos":
       "Indicaciones operativas y confirmación de lectura.",
     "gestion-campo/locales":
-      "Puntos de venta, rutas y planificación operativa.",
+      "Información, itinerarios y asignaciones de los locales.",
     "gestion-campo/tareas": "Protocolos y tareas asignadas al equipo.",
     "mi-jornada/locales":
       "Tu ruta de hoy: locales, horarios, mapas y novedades.",

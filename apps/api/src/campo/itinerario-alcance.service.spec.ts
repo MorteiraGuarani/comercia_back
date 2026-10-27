@@ -1,0 +1,139 @@
+import type { PrismaService } from '../prisma/prisma.service';
+import type { CampoAccesoService } from './campo-acceso.service';
+
+jest.mock('../prisma/prisma.service', () => ({ PrismaService: class {} }));
+import { CatalogoCampoService } from './catalogo-campo.service';
+
+function preparar(
+  rolDescripcion = 'supervisor.impulsador',
+  colaboradores = true,
+) {
+  const prisma = {
+    usuario: {
+      findUnique: jest.fn().mockResolvedValue({
+        id: 1,
+        empresaId: 10,
+        isActive: true,
+        rol: { equipoCampoId: 4 },
+      }),
+      findMany: jest
+        .fn()
+        .mockResolvedValueOnce(colaboradores ? [{ id: 2 }] : [])
+        .mockResolvedValueOnce([{ id: 3 }])
+        .mockResolvedValue([]),
+    },
+    socioNegocio: {
+      count: jest.fn().mockResolvedValue(0),
+      findMany: jest.fn().mockResolvedValue([]),
+    },
+  };
+  const acceso = {
+    gestionar: jest.fn().mockResolvedValue({
+      id: 1,
+      empresaId: 10,
+      rolDescripcion,
+      equipoCampo: { id: 4, tipo: 'IMPULSADOR', activo: true },
+    }),
+  };
+  return {
+    prisma,
+    service: new CatalogoCampoService(
+      prisma as unknown as PrismaService,
+      acceso as unknown as CampoAccesoService,
+    ),
+  };
+}
+
+describe('Alcance de Itinerario del supervisor impulsador', () => {
+  it.each(['locales', 'localesMapa'] as const)(
+    '%s limita catálogo, conteo y asignados a la cadena real del equipo',
+    async (metodo) => {
+      const { prisma, service } = preparar();
+      await service[metodo](1, { page: 2, limit: 7, buscar: 'central' });
+      const personal = {
+        empresaId: 10,
+        id: { in: [2, 3] },
+        isActive: true,
+        esSuperadmin: false,
+        rol: { equipoCampoId: 4 },
+      };
+      const asignacion = {
+        activo: true,
+        usuario: personal,
+        fechaDesde: { lte: expect.any(Date) as unknown },
+        OR: [
+          { fechaHasta: null },
+          { fechaHasta: { gte: expect.any(Date) as unknown } },
+        ],
+      };
+      const where: unknown = expect.objectContaining({
+        empresaId: 10,
+        OR: [
+          { CardName: { contains: 'central', mode: 'insensitive' } },
+          { CardCode: { contains: 'central', mode: 'insensitive' } },
+        ],
+        asignaciones: { some: asignacion },
+      });
+      expect(prisma.socioNegocio.count).toHaveBeenCalledWith({ where });
+      expect(prisma.socioNegocio.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where,
+          skip: 7,
+          take: 7,
+          select: expect.objectContaining({
+            asignaciones: expect.objectContaining({
+              where: asignacion,
+            }) as unknown,
+          }) as unknown,
+        }),
+      );
+      expect(prisma.usuario.findMany).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({
+          where: expect.objectContaining({
+            empresaId: 10,
+            superiorId: { in: [1] },
+            rol: { equipoCampoId: 4 },
+          }) as unknown,
+        }),
+      );
+      expect(prisma.usuario.findMany).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          where: expect.objectContaining({
+            superiorId: { in: [2] },
+          }) as unknown,
+        }),
+      );
+    },
+  );
+
+  it('no convierte un supervisor sin colaboradores en acceso al catálogo completo', async () => {
+    const { prisma, service } = preparar('supervisor.impulsador', false);
+    await service.locales(1, {});
+    expect(prisma.socioNegocio.count).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        asignaciones: {
+          some: expect.objectContaining({
+            usuario: expect.objectContaining({ id: { in: [] } }) as unknown,
+          }) as unknown,
+        },
+      }) as unknown,
+    });
+  });
+
+  it.each([
+    'Back Office',
+    'backoffice.impulsador',
+    'SUPERVISOR_BACKOFFICE',
+    'Administrador',
+    'Superadmin',
+  ])('%s conserva todos los locales de su empresa', async (rol) => {
+    const { prisma, service } = preparar(rol);
+    await service.locales(1, {});
+    expect(prisma.socioNegocio.count).toHaveBeenCalledWith({
+      where: { empresaId: 10 },
+    });
+    expect(prisma.usuario.findUnique).not.toHaveBeenCalled();
+  });
+});

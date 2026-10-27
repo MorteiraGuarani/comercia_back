@@ -3,10 +3,12 @@
 import { createContext, useContext } from "react";
 import type { UsuarioSesion } from "@/types/usuario";
 import type { ModuloMenu } from "@/types/plataforma";
+import type { DisponibilidadTareas } from "@/types/disponibilidad-tareas";
 
 export interface PanelData {
   usuario: UsuarioSesion;
   modulos: ModuloMenu[];
+  tareasDisponibles: DisponibilidadTareas;
 }
 
 const PanelContext = createContext<PanelData | null>(null);

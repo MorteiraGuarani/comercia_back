@@ -1,4 +1,5 @@
 "use client";
+import type { PeriodoFiltro } from "@/types/periodo-filtro";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
@@ -7,6 +8,7 @@ import { guardarCacheSesion, leerCacheSesion } from "@/lib/cache-sesion";
 import { usePanel } from "@/components/panel/contexto";
 import { Modal } from "@/components/modal";
 import { HiloNovedad } from "./hilo-novedad";
+import { DetallePresentismoInicio } from "./detalle-presentismo-inicio";
 import { BarraSegmentos, RAYADO_EN_CURSO } from "./ui/barra-segmentos";
 import {
   EncabezadoTablero,
@@ -30,6 +32,7 @@ import { RUTA } from "@/utils/estado-jornada";
 import { fechaEnZonaIso, formatoHora, horaOFechaCorta, textoRangoFechas } from "@/utils/fechas";
 import {
   consultaPeriodoInicio,
+  periodoInicioHoy,
   cuandoPeriodoInicio,
   rangoPeriodoInicio,
 } from "@/utils/periodo-inicio";
@@ -56,7 +59,6 @@ import type {
   HojaHoy,
   IndicadorHoy,
   ItemAtencionHoy,
-  PeriodoInicio,
   TonoHoy,
 } from "@/types/hoy-en-campo";
 
@@ -73,7 +75,7 @@ const PRIORIDAD_UI: Record<PrioridadNovedad, { punto: string; barra: string; eti
 
 const TITULO_INDICADOR: Record<IndicadorHoy, string> = {
   presentismo: "Presentismo",
-  visitas: "Visitas a locales",
+  visitas: "Mi Ruta",
   tareas: "Realización de tareas",
   novedades: "Novedades abiertas",
 };
@@ -99,19 +101,20 @@ export function HoyEnCampo() {
     modulos.some((m) => m.ruta === modulo && m.paginas.some((p) => p.ruta === pagina));
   const verNovedades = tienePagina("gestion-campo", "novedades");
   const hoy = fechaEnZonaIso(new Date());
-  const [periodo, setPeriodo] = useState<PeriodoInicio>("hoy");
+  const [periodo, setPeriodo] = useState<PeriodoFiltro>(() => periodoInicioHoy(hoy));
   const consulta = consultaPeriodoInicio(periodo, hoy);
   const rango = rangoPeriodoInicio(periodo, hoy);
   const cuando = cuandoPeriodoInicio(periodo);
 
   const [revision, setRevision] = useState(0);
-  const [terminada, setTerminada] = useState(-1);
+  const [terminada, setTerminada] = useState("");
+  const claveCarga = `${revision}|${consulta}`;
   const claveCache = `hoy|${usuario.id}|${consulta}`;
   // Lo último que se vio de este período en esta pestaña aparece enseguida.
   const [datos, setDatos] = useState<DatosHoy | null>(
     () => leerCacheSesion<DatosHoy>(claveCache)?.valor ?? null,
   );
-  const cambiarPeriodo = (nuevo: PeriodoInicio) => {
+  const cambiarPeriodo = (nuevo: PeriodoFiltro) => {
     if (nuevo === periodo) return;
     setPeriodo(nuevo);
     // No mezclar los números de otro período mientras llegan los nuevos.
@@ -124,7 +127,7 @@ export function HoyEnCampo() {
   const [error, setError] = useState("");
   const [pila, setPila] = useState<HojaHoy[]>([]);
   const [filtro, setFiltro] = useState<FiltroEquipoHoy>("todos");
-  const cargando = terminada !== revision;
+  const cargando = terminada !== claveCarga;
   const hoja = pila.at(-1) ?? null;
   const abrir = (h: HojaHoy) => setPila((p) => [...p, h]);
   const actualizar = () => setRevision((n) => n + 1);
@@ -172,10 +175,10 @@ export function HoyEnCampo() {
           setError(e instanceof Error ? e.message : "No se pudo cargar el tablero");
       })
       .finally(() => {
-        if (!controller.signal.aborted) setTerminada(revision);
+        if (!controller.signal.aborted) setTerminada(claveCarga);
       });
     return () => controller.abort();
-  }, [revision, verNovedades, claveCache, consulta]);
+  }, [revision, verNovedades, claveCache, consulta, claveCarga]);
 
   // Se actualiza solo cada 5 minutos mientras la pestaña está visible.
   useEffect(() => {
@@ -238,7 +241,7 @@ export function HoyEnCampo() {
           <div>
             <p className="mb-2 flex items-baseline justify-between gap-2 px-0.5">
               <span className="text-[11px] font-bold uppercase tracking-wide text-muted">
-                {periodo === "hoy" ? "Indicadores del día" : `Indicadores · ${cuando}`}
+                {periodo.clave === "hoy" ? "Indicadores del día" : `Indicadores · ${cuando}`}
               </span>
               <span className="text-[11px] text-muted sm:text-xs">Tocá para ver el detalle</span>
             </p>
@@ -253,7 +256,7 @@ export function HoyEnCampo() {
 
           <div className="grid min-w-0 gap-4 lg:grid-cols-2 lg:items-start">
             <SeccionTablero
-              titulo={periodo === "hoy" ? "Atender ahora" : "Para revisar"}
+              titulo={periodo.clave === "hoy" ? "Atender ahora" : "Para revisar"}
               resumen={atender.length ? `${atender.length} pendientes` : "Todo en orden"}
               destacado={atender.some((a) => a.tono === "bad")}
             >
@@ -320,6 +323,7 @@ export function HoyEnCampo() {
             {hoja.tipo === "indicador" ? (
               <DetalleIndicador
                 indicador={hoja.indicador}
+                presentismoImpulsador={usuario.rol?.equipoCampo?.tipo === "IMPULSADOR"}
                 resumen={resumen}
                 equipo={equipo}
                 novedades={datos?.novedades ?? []}
@@ -406,7 +410,7 @@ function Indicadores({
     {
       clave: "visitas",
       letra: "B",
-      nombre: "Visitas",
+      nombre: "Mi Ruta",
       tono: r.ausentes ? "bad" : r.incompletas ? "warn" : "ok",
       valor: (
         <>
@@ -498,6 +502,7 @@ function Indicadores({
           tono={k.tono}
           valor={k.valor}
           barra={k.barra}
+          disabled={k.clave === "tareas" && t.total === 0}
           nota={k.nota}
           onClick={() => onAbrir(k.clave)}
           etiqueta={`Ver detalle de ${k.nombre}`}
@@ -688,8 +693,10 @@ function DetalleIndicador({
   novedades,
   abiertas,
   onAbrir,
+  presentismoImpulsador = false,
 }: {
   indicador: IndicadorHoy;
+  presentismoImpulsador?: boolean;
   resumen: SupervisionResumenData;
   equipo: ColaboradorResumen[];
   novedades: NovedadCampoItem[];
@@ -697,6 +704,10 @@ function DetalleIndicador({
   onAbrir: (h: HojaHoy) => void;
 }) {
   const persona = (c: ColaboradorResumen) => () => onAbrir({ tipo: "persona", id: c.id });
+
+  if (indicador === "presentismo" && presentismoImpulsador) {
+    return <DetallePresentismoInicio resumen={resumen} equipo={equipo} onAbrir={(id) => onAbrir({ tipo: "persona", id })} />;
+  }
 
   if (indicador === "presentismo") {
     const e = resumen.presentismo.estados;

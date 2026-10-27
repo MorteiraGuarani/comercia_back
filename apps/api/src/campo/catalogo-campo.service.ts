@@ -33,6 +33,9 @@ import {
 } from './utils/permisos-tareas';
 import { detalleTarea } from './utils/version-tarea';
 import { filtroPersonalEquipoOperativo } from './utils/personal-equipo';
+import { restringirItinerarioAlEquipo } from './utils/alcance-itinerario';
+import { obtenerColaboradoresGestionados } from './utils/autorizacion';
+import type { UsuarioConAcceso } from '../plataforma/interfaces/usuario-con-acceso.interface';
 import { CrearLocalCampoDto, EditarLocalCampoDto } from './dto/crear-local.dto';
 import { relanzarDuplicado } from '../common/utils/error-prisma';
 
@@ -43,6 +46,26 @@ export class CatalogoCampoService {
     private readonly acceso: CampoAccesoService,
   ) {}
 
+  private async alcanceItinerario(u: UsuarioConAcceso, hoy: Date) {
+    const restringido = restringirItinerarioAlEquipo(u);
+    const personal = {
+      ...filtroPersonalEquipoOperativo(u),
+      ...(restringido
+        ? { id: { in: await obtenerColaboradoresGestionados(this.prisma, u) } }
+        : {}),
+    };
+    const asignacion = {
+      activo: true,
+      usuario: personal,
+      fechaDesde: { lte: hoy },
+      OR: [{ fechaHasta: null }, { fechaHasta: { gte: hoy } }],
+    };
+    return {
+      asignacion,
+      locales: restringido ? { asignaciones: { some: asignacion } } : {},
+    };
+  }
+
   async locales(usuarioId: number, query: ConsultaCampoDto) {
     // Selector compartido con el ABM de tareas; devuelve solo datos de su empresa.
     const u = await this.acceso
@@ -51,10 +74,13 @@ export class CatalogoCampoService {
         if (!(error instanceof ForbiddenException)) throw error;
         return this.acceso.gestionar(usuarioId, 'tareas');
       });
-    const where = filtroLocales(u.empresaId, query.buscar);
     const { skip, take, page, limit } = rangoPaginacion(query);
     const hoy = fechaCampo(relojCampo().fecha);
-    const personal = filtroPersonalEquipoOperativo(u);
+    const alcance = await this.alcanceItinerario(u, hoy);
+    const where = {
+      ...filtroLocales(u.empresaId, query.buscar),
+      ...alcance.locales,
+    };
     const [total, filas] = await Promise.all([
       this.prisma.socioNegocio.count({ where }),
       this.prisma.socioNegocio.findMany({
@@ -62,12 +88,7 @@ export class CatalogoCampoService {
         select: {
           ...CLIENTE_OCRD_SELECT,
           asignaciones: {
-            where: {
-              activo: true,
-              usuario: personal,
-              fechaDesde: { lte: hoy },
-              OR: [{ fechaHasta: null }, { fechaHasta: { gte: hoy } }],
-            },
+            where: alcance.asignacion,
             select: {
               id: true,
               usuario: {
@@ -109,8 +130,11 @@ export class CatalogoCampoService {
    */
   async localesMapa(usuarioId: number, query: ConsultaCampoDto) {
     const u = await this.acceso.gestionar(usuarioId, 'locales');
+    const hoy = fechaCampo(relojCampo().fecha);
+    const alcance = await this.alcanceItinerario(u, hoy);
     const where: Prisma.SocioNegocioWhereInput = {
       ...filtroLocales(u.empresaId, query.buscar),
+      ...alcance.locales,
       AND: [
         { U_Latitud: { not: null } },
         { U_Latitud: { not: '' } },
@@ -119,8 +143,6 @@ export class CatalogoCampoService {
       ],
     };
     const { skip, take, page, limit } = rangoPaginacion(query);
-    const hoy = fechaCampo(relojCampo().fecha);
-    const personal = filtroPersonalEquipoOperativo(u);
     const [total, filas] = await Promise.all([
       this.prisma.socioNegocio.count({ where }),
       this.prisma.socioNegocio.findMany({
@@ -128,12 +150,7 @@ export class CatalogoCampoService {
         select: {
           ...LOCAL_OCRD_SELECT,
           asignaciones: {
-            where: {
-              activo: true,
-              usuario: personal,
-              fechaDesde: { lte: hoy },
-              OR: [{ fechaHasta: null }, { fechaHasta: { gte: hoy } }],
-            },
+            where: alcance.asignacion,
             select: {
               id: true,
               usuario: { select: { id: true, nombre: true, apellido: true } },

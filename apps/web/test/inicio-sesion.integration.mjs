@@ -67,11 +67,12 @@ async function ingresar(equipoCampo, modulos, { falloMenu = false, falloLogin = 
 
 assert.deepEqual((await ingresar({ tipo: "REPOSITOR", activo: true }, campo)).destinos, ["/panel"]);
 assert.deepEqual((await ingresar({ tipo: "REPOSITOR", activo: true }, [{ ruta: "mi-jornada", paginas: [{ ruta: "tareas" }] }])).destinos, ["/panel"]);
-assert.deepEqual((await ingresar({ tipo: "IMPULSADOR", activo: true }, campo)).destinos, ["/panel/mi-jornada/locales"]);
+assert.deepEqual((await ingresar({ tipo: "IMPULSADOR", activo: true }, campo)).destinos, ["/panel"]);
 assert.deepEqual((await ingresar({ tipo: "IMPULSADOR", activo: true }, [...campo, { ruta: "gestion-campo", paginas: [] }])).destinos, ["/panel"]);
 assert.deepEqual((await ingresar(null, [])).destinos, ["/panel"]);
 assert.deepEqual((await ingresar({ tipo: "REPOSITOR", activo: true }, campo, { falloMenu: true })).destinos, ["/panel"]);
 const rechazado = await ingresar({ tipo: "REPOSITOR", activo: true }, campo, { falloLogin: true });
 assert.deepEqual(rechazado.destinos, []);
 assert.deepEqual(rechazado.peticiones, ["/auth/login"]);
-console.log("OK: el repositor ingresa a Inicio; impulsador, líder y errores de autenticación conservan su navegación.");
+assert.deepEqual((await ingresar({ tipo: "IMPULSADOR", activo: true }, campo)).peticiones, ["/auth/login"]);
+console.log("OK: impulsador, repositor y demás roles ingresan a Inicio; el login fallido no navega.");

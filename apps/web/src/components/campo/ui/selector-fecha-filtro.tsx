@@ -1,96 +1,32 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
-import {
-  agregarDiasIso,
-  fechaEnZonaIso,
-  lunesDeIso,
-} from "@/utils/fechas";
-
-export interface PeriodoFiltro {
-  clave: string;
-  etiqueta: string;
-  fecha?: string;
-  fechaInicio?: string;
-  fechaFin?: string;
-}
+import React, { useId, useState, useRef, useEffect } from "react";
+import { fechaEnZonaIso } from "@/utils/fechas";
+import { periodosDesdeHoy } from "@/utils/periodo-inicio";
+import type { PeriodoFiltro } from "@/types/periodo-filtro";
 
 interface SelectorFechaFiltroProps {
   valorActual: PeriodoFiltro;
   onChange: (periodo: PeriodoFiltro) => void;
 }
 
-function periodosDesdeHoy(hoy: string): PeriodoFiltro[] {
-  const ayer = agregarDiasIso(hoy, -1);
-  const lunes = lunesDeIso(hoy);
-  const lunesPasado = agregarDiasIso(lunes, -7);
-  const domingoPasado = agregarDiasIso(lunes, -1);
-  const [anio, mes] = hoy.split("-").map(Number);
-  const primerDiaMes = `${anio}-${String(mes).padStart(2, "0")}-01`;
-  const mesPasado = mes === 1 ? 12 : mes - 1;
-  const anioMesPasado = mes === 1 ? anio - 1 : anio;
-  const primerDiaMesPasado = `${anioMesPasado}-${String(mesPasado).padStart(2, "0")}-01`;
-  const ultimoDiaMesPasado = agregarDiasIso(primerDiaMes, -1);
-  const trimInicioMes = Math.floor((mes - 1) / 3) * 3 + 1;
-  const primerDiaTrim = `${anio}-${String(trimInicioMes).padStart(2, "0")}-01`;
-  const semInicioMes = mes <= 6 ? 1 : 7;
-  const primerDiaSem = `${anio}-${String(semInicioMes).padStart(2, "0")}-01`;
-
-  return [
-    { clave: "hoy", etiqueta: "Hoy", fecha: hoy, fechaInicio: hoy, fechaFin: hoy },
-    { clave: "ayer", etiqueta: "Ayer", fecha: ayer, fechaInicio: ayer, fechaFin: ayer },
-    {
-      clave: "esta_semana",
-      etiqueta: "Esta semana",
-      fechaInicio: lunes,
-      fechaFin: hoy,
-    },
-    {
-      clave: "semana_pasada",
-      etiqueta: "Semana pasada",
-      fechaInicio: lunesPasado,
-      fechaFin: domingoPasado,
-    },
-    {
-      clave: "este_mes",
-      etiqueta: "Este mes",
-      fechaInicio: primerDiaMes,
-      fechaFin: hoy,
-    },
-    {
-      clave: "mes_pasado",
-      etiqueta: "Mes pasado",
-      fechaInicio: primerDiaMesPasado,
-      fechaFin: ultimoDiaMesPasado,
-    },
-    {
-      clave: "este_trimestre",
-      etiqueta: `Trimestre ${Math.floor((mes - 1) / 3) + 1}`,
-      fechaInicio: primerDiaTrim,
-      fechaFin: hoy,
-    },
-    {
-      clave: "este_semestre",
-      etiqueta: `Semestre ${mes <= 6 ? 1 : 2}`,
-      fechaInicio: primerDiaSem,
-      fechaFin: hoy,
-    },
-  ];
-}
-
 export function SelectorFechaFiltro({ valorActual, onChange }: SelectorFechaFiltroProps) {
+  const hoyStr = fechaEnZonaIso(new Date());
+  const presets = periodosDesdeHoy(hoyStr);
+  const seleccion = presets.find((p) => p.clave === valorActual.clave) ?? valorActual;
   const [abierto, setAbierto] = useState(false);
+  const [personalizadoAbierto, setPersonalizadoAbierto] = useState(false);
+  const panelId = useId();
+  const personalizadoId = useId();
   // Desde `sm` el panel flota junto al botón, del lado donde hay lugar.
   const [alinearIzquierda, setAlinearIzquierda] = useState(false);
   const [desdePersonalizado, setDesdePersonalizado] = useState(
-    valorActual.fechaInicio ?? valorActual.fecha ?? fechaEnZonaIso(new Date()),
+    seleccion.fechaInicio ?? seleccion.fecha ?? hoyStr,
   );
   const [hastaPersonalizado, setHastaPersonalizado] = useState(
-    valorActual.fechaFin ?? valorActual.fecha ?? fechaEnZonaIso(new Date()),
+    seleccion.fechaFin ?? seleccion.fecha ?? hoyStr,
   );
   const popoverRef = useRef<HTMLDivElement>(null);
-  const hoyStr = fechaEnZonaIso(new Date());
-  const presets = periodosDesdeHoy(hoyStr);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -115,6 +51,9 @@ export function SelectorFechaFiltro({ valorActual, onChange }: SelectorFechaFilt
     const caja = popoverRef.current?.getBoundingClientRect();
     // 20rem del panel: si a la izquierda del botón no entra, se abre hacia la derecha.
     if (caja) setAlinearIzquierda(caja.right < 336);
+    setDesdePersonalizado(seleccion.fechaInicio ?? seleccion.fecha ?? hoyStr);
+    setHastaPersonalizado(seleccion.fechaFin ?? seleccion.fecha ?? hoyStr);
+    setPersonalizadoAbierto(false);
     setAbierto((prev) => !prev);
   };
 
@@ -152,9 +91,9 @@ export function SelectorFechaFiltro({ valorActual, onChange }: SelectorFechaFilt
   };
 
   const rangoVisible =
-    valorActual.fechaInicio && valorActual.fechaFin
-      ? `${valorActual.fechaInicio} — ${valorActual.fechaFin}`
-      : (valorActual.fecha ?? hoyStr);
+    seleccion.fechaInicio && seleccion.fechaFin
+      ? `${seleccion.fechaInicio} — ${seleccion.fechaFin}`
+      : (seleccion.fecha ?? hoyStr);
 
   return (
     <div className="relative inline-block text-left" ref={popoverRef}>
@@ -162,6 +101,8 @@ export function SelectorFechaFiltro({ valorActual, onChange }: SelectorFechaFilt
         type="button"
         onClick={alternar}
         aria-expanded={abierto}
+        aria-controls={panelId}
+        aria-haspopup="dialog"
         className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-line bg-surface-raised px-3 py-2 text-xs text-foreground shadow-sm transition-colors hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40"
         title="Cambiar fecha o período de visualización"
       >
@@ -203,6 +144,7 @@ export function SelectorFechaFiltro({ valorActual, onChange }: SelectorFechaFilt
           className="fixed inset-0 z-[60] bg-black/40 sm:hidden"
         />
         <div
+          id={panelId}
           role="dialog"
           aria-label="Elegir período"
           className={`fixed inset-x-0 bottom-0 z-[61] max-h-[85dvh] overflow-y-auto rounded-t-2xl border border-line bg-surface-raised p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] text-foreground shadow-2xl max-sm:motion-safe:animate-hoja-subir sm:absolute sm:inset-x-auto sm:bottom-auto sm:z-50 sm:mt-2 sm:max-h-[70dvh] sm:w-80 sm:rounded-xl sm:p-3 ${
@@ -219,43 +161,9 @@ export function SelectorFechaFiltro({ valorActual, onChange }: SelectorFechaFilt
             </span>
           </div>
 
-          <div className="mb-3 rounded-lg border border-line bg-surface-soft p-2">
-            <p className="mb-1 text-[11px] font-medium text-muted">
-              Rango personalizado
-            </p>
-            <div className="grid grid-cols-1 gap-2">
-              <label className="block min-w-0 text-[10px] uppercase tracking-wider text-muted">
-                Desde
-                <input
-                  type="date"
-                  value={desdePersonalizado}
-                  onChange={(e) => setDesdePersonalizado(e.target.value)}
-                  className="mt-1 min-h-11 w-full min-w-0 cursor-pointer rounded border border-line bg-surface-raised px-2 py-1.5 text-xs text-foreground outline-none focus:border-accent-ink focus:ring-2 focus:ring-brand-600/30 ft-mono"
-                />
-              </label>
-              <label className="block min-w-0 text-[10px] uppercase tracking-wider text-muted">
-                Hasta
-                <input
-                  type="date"
-                  value={hastaPersonalizado}
-                  min={desdePersonalizado}
-                  onChange={(e) => setHastaPersonalizado(e.target.value)}
-                  className="mt-1 min-h-11 w-full min-w-0 cursor-pointer rounded border border-line bg-surface-raised px-2 py-1.5 text-xs text-foreground outline-none focus:border-accent-ink focus:ring-2 focus:ring-brand-600/30 ft-mono"
-                />
-              </label>
-            </div>
-            <button
-              type="button"
-              onClick={aplicarRango}
-              className="mt-2 min-h-11 w-full cursor-pointer rounded-lg border border-line bg-surface-raised px-2 py-1.5 text-xs font-semibold text-foreground hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40"
-            >
-              Aplicar rango
-            </button>
-          </div>
-
           <div>
             <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted">
-              Rangos Predefinidos:
+              Fechas predefinidas
             </p>
             <div className="grid grid-cols-2 gap-1.5">
               {presets.map((p) => {
@@ -265,6 +173,7 @@ export function SelectorFechaFiltro({ valorActual, onChange }: SelectorFechaFilt
                     key={p.clave}
                     type="button"
                     onClick={() => seleccionarPreset(p)}
+                    aria-pressed={esActivo}
                     className={`flex min-h-11 cursor-pointer items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-xs font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40 ${
                       esActivo
                         ? "bg-accent-ink text-background font-bold shadow"
@@ -280,6 +189,49 @@ export function SelectorFechaFiltro({ valorActual, onChange }: SelectorFechaFilt
                   </button>
                 );
               })}
+            </div>
+          </div>
+          <div className="mt-3 rounded-lg border border-line bg-surface-soft p-2">
+            <button
+              type="button"
+              aria-expanded={personalizadoAbierto}
+              aria-controls={personalizadoId}
+              onClick={() => setPersonalizadoAbierto((prev) => !prev)}
+              className="flex min-h-11 w-full items-center justify-between gap-2 rounded px-1 text-left text-xs font-semibold text-foreground hover:bg-surface-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            >
+              Fecha personalizada
+              <span aria-hidden="true">{personalizadoAbierto ? "−" : "+"}</span>
+            </button>
+            <div id={personalizadoId} hidden={!personalizadoAbierto}>
+              <div className="grid grid-cols-1 gap-2">
+                <label className="block min-w-0 text-[10px] uppercase tracking-wider text-muted">
+                  Desde
+                  <input
+                    type="date"
+                    value={desdePersonalizado}
+                    onChange={(e) => setDesdePersonalizado(e.target.value)}
+                    className="mt-1 min-h-11 w-full min-w-0 cursor-pointer rounded border border-line bg-surface-raised px-2 py-1.5 text-xs text-foreground outline-none focus:border-accent-ink focus:ring-2 focus:ring-brand-600/30 ft-mono"
+                  />
+                </label>
+                <label className="block min-w-0 text-[10px] uppercase tracking-wider text-muted">
+                  Hasta
+                  <input
+                    type="date"
+                    value={hastaPersonalizado}
+                    min={desdePersonalizado}
+                    onChange={(e) => setHastaPersonalizado(e.target.value)}
+                    className="mt-1 min-h-11 w-full min-w-0 cursor-pointer rounded border border-line bg-surface-raised px-2 py-1.5 text-xs text-foreground outline-none focus:border-accent-ink focus:ring-2 focus:ring-brand-600/30 ft-mono"
+                  />
+                </label>
+              </div>
+              <button
+                type="button"
+                onClick={aplicarRango}
+                disabled={!desdePersonalizado || !hastaPersonalizado}
+                className="disabled:cursor-not-allowed disabled:opacity-50 mt-2 min-h-11 w-full cursor-pointer rounded-lg border border-line bg-surface-raised px-2 py-1.5 text-xs font-semibold text-foreground hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40"
+              >
+                Aplicar rango
+              </button>
             </div>
           </div>
         </div>

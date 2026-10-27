@@ -1,26 +1,43 @@
 "use client";
+import type { PeriodoFiltro } from "@/types/periodo-filtro";
 import dynamic from "next/dynamic";
 
-import React, { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { apiFetch } from "@/lib/api";
 import { useJornadaCompleta } from "@/hooks/use-jornada-completa";
 import { useFechaCampo } from "@/hooks/use-fecha-campo";
-import { queryFechasCampo } from "@/utils/fechas";
+import {
+  formatoFechaHora,
+  formatoHora,
+  queryFechasCampo,
+  textoRangoFechas,
+} from "@/utils/fechas";
+import { usePanel } from "@/components/panel/contexto";
+import type { FiltroRuta } from "@/types/estado-jornada";
 import { formatoDistancia, metrosEntre } from "@/utils/distancia";
 import {
   conUbicacion,
+  metrosRecorrido,
   ordenarParadasPorRuta,
   urlGoogleMapsRuta,
   type CoordenadaCampo,
 } from "@/utils/ruta-recomendada";
 import { mensajeError } from "@/utils/error";
-import { RUTA, PRESENTISMO } from "@/utils/estado-jornada";
-import { formatoFechaHora } from "@/utils/fechas";
-import { TOKENS } from "./tokens";
-import { StatusStamp } from "./ui/status-stamp";
-import { ResumenRuta } from "./ui/resumen-ruta";
-import { TopBar } from "./ui/top-bar";
-import { SelectorFechaFiltro, type PeriodoFiltro } from "./ui/selector-fecha-filtro";
+import { ETIQUETA_FILTRO, ORDEN_RUTA } from "@/utils/estado-jornada";
+import { EstadoRutaSimple } from "./ui/estado-ruta-simple";
+import { SaludoRuta } from "./ui/saludo-ruta";
+import { KpisRuta } from "./ui/kpis-ruta";
+import { TarjetaAgendaRepositor } from "./tarjeta-agenda-repositor";
+import { TablaCampo } from "./tabla-campo";
+import {
+  IconoCalendario,
+  IconoCruz,
+  IconoMapa,
+  IconoMensaje,
+  IconoRefrescar,
+  IconoRuta,
+} from "./ui/iconos-campo";
+import { SelectorFechaFiltro } from "./ui/selector-fecha-filtro";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import type { AgendaCampo, LocalCampo, VisitaCampo } from "@/types/campo";
 import { ModalNovedadLocal } from "./modal-novedad-local";
@@ -31,8 +48,6 @@ const MapaLocal = dynamic(
   { ssr: false },
 );
 
-type LocalParaNovedad = Pick<LocalCampo, "id" | "nombre">;
-
 export function RutaImpulsadorPanel() {
   const hoyStr = useFechaCampo();
   const [periodo, setPeriodo] = useState<PeriodoFiltro>({
@@ -42,18 +57,51 @@ export function RutaImpulsadorPanel() {
     fechaInicio: hoyStr,
     fechaFin: hoyStr,
   });
-  const qsFecha = periodo.clave === "hoy" ? `fecha=${hoyStr}` : queryFechasCampo(periodo) || `fecha=${hoyStr}`;
+  const qsFecha =
+    periodo.clave === "hoy"
+      ? `fecha=${hoyStr}`
+      : queryFechasCampo(periodo) || `fecha=${hoyStr}`;
+  return (
+    <div className="min-w-0 w-full px-4 py-3 sm:px-6 sm:py-5 lg:px-8">
+      <RutaImpulsadorDelPeriodo
+        key={qsFecha}
+        qsFecha={qsFecha}
+        periodo={periodo}
+        onPeriodo={setPeriodo}
+      />
+    </div>
+  );
+}
+
+function RutaImpulsadorDelPeriodo({
+  qsFecha,
+  periodo,
+  onPeriodo,
+}: {
+  qsFecha: string;
+  periodo: PeriodoFiltro;
+  onPeriodo: (periodo: PeriodoFiltro) => void;
+}) {
+  const { usuario } = usePanel();
+  const hoyStr = useFechaCampo();
   const lista = useJornadaCompleta<AgendaCampo>(qsFecha);
   const [visitaAbierta, setAbierta] = useState<VisitaCampo | null>(null);
-  const abierta = visitaAbierta?.fecha.slice(0, 10) === hoyStr ? visitaAbierta : null;
+  const abierta =
+    visitaAbierta?.fecha.slice(0, 10) === hoyStr ? visitaAbierta : null;
   const [error, setError] = useState("");
   const [mapa, setMapa] = useState<LocalCampo | null>(null);
   const [busqueda, setBusqueda] = useState("");
+  const [filtro, setFiltro] = useState<FiltroRuta>("todos");
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(7);
+  const [expandida, setExpandida] = useState<number | null | undefined>();
+  const [revision, setRevision] = useState(0);
 
   // Modal para reportar novedad en un local
-  const [novedadLocal, setNovedadLocal] = useState<LocalParaNovedad | null>(
-    null,
-  );
+  const [novedadLocal, setNovedadLocal] = useState<Pick<
+    LocalCampo,
+    "id" | "nombre"
+  > | null>(null);
   const [rutaCalc, setRutaCalc] = useState<{
     qs: string;
     origen: CoordenadaCampo;
@@ -79,43 +127,51 @@ export function RutaImpulsadorPanel() {
     return () => {
       vigente = false;
     };
-  }, [hoyStr]);
+  }, [hoyStr, revision]);
+
+  const itemsOrdenados = useMemo(() => {
+    const peso = new Map(ordenRuta?.map((id, i) => [id, i]) ?? []);
+    return lista.items
+      .map((a, i) => ({ a, i }))
+      .sort(
+        (x, y) =>
+          ORDEN_RUTA[x.a.estado] - ORDEN_RUTA[y.a.estado] ||
+          (x.a.estado === "pendiente"
+            ? (peso.get(x.a.id) ?? 10_000) - (peso.get(y.a.id) ?? 10_000)
+            : 0) ||
+          x.i - y.i,
+      )
+      .map(({ a }) => a);
+  }, [lista.items, ordenRuta]);
 
   const itemsFiltrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
+    const porEstado =
+      filtro === "todos"
+        ? itemsOrdenados
+        : itemsOrdenados.filter((a) => a.estado === filtro);
     const base = q
-      ? lista.items.filter(
+      ? porEstado.filter(
           (a) =>
             a.local.nombre.toLowerCase().includes(q) ||
             a.local.id.toLowerCase().includes(q) ||
             a.local.direccion.toLowerCase().includes(q),
         )
-      : lista.items;
-    const visitado = (a: AgendaCampo) => a.estado === "completado";
-    if (!ordenRuta?.length) {
-      return [...base].sort(
-        (a, b) => Number(visitado(a)) - Number(visitado(b)),
-      );
-    }
-    const peso = new Map(ordenRuta.map((id, i) => [id, i]));
-    return [...base].sort((a, b) => {
-      const va = visitado(a);
-      const vb = visitado(b);
-      if (va !== vb) return Number(va) - Number(vb);
-      const pa = peso.get(a.id) ?? 10_000;
-      const pb = peso.get(b.id) ?? 10_000;
-      return pa - pb;
-    });
-  }, [lista.items, busqueda, ordenRuta]);
+      : porEstado;
+    return base;
+  }, [itemsOrdenados, busqueda, filtro]);
 
   const totalParadas = lista.total || lista.items.length;
-  const visitadas = lista.items.filter((a) =>
-    a.estado === "completado",
+  const visitadas = lista.items.filter((a) => a.estado === "completado").length;
+  const enCurso = lista.items.filter((a) => a.estado === "en_curso").length;
+  const incompletas = lista.items.filter(
+    (a) => a.estado === "incompleto",
   ).length;
-  const enCurso = lista.items.filter(a => a.estado === "en_curso").length;
-  const incompletas = lista.items.filter(a => a.estado === "incompleto").length;
-  const ausentes = lista.items.filter(a => a.estado === "ausente").length;
-  const pendientes = Math.max(0, totalParadas - visitadas - enCurso - incompletas - ausentes);
+  const ausentes = lista.items.filter((a) => a.estado === "ausente").length;
+  const pendientes = Math.max(
+    0,
+    totalParadas - visitadas - enCurso - incompletas - ausentes,
+  );
 
   function ventanaDe(a: AgendaCampo) {
     const horarios = a.local.horarios;
@@ -215,266 +271,379 @@ export function RutaImpulsadorPanel() {
     window.open(url, "_blank", "noopener,noreferrer");
   }
 
+  const hoy = new URLSearchParams(qsFecha).get("fecha") === hoyStr;
+  const inicioPeriodo = hoy
+    ? hoyStr
+    : (periodo.fechaInicio ?? periodo.fecha ?? hoyStr);
+  const finPeriodo = hoy
+    ? hoyStr
+    : (periodo.fechaFin ?? periodo.fecha ?? inicioPeriodo);
+  const resumen = lista.cargando
+    ? "Cargando tu ruta…"
+    : hoy && totalParadas > 0 && visitadas === totalParadas
+      ? `Completaste ${totalParadas === 1 ? "el local" : `los ${totalParadas} locales`} de tu ruta`
+      : `${hoy ? "Hoy tenés" : periodo.etiqueta + ":"} ${totalParadas} ${totalParadas === 1 ? "local" : "locales"} en tu ruta`;
+  const numeroParada = new Map(
+    itemsOrdenados
+      .filter((a) => a.estado === "pendiente")
+      .map((a, i) => [a.id, i + 1]),
+  );
+  const idExpandida =
+    expandida === undefined
+      ? (itemsOrdenados.find(
+          (a) => a.id === abierta?.asignacionId || a.estado === "en_curso",
+        )?.id ?? null)
+      : expandida;
+  const totalPages = Math.ceil(itemsFiltrados.length / limit);
+  const paginaActual = Math.min(page, Math.max(1, totalPages));
+  const itemsPagina = itemsFiltrados.slice(
+    (paginaActual - 1) * limit,
+    paginaActual * limit,
+  );
+  // Se pagina la vista sobre la misma ruta completa que usa el cálculo por GPS.
+  const listaVisible = {
+    ...lista,
+    datos: {
+      items: itemsPagina,
+      total: itemsFiltrados.length,
+      page: paginaActual,
+      limit,
+      totalPages,
+    },
+    items: itemsPagina,
+    setPage,
+    setLimit: (valor: number) => {
+      setLimit(valor);
+      setPage(1);
+    },
+  };
+  const rutaActual = rutaCalc?.qs === qsFecha ? rutaCalc : null;
+  const btnAccion =
+    "inline-flex min-h-11 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border border-control-line bg-surface-raised px-3 text-xs font-semibold text-foreground transition-colors hover:border-brand-500 hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus";
 
   return (
-    <div
-      className="campo-screen min-w-0 w-full min-h-[calc(100vh-5rem)] flex flex-col font-sans"
-      style={{
-        background: TOKENS.bone,
-        color: TOKENS.ink,
-      }}
-    >
-      <TopBar
-        title="Mi Ruta"
-        subtitle="Locales, horarios y avance de tu recorrido"
-        right={
-          <SelectorFechaFiltro valorActual={periodo} onChange={setPeriodo} />
-        }
-      />
+    <>
+      <SaludoRuta
+        nombre={usuario.nombre.trim().split(/\s+/)[0] ?? ""}
+        fechaTexto={textoRangoFechas(inicioPeriodo, finPeriodo)}
+        resumen={resumen}
+      >
+        <SelectorFechaFiltro valorActual={periodo} onChange={onPeriodo} />
+      </SaludoRuta>
 
-      <div className="min-w-0 p-3 sm:p-5 lg:p-6 max-w-6xl mx-auto w-full space-y-3 flex-1">
-        <ResumenRuta total={totalParadas} visitadas={visitadas} enCurso={enCurso} pendientes={pendientes} incompletas={incompletas} ausentes={ausentes} />
+      <div className="mb-2 mt-2 sm:mb-3 sm:mt-3">
+        <KpisRuta
+          total={lista.cargando ? "—" : totalParadas}
+          visitadas={visitadas}
+          enCurso={enCurso}
+          pendientes={pendientes}
+          incompletas={incompletas}
+          ausentes={ausentes}
+          sufijo={hoy ? "hoy" : "en el período"}
+          filtro={filtro}
+          onFiltro={(valor) => {
+            setFiltro(valor);
+            setPage(1);
+          }}
+        />
+      </div>
 
-        <section aria-label="Controles de la ruta" className="grid min-w-0 grid-cols-2 items-center gap-2 lg:flex">
-        {abierta && (
-          <div
-            className="col-span-2 flex min-w-0 items-center gap-2 rounded-lg border px-2 py-1 lg:w-72 lg:shrink-0"
-            style={{
-              background: TOKENS.canvas,
-              borderColor: TOKENS.frio,
-            }}
-          >
-            <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full" style={{ background: TOKENS.frio }} />
-              <div className="min-w-0 flex-1">
-                <p
-                  className="ft-body truncate text-xs font-semibold"
-                  title={`Visita en curso · ${abierta.local.nombre}`}
-                  style={{ color: TOKENS.ink }}
-                >
-                  En curso · {abierta.local.nombre}
-                </p>
-                <p className="ft-mono truncate text-[10px] text-muted" title={`Entrada: ${formatoFechaHora(abierta.entrada)}`}>
-                  Entrada:{" "}
-                  {formatoFechaHora(abierta.entrada)}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setNovedadLocal(abierta.local)}
-                aria-label="Reportar novedad"
-                title="Reportar novedad"
-                className="grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-lg text-xl font-semibold text-accent-ink transition hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:text-accent-ink dark:hover:bg-accent-soft"
-              >
-                <span aria-hidden="true">+</span>
-              </button>
+      {abierta ? (
+        <div className="mb-2 flex min-w-0 items-center gap-2 rounded-lg border border-sky-500 bg-sky-50/60 px-3 py-1 sm:mb-3 dark:border-sky-700 dark:bg-sky-950/40">
+          <span
+            aria-hidden="true"
+            className="h-2 w-2 shrink-0 rounded-full bg-sky-600 dark:bg-sky-400"
+          />
+          <div className="min-w-0 flex-1">
+            <p
+              className="truncate text-xs font-semibold text-foreground"
+              title={`Visita en curso · ${abierta.local.nombre}`}
+            >
+              En curso · {abierta.local.nombre}
+            </p>
+            <p className="truncate font-mono text-[11px] text-muted">
+              Entrada: {formatoFechaHora(abierta.entrada)}
+            </p>
           </div>
-        )}
-          <label className="relative col-span-2 min-w-0 lg:flex-1">
-            <span className="sr-only">Buscar local o cliente en la ruta</span>
-            <input
-              type="search"
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-              placeholder="Buscar local o cliente…"
-              className="h-11 min-h-11 w-full rounded-lg border border-line bg-surface-raised pl-9 pr-3 text-base text-foreground outline-none placeholder:text-muted focus-visible:ring-2 focus-visible:ring-focus sm:text-sm dark:border-line dark:bg-surface-raised dark:text-foreground"
-            />
-            <svg aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-              <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
-            </svg>
-          </label>
+          <button
+            type="button"
+            onClick={() => setNovedadLocal(abierta.local)}
+            className={btnAccion}
+            aria-label={`Reportar novedad en ${abierta.local.nombre}`}
+          >
+            <IconoMensaje className="h-4 w-4" /> Novedad
+          </button>
+        </div>
+      ) : null}
+
+      <div className="mb-2 flex min-w-0 w-full items-center gap-2 sm:mb-3">
+        <label className="relative min-w-0 flex-1">
+          <span className="sr-only">
+            Buscar local o cliente en toda la ruta
+          </span>
+          <svg
+            aria-hidden="true"
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            viewBox="0 0 24 24"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.35-4.35" />
+          </svg>
+          <input
+            type="search"
+            value={busqueda}
+            onChange={(e) => {
+              setBusqueda(e.target.value);
+              setPage(1);
+            }}
+            placeholder="Buscar local o cliente…"
+            className={`h-11 min-h-11 w-full rounded-lg border border-line bg-surface-raised py-2 pl-9 ${busqueda ? "pr-11" : "pr-3"} text-base text-foreground outline-none transition-colors placeholder:text-muted focus-visible:border-brand-600 focus-visible:ring-2 focus-visible:ring-brand-600/30 sm:text-sm`}
+          />
+          {busqueda ? (
+            <button
+              type="button"
+              onClick={() => {
+                setBusqueda("");
+                setPage(1);
+              }}
+              aria-label="Limpiar búsqueda de locales"
+              title="Limpiar búsqueda"
+              className="absolute inset-y-0 right-0 grid min-w-11 cursor-pointer place-items-center rounded-r-lg text-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            >
+              <IconoCruz className="h-4 w-4" />
+            </button>
+          ) : null}
+        </label>
+        <button
+          type="button"
+          onClick={() => {
+            lista.refrescar();
+            setRevision((n) => n + 1);
+          }}
+          disabled={lista.cargando}
+          aria-label="Actualizar ruta"
+          title="Actualizar ruta"
+          className={`${btnAccion} disabled:cursor-not-allowed disabled:opacity-50`}
+        >
+          <IconoRefrescar className="h-4 w-4" />
+        </button>
+      </div>
+
+      <div className="mb-2 flex min-h-11 min-w-0 items-center justify-between gap-2 px-0.5">
+        <h2 className="flex min-w-0 items-center gap-1.5 text-[13px] font-bold text-foreground sm:text-sm">
+          <IconoCalendario className="h-4 w-4 shrink-0 text-brand-700 dark:text-brand-200" />
+          <span className="truncate">
+            {hoy ? "Agenda del día" : `Agenda · ${periodo.etiqueta}`}
+            {filtro !== "todos" ? ` · ${ETIQUETA_FILTRO[filtro]}` : ""}
+          </span>
+        </h2>
+        {!rutaActual ? (
           <button
             type="button"
             onClick={() => void calcularRuta()}
             disabled={calculandoRuta || lista.cargando}
-            className="h-11 min-h-11 cursor-pointer whitespace-nowrap rounded-lg border border-line bg-surface-raised px-3 text-xs font-semibold text-foreground transition hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50 lg:shrink-0 dark:border-line dark:bg-surface-raised dark:text-foreground dark:hover:bg-surface-soft"
+            className="inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border border-brand-200 bg-brand-50 px-3 text-xs font-semibold text-brand-800 transition-colors hover:border-brand-500 hover:bg-brand-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50 dark:border-brand-800 dark:bg-brand-950/50 dark:text-brand-100 dark:hover:border-brand-500 dark:hover:bg-brand-900"
           >
-            Calcular ruta
+            <IconoRuta className="h-4 w-4" /> Calcular ruta
           </button>
-          <button
-            type="button"
-            onClick={iniciarEnMaps}
-            disabled={!paradasMaps.length}
-            className="h-11 min-h-11 cursor-pointer whitespace-nowrap rounded-lg bg-commercial-ink px-3 text-xs font-semibold text-accent-on-ink transition hover:bg-[var(--commercial-ink-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50 lg:shrink-0 dark:bg-commercial-ink dark:text-accent-on-ink dark:hover:bg-[var(--commercial-ink-soft)]"
-          >
-            Iniciar en Maps
-          </button>
-        </section>
-        {(rutaCalc?.qs === qsFecha ? rutaCalc.aviso : avisoRuta) ? (
-          <p className="rounded-lg border border-line bg-surface-soft px-3 py-2 text-xs text-foreground dark:border-line">
-            {rutaCalc?.qs === qsFecha ? rutaCalc.aviso : avisoRuta}
-          </p>
-        ) : null}
-
-        {/* Lista de paradas de la ruta */}
-        <div className="space-y-2.5 pb-16">
-          {lista.cargando ? (
-            <p className="py-8 text-center text-xs text-muted">
-              Cargando tu ruta…
-            </p>
-          ) : itemsFiltrados.length === 0 ? (
-            <div
-              className="rounded-lg p-8 text-center"
-              style={{
-                background: TOKENS.canvas,
-                border: `1px solid ${TOKENS.line}`,
-              }}
-            >
-              <p className="ft-body text-xs text-muted">
-                No hay locales programados en tu ruta para esta fecha.
-              </p>
-            </div>
-          ) : (
-            itemsFiltrados.map((a, i) => {
-              const estaEnCurso = a.estado === "en_curso";
-              const tieneVisitaCerrada = a.estado === "completado";
-              const ultimaVisita = a.visitas[a.visitas.length - 1];
-
-              const { tone, etiqueta: label } = RUTA[a.estado];
-
-              const horarios = a.local.horarios;
-              const ventana = horarios.length
-                ? `${horarios[0].entrada} – ${horarios[0].salida}`
-                : "08:00 – 18:00";
-              const ordenNumero = ordenRuta
-                ? ordenRuta.indexOf(a.id)
-                : itemsFiltrados
-                    .filter((x) => x.estado === "pendiente")
-                    .findIndex((x) => x.id === a.id);
-
-              return (
-                <div
-                  key={a.id}
-                  className="rounded-lg p-3.5 flex flex-col justify-between transition-all"
-                  style={{
-                    background: TOKENS.canvas,
-                    border: `1px solid ${estaEnCurso ? TOKENS.frio : TOKENS.line}`,
-                  }}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-start gap-2.5 min-w-0">
-                      <span className="ft-display text-xs font-bold w-6 h-6 rounded-full bg-zinc-200 text-foreground flex items-center justify-center shrink-0 mt-0.5 dark:bg-zinc-700 dark:text-zinc-100">
-                        {tieneVisitaCerrada
-                          ? "✓"
-                          : ordenNumero >= 0
-                            ? ordenNumero + 1
-                            : i + 1}
-                      </span>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <p className="ft-body font-bold text-sm truncate text-foreground">
-                            {a.local.nombre}
-                          </p>
-                          <span className="ft-body text-[11px] text-muted truncate">
-                            · {a.local.id}
-                          </span>
-                        </div>
-                        <p className="ft-body text-xs text-muted truncate mt-0.5">
-                          {a.local.direccion || "Sin dirección fijada"}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-1"><StatusStamp tone={tone}>{label}</StatusStamp>
-                      <StatusStamp tone={PRESENTISMO[a.estadoPresentismo].tone}>{PRESENTISMO[a.estadoPresentismo].etiqueta}</StatusStamp></div>
-                  </div>
-
-                  <div
-                    className="flex flex-wrap items-center justify-between gap-2 mt-3 pt-2.5"
-                    style={{ borderTop: `1px solid ${TOKENS.line}` }}
-                  >
-                    <div className="flex items-center gap-3 text-[11px] text-muted">
-                      <span className="ft-mono">{ventana}</span>
-                      {ultimaVisita?.entrada && (
-                        <span className="ft-mono font-medium text-foreground">
-                          Entrada{" "}
-                          {new Date(ultimaVisita.entrada).toLocaleTimeString(
-                            "es-AR",
-                            { hour: "2-digit", minute: "2-digit" },
-                          )}
-                        </span>
-                      )}
-                      {ultimaVisita?.salida && (
-                        <span className="ft-mono font-medium text-foreground">
-                          Salida{" "}
-                          {new Date(ultimaVisita.salida).toLocaleTimeString(
-                            "es-AR",
-                            { hour: "2-digit", minute: "2-digit" },
-                          )}
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-1.5">
-                      {origenGps && conUbicacion(a.local) ? (
-                        <span className="ft-mono text-[10px] text-muted">
-                          {formatoDistancia(metrosEntre(origenGps, a.local))}
-                        </span>
-                      ) : null}
-                      <button
-                        type="button"
-                        onClick={() => setMapa(a.local)}
-                        className="grid h-11 w-11 min-h-11 min-w-11 shrink-0 place-items-center rounded-lg border border-line bg-surface-raised text-foreground transition hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40 cursor-pointer dark:border-line"
-                        aria-label={`Ver mapa de ${a.local.nombre}`}
-                        title="Ver mapa"
-                      >
-                        <svg
-                          width="18"
-                          height="18"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          aria-hidden
-                        >
-                          <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
-                          <line x1="8" y1="2" x2="8" y2="18" />
-                          <line x1="16" y1="6" x2="16" y2="22" />
-                        </svg>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setNovedadLocal(a.local)}
-                        className="h-11 min-h-11 shrink-0 rounded-lg border border-line bg-surface-raised px-2.5 text-[11px] font-semibold text-foreground transition hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40 cursor-pointer dark:border-line"
-                        aria-label={`Reportar novedad en ${a.local.nombre}`}
-                        title={`Reportar novedad en ${a.local.nombre}`}
-                      >
-                        Novedad
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-        {lista.error || error ? (
-          <p
-            role="alert"
-            className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-200"
-          >
-            {lista.error || error}
-          </p>
         ) : null}
       </div>
+
+      {rutaActual ? (
+        <section
+          aria-label="Ruta sugerida"
+          className="mb-2 rounded-xl border border-brand-200 bg-brand-50 p-3 dark:border-brand-800 dark:bg-brand-950/50 sm:mb-3"
+        >
+          <div className="flex min-w-0 items-start gap-2.5">
+            <span
+              aria-hidden="true"
+              className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-700 text-white dark:bg-brand-500 dark:text-brand-950"
+            >
+              <IconoRuta className="h-4 w-4" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[13px] font-semibold text-foreground sm:text-sm">
+                Ruta sugerida · {rutaActual.ids.length}{" "}
+                {rutaActual.ids.length === 1 ? "parada" : "paradas"} ·{" "}
+                {formatoDistancia(
+                  metrosRecorrido(rutaActual.origen, rutaActual.paradas),
+                )}{" "}
+                aprox.
+              </p>
+              <p className="mt-0.5 text-[11px] leading-snug text-muted sm:text-xs">
+                {avisoRuta || rutaActual.aviso} Es una recomendación: podés ir
+                en el orden que prefieras.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setRutaCalc(null);
+                setAvisoRuta("");
+              }}
+              aria-label="Quitar ruta sugerida"
+              title="Quitar ruta sugerida"
+              className="-mr-1.5 -mt-1.5 grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-lg text-muted transition-colors hover:bg-brand-100 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:hover:bg-brand-900"
+            >
+              <IconoCruz className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="mt-2.5 flex gap-2">
+            <button
+              type="button"
+              onClick={iniciarEnMaps}
+              disabled={!paradasMaps.length}
+              className="flex min-h-11 min-w-0 flex-1 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-lg bg-brand-700 px-3 text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-brand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50 dark:bg-brand-500 dark:text-brand-950 dark:hover:brightness-110 sm:text-sm"
+            >
+              <IconoMapa className="h-4 w-4" /> Iniciar en Maps
+            </button>
+            <button
+              type="button"
+              onClick={() => void calcularRuta()}
+              disabled={calculandoRuta}
+              className={`${btnAccion} min-w-0 flex-1 justify-center disabled:cursor-not-allowed disabled:opacity-50`}
+            >
+              <IconoRefrescar className="h-4 w-4" /> Recalcular
+            </button>
+          </div>
+        </section>
+      ) : avisoRuta ? (
+        <p
+          role="status"
+          className="mb-2 rounded-lg border border-line bg-surface-soft px-3 py-2 text-xs text-foreground sm:mb-3"
+        >
+          {avisoRuta}
+        </p>
+      ) : null}
+
+      <TablaCampo
+        lista={listaVisible}
+        etiqueta="Agenda"
+        columnas={[
+          {
+            titulo: "Local",
+            valor: (a) => (
+              <div className="min-w-0">
+                <strong className="block font-semibold text-foreground">
+                  {a.local.nombre}
+                </strong>
+                <p className="text-xs font-medium text-brand-700 dark:text-brand-200">
+                  {a.local.direccion || a.local.id}
+                </p>
+              </div>
+            ),
+          },
+          {
+            titulo: "Visita",
+            valor: (a) => {
+              const ultima = a.visitas.at(-1);
+              return (
+                <div className="space-y-0.5 text-xs">
+                  <p className="font-semibold text-foreground">
+                    {ultima
+                      ? `Entrada ${formatoFechaHora(ultima.entrada)}`
+                      : "Sin visita todavía"}
+                  </p>
+                  {ultima?.salida ? (
+                    <p className="text-muted">
+                      Salida {formatoHora(ultima.salida)}
+                    </p>
+                  ) : null}
+                  {a.esBackup ? (
+                    <p className="text-muted">Reemplazás a {a.titular}</p>
+                  ) : null}
+                </div>
+              );
+            },
+          },
+          {
+            titulo: "Horario de Atención",
+            valor: (a) =>
+              a.local.horarios.length ? (
+                <div className="flex flex-wrap gap-1 font-mono text-xs">
+                  {a.local.horarios.map((h) => (
+                    <span
+                      key={h.id}
+                      className="rounded bg-surface-soft px-2 py-0.5"
+                    >
+                      {h.entrada}–{h.salida}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <span className="text-xs text-muted">Sin horario fijado</span>
+              ),
+          },
+          {
+            titulo: "Estado",
+            valor: (a) => <EstadoRutaSimple estado={a.estado} />,
+          },
+        ]}
+        tarjetaMovil={(a) => (
+          <TarjetaAgendaRepositor
+            soloConsulta
+            agenda={a}
+            orden={numeroParada.get(a.id) ?? 0}
+            distancia={
+              origenGps && conUbicacion(a.local)
+                ? formatoDistancia(metrosEntre(origenGps, a.local))
+                : undefined
+            }
+            abierta={idExpandida === a.id}
+            alternar={() => setExpandida(idExpandida === a.id ? null : a.id)}
+            qsFecha={qsFecha}
+            visitaAbierta={abierta}
+            onMapa={() => setMapa(a.local)}
+            onNovedad={() => setNovedadLocal(a.local)}
+          />
+        )}
+        acciones={(a) => (
+          <div className="flex flex-wrap gap-1.5">
+            <button
+              type="button"
+              onClick={() => setMapa(a.local)}
+              className={btnAccion}
+              aria-label={`Ver mapa de ${a.local.nombre}`}
+            >
+              <IconoMapa className="h-4 w-4" /> Mapa
+            </button>
+            <button
+              type="button"
+              onClick={() => setNovedadLocal(a.local)}
+              className={btnAccion}
+              aria-label={`Reportar novedad en ${a.local.nombre}`}
+            >
+              <IconoMensaje className="h-4 w-4" /> Novedad
+            </button>
+          </div>
+        )}
+      />
+      {error ? (
+        <p
+          role="alert"
+          className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-200"
+        >
+          {error}
+        </p>
+      ) : null}
       <PantallaCarga
         visible={calculandoRuta}
         mensaje="Calculando mejor ruta"
         detalle="Usamos tu GPS, los horarios y la distancia entre locales."
       />
-
-      {/* Modal de Mapa */}
-      {mapa && (
-        <MapaLocal local={mapa} cerrar={() => setMapa(null)} />
-      )}
-
+      {mapa ? <MapaLocal local={mapa} cerrar={() => setMapa(null)} /> : null}
       {novedadLocal ? (
         <ModalNovedadLocal
           local={novedadLocal}
-          visitaId={abierta?.local.id === novedadLocal.id ? abierta.id : undefined}
+          visitaId={
+            abierta?.local.id === novedadLocal.id ? abierta.id : undefined
+          }
           cerrar={() => setNovedadLocal(null)}
         />
       ) : null}
-    </div>
+    </>
   );
 }

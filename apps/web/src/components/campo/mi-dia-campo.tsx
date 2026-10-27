@@ -28,12 +28,14 @@ import { RUTA } from "@/utils/estado-jornada";
 import { fechaEnZonaIso, formatoHora, textoRangoFechas } from "@/utils/fechas";
 import {
   consultaPeriodoInicio,
+  periodoInicioHoy,
   cuandoPeriodoInicio,
   rangoPeriodoInicio,
 } from "@/utils/periodo-inicio";
 import { SelectorPeriodoInicio } from "./ui/periodo-inicio";
 import { pct, resumenMiDia } from "@/utils/hoy-en-campo";
 import { tareaCumplidaEnVisita } from "@/utils/tareas-campo";
+import { hayTareasAsignadas } from "@/lib/disponibilidad-tareas";
 import type {
   AgendaCampo,
   AvisoRecibidoItem,
@@ -42,7 +44,7 @@ import type {
   VisitaCampo,
 } from "@/types/campo";
 import type { RespuestaPaginada } from "@/types/paginacion";
-import type { PeriodoInicio } from "@/types/hoy-en-campo";
+import type { PeriodoFiltro } from "@/types/periodo-filtro";
 
 // Inicio del repositor o impulsador: los mismos indicadores del supervisor,
 // pero solo con su propio día (ruta, presentismo, tareas y novedades).
@@ -54,6 +56,7 @@ interface DatosMiDia {
   /** Visita abierta, sea de hoy o de una jornada anterior. */
   abierta: VisitaCampo | null;
   tareas: TareaJornadaCampo[] | null;
+  hayTareas: boolean | null;
   novedadesAbiertas: number | null;
   primeraNovedad: string | null;
   avisos: AvisoRecibidoItem[] | null;
@@ -61,7 +64,7 @@ interface DatosMiDia {
 }
 
 export function MiDiaCampo() {
-  const { usuario, modulos } = usePanel();
+  const { usuario, modulos, tareasDisponibles } = usePanel();
   const pagina = (ruta: string) =>
     modulos.some((m) => m.ruta === "mi-jornada" && m.paginas.some((p) => p.ruta === ruta));
   const rutaRuta = pagina("locales")
@@ -73,22 +76,23 @@ export function MiDiaCampo() {
   const rutaNovedades = pagina("novedades") ? "/panel/mi-jornada/novedades" : null;
   const rutaAvisos = pagina("avisos") ? "/panel/mi-jornada/avisos" : null;
   const hoy = fechaEnZonaIso(new Date());
-  const [periodo, setPeriodo] = useState<PeriodoInicio>("hoy");
+  const [periodo, setPeriodo] = useState<PeriodoFiltro>(() => periodoInicioHoy(hoy));
   const consulta = consultaPeriodoInicio(periodo, hoy);
   const rango = rangoPeriodoInicio(periodo, hoy);
   const cuando = cuandoPeriodoInicio(periodo);
 
   const [revision, setRevision] = useState(0);
-  const [terminada, setTerminada] = useState(-1);
+  const [terminada, setTerminada] = useState("");
+  const claveCarga = `${revision}|${consulta}`;
   const [datos, setDatos] = useState<DatosMiDia | null>(null);
-  const cambiarPeriodo = (nuevo: PeriodoInicio) => {
+  const cambiarPeriodo = (nuevo: PeriodoFiltro) => {
     if (nuevo === periodo) return;
     setPeriodo(nuevo);
     // No mezclar los números de otro período mientras llegan los nuevos.
     setDatos(null);
   };
   const [error, setError] = useState("");
-  const cargando = terminada !== revision;
+  const cargando = terminada !== claveCarga;
   const actualizar = () => setRevision((n) => n + 1);
 
   useEffect(() => {
@@ -96,7 +100,7 @@ export function MiDiaCampo() {
     const opciones = { signal: controller.signal };
     const fecha = fechaEnZonaIso(new Date());
     async function cargar() {
-      const [agenda, abierta, novedades, avisos] = await Promise.all([
+      const [agenda, abierta, novedades, avisos, hayTareas] = await Promise.all([
         apiFetch<RespuestaPaginada<AgendaCampo>>(`/campo/jornada?${consulta}&page=1&limit=50`, opciones),
         apiFetch<VisitaCampo | null>("/campo/jornada/abierta", opciones),
         rutaNovedades
@@ -104,6 +108,9 @@ export function MiDiaCampo() {
           : Promise.resolve(null),
         rutaAvisos
           ? apiFetch<RespuestaPaginada<AvisoRecibidoItem>>("/campo/avisos/recibidos?page=1&limit=20", opciones).catch(() => null)
+          : Promise.resolve(null),
+        rutaTareas && consulta !== `fecha=${hoy}`
+          ? hayTareasAsignadas(consulta, controller.signal).catch(() => null)
           : Promise.resolve(null),
       ]);
       // Las tareas solo se trabajan con la visita abierta de hoy.
@@ -121,6 +128,7 @@ export function MiDiaCampo() {
         agenda: agenda.items,
         abierta,
         tareas,
+        hayTareas,
         novedadesAbiertas: novedades ? novedades.counts.abierta : null,
         primeraNovedad: novedades?.items[0]?.titulo ?? null,
         avisos: avisos?.items ?? null,
@@ -134,10 +142,10 @@ export function MiDiaCampo() {
           setError(e instanceof Error ? e.message : "No se pudo cargar tu día");
       })
       .finally(() => {
-        if (!controller.signal.aborted) setTerminada(revision);
+        if (!controller.signal.aborted) setTerminada(claveCarga);
       });
     return () => controller.abort();
-  }, [revision, rutaNovedades, rutaAvisos, consulta]);
+  }, [revision, rutaNovedades, rutaAvisos, rutaTareas, consulta, hoy, claveCarga]);
 
   // Se actualiza solo cada 5 minutos mientras la pestaña está visible.
   useEffect(() => {
@@ -160,6 +168,7 @@ export function MiDiaCampo() {
   const proximo = agenda.find((a) => a.estado === "pendiente");
   const avisosSinLeer = datos?.avisos?.filter((a) => !a.leido) ?? [];
   const novedadesAbiertas = datos?.novedadesAbiertas ?? null;
+  const sinTareas = !rutaTareas || datos?.hayTareas === false || (consulta === `fecha=${hoy}` && tareasDisponibles["mi-jornada"] === false);
   const ui = PRESENTISMO_UI[r.presentismo];
   const nombre = usuario.nombre.trim().split(/\s+/)[0] ?? "";
 
@@ -200,7 +209,27 @@ export function MiDiaCampo() {
             <div className="grid min-w-0 grid-cols-2 gap-2.5 lg:grid-cols-4 lg:gap-3">
               <TarjetaIndicador
                 letra="A"
-                nombre="Mi ruta"
+                nombre="Presentismo"
+                etiqueta="Ir a Mi Ruta"
+                href={rutaRuta ?? undefined}
+                tono={ui.tono}
+                valor={<span className="text-2xl sm:text-3xl">{ui.etiqueta}</span>}
+                barra={
+                  <span className={`block h-2 w-full rounded-full ${r.presentismo === "SIN_REGISTRO" ? "bg-stone-200 dark:bg-stone-700" : ui.barra}`} />
+                }
+                nota={
+                  r.primeraEntrada ? (
+                    <>
+                      Primera entrada <b className="font-mono text-foreground">{formatoHora(r.primeraEntrada)}</b>
+                    </>
+                  ) : (
+                    "Todavía no marcaste entrada " + cuando
+                  )
+                }
+              />
+              <TarjetaIndicador
+                letra="B"
+                nombre="Mi Ruta"
                 etiqueta="Ir a Mi Ruta"
                 href={rutaRuta ?? undefined}
                 tono={r.ausentes ? "bad" : r.incompletas ? "warn" : "ok"}
@@ -229,30 +258,11 @@ export function MiDiaCampo() {
                 }
               />
               <TarjetaIndicador
-                letra="B"
-                nombre="Presentismo"
-                etiqueta="Ir a Mi Ruta"
-                href={rutaRuta ?? undefined}
-                tono={ui.tono}
-                valor={<span className="text-2xl sm:text-3xl">{ui.etiqueta}</span>}
-                barra={
-                  <span className={`block h-2 w-full rounded-full ${r.presentismo === "SIN_REGISTRO" ? "bg-stone-200 dark:bg-stone-700" : ui.barra}`} />
-                }
-                nota={
-                  r.primeraEntrada ? (
-                    <>
-                      Primera entrada <b className="font-mono text-foreground">{formatoHora(r.primeraEntrada)}</b>
-                    </>
-                  ) : (
-                    "Todavía no marcaste entrada " + cuando
-                  )
-                }
-              />
-              <TarjetaIndicador
                 letra="C"
                 nombre="Tareas"
                 etiqueta="Ir a Mis tareas"
                 href={rutaTareas ?? undefined}
+                disabled={sinTareas}
                 tono={!tareas ? "info" : obligPend ? "warn" : "ok"}
                 valor={
                   tareas ? (
@@ -271,7 +281,7 @@ export function MiDiaCampo() {
                   />
                 }
                 nota={
-                  tareas ? (
+                  sinTareas ? "Sin tareas asignadas" : tareas ? (
                     <>
                       <b className="text-foreground">{hechas} de {tareas.length}</b> hechas
                       {obligPend ? <span className="font-semibold text-amber-700 dark:text-amber-300"> · {obligPend} obligatorias</span> : null}
@@ -281,12 +291,12 @@ export function MiDiaCampo() {
                   )
                 }
               />
-              {novedadesAbiertas !== null || !datos.avisos ? (
-                <TarjetaIndicador
+              <TarjetaIndicador
                   letra="D"
                   nombre="Novedades"
                   etiqueta="Ir a Novedades"
                   href={rutaNovedades ?? undefined}
+                  disabled={!rutaNovedades}
                   tono={novedadesAbiertas ? "warn" : avisosSinLeer.length ? "info" : "ok"}
                   valor={
                     <>
@@ -307,23 +317,7 @@ export function MiDiaCampo() {
                       "Reportes en seguimiento"
                     )
                   }
-                />
-              ) : (
-                <TarjetaIndicador
-                  letra="D"
-                  nombre="Avisos"
-                  etiqueta="Ir a Avisos"
-                  href={rutaAvisos ?? undefined}
-                  tono={avisosSinLeer.length ? "info" : "ok"}
-                  valor={
-                    <>
-                      {avisosSinLeer.length}
-                      <small className="text-base font-semibold text-muted"> sin leer</small>
-                    </>
-                  }
-                  nota={`${datos.avisos.length} recibidos recientes`}
-                />
-              )}
+              />
             </div>
           </div>
 

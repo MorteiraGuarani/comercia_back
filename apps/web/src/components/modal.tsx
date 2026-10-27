@@ -12,6 +12,7 @@ export function Modal({
   abierto,
   onCerrar,
   children,
+  encabezado,
   pie,
   ancho = "md",
   hojaMovil = false,
@@ -20,6 +21,8 @@ export function Modal({
   abierto: boolean;
   onCerrar: () => void;
   children: ReactNode;
+  /** Controles compactos en lugar del título visible; el título sigue siendo accesible. */
+  encabezado?: ReactNode;
   pie?: ReactNode;
   // "lg"/"xl" para formularios anchos; "md" es el default historico
   ancho?: "md" | "lg" | "xl";
@@ -116,7 +119,12 @@ export function Modal({
           <div aria-hidden className="mx-auto mb-1 h-1.5 w-10 shrink-0 rounded-full bg-line sm:hidden" />
         ) : null}
         <header className="flex shrink-0 items-start justify-between gap-2 sm:gap-4">
-          <h2 className={`min-w-0 flex-1 break-words font-extrabold tracking-[-0.025em] ${hojaMovil ? "self-center text-base sm:text-lg" : "text-lg"}`}>{titulo}</h2>
+          <h2 className={encabezado ? "sr-only" : `min-w-0 flex-1 break-words font-extrabold tracking-[-0.025em] ${hojaMovil ? "self-center text-base sm:text-lg" : "text-lg"}`}>
+            {titulo}
+          </h2>
+          {encabezado ? (
+            <div className="min-w-0 flex-1 self-center">{encabezado}</div>
+          ) : null}
           <button
             type="button"
             onClick={onCerrar}

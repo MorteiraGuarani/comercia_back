@@ -94,6 +94,7 @@ export function TarjetaIndicador({
   href,
   onClick,
   etiqueta,
+  disabled = false,
 }: {
   letra: string;
   nombre: string;
@@ -104,8 +105,9 @@ export function TarjetaIndicador({
   href?: string;
   onClick?: () => void;
   etiqueta: string;
+  disabled?: boolean;
 }) {
-  const clase = `flex min-w-0 cursor-pointer flex-col gap-1.5 rounded-xl border border-line bg-surface-raised p-3 text-left ${SOMBRA} transition-colors hover:border-brand-500 hover:bg-surface-soft/40 sm:p-4 ${enfoqueTablero}`;
+  const clase = `flex min-w-0 flex-col gap-1.5 rounded-xl border border-line bg-surface-raised p-3 text-left ${SOMBRA} transition-colors disabled:cursor-not-allowed disabled:opacity-50 sm:p-4 ${enfoqueTablero} ${!disabled ? "cursor-pointer hover:border-brand-500 hover:bg-surface-soft/40" : ""}`;
   const contenido = (
     <>
       <span className="flex items-center justify-between gap-1.5">
@@ -127,12 +129,12 @@ export function TarjetaIndicador({
       <span className="text-[11px] leading-snug text-muted sm:text-xs">{nota}</span>
     </>
   );
-  return href ? (
+  return href && !disabled ? (
     <Link href={href} aria-label={etiqueta} className={clase}>
       {contenido}
     </Link>
   ) : (
-    <button type="button" onClick={onClick} aria-label={etiqueta} className={clase}>
+    <button type="button" disabled={disabled} onClick={onClick} aria-label={etiqueta} className={clase}>
       {contenido}
     </button>
   );

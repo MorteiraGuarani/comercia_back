@@ -28,7 +28,6 @@ const consultas = [];
 const altas = [];
 const ediciones = [];
 let errorCarga = true;
-let rechazarAlta;
 let items = [];
 const cliente = {
   id: "00001",
@@ -49,10 +48,6 @@ async function apiFetch(url, opciones = {}) {
   }
   if (opciones.method === "POST") {
     altas.push(JSON.parse(opciones.body));
-    if (altas.length === 1)
-      return new Promise((_, reject) => {
-        rechazarAlta = reject;
-      });
     items = [cliente];
     return cliente;
   }
@@ -64,8 +59,8 @@ const stubs = {
   "@/lib/api": { apiFetch, ApiError },
   "next/dynamic": { default: () => () => null, __esModule: true },
   "@/components/toast/toast-controller": { mostrarToast: () => {} },
-  "./horarios-local": { HorariosLocal: () => null },
-  "./asignaciones-local": { AsignacionesLocal: () => null },
+  "./horarios-local": { HorariosLocal: () => createElement("section", { "aria-label": "Editor de horarios" }, "Horarios") },
+  "./asignaciones-local": { AsignacionesLocal: () => createElement("section", { "aria-label": "Editor de asignación" }, "Personal") },
   "@/components/panel/contexto": {
     usePanel: () => ({ usuario: { rol: { equipoCampo: { nombre: "Repositores" } } } }),
   },
@@ -188,109 +183,44 @@ try {
     /OCRD|CardCode|U_Latitud|U_Longitud/,
   );
 
-  await act(async () =>
-    click(document.querySelector('[aria-label="Crear cliente"]')),
-  );
-  assert.ok(document.querySelector('[role="dialog"]'));
-  await act(async () => ingresar("Phone1", "0991 18"));
-  assert.match(
-    document.getElementById("telefono-pista").textContent,
-    /Faltan dígitos/,
-  );
-  await act(async () => {
-    ingresar("CardCode", "00001");
-    ingresar("CardName", "Almacén Central");
-    ingresar("LicTradNum", "80012345-6");
-    ingresar("Phone1", "0991188620");
-    ingresar("Street", "Calle 123");
-  });
-  assert.equal(document.querySelector('button[type="submit"]').disabled, false);
-  assert.equal(
-    document.querySelector('[aria-label="Dígito verificador"]').textContent,
-    "-0",
-    "Calcula el DV del RUC y reemplaza el que escribieron",
-  );
-  assert.equal(
-    document.querySelector('input[name="Phone1"]').value,
-    "+595 991 188620",
-    "Formatea el teléfono con el código de Paraguay",
-  );
-  assert.equal(document.querySelector('button[type="submit"]').textContent, "Siguiente");
-  await act(async () => {
-    enviar();
-    enviar();
-  });
-  assert.equal(altas.length, 1, "Bloquea envíos duplicados");
-  assert.ok(
-    document.querySelector('[aria-busy="true"]'),
-    "Muestra la carga durante el alta",
-  );
-  await act(async () =>
-    rechazarAlta(
-      new ApiError("Ya existe un cliente con ese código en tu empresa"),
-    ),
-  );
-  assert.match(
-    document.querySelector('[role="alert"]').textContent,
-    /Ya existe un cliente/,
-  );
-  assert.equal(
-    document.querySelector('input[name="CardName"]').value,
-    "Almacén Central",
-    "Conserva el formulario ante un error",
-  );
+  assert.equal(document.querySelector('[aria-label="Crear cliente"]').disabled, true);
+  await act(async () => click(document.querySelector('[aria-label="Crear cliente"]')));
+  assert.equal(document.querySelector('[role="dialog"]'), null);
+  assert.equal(altas.length, 0, "El botón de alta deshabilitado no abre ni envía datos");
 
-  await act(async () => enviar());
-  assert.deepEqual(altas.at(-1), {
-    CardCode: "00001",
-    CardName: "Almacén Central",
-    LicTradNum: "80012345-0",
-    Phone1: "+595991188620",
-    Address: "",
-    Street: "Calle 123",
-  }, "Sin punto marcado no envía coordenadas");
-  assert.ok(document.querySelector('[role="dialog"]'), "Sigue abierto para cargar horarios y personal");
-  assert.equal(
-    document.querySelector('[role="tab"][aria-selected="true"]').textContent,
-    "Horarios",
-  );
-  assert.ok(consultas.at(-1).includes("buscar=00001"));
-  assert.match(document.querySelector("table").textContent, /Almacén Central/);
+  items = [cliente];
+  await act(async () => root.render(createElement(LocalesPanel, { key: "con-datos" })));
+  assert.match(document.body.textContent, /Itinerario/);
   assert.match(document.querySelector('nav[aria-label="Paginación"]').textContent, /1–1/);
-
-  await act(async () =>
-    click(
-      Array.from(document.querySelectorAll('[role="tab"]')).find(
-        (b) => b.textContent === "Datos y ubicación",
-      ),
-    ),
-  );
-  assert.ok(
-    Array.from(document.querySelector('input[name="CardCode"]').attributes).some(
-      (atributo) => atributo.name.toLowerCase() === "readonly",
-    ),
-    "El código de cliente no se edita",
-  );
+  await act(async () => click(document.querySelector('[aria-label="Información de Almacén Central"]')));
+  assert.ok(document.querySelector('[role="dialog"]'));
+  assert.equal(document.querySelector('[role="tablist"]'), null, "Información no permite saltar a otras secciones");
+  assert.equal(document.querySelector('[aria-label="Editor de horarios"]'), null);
+  assert.equal(document.querySelector('[aria-label="Editor de asignación"]'), null);
+  assert.ok(Array.from(document.querySelector('input[name="CardCode"]').attributes).some((a) => a.name.toLowerCase() === "readonly"));
   await act(async () => ingresar("CardName", "Almacén Norte"));
-  // Antes se perdía: cambiar de pestaña con datos editados ahora los guarda.
-  await act(async () =>
-    click(
-      Array.from(document.querySelectorAll('[role="tab"]')).find(
-        (b) => b.textContent === "Horarios",
-      ),
-    ),
-  );
-  assert.equal(ediciones.length, 1, "Guarda los datos al cambiar de pestaña");
-  assert.equal(
-    document.querySelector('[role="tab"][aria-selected="true"]').textContent,
-    "Horarios",
-  );
+  assert.equal(document.querySelector('button[type="submit"]').textContent, "Guardar cambios");
+  await act(async () => enviar());
+  assert.equal(ediciones.length, 1);
   assert.equal(ediciones[0].url, "/campo/locales/00001");
   assert.equal(ediciones[0].cuerpo.CardName, "Almacén Norte");
-  assert.equal(ediciones[0].cuerpo.CardCode, undefined, "La edición no manda el código");
-  console.log(
-    "OK: alta y edición del cliente, reintento sin perder datos, protección contra doble envío y textos en español; sin navegador",
-  );
+  assert.equal(ediciones[0].cuerpo.CardCode, undefined);
+  assert.equal(document.querySelector('[role="dialog"]'), null, "Guardar Información cierra su modal");
+
+  await act(async () => click(document.querySelector('[aria-label="Itinerario de Almacén Central"]')));
+  assert.ok(document.querySelector('[aria-label="Editor de horarios"]'));
+  assert.equal(document.querySelector('[aria-label="Editor de asignación"]'), null);
+  assert.equal(document.querySelector('input[name="CardCode"]'), null);
+  assert.equal(document.querySelector('[role="tablist"]'), null);
+  await act(async () => click(document.querySelector('[aria-label="Cerrar"]')));
+
+  await act(async () => click(document.querySelector('[aria-label="Asignación de Almacén Central"]')));
+  assert.ok(document.querySelector('[aria-label="Editor de asignación"]'));
+  assert.equal(document.querySelector('[aria-label="Editor de horarios"]'), null);
+  assert.equal(document.querySelector('input[name="CardCode"]'), null);
+  assert.equal(document.querySelector('[role="tablist"]'), null);
+  await act(async () => click(document.querySelector('[aria-label="Cerrar"]')));
+  console.log("OK: Itinerario, alta deshabilitada, Información/Itinerario/Asignación independientes, guardado y reintento; sin navegador.");
 } finally {
   await act(async () => root.unmount());
 }

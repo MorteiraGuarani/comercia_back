@@ -1,4 +1,5 @@
 "use client";
+import type { PeriodoFiltro } from "@/types/periodo-filtro";
 import dynamic from "next/dynamic";
 import { RUTA } from "@/utils/estado-jornada";
 
@@ -21,7 +22,7 @@ import { TOKENS } from "./tokens";
 import { StatusStamp } from "./ui/status-stamp";
 import { StatChip } from "./ui/stat-chip";
 import { TopBar } from "./ui/top-bar";
-import { SelectorFechaFiltro, type PeriodoFiltro } from "./ui/selector-fecha-filtro";
+import { SelectorFechaFiltro } from "./ui/selector-fecha-filtro";
 import { Modal } from "@/components/modal";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { SubidorFotos } from "./subidor-fotos";

@@ -1,4 +1,5 @@
 "use client";
+import type { PeriodoFiltro } from "@/types/periodo-filtro";
 
 import Link from "next/link";
 import { PRESENTISMO, RUTA } from "@/utils/estado-jornada";
@@ -27,10 +28,7 @@ import {
 } from "./presentismo-equipo";
 import styles from "./presentismo.module.css";
 import MarcacionesColaborador from "./marcaciones-colaborador";
-import {
-  SelectorFechaFiltro,
-  type PeriodoFiltro,
-} from "./ui/selector-fecha-filtro";
+import { SelectorFechaFiltro } from "./ui/selector-fecha-filtro";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { obtenerUrlFoto } from "@/lib/api-tareas";
 import type {

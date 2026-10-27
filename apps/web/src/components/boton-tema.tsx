@@ -20,10 +20,10 @@ export function BotonTema({ sobreOscuro = false }: { sobreOscuro?: boolean }) {
       onClick={alternar}
       aria-label="Cambiar entre modo claro y oscuro"
       title="Cambiar tema"
-      className={`grid h-10 w-10 place-items-center rounded-xl border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50 ${
+      className={`grid h-10 w-10 place-items-center rounded-xl border border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40 ${
         sobreOscuro
-          ? "border-[#587268] bg-commercial-ink text-white hover:bg-commercial-ink-soft"
-          : "border-control-line bg-surface text-muted shadow-sm hover:border-brand-500 hover:bg-surface-soft hover:text-foreground"
+          ? "text-white hover:border-[#587268] hover:bg-commercial-ink-soft"
+          : "text-muted hover:border-line hover:bg-surface-soft hover:text-foreground"
       }`}
     >
       {/* Luna: visible en modo claro (invita a pasar a oscuro) */}

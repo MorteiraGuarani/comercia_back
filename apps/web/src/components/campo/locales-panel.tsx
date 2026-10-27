@@ -4,20 +4,15 @@ import React, { useMemo, useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { Paginacion } from "@/components/paginacion";
 import { useListaCampo } from "@/hooks/use-lista-campo";
-import { BotonEditar } from "@/components/boton-editar";
 import { IconoMas } from "@/components/icono-mas";
 import { ClienteModal, type PestanaCliente } from "./cliente-modal";
 import { TOKENS } from "./tokens";
 import { BuscadorCatalogo } from "./ui/filtros-catalogo";
 import { TopBar } from "./ui/top-bar";
 import { TarjetaPdv } from "./tarjeta-pdv";
+import { AccionesItinerario } from "./acciones-itinerario";
 import { FotoLocal } from "./ui/foto-local";
-import {
-  IconoCalendario,
-  IconoTienda,
-  IconoMapa,
-  IconoPlanificacion,
-} from "./ui/iconos-campo";
+import { IconoCalendario, IconoTienda, IconoMapa } from "./ui/iconos-campo";
 import { ConfigVencimientosModal } from "./config-vencimientos-modal";
 import type { ClientePdv } from "@/types/campo";
 
@@ -71,16 +66,16 @@ export function LocalesPanel() {
       style={{ backgroundColor: TOKENS.bone, color: TOKENS.ink }}
     >
       <TopBar
-        title="Puntos de Venta & Rutas"
+        title="Itinerario"
         subtitle="Clientes con su ubicación, horarios y personal asignado"
         right={
           <>
             <button
               type="button"
-              onClick={() => setModal({})}
+              disabled
               aria-label="Crear cliente"
               title="Crear cliente"
-              className="grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-xl bg-brand-700 text-white transition hover:bg-brand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:bg-brand-500 dark:text-zinc-950 dark:hover:bg-brand-400"
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-700 text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-brand-500 dark:text-zinc-950"
             >
               <IconoMas className="h-5 w-5" />
             </button>
@@ -127,7 +122,7 @@ export function LocalesPanel() {
                 lista.setPage(1);
               }}
               placeholder="Buscar por nombre o código de cliente…"
-              etiqueta="Buscar punto de venta"
+              etiqueta="Buscar local en Itinerario"
             />
           </div>
           {!lista.error && (
@@ -159,7 +154,7 @@ export function LocalesPanel() {
           ) : lista.cargando && !lista.items.length ? (
             <div className="py-16 text-center text-muted">
               <div className="w-6 h-6 mx-auto border-2 border-foreground border-t-transparent rounded-full animate-spin mb-2.5" />
-              <p className="text-xs font-mono">Cargando puntos de venta...</p>
+              <p className="text-xs font-mono">Cargando itinerario…</p>
             </div>
           ) : lista.items.length === 0 ? (
             <div className="py-12 px-4 text-center">
@@ -172,22 +167,27 @@ export function LocalesPanel() {
               <p className="text-xs text-muted mt-1 max-w-sm mx-auto">
                 {busqueda
                   ? "Probá con otro nombre o código de cliente."
-                  : "Usá el botón + para crear un cliente y después asignarle visitas y tareas."}
+                  : "No hay locales disponibles para tu alcance."}
               </p>
             </div>
           ) : (
             <>
               <ul
                 className="grid gap-2.5 p-2.5 md:hidden"
-                aria-label="Puntos de venta"
+                aria-label="Locales de Itinerario"
               >
                 {lista.items.map((local) => (
                   <li key={local.id} className="min-w-0">
                     <TarjetaPdv
                       local={local}
-                      onEditar={() => setModal({ cliente: local })}
-                      onRuta={() =>
+                      onInformacion={() =>
+                        setModal({ cliente: local, pestana: "datos" })
+                      }
+                      onItinerario={() =>
                         setModal({ cliente: local, pestana: "horarios" })
+                      }
+                      onAsignacion={() =>
+                        setModal({ cliente: local, pestana: "personal" })
                       }
                     />
                   </li>
@@ -198,7 +198,7 @@ export function LocalesPanel() {
                   <thead>
                     <tr className="border-b border-line bg-surface-soft text-[11px] font-bold uppercase tracking-wider text-muted">
                       <th className="py-2.5 px-3.5">Acciones</th>
-                      <th className="py-2.5 px-3.5">PDV</th>
+                      <th className="py-2.5 px-3.5">Local</th>
                       <th className="py-2.5 px-3.5">Asignado</th>
                     </tr>
                   </thead>
@@ -209,22 +209,18 @@ export function LocalesPanel() {
                         className="transition-colors hover:bg-surface-soft"
                       >
                         <td className="whitespace-nowrap px-3.5 py-2.5">
-                          <div className="flex items-center gap-1.5">
-                            <BotonEditar
-                              onClick={() => setModal({ cliente: local })}
-                              etiqueta={`Editar cliente ${local.nombre}`}
-                            />
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setModal({ cliente: local, pestana: "horarios" })
-                              }
-                              className="inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-md border border-line px-2.5 font-semibold text-foreground hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
-                            >
-                              <IconoPlanificacion className="h-3.5 w-3.5" />
-                              Ruta
-                            </button>
-                          </div>
+                          <AccionesItinerario
+                            nombre={local.nombre}
+                            onInformacion={() =>
+                              setModal({ cliente: local, pestana: "datos" })
+                            }
+                            onItinerario={() =>
+                              setModal({ cliente: local, pestana: "horarios" })
+                            }
+                            onAsignacion={() =>
+                              setModal({ cliente: local, pestana: "personal" })
+                            }
+                          />
                         </td>
                         <td className="min-w-[240px] px-3.5 py-2.5">
                           <div className="flex min-w-0 items-center gap-3">
@@ -299,14 +295,23 @@ export function LocalesPanel() {
       </main>
 
       {configVencimientos && (
-        <ConfigVencimientosModal onCerrar={() => setConfigVencimientos(false)} />
+        <ConfigVencimientosModal
+          onCerrar={() => setConfigVencimientos(false)}
+        />
       )}
 
       {modal && (
         <ClienteModal
+          seccionUnica
           cliente={modal.cliente}
           pestana={modal.pestana}
-          onCerrar={() => setModal(null)}
+          onCerrar={() => {
+            if (modal.pestana === "horarios" || modal.pestana === "personal") {
+              lista.refrescar();
+              setRevisionMapa((valor) => valor + 1);
+            }
+            setModal(null);
+          }}
           onGuardado={(cliente) => {
             // Un alta nueva se busca por su código para verla en la lista.
             if (!modal.cliente) {
@@ -318,7 +323,6 @@ export function LocalesPanel() {
           }}
         />
       )}
-
     </div>
   );
 }

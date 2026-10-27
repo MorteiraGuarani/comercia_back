@@ -1,5 +1,3 @@
-import type { EquipoCampo } from "@/types/rol";
-
 export function etiquetaPaginaMenu(
   moduloRuta: string,
   paginaRuta: string,
@@ -7,27 +5,9 @@ export function etiquetaPaginaMenu(
 ) {
   if (moduloRuta === "mi-jornada" && paginaRuta === "locales") return "Mi Ruta";
   if (moduloRuta === "mi-jornada" && paginaRuta === "tareas") return "Mis tareas";
-  if (moduloRuta === "gestion-campo" && paginaRuta === "locales") return "PDV y rutas";
+  if (moduloRuta === "gestion-campo" && paginaRuta === "locales") return "Itinerario";
   if (moduloRuta === "gestion-campo" && paginaRuta === "visitas") return "Presentismo";
   if (paginaRuta === "novedades") return "Novedades";
   if (paginaRuta === "avisos") return "Avisos";
   return nombre;
-}
-
-export function rutaInicialImpulsador(
-  modulos: Array<{
-    ruta: string;
-    paginas: Array<{ ruta: string }>;
-  }>,
-  equipoCampo?: Pick<EquipoCampo, "tipo"> | null,
-) {
-  // El repositor entra a Inicio aunque tenga las mismas páginas que un impulsador.
-  if (equipoCampo?.tipo === "REPOSITOR") return null;
-  const miJornada = modulos.find((modulo) => modulo.ruta === "mi-jornada");
-  const esLider = modulos.some((modulo) => modulo.ruta === "gestion-campo");
-  if (!miJornada || esLider) return null;
-  const ruta =
-    miJornada.paginas.find((pagina) => pagina.ruta === "locales") ??
-    miJornada.paginas[0];
-  return ruta ? `/panel/mi-jornada/${ruta.ruta}` : null;
 }

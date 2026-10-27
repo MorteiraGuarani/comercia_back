@@ -6,7 +6,7 @@ import { queryFechasCampo } from '@/utils/fechas';
 import { valorMarcacion } from '@/utils/marcacion';
 import type { DetalleMarcacion } from '@/types/marcacion';
 import type { RespuestaPaginada } from '@/types/paginacion';
-import type { PeriodoFiltro } from './ui/selector-fecha-filtro';
+import type { PeriodoFiltro } from '@/types/periodo-filtro';
 import ComparacionMarcaciones from '../ComparacionMarcaciones';
 import InfoColumna from '../InfoColumna';
 import { Modal } from '../modal';
