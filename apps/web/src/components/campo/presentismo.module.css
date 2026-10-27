@@ -27,7 +27,7 @@
 .refresh:hover:not(:disabled) { background: var(--accent-soft); border-color: var(--accent-ink); }
 .refresh:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .refresh:disabled { opacity: .5; cursor: not-allowed; }
-.organigrama { display: inline-flex; align-items: center; gap: .375rem; flex: none; min-height: 2.75rem; padding: 0 .875rem; border: 1px solid var(--border); border-radius: .5rem; background: var(--surface-raised); color: var(--accent-ink); font-weight: 700; font-size: .875rem; white-space: nowrap; text-decoration: none; cursor: pointer; }
+.organigrama { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 2.75rem; min-height: 2.75rem; padding: 0; border: 1px solid var(--border); border-radius: .5rem; background: var(--surface-raised); color: var(--accent-ink); font-weight: 700; font-size: .875rem; white-space: nowrap; text-decoration: none; cursor: pointer; }
 .organigrama:hover { background: var(--accent-soft); border-color: var(--accent-ink); }
 .organigrama:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .body { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-lg); max-width: var(--container-7xl); margin-inline: auto; padding: var(--space-md) var(--gutter); }

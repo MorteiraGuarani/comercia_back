@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
-import { PantallaCarga } from "@/components/pantalla-carga";
 import type { DetalleNotificacionInventario } from "@/types/notificacion-inventario";
 import {
   estadoVencimiento,
@@ -62,7 +61,19 @@ export function DetalleNotificacionInventario({ id }: { id: number }) {
       </div>
     );
   if (!detalle)
-    return <PantallaCarga visible mensaje="Cargando detalle del inventario" />;
+    return (
+      <div
+        className="flex min-h-28 items-center justify-center gap-3 text-sm text-muted"
+        role="status"
+        aria-live="polite"
+      >
+        <span
+          className="h-5 w-5 animate-spin rounded-full border-2 border-current border-r-transparent"
+          aria-hidden="true"
+        />
+        Cargando detalle del inventario…
+      </div>
+    );
 
   return (
     <article className="w-full min-w-0 space-y-5 break-words text-foreground dark:text-foreground">

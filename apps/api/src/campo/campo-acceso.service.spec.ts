@@ -10,26 +10,25 @@ describe('Alcance de campo', () => {
     tipo: 'IMPULSADOR',
     activo: true,
   };
-  // Supervisor 20 → TeamLeader 25 → impulsador 30. El 40 es de otro líder.
-  const jerarquia: Record<number, number[]> = { 20: [25], 25: [30], 50: [40] };
+  const usuariosDelEquipo = new Set([25, 30]);
   function preparar() {
     const prisma = {
       usuario: {
-        findFirst: jest.fn().mockResolvedValue({
-          rol: { descripcion: 'Supervisor', equipoCampo },
-        }),
-        findUnique: jest.fn().mockResolvedValue({
-          id: 20,
-          empresaId: 10,
-          isActive: true,
-          rol: { equipoCampoId: 1 },
-        }),
-        findMany: jest.fn(
-          ({ where }: { where: { superiorId: { in: number[] } } }) =>
+        findFirst: jest.fn(
+          ({
+            where,
+          }: {
+            where: {
+              id?: number;
+              AND?: [{ id: { not: number } }, { id: number }];
+            };
+          }) =>
             Promise.resolve(
-              where.superiorId.in
-                .flatMap((id) => jerarquia[id] ?? [])
-                .map((id) => ({ id })),
+              where.id === 20
+                ? { rol: { descripcion: 'Supervisor', equipoCampo } }
+                : usuariosDelEquipo.has(where.AND?.[1].id ?? -1)
+                  ? { id: where.AND?.[1].id }
+                  : null,
             ),
         ),
       },
@@ -45,19 +44,24 @@ describe('Alcance de campo', () => {
     );
     return { prisma, plataforma, service };
   }
-  it('rechaza usuarios fuera de la cadena del líder', async () => {
+  it('rechaza usuarios fuera del equipo operativo del líder', async () => {
     const { prisma, plataforma, service } = preparar();
     await expect(service.subordinado(10, 20, 40)).rejects.toBeInstanceOf(
       NotFoundException,
     );
-    expect(prisma.usuario.findMany).toHaveBeenCalledWith(
+    expect(prisma.usuario.findFirst).toHaveBeenLastCalledWith(
       expect.objectContaining({
         where: {
-          superiorId: { in: [20] },
-          empresaId: 10,
-          isActive: true,
-          esSuperadmin: false,
-          rol: { equipoCampoId: 1 },
+          AND: [
+            {
+              empresaId: 10,
+              id: { not: 20 },
+              isActive: true,
+              esSuperadmin: false,
+              rol: { equipoCampoId: 1 },
+            },
+            { id: 40 },
+          ],
         },
       }),
     );
