@@ -20,6 +20,7 @@ import {
   rangoPeriodoInicio,
 } from "@/utils/periodo-inicio";
 import { SelectorPeriodoInicio } from "@/components/campo/ui/periodo-inicio";
+import { AyudaApp } from "@/components/campo/ui/ayuda-app";
 import type { PeriodoFiltro } from "@/types/periodo-filtro";
 import { etiquetaPaginaMenu } from "@/utils/nombres-menu";
 import type { AgendaCampo, SupervisionResumenData } from "@/types/campo";
@@ -48,11 +49,14 @@ export default function PanelInicioPage() {
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-7xl space-y-8 p-4 text-foreground sm:p-6 lg:p-8">
-      <header className="border-b border-line pb-6">
-        <p className="text-sm text-muted">{usuario.empresa.nombre}</p>
-        <h1 className="ft-display mt-2 text-3xl font-semibold sm:text-4xl">
-          Hola, {usuario.nombre}
-        </h1>
+      <header className="flex items-start justify-between gap-3 border-b border-line pb-6">
+        <div className="min-w-0">
+          <p className="text-sm text-muted">{usuario.empresa.nombre}</p>
+          <h1 className="ft-display mt-2 text-3xl font-semibold sm:text-4xl">
+            Hola, {usuario.nombre}
+          </h1>
+        </div>
+        <AyudaApp />
       </header>
       {!usuario.rol && !usuario.esSuperadmin && (
         <p className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100">

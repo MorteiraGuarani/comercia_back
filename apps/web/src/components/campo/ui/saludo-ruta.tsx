@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { AyudaApp } from "./ayuda-app";
 
 interface SaludoRutaProps {
   nombre: string;
@@ -50,19 +51,27 @@ export function SaludoRuta({
             d="M156 6c-6.6 0-11 4.6-11 10.4 0 7.4 11 17.6 11 17.6s11-10.2 11-17.6C167 10.6 162.6 6 156 6z"
             className="fill-brand-600/60 dark:fill-brand-200/40"
           />
-          <circle cx="156" cy="16.5" r="3.6" className="fill-brand-50 dark:fill-brand-950" />
+          <circle
+            cx="156"
+            cy="16.5"
+            r="3.6"
+            className="fill-brand-50 dark:fill-brand-950"
+          />
         </svg>
       </div>
 
       <div className="relative min-w-0">
-        <div className="min-w-0">
-          <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-200 sm:text-[11px]">
-            {fechaTexto}
-          </p>
-          <h1 className="mt-0.5 truncate text-lg font-bold leading-tight text-foreground sm:text-2xl">
-            {nombre ? `¡Hola, ${nombre}!` : "¡Hola!"}
-          </h1>
-          <p className="mt-0.5 text-xs text-muted sm:text-sm">{resumen}</p>
+        <div className="flex min-w-0 items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-200 sm:text-[11px]">
+              {fechaTexto}
+            </p>
+            <h1 className="mt-0.5 truncate text-lg font-bold leading-tight text-foreground sm:text-2xl">
+              {nombre ? `¡Hola, ${nombre}!` : "¡Hola!"}
+            </h1>
+            <p className="mt-0.5 text-xs text-muted sm:text-sm">{resumen}</p>
+          </div>
+          <AyudaApp />
         </div>
         <div className="mt-2.5 min-w-0">{children}</div>
       </div>

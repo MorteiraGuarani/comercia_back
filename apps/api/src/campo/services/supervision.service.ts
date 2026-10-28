@@ -1,3 +1,4 @@
+import { avanceTareasPorLocal } from '../utils/avance-tareas';
 import {
   ForbiddenException,
   Injectable,
@@ -394,7 +395,7 @@ export class SupervisionService {
     for (const user of usuarios) {
       const datos = datosPorUsuario.get(user.id);
       if (!datos) continue;
-      const { esTeamleader, asignaciones, visitasHoy, localIds } = datos;
+      const { esTeamleader, asignaciones, visitasHoy } = datos;
 
       // Calcular asistencias e In/Out
       const paradasPorLocal = new Map(
@@ -488,28 +489,19 @@ export class SupervisionService {
       totalRutaIncompleta += incompletasVisitas;
       totalRutaAusente += ausentesVisitas;
 
-      // Métricas de tareas del colaborador
-      const tareasAplicables = esTeamleader
-        ? []
-        : (
-            tareasPorGrupo.get(exigirEquipoCampo(user.rol?.equipoCampo).id) ??
-            []
-          ).filter(
-            (t) =>
-              t.todosLocales || t.locales.some((l) => localIds.has(l.localId)),
-          );
-
-      const cumplimientosIds = new Set(
-        visitasHoy.flatMap((v) => v.cumplimientos.map((c) => c.tareaId)),
+      // Métricas de tareas del colaborador: cada tarea por cada local de su ruta.
+      const {
+        total: totalTareas,
+        completadas: completadasTareas,
+        obligPendientes,
+      } = avanceTareasPorLocal(
+        paradasPorLocal.keys(),
+        esTeamleader
+          ? []
+          : (tareasPorGrupo.get(exigirEquipoCampo(user.rol?.equipoCampo).id) ??
+              []),
+        visitasHoy,
       );
-
-      const totalTareas = tareasAplicables.length;
-      const completadasTareas = tareasAplicables.filter((t) =>
-        cumplimientosIds.has(t.id),
-      ).length;
-      const obligPendientes = tareasAplicables.filter(
-        (t) => t.esObligatoria && !cumplimientosIds.has(t.id),
-      ).length;
       const pctTareas = totalTareas
         ? Math.round((completadasTareas / totalTareas) * 100)
         : 0;

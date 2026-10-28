@@ -98,6 +98,8 @@ interface DatosHoy {
   novedades: NovedadCampoItem[];
   /** null cuando el rol no tiene la página de novedades. */
   abiertas: number | null;
+  /** Novedades de todos los estados, para el porcentaje de abiertas. */
+  totalNovedades?: number | null;
   actualizado: string;
 }
 
@@ -159,6 +161,7 @@ export function HoyEnCampo() {
           resumen,
           novedades: previo?.novedades ?? [],
           abiertas: previo?.abiertas ?? null,
+          totalNovedades: previo?.totalNovedades ?? null,
           actualizado: new Date().toISOString(),
         }));
       })
@@ -170,6 +173,7 @@ export function HoyEnCampo() {
           resumen,
           novedades: novedades?.items ?? [],
           abiertas: novedades ? novedades.counts.abierta : null,
+          totalNovedades: novedades ? novedades.counts.total : null,
           actualizado: new Date().toISOString(),
         };
         setDatos(nuevos);
@@ -262,6 +266,7 @@ export function HoyEnCampo() {
               resumen={resumen}
               novedades={datos?.novedades ?? []}
               abiertas={datos?.abiertas ?? null}
+              totalNovedades={datos?.totalNovedades ?? null}
               cuando={cuando}
               onAbrir={(indicador) => abrir({ tipo: "indicador", indicador })}
             />
@@ -366,12 +371,14 @@ function Indicadores({
   resumen,
   novedades,
   abiertas,
+  totalNovedades,
   cuando,
   onAbrir,
 }: {
   resumen: SupervisionResumenData;
   novedades: NovedadCampoItem[];
   abiertas: number | null;
+  totalNovedades: number | null;
   /** "hoy", "ayer", "esta semana"… */
   cuando: string;
   onAbrir: (indicador: IndicadorHoy) => void;
@@ -428,8 +435,8 @@ function Indicadores({
       tono: r.ausentes ? "bad" : r.incompletas ? "warn" : "ok",
       valor: (
         <>
-          {r.completadas}
-          <small className="text-base font-semibold text-muted">/{r.total}</small>
+          {pct(r.completadas, r.total)}
+          <small className="text-base font-semibold text-muted">%</small>
         </>
       ),
       barra: (
@@ -445,8 +452,7 @@ function Indicadores({
       ),
       nota: (
         <>
-          <b className="text-foreground">{r.enCurso} en curso</b> · {r.pendientes} pendientes
-          {r.ausentes ? <span className="font-semibold text-red-700 dark:text-red-300"> · {r.ausentes} sin visitar</span> : null}
+          <b className="text-foreground">{r.completadas}/{r.total}</b> visitados
         </>
       ),
     },
@@ -481,12 +487,18 @@ function Indicadores({
       letra: "D",
       nombre: "Novedades",
       tono: criticas ? "bad" : (abiertas ?? reportadasHoy) ? "warn" : "ok",
-      valor: (
-        <>
-          {abiertas ?? reportadasHoy}
-          <small className="text-base font-semibold text-muted">{abiertas !== null ? " abiertas" : ` ${cuando}`}</small>
-        </>
-      ),
+      valor:
+        abiertas !== null && totalNovedades !== null ? (
+          <>
+            {pct(abiertas, totalNovedades)}
+            <small className="text-base font-semibold text-muted">%</small>
+          </>
+        ) : (
+          <>
+            {reportadasHoy}
+            <small className="text-base font-semibold text-muted"> {cuando}</small>
+          </>
+        ),
       barra: (
         <BarraSegmentos
           total={Math.max(novedades.length, 1)}
@@ -500,7 +512,15 @@ function Indicadores({
       nota: (
         <>
           {criticas ? <span className="font-semibold text-red-700 dark:text-red-300">{criticas} crítica{criticas > 1 ? "s" : ""} · </span> : null}
-          {reportadasHoy} reportada{reportadasHoy === 1 ? "" : "s"} {cuando}
+          {abiertas !== null && totalNovedades !== null ? (
+            <>
+              <b className="text-foreground">{abiertas}/{totalNovedades}</b> abiertas
+            </>
+          ) : (
+            <>
+              {reportadasHoy} reportada{reportadasHoy === 1 ? "" : "s"} {cuando}
+            </>
+          )}
         </>
       ),
     },

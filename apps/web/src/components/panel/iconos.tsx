@@ -37,19 +37,27 @@ const ICONOS: Record<string, (p: Props) => React.ReactNode> = {
       <path d="M7 8a3 3 0 100-6 3 3 0 000 6zM14.5 9a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM1.615 16.428a1.224 1.224 0 01-.569-1.175 6.002 6.002 0 0111.908 0c.058.467-.172.92-.57 1.174A9.953 9.953 0 017 18a9.953 9.953 0 01-5.385-1.572zM14.5 16h-.106c.07-.297.088-.611.048-.933a7.47 7.47 0 00-1.588-3.755 4.502 4.502 0 015.874 2.636.818.818 0 01-.36.98A7.465 7.465 0 0114.5 16z" />
     </Base>
   ),
-  pedidos: (p) => (
-    <Base {...p}>
-      <path
-        fillRule="evenodd"
-        d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm1 8a.75.75 0 000 1.5h6a.75.75 0 000-1.5H7zm0 3a.75.75 0 000 1.5h6a.75.75 0 000-1.5H7z"
-        clipRule="evenodd"
-      />
-    </Base>
-  ),
   reportes: (p) => (
     <Base {...p}>
       <path d="M15.5 2A1.5 1.5 0 0017 3.5v13a1.5 1.5 0 01-1.5 1.5h-11A1.5 1.5 0 013 16.5v-13A1.5 1.5 0 014.5 2h11zM7 14a1 1 0 10-2 0v1a1 1 0 102 0v-1zm4-3a1 1 0 10-2 0v4a1 1 0 102 0v-4zm4-3a1 1 0 10-2 0v7a1 1 0 102 0V8z" />
     </Base>
+  ),
+  // Carrito de Lucide (LuShoppingCart), el mismo trazo que usa react-icons.
+  pedidos: ({ className }) => (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className ?? "h-5 w-5 shrink-0"}
+      aria-hidden
+    >
+      <circle cx="8" cy="21" r="1" />
+      <circle cx="19" cy="21" r="1" />
+      <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />
+    </svg>
   ),
   inventario: (p) => (
     <Base {...p}>

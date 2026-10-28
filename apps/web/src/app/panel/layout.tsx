@@ -144,22 +144,41 @@ export default function PanelLayout({
   const soloEnCampana = (moduloRuta: string, paginaRuta: string) =>
     (moduloRuta === "gestion-campo" || moduloRuta === "mi-jornada") &&
     (paginaRuta === "avisos" || paginaRuta === "novedades");
-  const enlaces = [
+  const enlaces: {
+    href: string;
+    nombre: string;
+    icono: string;
+    disabled: boolean;
+    motivo?: string;
+  }[] = [
     { href: "/panel", nombre: "Inicio", icono: "inicio", disabled: false },
     ...modulos.flatMap((m) =>
       m.paginas
         .filter((p) => !soloEnCampana(m.ruta, p.ruta))
-        .map((p) => ({
-          href: `/panel/${m.ruta}/${p.ruta}`,
-          nombre: etiquetaPaginaMenu(m.ruta, p.ruta, p.nombre),
-          disabled: p.ruta === "tareas" && tareasDisponibles[m.ruta] === false,
-          icono: resolverIconoPagina({
-            moduloRuta: m.ruta,
-            moduloIcono: m.icono,
-            paginaRuta: p.ruta,
-            paginaIcono: p.icono,
-          }),
-        })),
+        .map((p) =>
+          // El inventario se carga desde el Itinerario: su lugar en el menú es
+          // para Pedidos, que todavía no está habilitado.
+          m.ruta === "mi-jornada" && p.ruta === "inventario"
+            ? {
+                href: "/panel/pedidos",
+                nombre: "Pedidos",
+                icono: "pedidos",
+                disabled: true,
+                motivo: "Próximamente",
+              }
+            : {
+                href: `/panel/${m.ruta}/${p.ruta}`,
+                nombre: etiquetaPaginaMenu(m.ruta, p.ruta, p.nombre),
+                disabled:
+                  p.ruta === "tareas" && tareasDisponibles[m.ruta] === false,
+                icono: resolverIconoPagina({
+                  moduloRuta: m.ruta,
+                  moduloIcono: m.icono,
+                  paginaRuta: p.ruta,
+                  paginaIcono: p.icono,
+                }),
+              },
+        ),
     ),
   ];
   // Presentismo va segundo, después de Inicio (supervisores y team leaders).
@@ -372,6 +391,7 @@ export default function PanelLayout({
                         key={e.href}
                         href={e.href}
                         disabled={e.disabled}
+                        motivo={e.motivo}
                         className={`relative flex min-h-11 items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition focus-visible:ring-2 focus-visible:ring-[#dea06a]/60 ${
                           activo(e.href)
                             ? "bg-commercial-ink-soft font-bold text-white shadow-sm before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-[#dea06a]"
@@ -437,6 +457,7 @@ export default function PanelLayout({
                         key={enlace.href}
                         href={enlace.href}
                         disabled={enlace.disabled}
+                        motivo={enlace.motivo}
                         role="menuitem"
                         aria-current={esActivo ? "page" : undefined}
                         onClick={() => setMasAbierto(false)}
@@ -478,6 +499,7 @@ export default function PanelLayout({
                     key={e.href}
                     href={e.href}
                     disabled={e.disabled}
+                    motivo={e.motivo}
                     title={e.nombre}
                     aria-current={esActivo ? "page" : undefined}
                     onClick={() => setMasAbierto(false)}
