@@ -107,7 +107,7 @@ export class ProductosController {
   @ApiOperation({
     summary: 'Opciones de artículo y lista para selectores',
     description:
-      'Sin login ni token. Datos de tbl_oitm relacionados con tbl_itm1 por empresa y artículo. Paginación 7/50.',
+      'Sin login ni token. Datos del maestro global tbl_oitm relacionados por artículo con los precios tbl_itm1 de la empresa. Paginación 7/50.',
   })
   opciones(@Param() p: EmpresaCatalogoParams, @Query() q: ConsultaCatalogoDto) {
     return this.servicio.productos(p.empresaId, q, true);
@@ -117,7 +117,7 @@ export class ProductosController {
   @ApiOperation({
     summary: 'Consultar productos y precios para la pantalla existente',
     description:
-      'Público sin sesión. Adapta tbl_oitm (maestro oficial) y tbl_itm1 (precios) al contrato de la pantalla existente. Cada fila incluye su ID técnico como dato informativo; las operaciones usan ItemCode y PriceList; los campos generales son compartidos por todas las listas. Los nombres de listas se leen de tbl_opln. Nuevas integraciones: usar las rutas /tbl_oitm y /tbl_itm1 con los nombres originales de columnas. Paginación 7/50.',
+      'Público sin sesión. Adapta tbl_oitm (maestro global) y tbl_itm1 (precios por empresa) al contrato de la pantalla existente. Cada fila incluye el ID técnico del precio como dato informativo; las operaciones usan ItemCode y PriceList; los campos generales son compartidos por todas las empresas y listas. Los nombres de listas se leen de tbl_opln. Nuevas integraciones: usar las rutas /tbl_oitm y /tbl_itm1 con los nombres originales de columnas. Paginación 7/50.',
   })
   @ApiOkResponse({ type: PaginaProductoDto })
   productos(

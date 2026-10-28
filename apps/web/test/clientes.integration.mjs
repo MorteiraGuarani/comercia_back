@@ -29,6 +29,7 @@ const altas = [];
 const ediciones = [];
 let errorCarga = true;
 let items = [];
+let usuarioPanel = { rol: { equipoCampo: { nombre: "Repositores" } } };
 const cliente = {
   id: "00001",
   nombre: "Almacén Central",
@@ -62,7 +63,7 @@ const stubs = {
   "./horarios-local": { HorariosLocal: () => createElement("section", { "aria-label": "Editor de horarios" }, "Horarios") },
   "./asignaciones-local": { AsignacionesLocal: () => createElement("section", { "aria-label": "Editor de asignación" }, "Personal") },
   "@/components/panel/contexto": {
-    usePanel: () => ({ usuario: { rol: { equipoCampo: { nombre: "Repositores" } } } }),
+    usePanel: () => ({ usuario: usuarioPanel }),
   },
   "./tarjeta-pdv": { TarjetaPdv: () => null },
   "./ui/foto-local": { FotoLocal: () => null },
@@ -134,6 +135,8 @@ function cargar(ruta) {
 }
 const { LocalesPanel } = cargar("components/campo/locales-panel.tsx");
 const root = createRoot(document.getElementById("app"));
+// El DOM de prueba no trae validación nativa de formularios.
+window.HTMLInputElement.prototype.setCustomValidity ??= () => {};
 const click = (boton) =>
   boton.dispatchEvent(new window.Event("click", { bubbles: true }));
 const ingresar = (nombre, valor) => {
@@ -190,7 +193,7 @@ try {
 
   items = [cliente];
   await act(async () => root.render(createElement(LocalesPanel, { key: "con-datos" })));
-  assert.match(document.body.textContent, /Itinerario/);
+  assert.match(document.body.textContent, /Administración/);
   assert.match(document.querySelector('nav[aria-label="Paginación"]').textContent, /1–1/);
   await act(async () => click(document.querySelector('[aria-label="Información de Almacén Central"]')));
   assert.ok(document.querySelector('[role="dialog"]'));
@@ -221,7 +224,26 @@ try {
   assert.equal(document.querySelector('input[name="CardCode"]'), null);
   assert.equal(document.querySelector('[role="tablist"]'), null);
   await act(async () => click(document.querySelector('[aria-label="Cerrar"]')));
-  console.log("OK: Itinerario, alta deshabilitada, Información/Itinerario/Asignación independientes, guardado y reintento; sin navegador.");
+  // Supervisor: busca por persona (5 sugerencias) y sus locales, sin dirección ni a cargo.
+  assert.match(document.body.textContent, /Calle 123/, "Los demás roles ven la dirección");
+  usuarioPanel = { rol: { descripcion: "SUPERVISOR_REPOSITORES", equipoCampo: { nombre: "Repositores" } } };
+  consultas.length = 0;
+  await act(async () => root.render(createElement(LocalesPanel, { key: "supervisor" })));
+  // El selector consulta en un setTimeout(0).
+  await act(async () => new Promise((listo) => setTimeout(listo, 10)));
+  assert.ok(document.querySelector('[aria-label="Buscar locales por repositor o impulsador"]'));
+  assert.ok(consultas.includes("/campo/locales/colaboradores?page=1&limit=5&buscar="), consultas.join(" | "));
+  assert.equal(document.querySelector('input[aria-label="Local asignado"]').disabled, true, "El local se elige después de la persona");
+  assert.equal(document.querySelector('input[placeholder="Buscar local o código"]'), null);
+  assert.ok(!consultas.some((u) => u.startsWith("/campo/locales?page")), "No carga locales hasta buscar");
+  assert.match(document.body.textContent, /Elegí un repositor o impulsador/);
+  await act(async () => enviar());
+  assert.ok(consultas.includes("/campo/locales?page=1&limit=7"), consultas.join(" | "));
+  assert.equal(document.querySelector("#filtros-administracion").hidden, true, "Al buscar se pliega la búsqueda");
+  await act(async () => click(document.querySelector('[aria-controls="filtros-administracion"]')));
+  assert.equal(document.querySelector("#filtros-administracion").hidden, false);
+  assert.doesNotMatch(document.body.textContent, /Calle 123|Asignado/);
+  console.log("OK: Administración, alta deshabilitada, Información/Itinerario/Asignación independientes, guardado, reintento y buscador por persona del supervisor; sin navegador.");
 } finally {
   await act(async () => root.unmount());
 }

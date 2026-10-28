@@ -13,5 +13,4 @@ export const PRODUCTO_SELECT = {
   itemcode: true,
   pricelist: true,
   price: true,
-  producto: { select: ARTICULO_SELECT },
 } as const;

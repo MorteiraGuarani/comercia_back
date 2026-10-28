@@ -12,7 +12,7 @@ import {
   DatosProductoDto,
 } from './dto/catalogo.dto';
 import type { ProductoFila } from './interfaces/producto.interface';
-import { PRODUCTO_SELECT } from './utils/selectores';
+import { ARTICULO_SELECT, PRODUCTO_SELECT } from './utils/selectores';
 import { productoRespuesta } from './utils/producto';
 import { datosMaestroLegacy } from './utils/maestro-legacy';
 import { errorCatalogo } from './utils/error-catalogo';
@@ -77,6 +77,15 @@ export class ProductosService {
   }
   private async respuestas(empresaId: number, filas: ProductoFila[]) {
     const codigos = [...new Set(filas.map((f) => f.pricelist))];
+    const articulos = filas.length
+      ? await this.prisma.producto.findMany({
+          where: {
+            itemcode: { in: [...new Set(filas.map((f) => f.itemcode))] },
+          },
+          select: ARTICULO_SELECT,
+        })
+      : [];
+    const porCodigo = new Map(articulos.map((p) => [p.itemcode, p]));
     const listas = codigos.length
       ? await this.prisma.socioNegocioListaPrecio.findMany({
           where: { empresaId, ListNum: { in: codigos } },
@@ -85,7 +94,9 @@ export class ProductosService {
         })
       : [];
     const nombres = new Map(listas.map((l) => [l.ListNum!, l.ListName]));
-    return filas.map((f) => productoRespuesta(f, nombres));
+    return filas.map((f) =>
+      productoRespuesta(f, nombres, porCodigo.get(f.itemcode) ?? null),
+    );
   }
   async productos(
     empresaId: number,
@@ -94,12 +105,25 @@ export class ProductosService {
   ) {
     await this.comprobarEmpresa(empresaId);
     const texto = { contains: query.buscar, mode: 'insensitive' as const };
+    const articulosCoincidentes = query.buscar
+      ? await this.prisma.producto.findMany({
+          where: { itemname: texto },
+          select: { itemcode: true },
+        })
+      : [];
     const where = {
       empresaId,
       ...(query.itemcode !== undefined ? { itemcode: query.itemcode } : {}),
       ...(query.pricelist !== undefined ? { pricelist: query.pricelist } : {}),
       ...(query.buscar
-        ? { OR: [{ itemcode: texto }, { producto: { itemname: texto } }] }
+        ? {
+            OR: [
+              { itemcode: texto },
+              {
+                itemcode: { in: articulosCoincidentes.map((p) => p.itemcode) },
+              },
+            ],
+          }
         : {}),
     };
     const { skip, take, page, limit } = rangoPaginacion(query);
@@ -137,7 +161,7 @@ export class ProductosService {
       const fila = await this.prisma.$transaction(async (tx) => {
         await tx.$queryRaw`SELECT id FROM empresas WHERE id=${empresaId} FOR UPDATE`;
         await tx.producto.createMany({
-          data: [{ ...datosMaestroLegacy(dto), empresaId }],
+          data: [datosMaestroLegacy(dto)],
           skipDuplicates: true,
         });
         await this.nombreLista(tx, empresaId, dto);
@@ -189,7 +213,7 @@ export class ProductosService {
           await tx.producto.createMany({
             data: articulos
               .slice(i, i + PRODUCTOS_POR_BLOQUE)
-              .map((d) => ({ ...datosMaestroLegacy(d), empresaId })),
+              .map((d) => datosMaestroLegacy(d)),
             skipDuplicates: true,
           });
         let insertados = 0;
@@ -238,8 +262,8 @@ export class ProductosService {
         )
           throw new NotFoundException('Registro no disponible en esta empresa');
         await tx.producto.upsert({
-          where: { empresaId_itemcode: { empresaId, itemcode: dto.itemcode } },
-          create: { ...datosMaestroLegacy(dto), empresaId },
+          where: { itemcode: dto.itemcode },
+          create: datosMaestroLegacy(dto),
           update: datosMaestroLegacy(dto),
         });
         await this.nombreLista(tx, empresaId, dto);

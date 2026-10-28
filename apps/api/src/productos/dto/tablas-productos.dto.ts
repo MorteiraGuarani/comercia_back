@@ -88,7 +88,8 @@ export class ArticuloDto {
     tipo: 'decimal',
     requerido: false,
     nullable: true,
-    descripcion: 'Cantidad por unidad del artículo (SAP U_ItemQty), numeric(21,6).',
+    descripcion:
+      'Cantidad por unidad del artículo (SAP U_ItemQty), numeric(21,6).',
     ejemplo: '12.000000',
   })
   U_ItemQty?: number | string | null;
@@ -97,10 +98,10 @@ export class ArticuloDto {
     longitud: 50,
     requerido: false,
     nullable: true,
-    descripcion: 'Tipo del artículo.',
-    ejemplo: 'Artículo',
+    descripcion: 'Valor original de SAP U_beas_vg.',
+    ejemplo: '2',
   })
-  TIPO?: string | null;
+  U_beas_vg?: string | null;
 }
 export class PrecioListaDto {
   @CampoTabla({

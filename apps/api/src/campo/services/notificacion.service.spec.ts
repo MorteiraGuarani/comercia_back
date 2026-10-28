@@ -47,6 +47,11 @@ function preparar() {
           ),
       ),
     },
+    producto: {
+      findUnique: jest
+        .fn()
+        .mockResolvedValue({ itemname: 'Producto con nombre '.repeat(20) }),
+    },
     cargaInventarioCampo: {
       findFirst: jest.fn().mockResolvedValue({
         id: 8,
@@ -54,6 +59,7 @@ function preparar() {
         cantidad: 12,
         vencimiento: new Date('2026-10-27'),
         creadaEn: new Date('2026-10-26T10:00Z'),
+        itemcode: 'P1',
         actualizadaEn: new Date('2026-10-26T11:00Z'),
         producto: {
           itemcode: 'P1',

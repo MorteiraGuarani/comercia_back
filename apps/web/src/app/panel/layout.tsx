@@ -49,7 +49,11 @@ export default function PanelLayout({
   const [sidebarVisible, setSidebarVisible] = useState(true);
   const [cerrandoSesion, setCerrandoSesion] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const tareasDisponibles = useDisponibilidadTareas(usuario?.id, modulos, pathname);
+  const tareasDisponibles = useDisponibilidadTareas(
+    usuario?.id,
+    modulos,
+    pathname,
+  );
 
   useEffect(() => {
     Promise.all([
@@ -144,6 +148,16 @@ export default function PanelLayout({
   const soloEnCampana = (moduloRuta: string, paginaRuta: string) =>
     (moduloRuta === "gestion-campo" || moduloRuta === "mi-jornada") &&
     (paginaRuta === "avisos" || paginaRuta === "novedades");
+  // El catálogo de locales de supervisores, team leaders y back office se abre
+  // como "Administración" desde el menú del perfil, no desde la barra.
+  const enPerfil = (moduloRuta: string, paginaRuta: string) =>
+    !usuario.esSuperadmin &&
+    moduloRuta === "gestion-campo" &&
+    paginaRuta === "locales";
+  const tieneAdministracion = modulos.some(
+    (m) =>
+      m.ruta === "gestion-campo" && m.paginas.some((p) => p.ruta === "locales"),
+  );
   const enlaces: {
     href: string;
     nombre: string;
@@ -154,7 +168,9 @@ export default function PanelLayout({
     { href: "/panel", nombre: "Inicio", icono: "inicio", disabled: false },
     ...modulos.flatMap((m) =>
       m.paginas
-        .filter((p) => !soloEnCampana(m.ruta, p.ruta))
+        .filter(
+          (p) => !soloEnCampana(m.ruta, p.ruta) && !enPerfil(m.ruta, p.ruta),
+        )
         .map((p) =>
           // El inventario se carga desde el Itinerario: su lugar en el menú es
           // para Pedidos, que todavía no está habilitado.
@@ -318,6 +334,16 @@ export default function PanelLayout({
                       >
                         <IconoPersona /> Mis Datos
                       </button>
+                      {tieneAdministracion && !usuario.esSuperadmin && (
+                        <Link
+                          role="menuitem"
+                          href="/panel/gestion-campo/locales"
+                          onClick={() => setMenuAbierto(false)}
+                          className={itemMenu}
+                        >
+                          <IconoEngranaje /> Administración
+                        </Link>
+                      )}
                       {usuario.puedeAdministrarUsuarios && (
                         <Link
                           role="menuitem"

@@ -3,7 +3,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch, ApiError } from "@/lib/api";
 import type { RespuestaPaginada } from "@/types/paginacion";
 
-export function useListaCampo<T>(url: string, revision = 0, limiteInicial = 25) {
+/** `activa` en false no consulta (por ejemplo, hasta que el usuario busque). */
+export function useListaCampo<T>(
+  url: string,
+  revision = 0,
+  limiteInicial = 25,
+  activa = true,
+) {
   const [datos, setDatos] = useState<RespuestaPaginada<T> | null>(null);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(limiteInicial);
@@ -12,6 +18,7 @@ export function useListaCampo<T>(url: string, revision = 0, limiteInicial = 25) 
   const [recarga, setRecarga] = useState(0);
   const consulta = `${url}|${page}|${limit}|${revision}|${recarga}`;
   useEffect(() => {
+    if (!activa) return;
     let vigente = true;
     apiFetch<RespuestaPaginada<T>>(
       `${url}${url.includes("?") ? "&" : "?"}page=${page}&limit=${limit}`,
@@ -38,14 +45,14 @@ export function useListaCampo<T>(url: string, revision = 0, limiteInicial = 25) 
     return () => {
       vigente = false;
     };
-  }, [url, page, limit, consulta]);
+  }, [url, page, limit, consulta, activa]);
   const refrescar = useCallback(() => setRecarga((n) => n + 1), []);
   return {
     page,
     limit,
     datos,
     items: datos?.items ?? [],
-    cargando: consultaTerminada !== consulta,
+    cargando: activa && consultaTerminada !== consulta,
     error,
     refrescar,
     setPage,

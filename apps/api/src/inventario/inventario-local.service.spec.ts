@@ -51,16 +51,25 @@ describe('Inventario por local · carga de hoy', () => {
     const productos = Array.from({ length: 7 }, (_, i) => `P${i + 1}`);
     prisma.productoLocalCampo.count.mockImplementation(
       ({ where }: { where: { itemcode: { in: string[] } } }) =>
-        Promise.resolve(productos.filter((codigo) => where.itemcode.in.includes(codigo)).length),
+        Promise.resolve(
+          productos.filter((codigo) => where.itemcode.in.includes(codigo))
+            .length,
+        ),
     );
     const cargas = productos.slice(0, 5).map((itemcode, cantidad) => ({
-      itemcode, cantidad, vencimiento: '2026-11-01',
+      itemcode,
+      cantidad,
+      vencimiento: '2026-11-01',
     }));
-    expect(await servicio.guardarCargas(7, 'C1', { cargas })).toEqual({ guardadas: 5 });
+    expect(await servicio.guardarCargas(7, 'C1', { cargas })).toEqual({
+      guardadas: 5,
+    });
     expect(tx.cargaInventarioCampo.upsert).toHaveBeenCalledTimes(5);
-    expect(tx.cargaInventarioCampo.upsert.mock.calls.map(
-      ([args]: [{ create: { itemcode: string } }]) => args.create.itemcode,
-    )).toEqual(productos.slice(0, 5));
+    expect(
+      tx.cargaInventarioCampo.upsert.mock.calls.map(
+        ([args]: [{ create: { itemcode: string } }]) => args.create.itemcode,
+      ),
+    ).toEqual(productos.slice(0, 5));
   });
   it('exige el permiso de Mi jornada · Inventario y que el producto esté en el local', async () => {
     const { servicio, plataforma, tx } = contexto(0);
@@ -145,13 +154,19 @@ describe('Inventario por local · copia sin conexión', () => {
           .mockResolvedValue({ diasAvisoVencimiento: 5 }),
       },
       producto: {
-        findMany: jest.fn().mockResolvedValue(
-          Array.from({ length: productos }, (_, i) => ({
-            itemcode: `P${i}`,
-            inventory: 'Y',
-            itemname: i ? `Producto ${i}` : null,
-          })),
-        ),
+        findMany: jest
+          .fn()
+          .mockResolvedValueOnce(
+            Array.from({ length: productos }, (_, i) => ({
+              itemcode: `P${i}`,
+              inventory: 'Y',
+              itemname: i ? `Producto ${i}` : null,
+            })),
+          )
+          .mockResolvedValue([
+            { itemcode: 'A1', itemname: 'Agua' },
+            { itemcode: 'B2', itemname: null },
+          ]),
       },
       socioNegocio: {
         findMany: jest.fn().mockResolvedValue([

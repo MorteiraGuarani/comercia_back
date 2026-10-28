@@ -5,7 +5,10 @@ import type { RegistroTabla } from '../../common/interfaces/repositorio-tabla.in
 
 export function seleccionTabla(t: TablaProductos) {
   return Object.fromEntries(
-    ['id', ...Object.values(t.columnas)].map((c) => [c, true]),
+    [
+      ...(t.nombre === 'tbl_oitm' ? [] : ['id']),
+      ...Object.values(t.columnas),
+    ].map((c) => [c, true]),
   );
 }
 export function entradaTabla(
@@ -20,7 +23,7 @@ export function entradaTabla(
 }
 export function salidaTabla(t: TablaProductos, fila: RegistroTabla) {
   return {
-    id: fila.id.toString(),
+    ...(t.nombre === 'tbl_oitm' ? {} : { id: fila.id.toString() }),
     ...Object.fromEntries(
       Object.entries(t.columnas).map(([campo, interno]) => {
         const valor = fila[interno] ?? null;
@@ -41,7 +44,7 @@ export function filtroClaveTabla(
   if (t.clave.some((c) => clave[c] === undefined || clave[c] === null))
     throw new BadRequestException('Se requiere la clave de negocio completa');
   return {
-    empresaId,
+    ...(t.nombre === 'tbl_oitm' ? {} : { empresaId }),
     ...entradaTabla(t, Object.fromEntries(t.clave.map((c) => [c, clave[c]]))),
   };
 }

@@ -78,14 +78,22 @@ export class VencimientosService implements OnModuleInit, OnModuleDestroy {
               id: true,
               empresaId: true,
               localId: true,
+              itemcode: true,
               cantidad: true,
               vencimiento: true,
               usuarioId: true,
               local: { select: { CardCode: true, CardName: true } },
-              producto: { select: { itemcode: true, itemname: true } },
             },
             take: ids.length,
           });
+          const nombres = new Map(
+            (
+              await tx.producto.findMany({
+                where: { itemcode: { in: cargas.map((c) => c.itemcode) } },
+                select: { itemcode: true, itemname: true },
+              })
+            ).map((p) => [p.itemcode, p.itemname]),
+          );
           const fecha = fechaCampo(hoy);
           const avisos: Prisma.NotificacionCampoCreateManyInput[] = [];
           for (const carga of cargas) {
@@ -124,7 +132,7 @@ export class VencimientosService implements OnModuleInit, OnModuleDestroy {
               take: candidatos.size,
             });
             const texto = textoAvisoVencimiento(
-              carga.producto.itemname ?? carga.producto.itemcode,
+              nombres.get(carga.itemcode) ?? carga.itemcode,
               nombreLocal(carga.local),
               carga.vencimiento,
               carga.cantidad,

@@ -11,12 +11,18 @@ function preparar() {
   ];
   const tx = {
     $queryRaw: jest.fn().mockResolvedValue([{ id: 8 }]),
+    producto: {
+      findMany: jest
+        .fn()
+        .mockResolvedValue([{ itemcode: 'P1', itemname: 'Producto' }]),
+    },
     cargaInventarioCampo: {
       findMany: jest.fn().mockResolvedValue([
         {
           id: 8,
           empresaId: 10,
           localId: 'L1',
+          itemcode: 'P1',
           cantidad: 12,
           usuarioId: 3,
           vencimiento: new Date('2026-10-27'),

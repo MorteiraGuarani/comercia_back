@@ -96,10 +96,25 @@ export class CampoController {
   ) {
     return this.catalogo.localesMapa(r.usuarioId, q);
   }
-  @Get('locales') locales(
+  @Get('locales/colaboradores')
+  @ApiOperation({
+    summary: 'Repositores o impulsadores para filtrar locales',
+    description:
+      'Requiere acceso a PDV y rutas. Lista paginada y buscable (nombre, apellido o usuario) de quienes atienden hoy algún local dentro del alcance del Itinerario: supervisores y team leaders ven solo su equipo. Responde { id, nombre, descripcion: rol }.',
+  })
+  colaboradoresLocales(
     @Req() r: RequestConUsuario,
     @Query() q: ConsultaCampoDto,
   ) {
+    return this.catalogo.colaboradoresLocales(r.usuarioId, q);
+  }
+  @Get('locales')
+  @ApiOperation({
+    summary: 'Locales del Itinerario',
+    description:
+      'Paginado y buscable. usuarioId filtra los locales que esa persona atiende hoy y localId (CardCode) uno solo; ambos dentro del alcance del Itinerario.',
+  })
+  locales(@Req() r: RequestConUsuario, @Query() q: ConsultaCampoDto) {
     return this.catalogo.locales(r.usuarioId, q);
   }
   // Solo superadmin: locales de cualquier empresa (pestaña Locales de Administración).

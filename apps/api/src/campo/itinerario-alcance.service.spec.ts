@@ -11,6 +11,7 @@ function preparar(
 ) {
   const prisma = {
     usuario: {
+      count: jest.fn().mockResolvedValue(0),
       findUnique: jest.fn().mockResolvedValue({
         id: 1,
         empresaId: 10,
@@ -108,6 +109,49 @@ describe('Alcance de Itinerario del supervisor impulsador', () => {
       );
     },
   );
+
+  it('filtra por la persona elegida y por un local, sin salir del equipo', async () => {
+    const { prisma, service } = preparar();
+    await service.locales(1, { usuarioId: 3, localId: 'L1' });
+    expect(prisma.socioNegocio.count).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        CardCode: 'L1',
+        AND: [
+          {
+            asignaciones: {
+              some: expect.objectContaining({
+                usuarioId: 3,
+                usuario: expect.objectContaining({
+                  id: { in: [2, 3] },
+                }) as unknown,
+              }) as unknown,
+            },
+          },
+        ],
+      }) as unknown,
+    });
+  });
+
+  it('sugiere solo personas del equipo que atienden algún local hoy', async () => {
+    const { prisma, service } = preparar();
+    await service.colaboradoresLocales(1, { buscar: 'ana', limit: 5 });
+    const where: unknown = expect.objectContaining({
+      id: { in: [2, 3] },
+      rol: { equipoCampoId: 4 },
+      asignacionesCampo: {
+        some: expect.not.objectContaining({
+          usuario: expect.anything() as unknown,
+        }) as unknown,
+      },
+      OR: expect.arrayContaining([
+        { nombre: { contains: 'ana', mode: 'insensitive' } },
+      ]) as unknown,
+    });
+    expect(prisma.usuario.count).toHaveBeenCalledWith({ where });
+    expect(prisma.usuario.findMany).toHaveBeenLastCalledWith(
+      expect.objectContaining({ where, take: 5 }),
+    );
+  });
 
   it('no convierte un supervisor sin colaboradores en acceso al catálogo completo', async () => {
     const { prisma, service } = preparar('supervisor.impulsador', false);

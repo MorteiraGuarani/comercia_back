@@ -270,13 +270,13 @@ export class NotificacionService {
       where: { id: aviso.referenciaId, empresaId },
       select: {
         id: true,
+        itemcode: true,
         fecha: true,
         cantidad: true,
         vencimiento: true,
         creadaEn: true,
         actualizadaEn: true,
         local: { select: { CardCode: true, CardName: true } },
-        producto: { select: { itemcode: true, itemname: true } },
         usuario: {
           select: {
             id: true,
@@ -288,6 +288,10 @@ export class NotificacionService {
       },
     });
     if (!carga) throw new NotFoundException('Detalle no disponible');
+    const producto = await this.prisma.producto.findUnique({
+      where: { itemcode: carga.itemcode },
+      select: { itemname: true },
+    });
     const direcciones = await direccionesLocales(this.prisma, empresaId, [
       carga.local.CardCode,
     ]);
@@ -300,8 +304,8 @@ export class NotificacionService {
       creadaEn: carga.creadaEn.toISOString(),
       actualizadaEn: carga.actualizadaEn.toISOString(),
       producto: {
-        codigo: carga.producto.itemcode,
-        nombre: carga.producto.itemname ?? carga.producto.itemcode,
+        codigo: carga.itemcode,
+        nombre: producto?.itemname ?? carga.itemcode,
       },
       local: {
         codigo: carga.local.CardCode,

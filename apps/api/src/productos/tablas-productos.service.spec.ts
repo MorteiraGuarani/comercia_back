@@ -56,7 +56,7 @@ describe('Bulk de tablas tbl_* que no se corta', () => {
     });
     expect(prisma.producto.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { empresaId: 1, itemcode: { in: ['A1', 'NO'] } },
+        where: { itemcode: { in: ['A1', 'NO'] } },
       }),
     );
     expect(createMany.mock.calls[0][0].data).toHaveLength(2);

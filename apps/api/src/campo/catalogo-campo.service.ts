@@ -76,11 +76,80 @@ export class CatalogoCampoService {
       });
     const hoy = fechaCampo(relojCampo().fecha);
     const alcance = await this.alcanceItinerario(u, hoy);
+    // usuarioId: los locales que esa persona atiende hoy. El alcance va en la
+    // misma condición: alguien fuera de su equipo no devuelve locales.
     return this.paginaLocales(
       u.empresaId,
-      { ...filtroLocales(u.empresaId, query.buscar), ...alcance.locales },
+      {
+        ...filtroLocales(u.empresaId, query.buscar),
+        ...alcance.locales,
+        ...(query.localId ? { CardCode: query.localId } : {}),
+        ...(query.usuarioId
+          ? {
+              AND: [
+                {
+                  asignaciones: {
+                    some: { ...alcance.asignacion, usuarioId: query.usuarioId },
+                  },
+                },
+              ],
+            }
+          : {}),
+      },
       alcance.asignacion,
       query,
+    );
+  }
+
+  /**
+   * Buscador de Administración: repositores o impulsadores del alcance del
+   * Itinerario que atienden algún local hoy.
+   */
+  async colaboradoresLocales(usuarioId: number, query: ConsultaCampoDto) {
+    const u = await this.acceso.gestionar(usuarioId, 'locales');
+    const hoy = fechaCampo(relojCampo().fecha);
+    const { usuario: personal, ...vigente } = (
+      await this.alcanceItinerario(u, hoy)
+    ).asignacion;
+    const buscar = query.buscar?.trim();
+    const where: Prisma.UsuarioWhereInput = {
+      ...personal,
+      asignacionesCampo: { some: vigente },
+      ...(buscar
+        ? {
+            OR: [
+              { nombre: { contains: buscar, mode: 'insensitive' } },
+              { apellido: { contains: buscar, mode: 'insensitive' } },
+              { nombreLogin: { contains: buscar, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
+    };
+    const { skip, take, page, limit } = rangoPaginacion(query);
+    const [total, usuarios] = await Promise.all([
+      this.prisma.usuario.count({ where }),
+      this.prisma.usuario.findMany({
+        where,
+        select: {
+          id: true,
+          nombre: true,
+          apellido: true,
+          rol: { select: { descripcion: true } },
+        },
+        orderBy: [{ nombre: 'asc' }, { apellido: 'asc' }, { id: 'asc' }],
+        skip,
+        take,
+      }),
+    ]);
+    return respuestaPaginada(
+      usuarios.map((x) => ({
+        id: x.id,
+        nombre: `${x.nombre} ${x.apellido}`,
+        descripcion: x.rol?.descripcion ?? 'Sin rol',
+      })),
+      total,
+      page,
+      limit,
     );
   }
 

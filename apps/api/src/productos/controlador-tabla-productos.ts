@@ -82,21 +82,31 @@ export function crearControladorTablaProductos(
     );
   const EdicionDto = PartialType(t.Dto, { skipNullProperties: false });
   Object.defineProperty(EdicionDto, 'name', { value: 'Editar' + t.Dto.name });
-  const ejemplo = { id: '1', ...t.ejemplo };
+  const ejemplo = {
+    ...(t.nombre === 'tbl_oitm' ? {} : { id: '1' }),
+    ...t.ejemplo,
+  };
   const respuesta = {
     allOf: [
       { $ref: getSchemaPath(t.Dto) },
       {
         type: 'object' as const,
-        required: ['id', ...Object.keys(t.columnas)],
+        required: [
+          ...(t.nombre === 'tbl_oitm' ? [] : ['id']),
+          ...Object.keys(t.columnas),
+        ],
         properties: {
-          id: {
-            type: 'string' as const,
-            readOnly: true,
-            description:
-              'ID técnico interno, informativo. No se acepta como identificador en las rutas.',
-            example: '1',
-          },
+          ...(t.nombre === 'tbl_oitm'
+            ? {}
+            : {
+                id: {
+                  type: 'string' as const,
+                  readOnly: true,
+                  description:
+                    'ID técnico interno, informativo. No se acepta como identificador en las rutas.',
+                  example: '1',
+                },
+              }),
           ...Object.fromEntries(
             t.decimales.map((c) => [
               c,
@@ -132,7 +142,7 @@ export function crearControladorTablaProductos(
   const acceso = t.protegida
     ? 'Requiere sesión JWT o cookie y superadministrador activo.'
     : 'Público sin login, cookie, token ni API key por solicitud expresa del usuario.';
-  const detalle = `${acceso} Datos aislados por empresaId existente. Nombres de campos y mayúsculas exactos. Clave de negocio en la empresa: ${t.clave.join(' + ')}. La ruta identifica la fila exclusivamente por esa clave de negocio; no admite id técnico ni busca por él como alternativa. Los ceros iniciales se conservan. Para renombrar una clave, usar su valor original en la ruta y el nuevo en el cuerpo. id es técnico y solo informativo. Los decimales se devuelven como texto exacto de seis posiciones. ${t.nombre === 'tbl_itm1' ? 'Debe existir antes el artículo en tbl_oitm. El código del maestro solo admite 15 caracteres.' : ''} ${t.nombre === 'tbl_spp1' ? 'La estructura solicitada no incluye fechas de inicio/fin; no se calculan vigencias por fecha.' : ''} ${t.nombre === 'tbl_spp2' ? 'La clave no incluye ListNum ni líneas: solo una promoción por artículo y socio. SPP1Lnum es una referencia lógica que puede coincidir en varias listas; no se inventa una lista.' : ''}`;
+  const detalle = `${acceso} ${t.nombre === 'tbl_oitm' ? 'Maestro global: empresaId debe existir, pero todos los accesos comparten los mismos artículos. Las modificaciones afectan a todas las empresas. No tiene id técnico.' : 'Datos aislados por empresaId existente; id es técnico y solo informativo.'} Nombres de campos y mayúsculas exactos. Clave de negocio: ${t.clave.join(' + ')}. La ruta identifica la fila exclusivamente por esa clave. Los ceros iniciales se conservan. Para renombrar una clave, usar su valor original en la ruta y el nuevo en el cuerpo. Los decimales se devuelven como texto exacto de seis posiciones. ${t.nombre === 'tbl_itm1' ? 'Debe existir antes el artículo en tbl_oitm. El código del maestro solo admite 15 caracteres.' : ''} ${t.nombre === 'tbl_spp1' ? 'La estructura solicitada no incluye fechas de inicio/fin; no se calculan vigencias por fecha.' : ''} ${t.nombre === 'tbl_spp2' ? 'La clave no incluye ListNum ni líneas: solo una promoción por artículo y socio. SPP1Lnum es una referencia lógica que puede coincidir en varias listas; no se inventa una lista.' : ''}`;
   const rutas = [t.nombre, ...(t.alias ? [t.alias] : [])].map(
     (n) => 'admin/catalogo/empresas/:empresaId/' + n,
   );
@@ -141,7 +151,10 @@ export function crearControladorTablaProductos(
     name: 'empresaId',
     type: Number,
     example: 1,
-    description: 'Empresa existente; limita todas las operaciones.',
+    description:
+      t.nombre === 'tbl_oitm'
+        ? 'Empresa existente; el maestro es global y compartido.'
+        : 'Empresa existente; limita todas las operaciones.',
   })
   @ApiTags('Catálogo · ' + t.nombre + ' · ' + t.titulo)
   @ApiExtraModels(t.Dto, EdicionDto, ResumenLoteDto)

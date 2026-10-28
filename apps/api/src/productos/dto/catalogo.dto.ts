@@ -149,7 +149,8 @@ export class DatosProductoDto {
     tipo: 'texto',
     longitud: 50,
     nullable: true,
-    descripcion: 'TIPO del maestro.',
+    descripcion:
+      'U_beas_vg del maestro, expuesto como tipo por este adaptador.',
     ejemplo: 'Artículo',
   })
   tipo?: string | null;

@@ -20,7 +20,7 @@ export function configurarSwagger(app: INestApplication) {
   const documentConfig = new DocumentBuilder()
     .setTitle('Comercia API')
     .setDescription(
-      'Documentación pública de la API de Comercia. Las rutas por tabla tbl_* son públicas y admiten carga individual o bulk. tbl_oitm es el maestro de artículos y tbl_itm1 contiene precios por lista; tbl_omrc, tbl_oscn y tbl_oitb completan el catálogo de artículos, y tbl_jtiposubcanales los catálogos de socios. Todos se separan por empresa y conservan los nombres y tipos originales de negocio. Las rutas /productos adaptan artículos y precios para la pantalla existente.',
+      'Documentación pública de la API de Comercia. Las rutas por tabla tbl_* son públicas y admiten carga individual o bulk. tbl_oitm es un maestro global de artículos compartido por todas las empresas. Las demás tablas, incluida tbl_itm1 con los precios por lista, se separan por empresa. tbl_omrc, tbl_oscn y tbl_oitb completan el catálogo de artículos, y tbl_jtiposubcanales los catálogos de socios. Las rutas /productos adaptan artículos y precios para la pantalla existente.',
     )
     .setVersion('1.0.0')
     .addBearerAuth()

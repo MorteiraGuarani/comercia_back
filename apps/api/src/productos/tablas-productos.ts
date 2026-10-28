@@ -24,7 +24,7 @@ export const TABLAS_PRODUCTOS = {
       validFor: 'validFor',
       frozenFor: 'frozenFor',
       U_ItemQty: 'cantidadItem',
-      TIPO: 'tipo',
+      U_beas_vg: 'tipo',
     },
     clave: ['ItemCode'],
     textos: [
@@ -34,7 +34,7 @@ export const TABLAS_PRODUCTOS = {
       'DfltWH',
       'validFor',
       'frozenFor',
-      'TIPO',
+      'U_beas_vg',
     ],
     decimales: ['SWeight1', 'U_ItemQty'],
     ejemplo: {
@@ -48,7 +48,7 @@ export const TABLAS_PRODUCTOS = {
       validFor: 'Y',
       frozenFor: 'N',
       U_ItemQty: '12.000000',
-      TIPO: 'Artículo',
+      U_beas_vg: '2',
     },
   },
   tbl_itm1: {

@@ -25,6 +25,7 @@ export function SelectorPaginado<TId extends number | string = number>({
   buscable = false,
   placeholder = "Seleccioná o escribí para buscar",
   compacto = false,
+  limite = 7,
 }: {
   url: string;
   etiqueta: string;
@@ -40,12 +41,14 @@ export function SelectorPaginado<TId extends number | string = number>({
   /** Para barras de filtros: etiqueta solo para lectores de pantalla, alto de
    *  44 px y desplegable más ancho alineado a la derecha. Solo con buscable. */
   compacto?: boolean;
+  /** Opciones por página al abrir (7 por defecto). */
+  limite?: number;
 }) {
   const [datos, setDatos] = useState<RespuestaPaginada<
     OpcionSelector<TId>
   > | null>(null);
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(7);
+  const [limit, setLimit] = useState(limite);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [intento, setIntento] = useState(0);

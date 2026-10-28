@@ -61,7 +61,7 @@ for (const t of Object.values(TABLAS_PRODUCTOS)) {
     findMany: async () => [row],
     findFirst: async ({ where }) => {
       reads.push({ tabla: t.nombre, where });
-      return where.empresaId === 1 &&
+      return (t.nombre === 'tbl_oitm' || where.empresaId === 1) &&
         t.clave.every((c) => where[t.columnas[c]] === row[t.columnas[c]])
         ? row
         : null;
@@ -82,6 +82,10 @@ for (const t of Object.values(TABLAS_PRODUCTOS)) {
     delete: async () => row,
   };
 }
+prisma.producto.findUnique = async ({ where }) =>
+  where.itemcode ? { itemcode: where.itemcode } : null;
+prisma.productoLocalCampo = { count: async () => 0 };
+prisma.cargaInventarioCampo = { count: async () => 0 };
 prisma.$transaction = async (fn) => fn(prisma);
 const authCalls = [];
 const catalogo = {
@@ -209,9 +213,13 @@ try {
     assert.equal(list.body.limit, 7);
     assert.deepEqual(
       Object.keys(list.body.items[0]).sort(),
-      ['id', ...Object.keys(t.columnas)].sort(),
+      [
+        ...(t.nombre === 'tbl_oitm' ? [] : ['id']),
+        ...Object.keys(t.columnas),
+      ].sort(),
     );
-    assert.equal(list.body.items[0].id, '9007199254740993');
+    if (t.nombre !== 'tbl_oitm')
+      assert.equal(list.body.items[0].id, '9007199254740993');
     for (const sample of Object.values(samples))
       await call('post', route).send(sample.value).expect(201);
     await call('get', route + keyRoute).expect(200);
@@ -257,7 +265,7 @@ try {
       reads.some(
         (r) =>
           r.tabla === t.nombre &&
-          r.where.empresaId === 1 &&
+          (t.nombre === 'tbl_oitm' || r.where.empresaId === 1) &&
           t.clave.every((c) => r.where[t.columnas[c]] === t.ejemplo[c]),
       ),
     );
@@ -268,15 +276,17 @@ try {
   await request(http)
     .get(master + '/0001')
     .expect(404);
-  assert.deepEqual(reads.at(-1).where, { empresaId: 1, itemcode: '0001' });
+  assert.deepEqual(reads.at(-1).where, { itemcode: '0001' });
   await request(http)
     .get(master + '/' + encodeURIComponent('A/B + 1'))
     .expect(404);
-  assert.deepEqual(reads.at(-1).where, { empresaId: 1, itemcode: 'A/B + 1' });
+  assert.deepEqual(reads.at(-1).where, { itemcode: 'A/B + 1' });
   await request(http)
     .get(master + '/1')
     .expect(404);
-  assert.deepEqual(reads.at(-1).where, { empresaId: 1, itemcode: '1' });
+  assert.deepEqual(reads.at(-1).where, { itemcode: '1' });
+  assert.ok(doc.components.schemas.ArticuloDto.properties.U_beas_vg);
+  assert.ok(!doc.components.schemas.ArticuloDto.properties.TIPO);
   assert.ok(!Object.keys(doc.paths).some((p) => p.includes('/{id}')));
   await request(http)
     .post(master)

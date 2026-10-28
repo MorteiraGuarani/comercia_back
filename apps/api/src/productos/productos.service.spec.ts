@@ -40,6 +40,7 @@ describe('Maestro OITM y precios ITM1 con pantalla compatible', () => {
         findMany: jest.fn().mockResolvedValue([{ id: 20, nombre: 'Empresa' }]),
       },
       producto: {
+        findMany: jest.fn().mockResolvedValue([maestro]),
         createMany: jest.fn().mockResolvedValue({ count: 1 }),
         upsert: jest.fn().mockResolvedValue(maestro),
       },
@@ -110,7 +111,6 @@ describe('Maestro OITM y precios ITM1 con pantalla compatible', () => {
     expect(db.producto.createMany).toHaveBeenCalledWith({
       data: [
         {
-          empresaId: 20,
           itemcode: 'A',
           itemname: 'Artículo',
           iva: 10,
@@ -152,7 +152,6 @@ describe('Maestro OITM y precios ITM1 con pantalla compatible', () => {
         skipDuplicates: true,
         data: [
           {
-            empresaId: 20,
             itemcode: 'A',
             itemname: 'Artículo',
             iva: 10,
@@ -177,7 +176,7 @@ describe('Maestro OITM y precios ITM1 con pantalla compatible', () => {
     await service.editarProducto(20, 'A', 1, datos);
     expect(db.producto.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { empresaId_itemcode: { empresaId: 20, itemcode: 'A' } },
+        where: { itemcode: 'A' },
       }),
     );
     expect(db.productoPrecio.update).toHaveBeenCalledWith(

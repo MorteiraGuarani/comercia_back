@@ -1,23 +1,27 @@
 import type { ProductoFila } from '../interfaces/producto.interface';
 import { Decimal } from '@prisma/client/runtime/client';
 import { esIdBigint } from '../../common/utils/identificadores';
+import type { Prisma } from '../../../generated/prisma/client';
+import { ARTICULO_SELECT } from './selectores';
 export function productoRespuesta(
   fila: ProductoFila,
   nombres: ReadonlyMap<number, string | null> = new Map(),
+  p: Prisma.ProductoGetPayload<{
+    select: typeof ARTICULO_SELECT;
+  }> | null = null,
 ) {
-  const p = fila.producto;
   return {
     id: fila.id.toString(),
     itemcode: fila.itemcode,
-    itemname: p.itemname,
-    iva: p.iva,
-    itmsgrpcode: p.itmsgrpcode,
+    itemname: p?.itemname ?? null,
+    iva: p?.iva ?? null,
+    itmsgrpcode: p?.itmsgrpcode ?? null,
     itmsgrpnam: null,
-    inventory: p.inventory,
+    inventory: p?.inventory ?? null,
     pricelist: fila.pricelist,
     pricelistname: nombres.get(fila.pricelist) ?? null,
     price: fila.price?.toFixed(6) ?? null,
-    tipo: p.tipo,
+    tipo: p?.tipo ?? null,
   };
 }
 export function esIdProducto(value: unknown): boolean {

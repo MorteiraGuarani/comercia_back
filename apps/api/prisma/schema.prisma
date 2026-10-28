@@ -49,7 +49,6 @@ model Empresa {
   usuarios            Usuario[]
   roles               Rol[]
   equiposCampo        EquipoCampo[]
-  productos           Producto[]
   productosPrecios ProductoPrecio[]
   preciosPromociones PrecioEspecialPromocion[]
   preciosEspeciales   PrecioEspecial[]
@@ -269,10 +268,7 @@ model SocioNegocioListaPrecio {
 
 // Maestro oficial de art?culos; precios por lista separados en tbl_itm1.
 model Producto {
-  id BigInt @id @default(autoincrement())
-  empresaId Int @map("empresa_id")
-  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
-  itemcode String @map("ItemCode") @db.VarChar(15)
+  itemcode String @unique(map: "uq_tbl_ocrd_itemcode") @map("ItemCode") @db.VarChar(15)
   itemname String? @map("ItemName") @db.VarChar(200)
   iva Int? @map("TaxCodeAR") @db.SmallInt
   itmsgrpcode Int? @default(-1) @map("ItmsGrpCod") @db.SmallInt
@@ -282,12 +278,7 @@ model Producto {
   validFor String? @default("Y") @db.VarChar(1)
   frozenFor String? @default("N") @db.VarChar(1)
   cantidadItem Decimal? @map("U_ItemQty") @db.Decimal(21, 6)
-  tipo String? @map("TIPO") @db.VarChar(50)
-  precios ProductoPrecio[]
-  localesInventario ProductoLocalCampo[]
-  cargasInventario CargaInventarioCampo[]
-  @@unique([empresaId, itemcode], map: "uq_tbl_ocrd_itemcode")
-  @@index([empresaId, itemname], map: "idx_tbl_oitm_itemname")
+  tipo String? @map("U_beas_vg") @db.VarChar(50)
   @@map("tbl_oitm")
 }
 
@@ -298,7 +289,6 @@ model ProductoPrecio {
   itemcode String @map("ItemCode") @db.VarChar(50)
   pricelist Int @map("PriceList")
   price Decimal? @map("Price") @db.Decimal(21, 6)
-  producto Producto @relation(fields: [empresaId, itemcode], references: [empresaId, itemcode], onDelete: Restrict, onUpdate: Cascade, map: "tbl_itm1_producto_fkey")
   @@id([empresaId, itemcode, pricelist], map: "PK_tbl_itm1")
   @@index([empresaId, pricelist], map: "idx_tbl_itm1_pricelist")
   @@map("tbl_itm1")
@@ -1125,7 +1115,6 @@ model ProductoLocalCampo {
   localId String @map("CardCode") @db.VarChar(50)
   local SocioNegocio @relation(fields: [empresaId, localId], references: [empresaId, CardCode], onDelete: Cascade, onUpdate: Cascade)
   itemcode String @map("ItemCode") @db.VarChar(15)
-  producto Producto @relation(fields: [empresaId, itemcode], references: [empresaId, itemcode], onDelete: Cascade, onUpdate: Cascade)
   creadoEn DateTime @default(now()) @map("creado_en")
 
   @@id([empresaId, localId, itemcode])
@@ -1140,7 +1129,6 @@ model CargaInventarioCampo {
   localId String @map("CardCode") @db.VarChar(50)
   local SocioNegocio @relation(fields: [empresaId, localId], references: [empresaId, CardCode], onDelete: Restrict, onUpdate: Cascade)
   itemcode String @map("ItemCode") @db.VarChar(15)
-  producto Producto @relation(fields: [empresaId, itemcode], references: [empresaId, itemcode], onDelete: Restrict, onUpdate: Cascade)
   usuarioId Int @map("usuario_id")
   usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
   fecha DateTime @db.Date

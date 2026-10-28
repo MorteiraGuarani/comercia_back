@@ -41,8 +41,7 @@ const activosAnd: Prisma.ProductoWhereInput[] = [
   { OR: [{ validFor: null }, { validFor: { not: 'N' } }] },
   { OR: [{ frozenFor: null }, { frozenFor: { not: 'Y' } }] },
 ];
-const productosActivos = (empresaId: number): Prisma.ProductoWhereInput => ({
-  empresaId,
+const productosActivos = (): Prisma.ProductoWhereInput => ({
   AND: activosAnd,
 });
 
@@ -132,7 +131,7 @@ export class InventarioLocalService {
         select: { localPrincipalId: true },
       }),
       this.prisma.producto.findMany({
-        where: productosActivos(u.empresaId),
+        where: productosActivos(),
         select: { itemcode: true, itemname: true, inventory: true },
         orderBy: [{ itemname: 'asc' }, { itemcode: 'asc' }],
         take: LIMITE_PRODUCTOS_COPIA + 1,
@@ -162,7 +161,6 @@ export class InventarioLocalService {
         select: {
           localId: true,
           itemcode: true,
-          producto: { select: { itemname: true } },
         },
         orderBy: [{ creadoEn: 'asc' }, { itemcode: 'asc' }],
         take: LIMITE_PRODUCTOS_COPIA + 1,
@@ -199,6 +197,14 @@ export class InventarioLocalService {
       throw new PayloadTooLargeException(
         'El inventario supera el máximo que se puede guardar en el equipo',
       );
+    const nombresAsociados = new Map(
+      (
+        await this.prisma.producto.findMany({
+          where: { itemcode: { in: asociados.map((a) => a.itemcode) } },
+          select: { itemcode: true, itemname: true },
+        })
+      ).map((p) => [p.itemcode, p.itemname]),
+    );
     const cargaDe = new Map(
       cargas.map((c) => [`${c.localId}\u0000${c.itemcode}`, c]),
     );
@@ -208,7 +214,7 @@ export class InventarioLocalService {
       const lista = itemsDe.get(a.localId) ?? [];
       lista.push({
         itemcode: a.itemcode,
-        itemname: a.producto.itemname ?? a.itemcode,
+        itemname: nombresAsociados.get(a.itemcode) ?? a.itemcode,
         cantidad: carga?.cantidad ?? null,
         vencimiento: carga ? dia(carga.vencimiento) : null,
       });
@@ -246,9 +252,8 @@ export class InventarioLocalService {
 
   /** Productos activos de tbl_oitm para agregar al local. */
   async productos(usuarioId: number, query: BuscarInventarioDto) {
-    const u = await this.acceso(usuarioId);
+    await this.acceso(usuarioId);
     const where: Prisma.ProductoWhereInput = {
-      empresaId: u.empresaId,
       AND: [
         ...activosAnd,
         ...(query.buscar
@@ -344,7 +349,7 @@ export class InventarioLocalService {
         Promise.resolve(productosTotal),
         this.prisma.productoLocalCampo.findMany({
           where: delLocal,
-          select: { itemcode: true, producto: { select: { itemname: true } } },
+          select: { itemcode: true },
           orderBy: [{ creadoEn: 'asc' }, { itemcode: 'asc' }],
           skip,
           take,
@@ -360,9 +365,21 @@ export class InventarioLocalService {
         take: productos.length,
       });
       const porCodigo = new Map(cargas.map((c) => [c.itemcode, c]));
+      const nombres = new Map(
+        (
+          await this.prisma.producto.findMany({
+            where: { itemcode: { in: productos.map((p) => p.itemcode) } },
+            select: { itemcode: true, itemname: true },
+          })
+        ).map((p) => [p.itemcode, p.itemname]),
+      );
       pagina = respuestaPaginada(
         productos.map((p) =>
-          item(p.itemcode, p.producto.itemname, porCodigo.get(p.itemcode)),
+          item(
+            p.itemcode,
+            nombres.get(p.itemcode) ?? null,
+            porCodigo.get(p.itemcode),
+          ),
         ),
         total,
         page,
@@ -378,15 +395,22 @@ export class InventarioLocalService {
             itemcode: true,
             cantidad: true,
             vencimiento: true,
-            producto: { select: { itemname: true } },
           },
-          orderBy: [{ producto: { itemname: 'asc' } }, { itemcode: 'asc' }],
+          orderBy: { itemcode: 'asc' },
           skip,
           take,
         }),
       ]);
+      const nombres = new Map(
+        (
+          await this.prisma.producto.findMany({
+            where: { itemcode: { in: cargas.map((c) => c.itemcode) } },
+            select: { itemcode: true, itemname: true },
+          })
+        ).map((p) => [p.itemcode, p.itemname]),
+      );
       pagina = respuestaPaginada(
-        cargas.map((c) => item(c.itemcode, c.producto.itemname, c)),
+        cargas.map((c) => item(c.itemcode, nombres.get(c.itemcode) ?? null, c)),
         total,
         page,
         limit,
@@ -413,7 +437,7 @@ export class InventarioLocalService {
     const u = await this.acceso(usuarioId);
     await this.local(u.empresaId, localId);
     const existentes = await this.prisma.producto.count({
-      where: { empresaId: u.empresaId, itemcode: { in: dto.itemcodes } },
+      where: { itemcode: { in: dto.itemcodes } },
     });
     if (existentes !== dto.itemcodes.length)
       throw new BadRequestException('Producto no disponible en la empresa');

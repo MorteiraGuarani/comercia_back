@@ -7,7 +7,7 @@ export function etiquetaPaginaMenu(
 ) {
   if (moduloRuta === "mi-jornada" && paginaRuta === "locales") return "Itinerario";
   if (moduloRuta === "mi-jornada" && paginaRuta === "tareas") return "Mis tareas";
-  if (moduloRuta === "gestion-campo" && paginaRuta === "locales") return "Itinerario";
+  if (moduloRuta === "gestion-campo" && paginaRuta === "locales") return "Administración";
   if (moduloRuta === "gestion-campo" && paginaRuta === "visitas") return "Desempeño";
   if (paginaRuta === "novedades") return "Novedades";
   if (paginaRuta === "avisos") return "Avisos";

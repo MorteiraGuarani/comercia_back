@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -70,7 +71,8 @@ export class TablasProductosService {
     usuarioId?: number,
   ) {
     await this.acceso(t, empresaId, usuarioId);
-    const where: Record<string, unknown> = { empresaId };
+    const where: Record<string, unknown> =
+      t.nombre === 'tbl_oitm' ? {} : { empresaId };
     for (const campo of [
       'ItemCode',
       'CardCode',
@@ -106,7 +108,7 @@ export class TablasProductosService {
         select: seleccionTabla(t),
         skip,
         take,
-        orderBy: { id: 'asc' },
+        orderBy: t.nombre === 'tbl_oitm' ? { itemcode: 'asc' } : { id: 'asc' },
       }),
     ]);
     return respuestaPaginada(
@@ -154,11 +156,25 @@ export class TablasProductosService {
         async (tx) => {
           await tx.$queryRaw`SELECT id FROM empresas WHERE id=${empresaId} FOR UPDATE`;
           const m = this.modelo(tx, t);
+          if (
+            !lote &&
+            t.nombre === 'tbl_itm1' &&
+            !(await tx.producto.findUnique({
+              where: { itemcode: unicas[0].f.ItemCode as string },
+              select: { itemcode: true },
+            }))
+          )
+            throw new BadRequestException(
+              'El artículo no existe en tbl_oitm; cargalo primero',
+            );
           if (!lote)
             return salidaTabla(
               t,
               await m.create({
-                data: { ...entradaTabla(t, unicas[0].f), empresaId },
+                data: {
+                  ...entradaTabla(t, unicas[0].f),
+                  ...(t.nombre === 'tbl_oitm' ? {} : { empresaId }),
+                },
                 select: seleccionTabla(t),
               }),
             );
@@ -170,7 +186,7 @@ export class TablasProductosService {
               : unicas;
           const entradas = validas.map(({ f }) => ({
             ...entradaTabla(t, f),
-            empresaId,
+            ...(t.nombre === 'tbl_oitm' ? {} : { empresaId }),
           }));
           let insertados = 0;
           for (let i = 0; i < entradas.length; i += PRODUCTOS_POR_BLOQUE)
@@ -210,7 +226,6 @@ export class TablasProductosService {
     for (let i = 0; i < codigos.length; i += PRODUCTOS_POR_BLOQUE)
       for (const p of await tx.producto.findMany({
         where: {
-          empresaId,
           itemcode: { in: codigos.slice(i, i + PRODUCTOS_POR_BLOQUE) },
         },
         select: { itemcode: true },
@@ -237,13 +252,21 @@ export class TablasProductosService {
   ) {
     const where = { empresaId, itemCode: fila[t.columnas.ItemCode] as string };
     if (t.nombre === 'tbl_oitm') {
+      const itemcode = fila[t.columnas.ItemCode] as string;
       if (
-        (await tx.precioEspecial.count({ where })) ||
-        (await tx.precioEspecialDetalle.count({ where })) ||
-        (await tx.precioEspecialPromocion.count({ where }))
+        (await tx.productoPrecio.count({ where: { itemcode } })) ||
+        (await tx.productoLocalCampo.count({ where: { itemcode } })) ||
+        (await tx.cargaInventarioCampo.count({ where: { itemcode } })) ||
+        (await tx.precioEspecial.count({ where: { itemCode: itemcode } })) ||
+        (await tx.precioEspecialDetalle.count({
+          where: { itemCode: itemcode },
+        })) ||
+        (await tx.precioEspecialPromocion.count({
+          where: { itemCode: itemcode },
+        }))
       )
         throw new ConflictException(
-          'El artículo tiene precios especiales relacionados',
+          'El artículo está usado en precios o inventario',
         );
     }
     if (t.nombre === 'tbl_ospp') {
@@ -288,6 +311,17 @@ export class TablasProductosService {
         if (!fila)
           throw new NotFoundException('Registro no disponible en esta empresa');
         if (
+          t.nombre === 'tbl_itm1' &&
+          datos.ItemCode !== undefined &&
+          !(await tx.producto.findUnique({
+            where: { itemcode: datos.ItemCode as string },
+            select: { itemcode: true },
+          }))
+        )
+          throw new BadRequestException(
+            'El artículo no existe en tbl_oitm; cargalo primero',
+          );
+        if (
           t.clave.some(
             (c) => datos[c] !== undefined && datos[c] !== fila[t.columnas[c]],
           )
@@ -296,7 +330,7 @@ export class TablasProductosService {
         return salidaTabla(
           t,
           await m.update({
-            where: { ...where, id: fila.id },
+            where: t.nombre === 'tbl_oitm' ? where : { ...where, id: fila.id },
             data: entradaTabla(t, datos),
             select: seleccionTabla(t),
           }),
@@ -323,8 +357,8 @@ export class TablasProductosService {
           throw new NotFoundException('Registro no disponible en esta empresa');
         await this.proteger(tx, t, empresaId, fila);
         await m.delete({
-          where: { ...where, id: fila.id },
-          select: { id: true },
+          where: t.nombre === 'tbl_oitm' ? where : { ...where, id: fila.id },
+          select: t.nombre === 'tbl_oitm' ? { itemcode: true } : { id: true },
         });
         return { ok: true };
       });
