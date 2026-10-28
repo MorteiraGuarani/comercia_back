@@ -66,7 +66,9 @@ function cargarModulo(ruta) {
     module: modulo,
     exports: modulo.exports,
     require: (nombre) => nombre === "@/lib/api" ? { apiFetch, ApiError }
-      : aliases[nombre] ? cargarModulo(aliases[nombre]) : require(nombre),
+      : nombre === "@/hooks/use-hoja-deslizable"
+        ? { useHojaDeslizable: () => ({ minimizar() {}, arrastre: {} }) }
+        : aliases[nombre] ? cargarModulo(aliases[nombre]) : require(nombre),
     window, document, AbortController, setTimeout, clearTimeout, setInterval, clearInterval, queueMicrotask,
   }, { filename: ruta });
   return modulo.exports;
