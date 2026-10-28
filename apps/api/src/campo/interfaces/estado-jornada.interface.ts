@@ -1,5 +1,10 @@
+/**
+ * Estados de Comercia (los mismos en todas las pantallas):
+ * PRESENTE = Visitado, EN_CURSO, INCOMPLETO, AUSENTE y SIN_REGISTRO = Pendiente.
+ * No existe "Tarde": la hora de llegada no cambia el estado.
+ */
 export type EstadoPresentismo =
-  'SIN_REGISTRO' | 'PRESENTE' | 'TARDE' | 'INCOMPLETO' | 'AUSENTE';
+  'SIN_REGISTRO' | 'PRESENTE' | 'EN_CURSO' | 'INCOMPLETO' | 'AUSENTE';
 export type EstadoVisita = 'EN_CURSO' | 'CERRADA' | 'INCOMPLETA';
 export type EstadoRuta =
   'pendiente' | 'en_curso' | 'completado' | 'incompleto' | 'ausente';

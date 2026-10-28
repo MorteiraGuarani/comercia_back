@@ -349,6 +349,7 @@ export function HoyEnCampo() {
                 item={personaHoja}
                 consulta={consulta}
                 cuando={cuando}
+                unDia={rango.desde === rango.hasta}
               />
             ) : (
               <HiloNovedad id={hoja.id} onActualizado={actualizar} />
@@ -376,7 +377,7 @@ function Indicadores({
 }) {
   const e = resumen.presentismo.estados;
   const totalEquipo = resumen.presentismo.totalEquipo;
-  const enCampo = e.PRESENTE + e.TARDE + e.INCOMPLETO;
+  const enCampo = e.PRESENTE + e.EN_CURSO + e.INCOMPLETO;
   const r = resumen.rutas;
   const t = resumen.tareas;
   const reportadasHoy = resumen.colaboradores.reduce((s, c) => s + c.novedadesCount, 0);
@@ -395,7 +396,7 @@ function Indicadores({
       clave: "presentismo",
       letra: "A",
       nombre: "Presentismo",
-      tono: e.AUSENTE ? "bad" : e.TARDE || e.INCOMPLETO ? "warn" : "ok",
+      tono: e.AUSENTE ? "bad" : e.INCOMPLETO ? "warn" : "ok",
       valor: (
         <>
           {pct(enCampo, totalEquipo)}
@@ -415,7 +416,6 @@ function Indicadores({
       nota: (
         <>
           <b className="text-foreground">{enCampo} de {totalEquipo}</b> en campo
-          {e.TARDE ? <span className="font-semibold text-amber-700 dark:text-amber-300"> · {e.TARDE} tarde</span> : null}
           {e.AUSENTE ? <span className="font-semibold text-red-700 dark:text-red-300"> · {e.AUSENTE} ausente{e.AUSENTE > 1 ? "s" : ""}</span> : null}
         </>
       ),
@@ -765,7 +765,7 @@ function DetalleIndicador({
     return (
       <>
         <div className={`${panel} space-y-2.5`}>
-          <ConteosFiltro etiqueta="Filtrar avance por estado de la ruta" items={conteos} activo={filtro} onFiltro={setFiltro} />
+          <ConteosFiltro etiqueta="Filtrar avance por estado de la ruta" total={r.total} items={conteos} activo={filtro} onFiltro={setFiltro} />
           <p className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted">
             <span className="inline-flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-sm bg-emerald-600 dark:bg-emerald-500" />Hecha</span>
             <span className="inline-flex items-center gap-1"><i className={`h-2.5 w-2.5 rounded-sm ${RAYADO_EN_CURSO}`} />En curso</span>
@@ -817,7 +817,7 @@ function DetalleIndicador({
     return (
       <>
         <div className={panel}>
-          <ConteosFiltro etiqueta="Filtrar tareas por estado" items={conteos} activo={filtro} onFiltro={setFiltro} />
+          <ConteosFiltro etiqueta="Filtrar tareas por estado" total={t.total} items={conteos} activo={filtro} onFiltro={setFiltro} />
         </div>
         <div className={panel}>
           <TituloLista titulo="Por persona" filtro={etiquetaDe(conteos)} cantidad={visibles.length} onLimpiar={limpiar} />
@@ -877,7 +877,7 @@ function DetalleIndicador({
   const visibles = filtro ? novedades.filter((n) => n.prioridad === filtro) : novedades;
   return (
     <>
-      <ConteosFiltro etiqueta="Filtrar novedades por prioridad" items={conteos} activo={filtro} onFiltro={setFiltro} />
+      <ConteosFiltro etiqueta="Filtrar novedades por prioridad" total={novedades.length} items={conteos} activo={filtro} onFiltro={setFiltro} />
       <div className={panel}>
         <TituloLista titulo="Novedades abiertas" filtro={etiquetaDe(conteos)} cantidad={visibles.length} onLimpiar={limpiar} />
         {visibles.length ? (
@@ -918,9 +918,12 @@ function HojaColaborador({
   item,
   consulta,
   cuando,
+  unDia,
 }: {
   id: number;
   item: ColaboradorResumen | null;
+  /** Período de un solo día: muestra horas; si no, cantidad de visitas y faltas. */
+  unDia: boolean;
   /** Parámetros de fecha del período ("fecha=…" o "fechaInicio=…&fechaFin=…"). */
   consulta: string;
   cuando: string;
@@ -955,7 +958,7 @@ function HojaColaborador({
             <p className="truncate text-xs text-muted">{item.zona}</p>
             <span className={`mt-0.5 inline-block rounded-md px-1.5 text-[11px] font-bold ${PRESENTISMO_UI[item.estadoPresentismo].pill}`}>
               {PRESENTISMO_UI[item.estadoPresentismo].etiqueta}
-              {item.inicioJornada ? ` · ${item.inicioJornada}` : ""}
+              {unDia && item.inicioJornada ? ` · ${item.inicioJornada}` : ""}
             </span>
           </div>
         </div>
@@ -988,39 +991,34 @@ function HojaColaborador({
       ) : (
         <>
           <div className={panel}>
-            <h3 className={tituloPanel}>Agenda del día</h3>
+            <h3 className={tituloPanel}>{unDia ? "Agenda del día" : "Agenda del período"}</h3>
             {detalle.ruta.length ? (
-              detalle.ruta.map((p) => {
-                // Llegó tarde a este local: la fila se pinta para verlo de un vistazo.
-                const tarde = p.estadoPresentismo === "TARDE";
-                return (
+              detalle.ruta.map((p) => (
                 <div
                   key={p.id}
-                  className={`flex min-w-0 items-center justify-between gap-2 ${
-                    tarde
-                      ? "-mx-2 my-1 rounded-lg border border-amber-300 bg-amber-50 px-2 py-2 dark:border-amber-800 dark:bg-amber-950/50"
-                      : "border-t border-line py-2 first:border-t-0 first:pt-0 last:pb-0"
-                  }`}
+                  className="flex min-w-0 items-center justify-between gap-2 border-t border-line py-2 first:border-t-0 first:pt-0 last:pb-0"
                 >
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-semibold text-foreground">{p.local}</span>
                     <span className="block truncate text-[11px] text-muted">
-                      {[p.localId, p.ventana, p.checkin ? `Entrada ${p.checkin}` : null, p.checkout ? `Salida ${p.checkout}` : null]
+                      {(unDia
+                        ? [p.localId, p.ventana, p.checkin ? `Entrada ${p.checkin}` : null, p.checkout ? `Salida ${p.checkout}` : null]
+                        : [
+                            p.localId,
+                            p.ventana,
+                            `${p.visitas} ${p.visitas === 1 ? "visita" : "visitas"}`,
+                            p.ausencias ? `${p.ausencias} ${p.ausencias === 1 ? "turno" : "turnos"} sin visita` : null,
+                          ]
+                      )
                         .filter(Boolean)
                         .join(" · ")}
                     </span>
-                    {tarde ? (
-                      <span className="mt-0.5 block text-[11px] font-semibold text-amber-800 dark:text-amber-300">
-                        Llegó tarde
-                      </span>
-                    ) : null}
                   </span>
                   <span className={`shrink-0 whitespace-nowrap rounded-md px-1.5 text-[11px] font-bold ${RUTA_PILL[p.estado]}`}>
                     {RUTA[p.estado].etiqueta}
                   </span>
                 </div>
-                );
-              })
+              ))
             ) : (
               <p className="text-sm text-muted">Sin locales en la agenda de {cuando}.</p>
             )}

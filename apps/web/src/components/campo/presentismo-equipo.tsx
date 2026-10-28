@@ -33,8 +33,9 @@ export function ResumenPresentismo({ resumen, onFiltrar, accion }: {
       </div>
       <ul className={styles.counts} aria-label="Personas por estado">
         {ESTADOS.map(e => <li key={e} data-tone={e} data-vacio={p.estados[e] === 0 || undefined}>
-          <button type="button" onClick={() => onFiltrar(e)} aria-label={`${PRESENTISMO[e].etiqueta}: ${p.estados[e]}. Ver en la lista`}>
-            <b>{p.estados[e]}</b><span>{PRESENTISMO[e].etiqueta}</span>
+          <button type="button" onClick={() => onFiltrar(e)} aria-label={`${PRESENTISMO[e].etiqueta}: ${p.estados[e]} de ${p.totalEquipo}. Ver en la lista`}>
+            <b>{p.estados[e]}<small>/{p.totalEquipo}</small></b>
+            <span>{PRESENTISMO[e].etiqueta}<small>{p.totalEquipo ? Math.round((p.estados[e] / p.totalEquipo) * 100) : 0}%</small></span>
           </button>
         </li>)}
       </ul>
@@ -44,7 +45,7 @@ export function ResumenPresentismo({ resumen, onFiltrar, accion }: {
     </section>
     <details className={styles.howto}>
       <summary>¿Cómo se calcula cada estado?</summary>
-      <p>El horario del local es la ventana para visitarlo: iniciar la visita después del inicio es Tarde (aunque sea pasado el fin) y salir antes del fin no cuenta. Al vencer el horario sin visita es Ausente; una visita que no se finalizó en el día es Incompleto. Sin horario no se deduce ausencia ni tardanza. En períodos de varios días se priorizan las incidencias.</p>
+      <p>Presente: tuvo entrada y salida. En curso: tiene entrada y todavía no salió, y la jornada del local no terminó. Incompleto: tiene entrada sin salida y la jornada del local ya terminó. Ausente: no tuvo entrada y la jornada terminó. Pendiente: todavía no marcó y la jornada no terminó. La hora de llegada no cambia el estado. Sin horario no se deduce ausencia. En períodos de varios días manda lo que está en curso y después las incidencias.</p>
     </details>
   </aside>;
 }
@@ -136,7 +137,7 @@ export function EquipoPresentismo({ colaboradores, metric = "presentismo", filtr
       <div className={styles.table}><table><caption className="sr-only">Estado y avance de los colaboradores</caption>
         <thead><tr>{[
           ['Persona / zona', 'Persona del equipo y su zona asignada. Ver ficha permite consultar sus marcaciones y datos del dispositivo.'],
-          ['Estado', 'Presente: inició la visita dentro del horario del local. Tarde: la inició después del inicio, aunque sea pasado el fin. Salir antes del fin no cuenta: el horario es la ventana para visitar. Incompleto: visita iniciada que no se finalizó en el día. Ausente: horario vencido sin visita. Sin registro: aún sin marcas. En períodos se prioriza Incompleto, Ausente, Tarde y Presente.'],
+          ['Estado', 'Presente: entrada y salida. En curso: entrada sin salida y la jornada del local no terminó. Incompleto: entrada sin salida y la jornada ya terminó. Ausente: sin entrada y la jornada terminó. Pendiente: todavía sin marcas. En períodos manda lo que está en curso y después Incompleto, Ausente y Presente.'],
           ['Entrada', 'Primera entrada registrada en el período. La pestaña Marcaciones de la ficha muestra cada visita y sus señales técnicas.'],
           ['Salida', 'Salida del último registro del período cuando las visitas están finalizadas. Consultá Marcaciones en la ficha para ver cada visita.'],
           ['Visitas', 'Visitas completadas sobre el total del período y cantidad de visitas en curso.'],

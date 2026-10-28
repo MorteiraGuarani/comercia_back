@@ -89,7 +89,7 @@ export function KpisRuta({
     },
     {
       filtro: "completado",
-      etiqueta: "Visitados",
+      etiqueta: "Presentes",
       valor: visitadas,
       detalle,
       porcentaje: porcentaje(visitadas),
@@ -130,17 +130,19 @@ export function KpisRuta({
                 </span>
                 <span className="ft-display truncate text-xl font-bold leading-none tabular-nums text-foreground sm:text-3xl">
                   {k.valor}
+                  {/* "1/2": de cuántos locales es el número. */}
+                  {k.porcentaje !== null ? (
+                    <small className="text-xs font-semibold text-muted sm:text-base">/{base}</small>
+                  ) : null}
                 </span>
-                {k.porcentaje !== null ? (
-                  <span className="truncate text-[11px] font-semibold tabular-nums text-muted sm:text-sm">
-                    {k.porcentaje}%
-                  </span>
-                ) : null}
               </span>
               <span className="ft-display mt-1 truncate text-xs font-semibold leading-tight text-foreground sm:mt-1.5 sm:text-sm">
                 {k.etiqueta}
               </span>
               <span className="truncate text-[10px] leading-tight text-muted sm:text-xs">
+                {k.porcentaje !== null ? (
+                  <b className="font-semibold tabular-nums text-foreground/80">{k.porcentaje}% · </b>
+                ) : null}
                 {k.detalle}
               </span>
             </button>

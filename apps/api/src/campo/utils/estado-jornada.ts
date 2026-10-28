@@ -1,8 +1,4 @@
-import {
-  evaluarMarcaHorario,
-  heredarTolerancias,
-  minutosDentroHorario,
-} from '../../tolerancias/utils/tolerancia-horario';
+import { minutosDentroHorario } from '../../tolerancias/utils/tolerancia-horario';
 import type {
   AsistenciaCampo,
   EstadoPresentismo,
@@ -19,11 +15,13 @@ import {
   ZONA_CAMPO,
 } from './calendario';
 
-// Visitas de campo: el horario del local es la ventana para llegar, no un turno
-// que haya que cumplir entero como en UWeb. Iniciar y finalizar la visita nunca
-// es Incompleto: salir antes del fin es normal (se visita 10 o 30 minutos) y
-// llegar después del inicio, aun pasado el fin, es Tarde. Incompleto queda para
-// la visita que no se finalizó en el día (o una salida sin entrada).
+// Estados de una visita de campo (iguales en todos los módulos y roles):
+// - Visitado (PRESENTE): tuvo entrada y salida.
+// - En curso: entrada sin salida y la jornada del local todavía no terminó.
+// - Incompleto: entrada sin salida y la jornada del local ya terminó.
+// - Ausente: sin entrada y la jornada ya terminó.
+// - Pendiente (SIN_REGISTRO): sin entrada y la jornada todavía no terminó.
+// Sin horario, la jornada termina con el día y no se deduce ausencia.
 export function evaluarPresentismo(
   r: RegistroPresentismoCampo,
   ahora = new Date(),
@@ -33,38 +31,18 @@ export function evaluarPresentismo(
       ? r.fecha.slice(0, 10)
       : r.fecha.toISOString().slice(0, 10);
   const zona = r.zonaHoraria ?? ZONA_CAMPO;
-  const instante = (d: Date | string) => {
-    const reloj = relojCampo(new Date(d), zona);
-    return `${reloj.fecha}T${reloj.hora}`;
-  };
+  const reloj = relojCampo(ahora, zona);
+  const conHorario = !!r.horaDesde && !!r.horaHasta;
+  const terminoJornada = conHorario
+    ? `${reloj.fecha}T${reloj.hora}` >= `${fecha}T${r.horaHasta}`
+    : reloj.fecha > fecha;
   if (!r.entrada) {
-    if (!r.horaDesde || !r.horaHasta) return 'SIN_REGISTRO';
+    if (!conHorario) return 'SIN_REGISTRO';
     if (r.salida) return 'INCOMPLETO';
-    return instante(ahora) >= `${fecha}T${r.horaHasta}`
-      ? 'AUSENTE'
-      : 'SIN_REGISTRO';
+    return terminoJornada ? 'AUSENTE' : 'SIN_REGISTRO';
   }
-  if (!r.salida && relojCampo(ahora, zona).fecha > fecha) return 'INCOMPLETO';
-  if (!r.horaDesde || !r.horaHasta) return 'PRESENTE';
-  const inicio = `${fecha}T${r.horaDesde}`;
-  const t = r.toleranciasAplicadas
-    ? heredarTolerancias(r.toleranciasAplicadas)
-    : null;
-  return (
-    t
-      ? evaluarMarcaHorario(
-          'ENTRADA',
-          new Date(r.entrada),
-          fecha,
-          r.horaDesde,
-          r.horaHasta,
-          zona,
-          t,
-        ).desvioMinutos > t.toleranciaEntrada
-      : instante(r.entrada) > inicio
-  )
-    ? 'TARDE'
-    : 'PRESENTE';
+  if (r.salida) return 'PRESENTE';
+  return terminoJornada ? 'INCOMPLETO' : 'EN_CURSO';
 }
 
 export function estadoVisita(
@@ -111,27 +89,47 @@ export function conEstadoVisita<T extends VisitaParaEstado>(
   };
 }
 
+const RUTA_POR_ESTADO: Record<EstadoPresentismo, EstadoRuta> = {
+  PRESENTE: 'completado',
+  EN_CURSO: 'en_curso',
+  INCOMPLETO: 'incompleto',
+  AUSENTE: 'ausente',
+  SIN_REGISTRO: 'pendiente',
+};
+
 export function resumirPresentismo(
   estados: EstadoPresentismo[],
 ): EstadoPresentismo {
   return (
-    (['INCOMPLETO', 'AUSENTE', 'TARDE', 'PRESENTE'] as const).find((e) =>
+    (['EN_CURSO', 'INCOMPLETO', 'AUSENTE', 'PRESENTE'] as const).find((e) =>
       estados.includes(e),
     ) ?? 'SIN_REGISTRO'
   );
 }
 
-export function estadoAgenda(
+type ArgsAgenda = [
   visitas: VisitaParaEstado[],
   horarios: (ReglaHorario & { id: number; entrada: string; salida: string })[],
   zonaHoraria: string | undefined,
   desde: string,
   hasta: string,
-  ahora = new Date(),
+  ahora?: Date,
   asignacion?: { fechaDesde: Date; fechaHasta: Date | null },
-) {
-  const marcas = visitas.map((v) => conEstadoVisita(v, ahora));
-  const estados = marcas.map((v) => v.estadoPresentismo);
+];
+
+/** Estado de cada turno del período que no tuvo visita (Sin registro o Ausente). */
+function turnosSinVisita(
+  ...[
+    visitas,
+    horarios,
+    zonaHoraria,
+    desde,
+    hasta,
+    ahora = new Date(),
+    asignacion,
+  ]: ArgsAgenda
+): EstadoPresentismo[] {
+  const estados: EstadoPresentismo[] = [];
   const inicio = Math.max(
     fechaCampo(desde).getTime(),
     asignacion?.fechaDesde.getTime() ?? -Infinity,
@@ -163,17 +161,27 @@ export function estadoAgenda(
       );
     }
   }
+  return estados;
+}
+
+export function estadoAgenda(...args: ArgsAgenda) {
+  const [visitas, , , , , ahora = new Date()] = args;
+  const marcas = visitas.map((v) => conEstadoVisita(v, ahora));
+  const estados = [
+    ...marcas.map((v) => v.estadoPresentismo),
+    ...turnosSinVisita(...args),
+  ];
   const estadoPresentismo = resumirPresentismo(estados);
-  const estado: EstadoRuta = marcas.some((v) => v.estado === 'EN_CURSO')
-    ? 'en_curso'
-    : estadoPresentismo === 'INCOMPLETO'
-      ? 'incompleto'
-      : estadoPresentismo === 'AUSENTE'
-        ? 'ausente'
-        : marcas.length
-          ? 'completado'
-          : 'pendiente';
-  return { estado, estadoPresentismo };
+  // La ruta usa el mismo estado que Presentismo: no hay dos lecturas distintas.
+  return { estado: RUTA_POR_ESTADO[estadoPresentismo], estadoPresentismo };
+}
+
+/**
+ * Turnos vencidos sin visita en el período: en un rango de varios días un
+ * local puede estar "Ausente" por días faltados aunque haya tenido visitas.
+ */
+export function ausenciasAgenda(...args: ArgsAgenda): number {
+  return turnosSinVisita(...args).filter((e) => e === 'AUSENTE').length;
 }
 
 export function asistenciaCampo(estados: EstadoRuta[]): AsistenciaCampo {

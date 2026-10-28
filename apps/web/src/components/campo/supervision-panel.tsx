@@ -898,12 +898,16 @@ function ResumenAvance({
             className="min-w-0 rounded-lg bg-surface-soft px-2.5 py-1.5"
           >
             <b
-              className={`ft-display block text-xl leading-tight tabular-nums ${i.clase ?? "text-foreground"}`}
+              className={`ft-display block whitespace-nowrap text-xl leading-tight tabular-nums ${i.clase ?? "text-foreground"}`}
             >
               {i.valor}
+              <small className="text-xs font-semibold text-muted">/{total}</small>
             </b>
             <span className="block truncate text-[11px] text-muted">
-              {i.etiqueta}
+              {i.etiqueta} ·{" "}
+              <b className="font-semibold tabular-nums">
+                {total ? Math.round((i.valor / total) * 100) : 0}%
+              </b>
             </span>
           </div>
         ))}

@@ -195,7 +195,7 @@ export function TarjetaAgendaRepositor({
         .join(" · ")
     : ultima
       ? ultima.salida
-        ? `Visitado ${formatoHora(ultima.entrada)}–${formatoHora(ultima.salida)}`
+        ? `Presente ${formatoHora(ultima.entrada)}–${formatoHora(ultima.salida)}`
         : `Entrada ${formatoHora(ultima.entrada)} · sin finalizar`
       : [a.local.direccion || a.local.id, distancia]
           .filter(Boolean)

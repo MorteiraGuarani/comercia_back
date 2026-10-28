@@ -21,12 +21,12 @@ export const PRESENTISMO_UI: Record<
     barra: "bg-emerald-600 dark:bg-emerald-500",
     tono: "ok",
   },
-  TARDE: {
-    etiqueta: "Tarde",
-    pill: "bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300",
-    anillo: "border-amber-500 dark:border-amber-400",
-    barra: "bg-amber-500 dark:bg-amber-400",
-    tono: "warn",
+  EN_CURSO: {
+    etiqueta: "En curso",
+    pill: "bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300",
+    anillo: "border-sky-500 dark:border-sky-400",
+    barra: "bg-sky-600 dark:bg-sky-500",
+    tono: "info",
   },
   INCOMPLETO: {
     etiqueta: "Incompleto",
@@ -43,7 +43,7 @@ export const PRESENTISMO_UI: Record<
     tono: "bad",
   },
   SIN_REGISTRO: {
-    etiqueta: "Sin entrada",
+    etiqueta: "Pendiente",
     pill: "bg-stone-100 text-stone-700 dark:bg-stone-800/70 dark:text-stone-200",
     anillo: "border-stone-300 dark:border-stone-600",
     barra: "bg-stone-400 dark:bg-stone-500",
@@ -53,7 +53,7 @@ export const PRESENTISMO_UI: Record<
 
 export const ORDEN_PRESENTISMO: EstadoPresentismo[] = [
   "PRESENTE",
-  "TARDE",
+  "EN_CURSO",
   "INCOMPLETO",
   "AUSENTE",
   "SIN_REGISTRO",
@@ -310,8 +310,11 @@ export function ConteosFiltro({
   items,
   activo,
   onFiltro,
+  total,
 }: {
   etiqueta: string;
+  /** Total al que se refiere cada número ("5/10"); el % sigue debajo. */
+  total?: number;
   items: {
     clave: string;
     etiqueta: string;
@@ -340,23 +343,33 @@ export function ConteosFiltro({
             aria-pressed={elegido}
             aria-label={i.descripcion}
             onClick={() => onFiltro(elegido ? null : i.clave)}
-            className={`min-h-11 min-w-0 cursor-pointer rounded-lg border px-1.5 py-1.5 text-left transition-[border-color,box-shadow,opacity] sm:px-2 ${enfoqueTablero} ${
+            className={`relative flex min-h-11 min-w-0 cursor-pointer flex-col rounded-xl border px-1 pb-1.5 pt-1.5 text-left transition-[border-color,box-shadow,opacity] sm:px-2 sm:pt-2 ${enfoqueTablero} ${
               elegido
                 ? "border-brand-600 bg-surface-raised ring-2 ring-brand-600/25 dark:border-brand-400 dark:ring-brand-400/30"
                 : `border-transparent bg-surface-soft hover:border-line ${activo ? "opacity-60 hover:opacity-100" : ""}`
             }`}
           >
-            <b className={`ft-display block text-xl leading-tight tabular-nums ${i.clase ?? "text-foreground"}`}>
+            {/* El punto va en la esquina: así el nombre del estado usa todo el ancho. */}
+            {i.punto ? (
+              <i
+                aria-hidden="true"
+                className={`absolute right-1.5 top-1.5 h-2 w-2 rounded-full ring-2 ring-surface-soft sm:right-2 sm:top-2 ${i.punto}`}
+              />
+            ) : null}
+            <b className={`ft-display block whitespace-nowrap pr-2.5 text-2xl leading-none tabular-nums ${i.clase ?? "text-foreground"}`}>
               {i.valor}
-            </b>
-            <span className="flex min-w-0 items-center gap-1 text-[10px] text-muted sm:text-[11px]">
-              {i.punto ? (
-                <i aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-full ${i.punto}`} />
+              {total !== undefined ? (
+                <small className="text-xs font-semibold text-muted">/{total}</small>
               ) : null}
-              <span className="truncate">{i.etiqueta}</span>
+            </b>
+            <span
+              lang="es"
+              className="mt-1 block hyphens-auto break-words text-[10px] font-semibold leading-tight text-foreground/80 sm:text-[11px]"
+            >
+              {i.etiqueta}
             </span>
             {i.detalle ? (
-              <span className="block truncate text-[10px] tabular-nums text-muted">{i.detalle}</span>
+              <span className="mt-auto block pt-0.5 text-[10px] tabular-nums text-muted">{i.detalle}</span>
             ) : null}
           </button>
         );

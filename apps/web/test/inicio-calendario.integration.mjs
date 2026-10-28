@@ -114,7 +114,7 @@ const ui = cargar("components/campo/ui/tablero-campo.tsx", { "next/link": { defa
 assert.equal(ui.TarjetaIndicador({ letra: "C", nombre: "Tareas", tono: "info", valor: 0, nota: "Sin tareas", href: "/tareas", disabled: true }).props.disabled, true);
 
 const resumen = {
-  presentismo: { totalEquipo: 1, estados: { PRESENTE: 1, TARDE: 0, INCOMPLETO: 0, AUSENTE: 0, SIN_REGISTRO: 0 } },
+  presentismo: { totalEquipo: 1, estados: { PRESENTE: 1, EN_CURSO: 0, INCOMPLETO: 0, AUSENTE: 0, SIN_REGISTRO: 0 } },
   rutas: { total: 0, completadas: 0, enCurso: 0, incompletas: 0, ausentes: 0, pendientes: 0 },
   tareas: { total: 0, completadas: 0, obligatoriasPendientes: 0, pct: 0 }, colaboradores: [],
 };
@@ -126,7 +126,7 @@ const { DetallePresentismoInicio } = cargar("components/campo/detalle-presentism
   "@/utils/hoy-en-campo": calculos, "./ui/tablero-campo": ui, "./ui/iconos-campo": { IconoTelefono: stub },
   "./ui/barra-segmentos": { BarraSegmentos: stub },
 });
-const equipoPresentismo = ["PRESENTE", "TARDE", "INCOMPLETO", "AUSENTE", "SIN_REGISTRO"].map((estado, i) => ({
+const equipoPresentismo = ["PRESENTE", "EN_CURSO", "INCOMPLETO", "AUSENTE", "SIN_REGISTRO"].map((estado, i) => ({
   id: i + 1, nombre: `Persona ${estado}`, estadoPresentismo: estado, telefono: "+595991188620", inicioJornada: null,
 }));
 const renderPresentismo = () => {

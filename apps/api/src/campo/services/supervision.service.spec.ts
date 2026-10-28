@@ -13,7 +13,12 @@ describe('SupervisionService', () => {
   );
   afterEach(() => jest.useRealTimers());
   it('Presentismo lista toda la cadena del líder de repositores aunque nadie haya marcado', async () => {
-    const equipo = { id: 4, nombre: 'Repositores', tipo: 'REPOSITOR', activo: true };
+    const equipo = {
+      id: 4,
+      nombre: 'Repositores',
+      tipo: 'REPOSITOR',
+      activo: true,
+    };
     const persona = (id: number, superiorId: number, rol: string) => ({
       id,
       nombre: `P${id}`,
@@ -31,10 +36,14 @@ describe('SupervisionService', () => {
           rol: { equipoCampoId: 4 },
         }),
         findMany: jest.fn(
-          ({ where }: { where: { superiorId?: { in: number[] }; id?: { in: number[] } } }) =>
+          ({
+            where,
+          }: {
+            where: { superiorId?: { in: number[] }; id?: { in: number[] } };
+          }) =>
             where.id
-              ? [persona(2, 1, 'BOFFICE'), persona(3, 2, 'REPOSITOR')].filter((u) =>
-                  where.id!.in.includes(u.id),
+              ? [persona(2, 1, 'BOFFICE'), persona(3, 2, 'REPOSITOR')].filter(
+                  (u) => where.id!.in.includes(u.id),
                 )
               : where.superiorId?.in.includes(1)
                 ? [{ id: 2 }]
@@ -339,7 +348,7 @@ describe('SupervisionService', () => {
     ]);
     const hoy = await service.resumen(1, { fecha: '2026-10-10' });
     expect(hoy.presentismo.enRuta).toBe(1);
-    expect(hoy.presentismo.estados.PRESENTE).toBe(1);
+    expect(hoy.presentismo.estados.EN_CURSO).toBe(1);
     expect(hoy.rutas.incompletas).toBe(0);
   });
 });

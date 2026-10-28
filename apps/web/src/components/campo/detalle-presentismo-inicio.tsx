@@ -45,6 +45,7 @@ export function DetallePresentismoInicio({
       <div className="space-y-2.5 rounded-xl border border-line bg-surface-raised p-3 sm:p-4">
         <ConteosFiltro
           etiqueta="Filtrar marcaciones por estado"
+          total={totalEquipo}
           activo={filtro}
           onFiltro={(clave) => {
             setFiltro(ORDEN_PRESENTISMO.find((e) => e === clave) ?? null);
@@ -73,7 +74,7 @@ export function DetallePresentismoInicio({
           }))}
         />
         <p className="text-xs text-muted">
-          Equipo de {totalEquipo}. &quot;Sin entrada&quot; incluye a quien
+          Equipo de {totalEquipo}. &quot;Pendiente&quot; incluye a quien
           todavía no empezó su horario.
         </p>
       </div>

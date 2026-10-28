@@ -1,4 +1,5 @@
 import {
+  ausenciasAgenda,
   asistenciaCampo,
   conEstadoVisita,
   estadoAgenda,
@@ -9,7 +10,7 @@ import {
 const fecha = new Date('2026-10-09T00:00:00Z');
 const hora = (h: string) => new Date(`2026-10-09T${h}:00-03:00`);
 
-it('respeta la tolerancia de entrada; salir antes del fin no vuelve Incompleta la visita', () => {
+it('la hora de llegada no cambia el estado: no existe Tarde', () => {
   const base = {
     fecha,
     horaDesde: '10:30',
@@ -18,24 +19,13 @@ it('respeta la tolerancia de entrada; salir antes del fin no vuelve Incompleta l
     entrada: hora('10:44'),
     salida: hora('17:46'),
   };
-  expect(evaluarPresentismo(base)).toBe('TARDE');
+  expect(evaluarPresentismo(base)).toBe('PRESENTE');
   expect(
     evaluarPresentismo({
       ...base,
-      toleranciasAplicadas: {
-        toleranciaEntrada: 14,
-        toleranciaSalidaAntes: 14,
-      },
+      toleranciasAplicadas: { toleranciaEntrada: 5 },
     }),
   ).toBe('PRESENTE');
-  expect(
-    evaluarPresentismo({
-      ...base,
-      entrada: hora('10:45'),
-      salida: hora('18:00'),
-      toleranciasAplicadas: { toleranciaEntrada: 14 },
-    }),
-  ).toBe('TARDE');
 });
 const turno = {
   fecha,
@@ -58,91 +48,53 @@ const horario = {
 };
 
 describe('Estados de las visitas de campo en Comercia', () => {
-  it('sin marcas es Sin registro hasta finalizar el turno y luego Ausente', () => {
+  it('sin marcas es Pendiente hasta que termina la jornada y luego Ausente', () => {
     expect(evaluarPresentismo(turno, hora('10:00'))).toBe('SIN_REGISTRO');
     expect(evaluarPresentismo(turno, hora('17:59'))).toBe('SIN_REGISTRO');
     expect(evaluarPresentismo(turno, hora('18:00'))).toBe('AUSENTE');
   });
-  it('evalúa presente a las 10:30:59 y tarde desde las 10:31', () => {
-    expect(
-      evaluarPresentismo(
-        { ...turno, entrada: new Date('2026-10-09T10:30:59-03:00') },
-        hora('11:00'),
-      ),
-    ).toBe('PRESENTE');
-    expect(
-      evaluarPresentismo({ ...turno, entrada: hora('10:31') }, hora('11:00')),
-    ).toBe('TARDE');
-    expect(
-      evaluarPresentismo(
-        { ...turno, entrada: hora('10:31'), salida: hora('18:00') },
-        hora('19:00'),
-      ),
-    ).toBe('TARDE');
+  it('con entrada y salida es Visitado, llegue a la hora que llegue', () => {
+    for (const [entrada, salida] of [
+      ['10:30', '10:45'],
+      ['11:00', '11:30'],
+      ['18:30', '19:00'],
+    ])
+      expect(
+        evaluarPresentismo(
+          { ...turno, entrada: hora(entrada), salida: hora(salida) },
+          hora('19:30'),
+        ),
+      ).toBe('PRESENTE');
   });
-  it('una visita iniciada y finalizada nunca es Incompleta: llegar después del inicio es Tarde', () => {
-    // Visita corta dentro de la ventana del local.
-    expect(
-      evaluarPresentismo(
-        { ...turno, entrada: hora('10:30'), salida: hora('10:45') },
-        hora('19:00'),
-      ),
-    ).toBe('PRESENTE');
-    // Llegó tarde y se quedó media hora.
-    expect(
-      evaluarPresentismo(
-        { ...turno, entrada: hora('11:00'), salida: hora('11:30') },
-        hora('19:00'),
-      ),
-    ).toBe('TARDE');
-    // Visitó después del fin del horario: solo llegada tardía.
-    expect(
-      evaluarPresentismo(
-        { ...turno, entrada: hora('18:30'), salida: hora('19:00') },
-        hora('19:30'),
-      ),
-    ).toBe('TARDE');
-  });
-  it('una visita abierta sigue en curso hasta el fin del día aunque termine el horario', () => {
-    expect(
-      evaluarPresentismo({ ...turno, entrada: hora('10:30') }, hora('18:00')),
-    ).toBe('PRESENTE');
-    expect(
+  it('con entrada sin salida es En curso hasta que termina la jornada del local y después Incompleto', () => {
+    const abierta = { ...turno, entrada: hora('10:30') };
+    expect(evaluarPresentismo(abierta, hora('17:59'))).toBe('EN_CURSO');
+    expect(evaluarPresentismo(abierta, hora('18:00'))).toBe('INCOMPLETO');
+    const visita = {
+      fecha,
+      entrada: hora('17:50'),
+      salida: null,
+      horarioId: 2,
+      horario: { entrada: '10:30', salida: '18:00' },
+    };
+    const ruta = (ahora: Date) =>
       estadoAgenda(
-        [
-          {
-            fecha,
-            entrada: hora('17:50'),
-            salida: null,
-            horarioId: 2,
-            horario: { entrada: '10:30', salida: '18:00' },
-          },
-        ],
+        [visita],
         [horario],
         'America/Asuncion',
         '2026-10-09',
         '2026-10-09',
-        hora('18:30'),
-      ),
-    ).toEqual({ estado: 'en_curso', estadoPresentismo: 'TARDE' });
-    expect(
-      estadoAgenda(
-        [
-          {
-            fecha,
-            entrada: hora('11:00'),
-            salida: hora('11:30'),
-            horarioId: 2,
-            horario: { entrada: '10:30', salida: '18:00' },
-          },
-        ],
-        [horario],
-        'America/Asuncion',
-        '2026-10-09',
-        '2026-10-09',
-        hora('19:00'),
-      ),
-    ).toEqual({ estado: 'completado', estadoPresentismo: 'TARDE' });
+        ahora,
+      );
+    expect(ruta(hora('17:55'))).toEqual({
+      estado: 'en_curso',
+      estadoPresentismo: 'EN_CURSO',
+    });
+    // Itinerario y Presentismo dicen lo mismo.
+    expect(ruta(hora('18:30'))).toEqual({
+      estado: 'incompleto',
+      estadoPresentismo: 'INCOMPLETO',
+    });
   });
   it('la entrada del 9 deja de ser operable exactamente a medianoche del 10 sin inventar salida', () => {
     const visita = {
@@ -167,7 +119,7 @@ describe('Estados de las visitas de campo en Comercia', () => {
       estadoVisita({ fecha, salida: null }, new Date('2026-10-10T02:59:59Z')),
     ).toBe('EN_CURSO');
   });
-  it('sin horario no deduce tardanza ni ausencia y conserva jornadas cerradas', () => {
+  it('sin horario no deduce ausencia y conserva jornadas cerradas', () => {
     const general = { ...turno, horaDesde: null, horaHasta: null };
     expect(evaluarPresentismo(general, hora('23:00'))).toBe('SIN_REGISTRO');
     expect(
@@ -223,6 +175,39 @@ describe('Estados de las visitas de campo en Comercia', () => {
       ),
     ).toEqual({ estado: 'pendiente', estadoPresentismo: 'SIN_REGISTRO' });
   });
+  it('en un período cuenta los turnos sin visita aunque el local tenga visitas', () => {
+    const ahora = new Date('2026-10-12T10:00:00-03:00');
+    const visitas = [
+      {
+        fecha: new Date('2026-10-10'),
+        entrada: hora('11:10'),
+        salida: hora('11:26'),
+        horarioId: 2,
+        horario: { entrada: '10:30', salida: '18:00' },
+      },
+    ];
+    // Del 9 al 12: visitó el 10, faltó el 9 y el 11; el 12 todavía no venció.
+    expect(
+      ausenciasAgenda(
+        visitas,
+        [horario],
+        'America/Asuncion',
+        '2026-10-09',
+        '2026-10-12',
+        ahora,
+      ),
+    ).toBe(2);
+    expect(
+      ausenciasAgenda(
+        visitas,
+        [horario],
+        'America/Asuncion',
+        '2026-10-10',
+        '2026-10-10',
+        ahora,
+      ),
+    ).toBe(0);
+  });
   it('no deduce ausencias antes del inicio de una asignación ni en turnos futuros', () => {
     const ahora = new Date('2026-10-10T10:00:00-03:00');
     expect(
@@ -250,9 +235,10 @@ describe('Estados de las visitas de campo en Comercia', () => {
       '2026-10-10',
       ahora,
     );
+    // Lo que está en curso hoy manda sobre lo de días anteriores.
     expect(ruta).toEqual({
       estado: 'en_curso',
-      estadoPresentismo: 'INCOMPLETO',
+      estadoPresentismo: 'EN_CURSO',
     });
     expect(asistenciaCampo([ruta.estado])).toBe('en_curso');
   });

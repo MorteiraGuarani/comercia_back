@@ -1,5 +1,5 @@
 export type EstadoPresentismo =
-  "SIN_REGISTRO" | "PRESENTE" | "TARDE" | "INCOMPLETO" | "AUSENTE";
+  "SIN_REGISTRO" | "PRESENTE" | "EN_CURSO" | "INCOMPLETO" | "AUSENTE";
 export type EstadoVisita = "EN_CURSO" | "CERRADA" | "INCOMPLETA";
 export type EstadoRuta =
   "pendiente" | "en_curso" | "completado" | "incompleto" | "ausente";

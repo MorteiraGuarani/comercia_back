@@ -118,6 +118,31 @@ export function PanelComentarios({
     }
   };
 
+  // Al ponerse a responder, el líder ya leyó lo que le escribieron: se marca solo.
+  const marcarLeidosAlResponder = () => {
+    if (!esLider) return;
+    const pendientes = comentarios.filter(
+      (c) => !c.leidoPorLider && c.usuario.id !== usuario.id,
+    );
+    if (!pendientes.length) return;
+    void Promise.allSettled(
+      pendientes.map((c) => marcarComentarioLeido(c.id)),
+    ).then((resultados) => {
+      // Solo los que la API aceptó (un comentario de otro líder no se marca).
+      const leidos = new Set(
+        pendientes
+          .filter((_, i) => resultados[i].status === "fulfilled")
+          .map((c) => c.id),
+      );
+      if (leidos.size)
+        setComentarios((actuales) =>
+          actuales.map((c) =>
+            leidos.has(c.id) ? { ...c, leidoPorLider: true } : c,
+          ),
+        );
+    });
+  };
+
   if (cargando) {
     return <PantallaCarga visible mensaje="Cargando comentarios de la tarea" />;
   }
@@ -180,6 +205,7 @@ export function PanelComentarios({
       <form onSubmit={handleEnviar} className="space-y-3">
         <textarea
           value={texto}
+          onFocus={marcarLeidosAlResponder}
           onChange={(e) => {
             const nuevo = e.target.value;
             setTexto(nuevo);

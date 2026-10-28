@@ -32,6 +32,7 @@ import { detalleVisita, selectorMarcaciones } from '../utils/detalle-marcacion';
 import {
   asistenciaCampo,
   conEstadoVisita,
+  ausenciasAgenda,
   estadoAgenda,
   resumirPresentismo,
 } from '../utils/estado-jornada';
@@ -172,11 +173,11 @@ export class SupervisionService {
     let incompletosCount = 0;
     let ausentesCount = 0;
     const estadosPresentismo: Record<EstadoPresentismo, number> = {
-      SIN_REGISTRO: 0,
       PRESENTE: 0,
-      TARDE: 0,
+      EN_CURSO: 0,
       INCOMPLETO: 0,
       AUSENTE: 0,
+      SIN_REGISTRO: 0,
     };
     const liderazgo = {
       totalTeamLeaders: 0,
@@ -788,6 +789,16 @@ export class SupervisionService {
           ahora,
           a,
         ),
+        visitas: 0,
+        ausencias: ausenciasAgenda(
+          [],
+          a.horarios.length ? a.horarios : a.local.horarios,
+          ZONA_CAMPO,
+          desde,
+          hasta,
+          ahora,
+          a,
+        ),
         checkin: null,
         checkout: null,
       });
@@ -799,9 +810,13 @@ export class SupervisionService {
       const h = v.local.horarios[0];
       const ventana = h ? `${h.entrada} – ${h.salida}` : '08:00 – 18:00';
       const a = asignaciones.find((a) => a.localId === v.localId);
+      const delLocal = visitas.filter((x) => x.localId === v.localId);
+      const horariosLocal = a?.horarios.length
+        ? a.horarios
+        : (a?.local.horarios ?? []);
       const estado = estadoAgenda(
-        visitas.filter((x) => x.localId === v.localId),
-        a?.horarios.length ? a.horarios : (a?.local.horarios ?? []),
+        delLocal,
+        horariosLocal,
         ZONA_CAMPO,
         desde,
         hasta,
@@ -816,6 +831,16 @@ export class SupervisionService {
         tipo: 'supermercado',
         ventana: existing?.ventana ?? ventana,
         ...estado,
+        visitas: delLocal.length,
+        ausencias: ausenciasAgenda(
+          delLocal,
+          horariosLocal,
+          ZONA_CAMPO,
+          desde,
+          hasta,
+          ahora,
+          a,
+        ),
         checkin: this.formatoHora(v.entrada),
         checkout: this.formatoHora(v.salida),
       });

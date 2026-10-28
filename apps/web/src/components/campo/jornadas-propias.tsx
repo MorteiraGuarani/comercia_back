@@ -9,7 +9,7 @@ import { IconoEntrada, IconoReloj, IconoSalida } from "./ui/iconos-campo";
 
 /**
  * Presentismo de "Tu día": las visitas del período elegido, por día, con
- * entrada, salida y cuánto duró cada una. Las de llegada tarde van en amarillo.
+ * entrada, salida y cuánto duró cada una.
  */
 export function JornadasPropias({
   agenda,
@@ -41,17 +41,10 @@ export function JornadasPropias({
                   </span>
                 </h3>
                 <ul className="min-w-0">
-                  {d.visitas.map((v) => {
-                    // Llegó tarde: se pinta para verlo de un vistazo.
-                    const tarde = v.estadoPresentismo === "TARDE";
-                    return (
+                  {d.visitas.map((v) => (
                       <li
                         key={v.id}
-                        className={
-                          tarde
-                            ? "-mx-1.5 my-1 rounded-lg border border-amber-300 bg-amber-50 px-1.5 py-2 dark:border-amber-800 dark:bg-amber-950/50"
-                            : "border-t border-line py-2 first:border-t-0 first:pt-0 last:pb-0"
-                        }
+                        className="border-t border-line py-2 first:border-t-0 first:pt-0 last:pb-0"
                       >
                         <p className="truncate text-sm font-semibold text-foreground">{v.local}</p>
                         <p className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-muted sm:text-xs">
@@ -75,14 +68,8 @@ export function JornadasPropias({
                                 : "Sin finalizar"}
                           </span>
                         </p>
-                        {tarde ? (
-                          <p className="mt-0.5 text-[11px] font-semibold text-amber-800 dark:text-amber-300">
-                            Llegó tarde
-                          </p>
-                        ) : null}
                       </li>
-                    );
-                  })}
+                  ))}
                 </ul>
               </section>
             );

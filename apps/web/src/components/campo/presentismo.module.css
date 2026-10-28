@@ -50,7 +50,8 @@
 .screen [data-tone='sin_iniciar'] { --tone: var(--tone-pending); }
 .screen [data-tone='SIN_REGISTRO'] { --tone: var(--muted); --swatch: color-mix(in srgb, var(--muted) 45%, var(--surface-soft)); }
 .screen [data-tone='PRESENTE'] { --tone: var(--campo-fresco); }
-.screen [data-tone='TARDE'], .screen [data-tone='INCOMPLETO'] { --tone: var(--campo-alerta); }
+.screen [data-tone='EN_CURSO'] { --tone: var(--tone-active); }
+.screen [data-tone='INCOMPLETO'] { --tone: var(--campo-alerta); }
 .screen [data-tone='AUSENTE'] { --tone: var(--campo-critico); }
 
 /* Resumen del equipo */
@@ -71,6 +72,9 @@
 .counts span { display: inline-flex; align-items: center; gap: .5rem; min-width: 0; font-size: .8125rem; font-weight: 500; white-space: nowrap; }
 .counts span::before { content: ''; flex: none; width: .5rem; height: .5rem; border-radius: 50%; background: var(--swatch, var(--tone)); }
 .counts > [data-tone='SIN_REGISTRO'] b { color: var(--foreground); }
+/* "5/10" y el % en gris: el número sigue siendo lo que se lee primero. */
+.counts b small { margin-left: .0625rem; font-size: .8125rem; font-weight: 600; color: var(--muted); }
+.counts span small { font-size: .75rem; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
 /* Un cero no es una alerta: se muestra apagado para que resalte lo que sí pasó. */
 .counts > [data-vacio] button { border-color: var(--border); background: var(--surface-raised); }
 .counts > [data-vacio] button:hover { border-color: var(--control-border); background: var(--surface-soft); }

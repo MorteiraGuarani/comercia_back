@@ -605,7 +605,7 @@ function AgendaDelDia({
                       ? `En el local desde ${formatoHora(enCurso)}`
                       : ultima
                         ? ultima.salida
-                          ? `Visitado ${formatoHora(ultima.entrada)}–${formatoHora(ultima.salida)} · ${formatoDuracionMinutos((Date.parse(ultima.salida) - Date.parse(ultima.entrada)) / 60_000)}`
+                          ? `Presente ${formatoHora(ultima.entrada)}–${formatoHora(ultima.salida)} · ${formatoDuracionMinutos((Date.parse(ultima.salida) - Date.parse(ultima.entrada)) / 60_000)}`
                           : `Entrada ${formatoHora(ultima.entrada)} · salida — sin finalizar`
                         : ruta && parada && conUbicacion(a.local)
                           ? `Parada ${parada} · a ${formatoDistancia(metrosEntre(ruta.origen, a.local))}`

@@ -21,7 +21,7 @@ export function ResumenRuta({
 }: ResumenRutaProps) {
   const metricas = [
     { etiqueta: "Locales", valor: total, color: TOKENS.ink },
-    { etiqueta: "Visitados", valor: visitadas, color: TOKENS.fresco },
+    { etiqueta: "Presentes", valor: visitadas, color: TOKENS.fresco },
     { etiqueta: "En curso", valor: enCurso, color: TOKENS.frio },
     { etiqueta: "Pendientes", valor: pendientes, color: TOKENS.sub },
   ];

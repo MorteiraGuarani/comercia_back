@@ -18,7 +18,7 @@ import { horaOFechaCorta } from "./fechas";
 const PRIORIDAD_PRESENTISMO: Record<EstadoPresentismo, number> = {
   AUSENTE: 0,
   INCOMPLETO: 1,
-  TARDE: 2,
+  EN_CURSO: 2,
   SIN_REGISTRO: 3,
   PRESENTE: 4,
 };
@@ -33,7 +33,6 @@ export function primerNombre(nombreCompleto: string) {
 export function requiereAtencion(c: ColaboradorResumen) {
   return (
     c.estadoPresentismo === "AUSENTE" ||
-    c.estadoPresentismo === "TARDE" ||
     c.estadoPresentismo === "INCOMPLETO" ||
     c.tareas.obligPendientes > 0
   );
@@ -120,16 +119,11 @@ export function resumenMiDia(agendas: AgendaCampo[]): ResumenMiDia {
   const cuenta = (estado: AgendaCampo["estado"]) =>
     agendas.filter((a) => a.estado === estado).length;
   const estados = agendas.map((a) => a.estadoPresentismo);
-  // Si ya marcó, manda cómo llegó; "ausente" solo si no hubo ninguna entrada.
-  const presentismo: EstadoPresentismo = estados.includes("TARDE")
-    ? "TARDE"
-    : estados.includes("INCOMPLETO")
-      ? "INCOMPLETO"
-      : estados.includes("PRESENTE")
-        ? "PRESENTE"
-        : estados.includes("AUSENTE")
-          ? "AUSENTE"
-          : "SIN_REGISTRO";
+  // Misma prioridad que el supervisor (resumirPresentismo de la API).
+  const presentismo: EstadoPresentismo =
+    (["EN_CURSO", "INCOMPLETO", "AUSENTE", "PRESENTE"] as const).find((e) =>
+      estados.includes(e),
+    ) ?? "SIN_REGISTRO";
   const entradas = agendas
     .flatMap((a) => a.visitas.map((v) => v.entrada))
     .filter(Boolean)
@@ -193,20 +187,6 @@ export function itemsAtenderAhora(
       abre: { tipo: "persona", id: c.id },
     });
   }
-
-  const tarde = equipo.filter((x) => x.estadoPresentismo === "TARDE");
-  if (tarde.length)
-    items.push({
-      clave: "tarde",
-      tono: "warn",
-      icono: "reloj",
-      titulo: `${tarde.length} ${tarde.length === 1 ? "persona llegó" : "personas llegaron"} tarde`,
-      detalle: tarde
-        .map((c) => `${primerNombre(c.nombre)}${c.inicioJornada ? ` ${c.inicioJornada}` : ""}`)
-        .join(" · "),
-      accion: "Ver",
-      abre: { tipo: "indicador", indicador: "presentismo" },
-    });
 
   const oblig = resumen.tareas.obligatoriasPendientes;
   if (oblig > 0) {

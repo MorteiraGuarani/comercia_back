@@ -8,6 +8,9 @@ export interface ParadaRuta {
   ventana: string;
   estado: EstadoRuta;
   estadoPresentismo: EstadoPresentismo;
+  /** Visitas al local en el período y turnos vencidos que quedaron sin visita. */
+  visitas: number;
+  ausencias: number;
   checkin: string | null;
   checkout: string | null;
 }
