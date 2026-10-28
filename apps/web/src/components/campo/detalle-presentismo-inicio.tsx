@@ -5,11 +5,18 @@ import { Paginacion } from "@/components/paginacion";
 import type { ColaboradorResumen, SupervisionResumenData } from "@/types/campo";
 import type { EstadoPresentismo } from "@/types/estado-jornada";
 import { pct } from "@/utils/hoy-en-campo";
-import { ConteosFiltro, LineaJornada, PRESENTISMO_UI, PuntoEstado, enfoqueTablero } from "./ui/tablero-campo";
+import {
+  ConteosFiltro,
+  LineaJornada,
+  ORDEN_PRESENTISMO,
+  PRESENTISMO_UI,
+  PuntoEstado,
+  enfoqueTablero,
+} from "./ui/tablero-campo";
+import { BarraSegmentos } from "./ui/barra-segmentos";
 import { IconoTelefono } from "./ui/iconos-campo";
 
-const ESTADOS = ["PRESENTE", "TARDE", "INCOMPLETO", "AUSENTE"] as const;
-
+/** Presentismo del equipo en Inicio: la misma vista para supervisores de repositores y de impulsadores. */
 export function DetallePresentismoInicio({
   resumen,
   equipo,
@@ -35,27 +42,41 @@ export function DetallePresentismoInicio({
 
   return (
     <div className="min-w-0 space-y-3">
-      <ConteosFiltro
-        etiqueta="Filtrar marcaciones por estado"
-        activo={filtro}
-        onFiltro={(clave) => {
-          setFiltro(ESTADOS.find((e) => e === clave) ?? null);
-          setPagina(1);
-        }}
-        items={ESTADOS.map((estado) => {
-          const cantidad = resumen.presentismo.estados[estado];
-          const porcentaje = pct(cantidad, totalEquipo);
-          const ui = PRESENTISMO_UI[estado];
-          return {
-            clave: estado,
-            etiqueta: ui.etiqueta,
-            valor: cantidad,
-            detalle: `${porcentaje}%`,
-            punto: ui.barra,
-            descripcion: `${ui.etiqueta}: ${porcentaje}%, ${cantidad} de ${totalEquipo} personas. Filtrar marcaciones`,
-          };
-        })}
-      />
+      <div className="space-y-2.5 rounded-xl border border-line bg-surface-raised p-3 sm:p-4">
+        <ConteosFiltro
+          etiqueta="Filtrar marcaciones por estado"
+          activo={filtro}
+          onFiltro={(clave) => {
+            setFiltro(ORDEN_PRESENTISMO.find((e) => e === clave) ?? null);
+            setPagina(1);
+          }}
+          items={ORDEN_PRESENTISMO.map((estado) => {
+            const cantidad = resumen.presentismo.estados[estado];
+            const porcentaje = pct(cantidad, totalEquipo);
+            const ui = PRESENTISMO_UI[estado];
+            return {
+              clave: estado,
+              etiqueta: ui.etiqueta,
+              valor: cantidad,
+              detalle: `${porcentaje}%`,
+              punto: ui.barra,
+              descripcion: `${ui.etiqueta}: ${porcentaje}%, ${cantidad} de ${totalEquipo} personas. Filtrar marcaciones`,
+            };
+          })}
+        />
+        <BarraSegmentos
+          total={totalEquipo}
+          segmentos={ORDEN_PRESENTISMO.map((estado) => ({
+            valor: resumen.presentismo.estados[estado],
+            clase: PRESENTISMO_UI[estado].barra,
+            etiqueta: PRESENTISMO_UI[estado].etiqueta.toLowerCase(),
+          }))}
+        />
+        <p className="text-xs text-muted">
+          Equipo de {totalEquipo}. &quot;Sin entrada&quot; incluye a quien
+          todavía no empezó su horario.
+        </p>
+      </div>
       <section
         aria-label="Marcaciones del equipo"
         className="rounded-xl border border-line bg-surface-raised p-3 sm:p-4"
@@ -92,7 +113,9 @@ export function DetallePresentismoInicio({
                 >
                   {c.nombre}
                 </button>
-                {unDia ? <LineaJornada inicio={c.inicioJornada} fin={c.finJornada} /> : null}
+                {unDia ? (
+                  <LineaJornada inicio={c.inicioJornada} fin={c.finJornada} />
+                ) : null}
                 <PuntoEstado estado={c.estadoPresentismo} />
                 {c.estadoPresentismo === "AUSENTE" &&
                 c.telefono.replace(/[^\d+]/g, "").length >= 6 ? (

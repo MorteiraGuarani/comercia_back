@@ -14,8 +14,6 @@ import {
   BotonActualizarTablero,
   ConteosFiltro,
   FilaAtencion,
-  LineaJornada,
-  PuntoEstado,
   ListaAtencion,
   ORDEN_PRESENTISMO,
   PRESENTISMO_UI,
@@ -338,7 +336,6 @@ export function HoyEnCampo() {
               <DetalleIndicador
                 key={hoja.indicador}
                 indicador={hoja.indicador}
-                presentismoImpulsador={usuario.rol?.equipoCampo?.tipo === "IMPULSADOR"}
                 unDia={rango.desde === rango.hasta}
                 resumen={resumen}
                 equipo={equipo}
@@ -734,11 +731,9 @@ function DetalleIndicador({
   novedades,
   abiertas,
   onAbrir,
-  presentismoImpulsador = false,
   unDia = false,
 }: {
   indicador: IndicadorHoy;
-  presentismoImpulsador?: boolean;
   /** Período de un solo día (hoy, ayer o una fecha): muestra inicio, final y duración de la jornada. */
   unDia?: boolean;
   resumen: SupervisionResumenData;
@@ -754,66 +749,8 @@ function DetalleIndicador({
     items.find((i) => i.clave === filtro)?.etiqueta;
   const limpiar = () => setFiltro(null);
 
-  if (indicador === "presentismo" && presentismoImpulsador) {
-    return <DetallePresentismoInicio resumen={resumen} equipo={equipo} unDia={unDia} onAbrir={(id) => onAbrir({ tipo: "persona", id })} />;
-  }
-
   if (indicador === "presentismo") {
-    const e = resumen.presentismo.estados;
-    const conteos = ORDEN_PRESENTISMO.map((estado) => ({
-      clave: estado,
-      etiqueta: PRESENTISMO_UI[estado].etiqueta,
-      valor: e[estado],
-      detalle: `${pct(e[estado], resumen.presentismo.totalEquipo)}%`,
-      punto: PRESENTISMO_UI[estado].barra,
-    }));
-    const visibles = filtro ? equipo.filter((c) => c.estadoPresentismo === filtro) : equipo;
-    return (
-      <>
-        <div className={`${panel} space-y-2.5`}>
-          <ConteosFiltro etiqueta="Filtrar marcaciones por estado" items={conteos} activo={filtro} onFiltro={setFiltro} />
-          <BarraSegmentos
-            total={resumen.presentismo.totalEquipo}
-            segmentos={ORDEN_PRESENTISMO.map((estado) => ({
-              valor: e[estado],
-              clase: PRESENTISMO_UI[estado].barra,
-              etiqueta: PRESENTISMO_UI[estado].etiqueta.toLowerCase(),
-            }))}
-          />
-          <p className="text-xs text-muted">
-            Equipo de {resumen.presentismo.totalEquipo}. &quot;Sin entrada&quot; incluye a quien todavía no empezó su horario.
-          </p>
-        </div>
-        <div className={panel}>
-          <TituloLista titulo="Marcaciones" filtro={etiquetaDe(conteos)} cantidad={visibles.length} onLimpiar={limpiar} />
-          {visibles.length
-            ? visibles.map((c) => (
-                <FilaPersona
-                  key={c.id}
-                  c={c}
-                  onAbrir={persona(c)}
-                  derecha={
-                    <span className="flex items-center gap-2">
-                      {unDia ? <LineaJornada inicio={c.inicioJornada} fin={c.finJornada} /> : null}
-                      <PuntoEstado estado={c.estadoPresentismo} />
-                    </span>
-                  }
-                >
-                  {c.estadoPresentismo === "AUSENTE" && telefonoValido(c.telefono) ? (
-                    <a
-                      href={hrefTelefono(c.telefono)}
-                      className={`mt-1.5 inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-brand-700 px-3 text-xs font-semibold text-white hover:bg-brand-800 dark:bg-brand-500 dark:text-brand-950 dark:hover:brightness-110 ${enfoque}`}
-                    >
-                      <IconoTelefono className="h-3.5 w-3.5" />
-                      Llamar a {primerNombre(c.nombre)}
-                    </a>
-                  ) : null}
-                </FilaPersona>
-              ))
-            : sinResultados}
-        </div>
-      </>
-    );
+    return <DetallePresentismoInicio resumen={resumen} equipo={equipo} unDia={unDia} onAbrir={(id) => onAbrir({ tipo: "persona", id })} />;
   }
 
   if (indicador === "visitas") {
@@ -837,7 +774,7 @@ function DetalleIndicador({
           </p>
         </div>
         <div className={panel}>
-          <TituloLista titulo="Avance por repositor" filtro={etiquetaDe(conteos)} cantidad={visibles.length} onLimpiar={limpiar} />
+          <TituloLista titulo="Avance por persona" filtro={etiquetaDe(conteos)} cantidad={visibles.length} onLimpiar={limpiar} />
           {visibles.length
             ? visibles.map((c) => (
                 <FilaPersona
@@ -883,7 +820,7 @@ function DetalleIndicador({
           <ConteosFiltro etiqueta="Filtrar tareas por estado" items={conteos} activo={filtro} onFiltro={setFiltro} />
         </div>
         <div className={panel}>
-          <TituloLista titulo="Por repositor" filtro={etiquetaDe(conteos)} cantidad={visibles.length} onLimpiar={limpiar} />
+          <TituloLista titulo="Por persona" filtro={etiquetaDe(conteos)} cantidad={visibles.length} onLimpiar={limpiar} />
           {visibles.length
             ? visibles.map((c) => (
                 <FilaPersona

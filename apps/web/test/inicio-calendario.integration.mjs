@@ -124,6 +124,7 @@ let personaAbierta = null;
 const { DetallePresentismoInicio } = cargar("components/campo/detalle-presentismo-inicio.tsx", {
   react: estadoPresentismo.react, "@/components/paginacion": { Paginacion: stub },
   "@/utils/hoy-en-campo": calculos, "./ui/tablero-campo": ui, "./ui/iconos-campo": { IconoTelefono: stub },
+  "./ui/barra-segmentos": { BarraSegmentos: stub },
 });
 const equipoPresentismo = ["PRESENTE", "TARDE", "INCOMPLETO", "AUSENTE", "SIN_REGISTRO"].map((estado, i) => ({
   id: i + 1, nombre: `Persona ${estado}`, estadoPresentismo: estado, telefono: "+595991188620", inicioJornada: null,
@@ -138,7 +139,7 @@ const renderPresentismo = () => {
 let detallePresentismo = renderPresentismo();
 const expandir = (arbol) => nodos(arbol).flatMap((n) => (n.type === ui.ConteosFiltro ? [n, ...nodos(n.type(n.props))] : [n]));
 const filtrosPresentismo = (arbol) => expandir(arbol).filter((n) => n.type === "button" && "aria-pressed" in n.props);
-assert.equal(filtrosPresentismo(detallePresentismo).length, 4);
+assert.equal(filtrosPresentismo(detallePresentismo).length, 5, "Los cinco estados, incluido Sin entrada");
 assert.ok(filtrosPresentismo(detallePresentismo).every((n) => n.props["aria-label"].includes("20%, 1 de 5")));
 filtrosPresentismo(detallePresentismo)[2].props.onClick();
 detallePresentismo = renderPresentismo();
@@ -173,14 +174,17 @@ const { Indicadores, DetalleIndicador } = cargar("components/campo/hoy-en-campo.
 const propsIndicador = { indicador: "presentismo", resumen, equipo: [], novedades: [], abiertas: 0, onAbrir: stub };
 // Un solo día: inicio, final y duración de la jornada; en un período de varios días, no.
 const conJornada = { ...propsIndicador, equipo: [{ id: 7, nombre: "Ana", estadoPresentismo: "PRESENTE", telefono: "", inicioJornada: "08:05", finJornada: "12:35", ruta: {}, tareas: {} }] };
-const lineas = (props) => nodos(DetalleIndicador(props)).flatMap((n) => [n, ...nodos(n.props?.derecha)]).filter((n) => n.type === ui.LineaJornada);
-assert.equal(lineas({ ...conJornada, unDia: false }).length, 0);
-const linea = lineas({ ...conJornada, unDia: true })[0];
+const lineas = (unDia) => {
+  estadoPresentismo.iniciar();
+  return nodos(DetallePresentismoInicio({ ...conJornada, unDia, resumen: { presentismo: { totalEquipo: 1, estados: { PRESENTE: 1 } } } }))
+    .filter((n) => n.type === ui.LineaJornada);
+};
+assert.equal(lineas(false).length, 0);
+const linea = lineas(true)[0];
 const textoJornada = texto(ui.LineaJornada(linea.props));
 assert.ok(textoJornada.includes("08:05") && textoJornada.includes("12:35"), "Muestra inicio y final de la jornada");
 assert.ok(!textoJornada.includes(" min"), "Sin la duración");
-assert.equal(DetalleIndicador({ ...propsIndicador, presentismoImpulsador: true }).type, DetallePresentismoInicio);
-assert.notEqual(DetalleIndicador(propsIndicador).type, DetallePresentismoInicio, "Conserva la vista de Presentismo de los demás equipos");
+assert.equal(DetalleIndicador(propsIndicador).type, DetallePresentismoInicio, "Misma vista de Presentismo para repositores e impulsadores");
 // Cada KPI del detalle filtra la lista de abajo; tocarlo otra vez muestra todo.
 const colaborador = (id, ruta) => ({ id, nombre: `P${id}`, estadoPresentismo: "PRESENTE", telefono: "", inicioJornada: null, novedadesCount: 0,
   ruta: { total: 2, completadas: 0, enCurso: 0, incompletas: 0, ausentes: 0, pct: 0, ...ruta }, tareas: { total: 0, completadas: 0, obligPendientes: 0, pct: 0 } });
@@ -285,4 +289,4 @@ assert.equal(gestor.valor["gestion-campo"], false);
 assert.ok(gestor.pedidos[0].startsWith("/campo/tareas?"));
 assert.deepEqual((await comprobarRol([modulo("mi-jornada", ["locales"])])).pedidos, [], "No consulta páginas sin permiso");
 
-console.log("OK: calendario, asignaciones, KPI y accesos; Presentismo del impulsador con cuatro filtros, porcentajes y llamada por icono.");
+console.log("OK: calendario, asignaciones, KPI y accesos; Presentismo igual para todo supervisor: cinco filtros, porcentajes y llamada por icono.");
