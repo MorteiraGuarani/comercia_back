@@ -44,6 +44,8 @@ jobs:
         run: npm run test:ucheck --workspace=web
       - name: Validar migración y agendas de campo en PostgreSQL aislado
         run: npm run test:planificacion --workspace=api
+      - name: Validar campos ERP de usuarios, migración y Swagger sin navegador
+        run: npm run test:usuarios --workspace=api && npm run test:usuarios --workspace=web
       - name: Validar catálogo y retiro de seguimiento en PostgreSQL aislado
         run: npm run test:productos --workspace=api
       - name: Validar maestro OITM y migración de precios

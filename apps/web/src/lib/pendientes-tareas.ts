@@ -90,6 +90,11 @@ export async function reintentarPendientes(usuarioId: number) {
   await sincronizarPendientes(usuarioId);
 }
 
+/** Las acciones de una misma tarea se envían en orden: comparten grupo. */
+function grupoAccion(ruta: string) {
+  return ruta.match(/^\/campo\/jornada\/visitas\/\d+\/tareas\/\d+/)?.[0] ?? ruta;
+}
+
 export function sincronizarPendientes(usuarioId: number): Promise<void> {
   const actual = enCurso.get(usuarioId);
   if (actual) return actual;
@@ -101,10 +106,7 @@ export function sincronizarPendientes(usuarioId: number): Promise<void> {
       throw new Error("Ingresá con la cuenta propietaria de estos pendientes");
     const bloqueadas = new Set<string>();
     for (const accion of await listarPendientes(usuarioId)) {
-      const grupo =
-        accion.ruta.match(
-          /^\/campo\/jornada\/visitas\/\d+\/tareas\/\d+/,
-        )?.[0] ?? accion.ruta;
+      const grupo = grupoAccion(accion.ruta);
       if (accion.estado === "REVISAR") {
         bloqueadas.add(grupo);
         continue;
@@ -176,6 +178,10 @@ export async function enviarAccionTarea<T>(
     campos.push({ nombre: "operacionId", valor: id });
   } else json = JSON.stringify({ ...cuerpo, operacionId: id });
   const actuales = await listarPendientes(usuarioId);
+  // Repetir una acción que la API rechazó la reemplaza: ese rechazo ya no aplica.
+  for (const a of actuales)
+    if (a.estado === "REVISAR" && a.ruta === ruta && a.etiqueta === etiqueta)
+      await escribir("acciones", null, a.id);
   if (actuales.length >= 100)
     throw new Error(
       "Tenés 100 acciones pendientes. Sincronizá o revisá antes de agregar más",
@@ -193,13 +199,30 @@ export async function enviarAccionTarea<T>(
   } satisfies AccionTareaPendiente);
   esperandoRespuesta.add(id);
   await sincronizarPendientes(usuarioId).catch(() => undefined);
-  const pendiente = (await listarPendientes(usuarioId)).some(
-    (a) => a.id === id,
-  );
+  const quedan = await listarPendientes(usuarioId);
+  const propia = quedan.find((a) => a.id === id);
   const resultado = resultados.get(id) as T | undefined;
   resultados.delete(id);
   esperandoRespuesta.delete(id);
-  return { pendiente, resultado: resultado ?? null, id };
+  // "Pendiente" es solo falta de señal o servidor caído. Si la API la rechazó, o
+  // la frena una anterior rechazada de la misma tarea, se avisa el motivo real.
+  const frenadaPor =
+    propia?.estado === "PENDIENTE" && navigator.onLine
+      ? quedan.find(
+          (a) =>
+            a.estado === "REVISAR" &&
+            grupoAccion(a.ruta) === grupoAccion(ruta),
+        )
+      : undefined;
+  if (propia && (propia.estado === "REVISAR" || frenadaPor)) {
+    await escribir("acciones", null, id);
+    throw new Error(
+      frenadaPor
+        ? `Primero resolvé «${frenadaPor.etiqueta}», guardada en este dispositivo: ${frenadaPor.error ?? "el servidor la rechazó"}. Podés descartarla en «Revisar acciones».`
+        : (propia.error ?? "El servidor rechazó la acción"),
+    );
+  }
+  return { pendiente: !!propia, resultado: resultado ?? null, id };
 }
 
 export async function guardarBorrador(

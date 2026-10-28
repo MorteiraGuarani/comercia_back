@@ -13,6 +13,7 @@
     "test:ucheck": "node test/ucheck-seguimiento.integration.mjs",
     "test:productos": "node test/productos.integration.mjs",
     "test:clientes": "node test/clientes.integration.mjs",
+    "test:usuarios": "node test/usuarios-erp.integration.mjs",
     "test:inventario": "node test/inventario.integration.mjs",
     "test:organigrama": "node test/organigrama.integration.mjs"
   },

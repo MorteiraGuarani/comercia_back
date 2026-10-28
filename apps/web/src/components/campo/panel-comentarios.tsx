@@ -12,17 +12,21 @@ import { useRef } from "react";
 import type { ComentarioTarea } from "@/types/campo";
 import { mostrarToast } from "@/components/toast/toast-controller";
 import { PantallaCarga } from "@/components/pantalla-carga";
+import { mensajeError } from "@/utils/error";
 
 interface PanelComentariosProps {
   visitaId: number;
   tareaId: number;
   esLider?: boolean;
+  /** Se llama al enviar bien: el modal que lo contiene se cierra. */
+  onEnviado?: () => void;
 }
 
 export function PanelComentarios({
   visitaId,
   tareaId,
   esLider = false,
+  onEnviado,
 }: PanelComentariosProps) {
   const { usuario } = usePanel();
   const borradorListo = useRef(false);
@@ -89,13 +93,15 @@ export function PanelComentarios({
           "exito",
           "Comentario guardado en este dispositivo, pendiente de envío",
         );
+        onEnviado?.();
         return;
       }
       mostrarToast("exito", "Comentario enviado");
+      if (onEnviado) return onEnviado();
       const data = await listarComentarios(visitaId, tareaId);
       setComentarios(data);
-    } catch {
-      mostrarToast("error", "Error al enviar comentario");
+    } catch (e) {
+      mostrarToast("error", mensajeError(e, "Error al enviar comentario"));
     } finally {
       operacionEnCurso.current = false;
       setEnviando(false);

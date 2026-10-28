@@ -9,7 +9,13 @@ import { PanelComentarios } from "./panel-comentarios";
  * Hilo de comentarios de la tarea a la que pertenece un comentario, abierto
  * desde la campana: el repositor comenta y su líder responde ahí mismo.
  */
-export function HiloComentarioTarea({ comentarioId }: { comentarioId: number }) {
+export function HiloComentarioTarea({
+  comentarioId,
+  onEnviado,
+}: {
+  comentarioId: number;
+  onEnviado?: () => void;
+}) {
   const [hilo, setHilo] = useState<{
     visitaId: number;
     tareaId: number;
@@ -51,6 +57,7 @@ export function HiloComentarioTarea({ comentarioId }: { comentarioId: number }) 
       visitaId={hilo.visitaId}
       tareaId={hilo.tareaId}
       esLider={!hilo.esPropia}
+      onEnviado={onEnviado}
     />
   );
 }

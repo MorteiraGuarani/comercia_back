@@ -11,7 +11,12 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import {
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import type { RequestConUsuario } from '../auth/interfaces/request-con-usuario.interface';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import {
@@ -22,6 +27,10 @@ import {
 } from './dto/usuario.dto';
 import { UsuariosService } from './usuarios.service';
 import { ListarSuperioresDto } from './dto/listar-superiores.dto';
+import {
+  PaginaUsuariosRespuestaDto,
+  UsuarioAdminRespuestaDto,
+} from './dto/usuario-respuesta.dto';
 
 @ApiTags('usuarios')
 @Controller('usuarios')
@@ -59,16 +68,29 @@ export class UsuariosController {
   }
 
   @Get()
+  @ApiOkResponse({ type: PaginaUsuariosRespuestaDto })
   listar(@Req() req: RequestConUsuario, @Query() query: ListarUsuariosDto) {
     return this.usuarios.listar(req.usuarioId, query);
   }
 
   @Post()
+  @ApiOperation({
+    summary: 'Crear un usuario',
+    description:
+      'Incluye las referencias ERP opcionales. Los campos ERP vacíos se guardan como null.',
+  })
+  @ApiCreatedResponse({ type: UsuarioAdminRespuestaDto })
   crear(@Req() req: RequestConUsuario, @Body() dto: CrearUsuarioDto) {
     return this.usuarios.crear(req.usuarioId, dto);
   }
 
   @Patch(':id')
+  @ApiOperation({
+    summary: 'Actualizar un usuario',
+    description:
+      'Omitir un campo ERP conserva su valor; null o texto vacío lo borra. Las referencias ERP no cambian roles ni superiores de Comercia.',
+  })
+  @ApiOkResponse({ type: UsuarioAdminRespuestaDto })
   actualizar(
     @Req() req: RequestConUsuario,
     @Param('id', ParseIntPipe) id: number,

@@ -21,6 +21,7 @@ import { puedeAdministrarUsuarios } from '../common/utils/permisos-usuario';
 import type { UsuarioSesion } from './interfaces/usuario-sesion.interface';
 import type { TokenPayload } from './interfaces/token-payload.interface';
 import type { AsignacionUsuario } from './interfaces/asignacion-usuario.interface';
+import type { DatosErpUsuario } from '../usuarios/interfaces/datos-erp-usuario.interface';
 import {
   camposDuplicados,
   esErrorDuplicado,
@@ -35,12 +36,13 @@ export class AuthService {
   ) {}
 
   async crearUsuario(
-    dto: Omit<RegisterDto, 'ruc' | 'celular' | 'celularPais'> & {
-      ruc?: string | null;
-      celular?: string | null;
-      celularPais?: string;
-      legajo?: string | null;
-    },
+    dto: Omit<RegisterDto, 'ruc' | 'celular' | 'celularPais'> &
+      Partial<DatosErpUsuario> & {
+        ruc?: string | null;
+        celular?: string | null;
+        celularPais?: string;
+        legajo?: string | null;
+      },
     asignacion: AsignacionUsuario,
     // Un lote con la contraseña por defecto la hashea una sola vez.
     passwordHashPrevio?: string,
@@ -94,6 +96,12 @@ export class AuthService {
           ruc,
           celular: celularE164,
           legajo: dto.legajo ?? null,
+          ERP_CanalVenta: dto.ERP_CanalVenta ?? null,
+          ERP_Almacen: dto.ERP_Almacen ?? null,
+          ERP_Supervisor: dto.ERP_Supervisor ?? null,
+          ERP_Vendedor: dto.ERP_Vendedor ?? null,
+          ERP_Repositor: dto.ERP_Repositor ?? null,
+          ERP_Impulsador: dto.ERP_Impulsador ?? null,
           passwordHash,
         },
         include: { empresa: true, rol: { include: { equipoCampo: true } } },

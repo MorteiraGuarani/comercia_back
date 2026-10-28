@@ -1,3 +1,33 @@
+import type { CountryCode } from "libphonenumber-js";
+import type { EquipoCampo } from "./rol";
+
+export interface DatosErpUsuario {
+  ERP_CanalVenta: string | null;
+  ERP_Almacen: string | null;
+  ERP_Supervisor: string | null;
+  ERP_Vendedor: number | null;
+  ERP_Repositor: string | null;
+  ERP_Impulsador: string | null;
+}
+
+export type FormularioErpUsuario = { [Campo in keyof DatosErpUsuario]: string };
+
+export interface FormUsuario extends FormularioErpUsuario {
+  nombre: string;
+  apellido: string;
+  correo: string;
+  nombreLogin: string;
+  ruc: string;
+  celularPais: CountryCode;
+  celular: string;
+  legajo: string;
+  password: string;
+  rolId: number | "";
+  superiorId: number | "";
+  esSuperadmin: boolean;
+  isActive: boolean;
+}
+
 // Usuario de la sesión, tal como lo devuelve la API (/auth/me, /auth/login)
 export interface UsuarioSesion {
   id: number;
@@ -20,7 +50,7 @@ export interface UsuarioSesion {
   } | null;
 }
 
-export interface UsuarioAdmin {
+export interface UsuarioAdmin extends DatosErpUsuario {
   id: number;
   nombre: string;
   apellido: string;
@@ -49,4 +79,3 @@ export interface UsuarioLocalAsignacion {
   fechaDesde: string;
   fechaHasta: string | null;
 }
-import type { EquipoCampo } from "./rol";

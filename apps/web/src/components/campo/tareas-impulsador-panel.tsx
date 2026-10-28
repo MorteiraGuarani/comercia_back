@@ -715,6 +715,7 @@ export function TareasImpulsadorPanel({
           <PanelComentarios
             visitaId={comentarioModal.visitaId}
             tareaId={comentarioModal.tareaId}
+            onEnviado={() => setComentarioModal(null)}
           />
         </Modal>
       )}

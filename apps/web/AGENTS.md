@@ -159,8 +159,11 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - **Al terminar bien** (guardar, enviar, finalizar) el modal se cierra solo y el
   resultado se avisa con `mostrarToast`: verde (`exito`) si salió bien, amarillo
   (`alerta`) si quedó pendiente o falta algo del usuario, rojo (`error`) si falló.
-  Si falla, el modal queda abierto con el motivo. Excepción: los hilos de
-  conversación (comentarios, respuestas de novedades) siguen abiertos al enviar.
+  Si falla, el modal queda abierto con el motivo. Enviar un comentario de
+  tarea también cierra su modal (`onEnviado` de `PanelComentarios`). Excepción:
+  las respuestas en el hilo de una novedad siguen abiertas al enviar.
+- Un modal con varios pendientes (las tareas del local) queda abierto mientras
+  falten y se cierra al finalizar el último.
 - Las acciones de un toque que no necesitan datos (Iniciar/Finalizar visita)
   no abren modal: se ejecutan directo con `PantallaCarga` y avisan con toast.
   Los toasts se cierran solos a los 7 segundos.

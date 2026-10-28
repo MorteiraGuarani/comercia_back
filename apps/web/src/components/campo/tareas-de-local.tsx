@@ -11,6 +11,8 @@ import { colorFinalizar, errorBox } from "@/components/ui";
 import { TablaCampo } from "./tabla-campo";
 import { SubidorFotos } from "./subidor-fotos";
 import { PanelComentarios } from "./panel-comentarios";
+import { PendientesTareas } from "./pendientes-tareas";
+import { mensajeError } from "@/utils/error";
 import type { AgendaCampo, TareaJornadaCampo, VisitaCampo } from "@/types/campo";
 
 const btnTarea =
@@ -40,32 +42,51 @@ export function TareasDeLocal({
   const op = useOperacionCampo();
   const [fotos, setFotos] = useState<TareaJornadaCampo | null>(null);
   const [comentarios, setComentarios] = useState<TareaJornadaCampo | null>(null);
+  // Finalizadas en este modal: se ven terminadas aunque sigan en la cola sin señal.
+  const [finalizadas, setFinalizadas] = useState<number[]>([]);
   const visita = abierta?.asignacionId === agenda.id ? abierta : null;
   const hecha = (t: TareaJornadaCampo) =>
     visita
-      ? t.visitasCompletadas.includes(visita.id)
+      ? finalizadas.includes(t.id) || t.visitasCompletadas.includes(visita.id)
       : t.visitasCompletadas.length > 0;
 
   // Misma cola que usaba Mis tareas: sin señal queda guardado y se envía después.
-  // Al finalizar una tarea el modal se cierra solo: se vuelve directo al local.
+  // El modal sigue abierto mientras queden tareas; al finalizar la última se cierra.
   function terminar(t: TareaJornadaCampo) {
     if (!visita) return;
+    // Las de otras páginas de la lista se cuentan como pendientes: así no se cierra antes de tiempo.
+    const quedan =
+      lista.items.filter((x) => x.id !== t.id && !hecha(x)).length +
+      Math.max(0, (lista.datos?.total ?? 0) - lista.items.length);
     void op
       .ejecutar("Finalizando tarea", async () => {
         const r = await enviarAccionTarea(
           usuario.id,
           `/campo/jornada/visitas/${visita.id}/tareas/${t.id}`,
           "Terminar tarea",
-        );
+        ).catch((e: unknown) => {
+          mostrarToast("error", mensajeError(e, "No se pudo finalizar la tarea."), "No se finalizó la tarea");
+          throw e;
+        });
         if (r.pendiente)
           mostrarToast(
             "alerta",
             "Guardado en el dispositivo: la tarea se confirma cuando vuelva la conexión.",
           );
-        else mostrarToast("exito", `Finalizaste «${t.nombre}».`, "Tarea finalizada");
+        else
+          mostrarToast(
+            "exito",
+            quedan
+              ? `Finalizaste «${t.nombre}». ${quedan === 1 ? "Queda 1 tarea" : `Quedan ${quedan} tareas`} por finalizar.`
+              : "Finalizaste todas las tareas del local.",
+            "Tarea finalizada",
+          );
       })
       .then((ok) => {
-        if (ok) cerrar();
+        if (!ok) return;
+        if (!quedan) return cerrar();
+        setFinalizadas((f) => [...f, t.id]);
+        lista.refrescar();
       });
   }
 
@@ -109,6 +130,11 @@ export function TareasDeLocal({
       ancho="lg"
       hojaMovil
     >
+      {visita ? (
+        <div className="mb-3">
+          <PendientesTareas onSincronizar={lista.refrescar} />
+        </div>
+      ) : null}
       <p className="mb-3 text-xs text-muted sm:mb-4 sm:text-sm">
         {visita
           ? "Cargá las fotos que pida cada tarea, dejá comentarios y terminala."
@@ -198,7 +224,11 @@ export function TareasDeLocal({
           onCerrar={() => setComentarios(null)}
           ancho="md"
         >
-          <PanelComentarios visitaId={visita.id} tareaId={comentarios.id} />
+          <PanelComentarios
+            visitaId={visita.id}
+            tareaId={comentarios.id}
+            onEnviado={() => setComentarios(null)}
+          />
         </Modal>
       ) : null}
     </Modal>

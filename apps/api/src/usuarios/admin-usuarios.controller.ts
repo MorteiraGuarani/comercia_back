@@ -15,6 +15,7 @@ import {
   ApiBody,
   ApiExtraModels,
   ApiOperation,
+  ApiOkResponse,
   ApiResponse,
   ApiTags,
   getSchemaPath,
@@ -69,9 +70,20 @@ const RESUMEN_LOTE = {
 };
 import { UsuariosService } from './usuarios.service';
 import { ListarSuperioresDto } from './dto/listar-superiores.dto';
+import {
+  LoteUsuariosRespuestaDto,
+  PaginaUsuariosRespuestaDto,
+  UsuarioAdminRespuestaDto,
+} from './dto/usuario-respuesta.dto';
 
 @ApiTags('administración')
-@ApiExtraModels(CrearUsuarioDto, ActualizarUsuarioLoteDto, DesactivarUsuarioLoteDto)
+@ApiExtraModels(
+  CrearUsuarioDto,
+  ActualizarUsuarioLoteDto,
+  DesactivarUsuarioLoteDto,
+  UsuarioAdminRespuestaDto,
+  LoteUsuariosRespuestaDto,
+)
 @Controller('admin/usuarios')
 @UseGuards(JwtAuthGuard, SuperadminGuard)
 export class AdminUsuariosController {
@@ -107,6 +119,7 @@ export class AdminUsuariosController {
   }
 
   @Get()
+  @ApiOkResponse({ type: PaginaUsuariosRespuestaDto })
   listar(@Req() req: RequestConUsuario, @Query() query: ListarUsuariosDto) {
     return this.usuarios.listar(req.usuarioId, query);
   }
@@ -117,7 +130,16 @@ export class AdminUsuariosController {
     description: `Todos los campos son opcionales. Lo que falta se completa así: nombreLogin sale del correo (lo anterior a la @) o se genera (usuario-xxxxxxxx); correo, \`<nombreLogin>@sin-correo.invalid\`; nombre, el nombreLogin; apellido y datos personales, vacíos; contraseña, configurada internamente; celularPais, PY; empresa, la del superadmin; sin rol ni superior. Un objeto devuelve el usuario creado (y 400/409 si falla). Un arreglo (hasta ${MAX_USUARIOS_POR_LOTE}) devuelve el resumen con los errores al final.`,
   })
   @ApiBody({ schema: unoOLote(CrearUsuarioDto) })
-  @ApiResponse({ status: 201, ...RESUMEN_LOTE })
+  @ApiResponse({
+    status: 201,
+    description: RESUMEN_LOTE.description,
+    schema: {
+      oneOf: [
+        { $ref: getSchemaPath(UsuarioAdminRespuestaDto) },
+        { $ref: getSchemaPath(LoteUsuariosRespuestaDto) },
+      ],
+    },
+  })
   async crear(
     @Req() req: RequestConUsuario,
     @Body(new LoteUsuariosPipe(CrearUsuarioDto))
@@ -135,7 +157,10 @@ export class AdminUsuariosController {
     description: `Arreglo (hasta ${MAX_USUARIOS_POR_LOTE}) de objetos con el id del usuario y solo los campos a cambiar; todos opcionales salvo id. Devuelve el resumen con los errores al final.`,
   })
   @ApiBody({ schema: unoOLote(ActualizarUsuarioLoteDto) })
-  @ApiResponse({ status: 200, ...RESUMEN_LOTE })
+  @ApiOkResponse({
+    description: RESUMEN_LOTE.description,
+    type: LoteUsuariosRespuestaDto,
+  })
   actualizarLote(
     @Req() req: RequestConUsuario,
     @Body(new LoteUsuariosPipe(ActualizarUsuarioLoteDto))
@@ -160,6 +185,12 @@ export class AdminUsuariosController {
   }
 
   @Patch(':id')
+  @ApiOperation({
+    summary: 'Actualizar un usuario',
+    description:
+      'Admite las referencias ERP opcionales. Omitir conserva; null o texto vacío borra el valor.',
+  })
+  @ApiOkResponse({ type: UsuarioAdminRespuestaDto })
   actualizar(
     @Req() req: RequestConUsuario,
     @Param('id', ParseIntPipe) id: number,

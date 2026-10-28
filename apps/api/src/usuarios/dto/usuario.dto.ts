@@ -16,6 +16,7 @@ import {
 } from 'class-validator';
 import { MAX_INT4 } from '../../common/utils/numeros';
 import { lowerTrimString, trimString } from '../../common/utils/transforms';
+import { DatosErpUsuarioDto } from './datos-erp-usuario.dto';
 
 // Texto libre opcional: vacío se guarda como null.
 const textoOpcional = ({ value }: { value: unknown }) =>
@@ -53,7 +54,7 @@ export class AsignarUsuarioLocalDto {
 
 // Alta: todos los campos son opcionales; el servicio completa lo que falte
 // (usuario desde el correo, contraseña por defecto, etc.).
-export class CrearUsuarioDto {
+export class CrearUsuarioDto extends DatosErpUsuarioDto {
   @IsOptional()
   @IsString()
   @Transform(trimString)
@@ -136,7 +137,7 @@ export class CrearUsuarioDto {
   legajo?: string | null;
 }
 
-export class ActualizarUsuarioDto {
+export class ActualizarUsuarioDto extends DatosErpUsuarioDto {
   @ValidateIf((_objeto, valor: unknown) => valor !== undefined)
   @Transform(lowerTrimString)
   @IsEmail({}, { message: 'el correo no tiene un formato válido' })

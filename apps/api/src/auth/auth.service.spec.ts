@@ -84,3 +84,64 @@ describe('AuthService', () => {
     expect(jwt.sign).not.toHaveBeenCalled();
   });
 });
+
+describe('Alta de usuario con referencias ERP', () => {
+  const erp = {
+    ERP_CanalVenta: 'MAYORISTA',
+    ERP_Almacen: 'ALM01',
+    ERP_Supervisor: 'SUP01',
+    ERP_Vendedor: 0,
+    ERP_Repositor: 'REP01',
+    ERP_Impulsador: 'IMP01',
+  };
+
+  it.each([erp, undefined])(
+    'persiste las referencias ERP opcionales sin agregarlas a la sesión',
+    async (campos) => {
+      const prisma = {
+        empresa: { findUnique: jest.fn().mockResolvedValue({ id: 1 }) },
+        usuario: {
+          findFirst: jest.fn().mockResolvedValue(null),
+          create: jest.fn(({ data }: { data: Record<string, unknown> }) =>
+            Promise.resolve({
+              ...data,
+              id: 7,
+              fotoPerfil: null,
+              empresa: { id: 1, nombre: 'Empresa' },
+              rol: null,
+            }),
+          ),
+        },
+      };
+      const service = new AuthService(
+        prisma as unknown as PrismaService,
+        {} as JwtService,
+        {} as ConfigService,
+      );
+      const sesion = await service.crearUsuario(
+        {
+          nombre: 'Ana',
+          apellido: 'Rojas',
+          correo: 'ana@example.com',
+          nombreLogin: 'ana',
+          empresaId: 1,
+          password: 'password123',
+          ...campos,
+        },
+        { rolId: null },
+        'hash-de-prueba',
+      );
+      const esperados = Object.fromEntries(
+        Object.keys(erp).map((campo) => [
+          campo,
+          campos?.[campo as keyof typeof erp] ?? null,
+        ]),
+      );
+      expect(prisma.usuario.create.mock.calls[0][0].data).toMatchObject(
+        esperados,
+      );
+      expect(sesion).not.toHaveProperty('ERP_Vendedor');
+      expect(sesion).not.toHaveProperty('passwordHash');
+    },
+  );
+});

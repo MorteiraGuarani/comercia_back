@@ -461,6 +461,12 @@ model Usuario {
   ruc                     String?                   @unique
   celular                 String
   legajo                  String?                   @db.VarChar(64)
+  ERP_CanalVenta          String?                   @db.VarChar(50)
+  ERP_Almacen             String?                   @db.VarChar(8)
+  ERP_Supervisor          String?                   @db.VarChar(30)
+  ERP_Vendedor            Int?
+  ERP_Repositor           String?                   @db.VarChar(50)
+  ERP_Impulsador          String?                   @db.VarChar(50)
   /// Foto de perfil: ruta relativa a UPLOADS_DIR y su tipo, la sube el propio usuario.
   fotoPerfil              String?                   @map("foto_perfil") @db.VarChar(255)
   fotoPerfilMime          String?                   @map("foto_perfil_mime") @db.VarChar(40)

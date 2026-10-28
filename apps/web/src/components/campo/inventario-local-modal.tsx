@@ -317,9 +317,19 @@ export function InventarioLocalModal({
       await guardarCambios(usuarioId, localId, [...nuevos, ...cambios]);
       setEdiciones(pendientes);
       if (navigator.onLine) await enviarPendientes(usuarioId);
-      const quedan = (await listarPendientes(usuarioId).catch(() => [])).some(
+      const delLocal = (await listarPendientes(usuarioId).catch(() => [])).filter(
         (p) => p.localId === localId,
       );
+      const rechazado = delLocal.find((p) => p.estado === "REVISAR");
+      if (rechazado) {
+        mostrarToast(
+          "error",
+          `${rechazado.error ?? "El servidor rechazó el cambio"}. Revisalo en los cambios pendientes del local.`,
+          "No se guardó el inventario",
+        );
+        return;
+      }
+      const quedan = delLocal.length > 0;
       const faltan = Object.keys(pendientes).length;
       mostrarToast(
         quedan || faltan ? "alerta" : "exito",

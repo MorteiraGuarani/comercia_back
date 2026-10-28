@@ -32,7 +32,16 @@ describe('UsuariosService - permiso de superadmin', () => {
     prisma as unknown as PrismaService,
     auth as unknown as AuthService,
   );
+  const erp = {
+    ERP_CanalVenta: 'MAYORISTA',
+    ERP_Almacen: 'ALM01',
+    ERP_Supervisor: 'SUP01',
+    ERP_Vendedor: 0,
+    ERP_Repositor: 'REP01',
+    ERP_Impulsador: 'IMP01',
+  };
   const dto = {
+    ...erp,
     nombre: 'Ana',
     apellido: 'Rojas',
     correo: 'ana@example.com',
@@ -62,6 +71,7 @@ describe('UsuariosService - permiso de superadmin', () => {
       })
       .mockResolvedValueOnce({
         id: 2,
+        ...erp,
         nombre: 'Ana',
         apellido: 'Rojas',
         correo: 'ana@example.com',
@@ -79,11 +89,12 @@ describe('UsuariosService - permiso de superadmin', () => {
     auth.crearUsuario.mockResolvedValue({ id: 2 });
 
     await expect(service.crear(1, dto)).resolves.toMatchObject({
+      ...erp,
       id: 2,
       esSuperadmin: true,
     });
     expect(auth.crearUsuario).toHaveBeenCalledWith(
-      expect.objectContaining({ empresaId: 20 }),
+      expect.objectContaining({ empresaId: 20, ...erp }),
       {
         rolId: 6,
         superiorId: null,
@@ -196,6 +207,7 @@ describe('UsuariosService - permiso de superadmin', () => {
     prisma.rol.findUnique.mockResolvedValue({ id: 6, empresaId: 20 });
     prisma.usuario.findFirst.mockResolvedValue(null);
     prisma.usuario.update.mockResolvedValue({
+      ...erp,
       id: 2,
       nombre: 'Ana',
       apellido: 'Rojas',
@@ -228,9 +240,32 @@ describe('UsuariosService - permiso de superadmin', () => {
     });
   });
 
+  it('guarda y devuelve las seis referencias ERP del ABM', async () => {
+    prepararCambioCorreo();
+    await expect(service.actualizar(1, 2, erp)).resolves.toMatchObject(erp);
+    expect(prisma.usuario.update.mock.calls[0][0]).toMatchObject({ data: erp });
+    expect(prisma.identidadUcheck.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it('permite borrar una referencia ERP, mantiene el vendedor cero y omite las referencias sin editar', async () => {
+    prepararCambioCorreo();
+    await service.actualizar(1, 2, { ERP_Almacen: null, ERP_Vendedor: 0 });
+    expect(prisma.usuario.update.mock.calls[0][0]).toMatchObject({
+      data: {
+        ERP_Almacen: null,
+        ERP_Vendedor: 0,
+        ERP_CanalVenta: undefined,
+        ERP_Supervisor: undefined,
+      },
+    });
+  });
+
   it('conserva el vínculo con Ucheck si el correo no cambia', async () => {
     prepararCambioCorreo();
-    await service.actualizar(1, 2, { correo: 'ANA@example.com', nombre: 'Ana' });
+    await service.actualizar(1, 2, {
+      correo: 'ANA@example.com',
+      nombre: 'Ana',
+    });
     expect(prisma.identidadUcheck.deleteMany).not.toHaveBeenCalled();
   });
 
@@ -315,6 +350,7 @@ describe('UsuariosService - alta en lote', () => {
       ruc: null,
       celular: '',
       legajo: null,
+      ERP_Almacen: 'ALM02',
       esSuperadmin: false,
       isActive: true,
       createdAt: new Date('2026-10-23T12:00:00.000Z'),
@@ -326,7 +362,13 @@ describe('UsuariosService - alta en lote', () => {
       usuario: {
         findUnique: jest.fn(({ where }: { where: { id: number } }) =>
           where.id === 1
-            ? { id: 1, empresaId: 20, esSuperadmin: true, isActive: true, rol: null }
+            ? {
+                id: 1,
+                empresaId: 20,
+                esSuperadmin: true,
+                isActive: true,
+                rol: null,
+              }
             : creado,
         ),
       },
@@ -345,7 +387,7 @@ describe('UsuariosService - alta en lote', () => {
     );
 
     const r = await service.crearLote(1, [
-      { dto: { correo: 'juan.perez@x.com' } },
+      { dto: { correo: 'juan.perez@x.com', ERP_Almacen: 'ALM02' } },
       { dto: { nombreLogin: 'juan.perez' } },
       { error: 'el correo no tiene un formato válido' },
     ]);
@@ -354,18 +396,18 @@ describe('UsuariosService - alta en lote', () => {
       total: 3,
       exitosos: 1,
       fallidos: 2,
-      resultados: [{ id: 2, ruc: null }],
+      resultados: [{ id: 2, ruc: null, ERP_Almacen: 'ALM02' }],
       errores: [
-        { indice: 1, usuario: 'juan.perez', error: 'Ese nombre de usuario ya está en uso' },
+        {
+          indice: 1,
+          usuario: 'juan.perez',
+          error: 'Ese nombre de usuario ya está en uso',
+        },
         { indice: 2, error: 'el correo no tiene un formato válido' },
       ],
     });
-    const [[primero, asignacion, hash], [segundo, , hash2]] =
-      auth.crearUsuario.mock.calls as [
-        Record<string, unknown>,
-        unknown,
-        string,
-      ][];
+    const [[primero, asignacion, hash], [segundo, , hash2]] = auth.crearUsuario
+      .mock.calls as [Record<string, unknown>, unknown, string][];
     expect(primero).toMatchObject({
       empresaId: 20,
       nombreLogin: 'juan.perez',
@@ -373,8 +415,13 @@ describe('UsuariosService - alta en lote', () => {
       nombre: 'juan.perez',
       apellido: '',
       password: '12345678',
+      ERP_Almacen: 'ALM02',
     });
-    expect(asignacion).toEqual({ rolId: null, superiorId: undefined, esSuperadmin: undefined });
+    expect(asignacion).toEqual({
+      rolId: null,
+      superiorId: undefined,
+      esSuperadmin: undefined,
+    });
     expect(segundo.correo).toBe('juan.perez@sin-correo.invalid');
     // La contraseña por defecto se hashea una sola vez por lote.
     expect(hash).toMatch(/^scrypt\$/);

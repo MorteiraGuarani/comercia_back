@@ -24,6 +24,7 @@
     "test:catalogo-v2": "node test/catalogo-v2-migration.integration.mjs && node test/swagger.integration.mjs",
     "test:socios": "node test/socios-negocio-migration.integration.mjs && node test/canales-plurales-migration.integration.mjs && node test/socios-negocio-http.integration.mjs",
     "test:swagger": "node test/swagger.integration.mjs",
+    "test:usuarios": "node test/usuarios-erp.integration.mjs",
     "test:http-body": "node test/http-body.integration.mjs",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",

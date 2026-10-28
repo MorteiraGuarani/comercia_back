@@ -63,6 +63,12 @@ const SELECT_USUARIO_ADMIN = {
   ruc: true,
   celular: true,
   legajo: true,
+  ERP_CanalVenta: true,
+  ERP_Almacen: true,
+  ERP_Supervisor: true,
+  ERP_Vendedor: true,
+  ERP_Repositor: true,
+  ERP_Impulsador: true,
   esSuperadmin: true,
   isActive: true,
   createdAt: true,
@@ -80,6 +86,12 @@ type UsuarioFila = {
   ruc: string | null;
   celular: string;
   legajo: string | null;
+  ERP_CanalVenta: string | null;
+  ERP_Almacen: string | null;
+  ERP_Supervisor: string | null;
+  ERP_Vendedor: number | null;
+  ERP_Repositor: string | null;
+  ERP_Impulsador: string | null;
   esSuperadmin: boolean;
   isActive: boolean;
   createdAt: Date;
@@ -104,6 +116,12 @@ function aUsuarioDto(usuario: UsuarioFila): UsuarioAdminDto {
     ruc: usuario.ruc,
     celular: usuario.celular,
     legajo: usuario.legajo,
+    ERP_CanalVenta: usuario.ERP_CanalVenta,
+    ERP_Almacen: usuario.ERP_Almacen,
+    ERP_Supervisor: usuario.ERP_Supervisor,
+    ERP_Vendedor: usuario.ERP_Vendedor,
+    ERP_Repositor: usuario.ERP_Repositor,
+    ERP_Impulsador: usuario.ERP_Impulsador,
     empresa: usuario.empresa,
     rol: usuario.rol,
     superior: usuario.superior
@@ -173,7 +191,7 @@ export class UsuariosService {
     const where: Prisma.UsuarioWhereInput = {
       empresaId,
       ...(actual.esSuperadmin ? {} : { esSuperadmin: false }),
-      AND: filtrosBusquedaUsuario(query.buscar),
+      AND: filtrosBusquedaUsuario(query.buscar, true),
     };
     const { skip, take, page, limit } = rangoPaginacion(query);
     const [total, usuarios] = await Promise.all([
@@ -654,6 +672,12 @@ export class UsuariosService {
           ruc,
           celular,
           legajo: dto.legajo,
+          ERP_CanalVenta: dto.ERP_CanalVenta,
+          ERP_Almacen: dto.ERP_Almacen,
+          ERP_Supervisor: dto.ERP_Supervisor,
+          ERP_Vendedor: dto.ERP_Vendedor,
+          ERP_Repositor: dto.ERP_Repositor,
+          ERP_Impulsador: dto.ERP_Impulsador,
           rolId: dto.rolId,
           superiorId: dto.superiorId,
           isActive: dto.isActive,

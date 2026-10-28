@@ -1,4 +1,6 @@
-export interface UsuarioAdminDto {
+import type { DatosErpUsuario } from './datos-erp-usuario.interface';
+
+export interface UsuarioAdminDto extends DatosErpUsuario {
   id: number;
   nombre: string;
   apellido: string;

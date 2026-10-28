@@ -15,6 +15,7 @@ const indexedDB = new IDBFactory();
 const navigator = { onLine: false };
 let usuarioActual = 8;
 let rechazar = null;
+let motivo = "Visita cerrada";
 let perderRespuesta = false;
 const recibidas = new Map();
 const intentos = [];
@@ -23,7 +24,7 @@ async function apiFetch(ruta, opciones) {
   const id = opciones.body instanceof FormData
     ? opciones.body.get("operacionId") : JSON.parse(opciones.body).operacionId;
   intentos.push(id);
-  if (ruta === rechazar) throw new ApiError(403, "Visita cerrada");
+  if (ruta === rechazar) throw new ApiError(403, motivo);
   recibidas.set(id, ruta);
   if (perderRespuesta) { perderRespuesta = false; throw new ApiError(0, "Sin respuesta"); }
   return { ok: true };
@@ -33,7 +34,7 @@ function cargarModulo() {
   vm.runInNewContext(js, {
     module: modulo, exports: modulo.exports,
     require: () => ({ apiFetch, ApiError }), indexedDB, navigator,
-    window: new EventTarget(), Event, Blob, File, FormData, crypto,
+    window: new EventTarget(), Event, Blob, File, FormData, crypto, Error,
     // Acciones sucesivas con el mismo reloj conservan el orden de insercion.
     Date: class extends Date { static now() { return 1000; } },
   });
@@ -84,4 +85,23 @@ assert.equal(recibidas.has(otra.id), true, "La revision bloquea solo la tarea af
 rechazar = null;
 await lib.reintentarPendientes(8);
 assert.equal((await lib.listarPendientes(8)).length, 0);
-console.log("OK: persistencia de fotos y borradores, orden, aislamiento de cuentas y reintentos sin falsa confirmacion.");
+// Con señal, un rechazo de la API muestra su motivo: no queda "guardado en el dispositivo".
+rechazar = ruta;
+motivo = "Debes subir foto antes y después para completar esta tarea";
+await assert.rejects(lib.enviarAccionTarea(8, ruta, "Terminar tarea"), /Debes subir foto/);
+assert.equal((await lib.listarPendientes(8)).length, 0, "El rechazo no queda en la cola");
+// Una acción frenada por otra rechazada de la misma tarea también avisa el motivo.
+navigator.onLine = false;
+await lib.enviarAccionTarea(8, ruta + "/comentarios", "Comentario malo", { comentario: "x" });
+navigator.onLine = true;
+rechazar = ruta + "/comentarios";
+motivo = "Visita cerrada";
+await lib.sincronizarPendientes(8);
+rechazar = null;
+await assert.rejects(lib.enviarAccionTarea(8, ruta, "Terminar tarea"), /Primero resolvé «Comentario malo».*Visita cerrada/);
+assert.deepEqual(Array.from(await lib.listarPendientes(8), (a) => a.estado), ["REVISAR"]);
+// Repetir la acción rechazada la reemplaza y se envía.
+const repetida = await lib.enviarAccionTarea(8, ruta + "/comentarios", "Comentario malo", { comentario: "x" });
+assert.equal(repetida.pendiente, false);
+assert.equal((await lib.listarPendientes(8)).length, 0);
+console.log("OK: persistencia de fotos y borradores, orden, aislamiento de cuentas, reintentos sin falsa confirmacion y rechazos con su motivo.");

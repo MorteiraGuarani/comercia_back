@@ -653,7 +653,10 @@ function PanelNotificaciones({
               id={referenciaSeleccionada.id}
             />
           ) : referenciaSeleccionada.tipo === "comentario" ? (
-            <HiloComentarioTarea comentarioId={referenciaSeleccionada.id} />
+            <HiloComentarioTarea
+              comentarioId={referenciaSeleccionada.id}
+              onEnviado={onCerrar}
+            />
           ) : referenciaSeleccionada.tipo === "novedad" ? (
             <HiloNovedad
               id={referenciaSeleccionada.id}

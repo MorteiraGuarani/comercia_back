@@ -17,6 +17,7 @@ import { BrandMark } from "@/components/auth-shell";
 import { BotonTema } from "@/components/boton-tema";
 import { BadgeNotificaciones } from "@/components/campo/badge-notificaciones";
 import { SincronizadorInventario } from "@/components/campo/sincronizador-inventario";
+import { SincronizadorTareas } from "@/components/campo/sincronizador-tareas";
 import { EmisorUbicacion } from "@/components/campo/emisor-ubicacion";
 import { PerfilModal } from "@/components/perfil/perfil-modal";
 import { urlFotoPerfil } from "@/lib/api-perfil";
@@ -394,6 +395,9 @@ export default function PanelLayout({
           <BotonSubir />
           {tieneInventario ? (
             <SincronizadorInventario usuarioId={usuario.id} />
+          ) : null}
+          {usuario.rol?.equipoCampo && !usuario.esSuperadmin ? (
+            <SincronizadorTareas usuarioId={usuario.id} />
           ) : null}
           {tieneAccesoUbicaciones &&
           usuario.rol?.equipoCampo?.activo &&

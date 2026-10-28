@@ -12,6 +12,7 @@ import { BotonEditar } from "@/components/boton-editar";
 import type { RespuestaPaginada } from "@/types/paginacion";
 import type {
   MetaUsuarios,
+  FormUsuario,
   UsuarioAdmin,
   UsuarioLocalAsignacion,
 } from "@/types/usuario";
@@ -27,28 +28,15 @@ import {
   labelBase,
 } from "@/components/ui";
 import { confirmar } from "@/components/confirmacion/confirmacion-controller";
-
-interface FormUsuario {
-  nombre: string;
-  apellido: string;
-  correo: string;
-  nombreLogin: string;
-  ruc: string;
-  celularPais: CountryCode;
-  celular: string;
-  legajo: string;
-  password: string;
-  rolId: number | "";
-  superiorId: number | "";
-  esSuperadmin: boolean;
-  isActive: boolean;
-}
+import { datosErpFormulario, formularioErpUsuario } from "@/utils/usuario";
+import { CamposErpUsuario, DetalleErpUsuario } from "./datos-erp-usuario";
 
 interface UsuariosPanelProps {
   soloSuperadmin?: boolean;
 }
 
 const FORM_INICIAL: FormUsuario = {
+  ...formularioErpUsuario(),
   nombre: "",
   apellido: "",
   correo: "",
@@ -121,6 +109,7 @@ function ListaUsuariosMovil({
               </strong>
             </p>
           </div>
+          <DetalleErpUsuario usuario={usuario} />
           {usuario.esSuperadmin ? (
             <p className="mt-3 rounded-lg bg-surface-soft px-3 py-2 text-center text-xs font-medium text-muted">
               Cuenta superadmin protegida
@@ -228,6 +217,7 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
     const celular = partesCelular(usuario.celular);
     setForm({
       ...FORM_INICIAL,
+      ...formularioErpUsuario(usuario),
       nombre: usuario.nombre,
       apellido: usuario.apellido,
       nombreLogin: usuario.nombreLogin,
@@ -250,12 +240,14 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
     setGuardando(true);
     setError(null);
     try {
+      const datosErp = datosErpFormulario(form);
       let creado: UsuarioAdmin | null = null;
       if (editando === "nuevo") {
         creado = await apiFetch<UsuarioAdmin>(base, {
           method: "POST",
           body: JSON.stringify({
             empresaId,
+            ...datosErp,
             nombre: form.nombre.trim(),
             apellido: form.apellido.trim(),
             correo: form.correo.trim().toLowerCase(),
@@ -281,6 +273,7 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
         await apiFetch(`${base}/${editando.id}`, {
           method: "PATCH",
           body: JSON.stringify({
+            ...datosErp,
             nombre: form.nombre.trim(),
             apellido: form.apellido.trim(),
             nombreLogin: form.nombreLogin.trim().toLowerCase(),
@@ -301,7 +294,7 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
       if (creado && !creado.esSuperadmin) setLocalesUsuario(creado);
     } catch (e) {
       setError(
-        e instanceof ApiError ? e.message : "No se pudo guardar el usuario",
+        e instanceof Error ? e.message : "No se pudo guardar el usuario",
       );
     } finally {
       setGuardando(false);
@@ -385,7 +378,7 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
             setTexto(e.target.value);
             setPage(1);
           }}
-          placeholder="Nombre, usuario, correo, legajo o RUC"
+          placeholder="Nombre, usuario, correo, legajo, RUC o datos ERP"
           className={inputBase}
         />
       </label>
@@ -421,6 +414,7 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
                   <p className="text-xs text-zinc-500 dark:text-zinc-400">
                     @{usuario.nombreLogin} · {usuario.correo}
                   </p>
+                  <DetalleErpUsuario usuario={usuario} />
                 </td>
                 <td className="px-4 py-3">{usuario.legajo ?? "—"}</td>
                 <td className="px-4 py-3">
@@ -678,6 +672,11 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
             value={form.password}
             required={editando === "nuevo"}
             onChange={(password) => setForm((f) => ({ ...f, password }))}
+          />
+          <CamposErpUsuario
+            valor={form}
+            disabled={guardando}
+            onChange={(campo, valor) => setForm((actual) => ({ ...actual, [campo]: valor }))}
           />
           {editando !== "nuevo" && (
             <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm">
