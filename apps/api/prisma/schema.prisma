@@ -33,6 +33,10 @@ model Empresa {
   socioNegocioGrupoFilas SocioNegocioGrupo[]
   socioNegocioCondicionPagoFilas SocioNegocioCondicionPago[]
   socioNegocioListaPrecioFilas SocioNegocioListaPrecio[]
+  fabricantesArticulo FabricanteArticulo[]
+  codigosArticuloSocio CodigoArticuloSocio[]
+  gruposArticulo GrupoArticulo[]
+  tiposSubcanal TipoSubcanal[]
   configuracionesTolerancia ConfiguracionTolerancia[]
   // Días antes del vencimiento en que se avisa por inventario de campo.
   diasAvisoVencimiento Int @default(5) @map("dias_aviso_vencimiento")
@@ -67,6 +71,48 @@ model Empresa {
 
 // Catálogos originales de socios de negocio. Las referencias entre códigos
 // se resuelven lógicamente por empresa para permitir sincronizaciones parciales.
+
+model FabricanteArticulo {
+  id BigInt @id @default(autoincrement())
+  empresaId Int @map("empresa_id")
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  FirmCode Int?
+  FirmName String? @db.VarChar(200)
+  @@unique([empresaId, FirmCode], map: "uq_tbl_omrc_empresa_clave")
+  @@map("tbl_omrc")
+}
+
+model CodigoArticuloSocio {
+  id BigInt @id @default(autoincrement())
+  empresaId Int @map("empresa_id")
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  ItemCode String @db.VarChar(100)
+  CardCode String @db.VarChar(200)
+  Substitute String @db.VarChar(200)
+  Descriptio String? @db.VarChar(300)
+  @@unique([empresaId, ItemCode, CardCode, Substitute], map: "uq_tbl_oscn_empresa_clave")
+  @@map("tbl_oscn")
+}
+
+model GrupoArticulo {
+  id BigInt @id @default(autoincrement())
+  empresaId Int @map("empresa_id")
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  ItmsGrpCod Int
+  ItmsGrpNam String? @db.VarChar(200)
+  @@unique([empresaId, ItmsGrpCod], map: "uq_tbl_oitb_empresa_clave")
+  @@map("tbl_oitb")
+}
+
+model TipoSubcanal {
+  id BigInt @id @default(autoincrement())
+  empresaId Int @map("empresa_id")
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  Code String @db.VarChar(50)
+  U_Descripcion String? @db.VarChar(120)
+  @@unique([empresaId, Code], map: "uq_tbl_jtiposubcanales_empresa_clave")
+  @@map("tbl_jtiposubcanales")
+}
 
 model SocioNegocio {
   id BigInt @id @default(autoincrement())

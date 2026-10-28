@@ -30,6 +30,9 @@ import {
 } from '@nestjs/swagger';
 import {
   CodigoCatalogoParams,
+  ListaPrecioParams,
+  VendedorParams,
+  SupervisorParams,
   DireccionParams,
   SelectorDireccionDto,
   ConsultaDireccionesDto,
@@ -49,6 +52,7 @@ import type { LoteValidado } from '../common/interfaces/error-validacion.interfa
 import { CrearSociosPipe } from './pipes/crear-socios.pipe';
 import { SociosNegocioService } from './socios-negocio.service';
 import { MAX_SOCIOS_POR_LOTE } from './tablas-socios';
+import { esCatalogoArticulos } from './rutas-socios';
 import {
   esquemaPaginaSocios,
   esquemaRespuestaSocios,
@@ -59,19 +63,23 @@ import {
 export function crearControladorSocios(
   tabla: TablaSociosDefinicion,
 ): Type<object> {
-  const esSocio = tabla.nombre === 'tbl_ocrd';
   const esDireccion = tabla.nombre === 'tbl_crd1';
-  const esCodigo =
-    tabla.nombre === 'tbl_jcanales' || tabla.nombre === 'tbl_jsubcanales';
-  const ruta =
-    esSocio || esDireccion ? ':CardCode' : esCodigo ? ':Code' : ':id';
-  const Parametros = esSocio
-    ? SocioParams
-    : esDireccion
-      ? DireccionParams
-      : esCodigo
-        ? CodigoCatalogoParams
-        : RegistroSociosParams;
+  const identificadores: Record<string, { campo: string; dto: Type<object> }> =
+    {
+      tbl_ocrd: { campo: 'CardCode', dto: SocioParams },
+      tbl_crd1: { campo: 'CardCode', dto: DireccionParams },
+      tbl_jcanales: { campo: 'Code', dto: CodigoCatalogoParams },
+      tbl_jsubcanales: { campo: 'Code', dto: CodigoCatalogoParams },
+      tbl_opln: { campo: 'ListNum', dto: ListaPrecioParams },
+      tbl_oslp: { campo: 'SlpCode', dto: VendedorParams },
+      tbl_oagp: { campo: 'AgentCode', dto: SupervisorParams },
+    };
+  const identificador = identificadores[tabla.nombre];
+  const identidad = identificador?.campo ?? 'id';
+  const ruta = `:${identidad}`;
+  const Parametros = identificador?.dto ?? RegistroSociosParams;
+  const esEntero = ['Code', 'ListNum', 'SlpCode'].includes(identidad);
+  const esTexto = identidad === 'CardCode' || identidad === 'AgentCode';
   const consulta = (listado: boolean) =>
     new ValidationPipe({
       expectedType: esDireccion
@@ -122,10 +130,8 @@ export function crearControladorSocios(
           ]
         : []),
     );
-  const identidad =
-    esSocio || esDireccion ? 'CardCode' : esCodigo ? 'Code' : 'id';
   const detalleClave =
-    esSocio || esDireccion || esCodigo
+    identidad !== 'id'
       ? `La ruta usa ${identidad} original y empresaId, sin búsqueda alternativa por id técnico. Codificar caracteres especiales en la URL. Si cambia la clave, enviar la nueva en el cuerpo y conservar la original en la ruta.`
       : 'id es el identificador técnico de esta fila de catálogo.';
 
@@ -140,18 +146,42 @@ export function crearControladorSocios(
       | SocioParams
       | RegistroSociosParams
       | CodigoCatalogoParams
+      | ListaPrecioParams
+      | VendedorParams
+      | SupervisorParams
       | DireccionParams,
-  ) => ('CardCode' in p ? p.CardCode : 'Code' in p ? p.Code : p.id);
+  ) =>
+    'CardCode' in p
+      ? p.CardCode
+      : 'Code' in p
+        ? p.Code
+        : 'ListNum' in p
+          ? p.ListNum
+          : 'SlpCode' in p
+            ? p.SlpCode
+            : 'AgentCode' in p
+              ? p.AgentCode
+              : p.id;
   const documentarCodigo = () =>
     ApiParam({
       name: identidad,
-      schema:
-        esSocio || esDireccion
-          ? { type: 'string', minLength: 1, maxLength: esDireccion ? 200 : 50 }
-          : esCodigo
-            ? { type: 'integer', minimum: -2147483648, maximum: 2147483647 }
-            : { type: 'string', pattern: '^[1-9][0-9]{0,18}$', maxLength: 19 },
-      example: esSocio || esDireccion ? 'C00001' : esCodigo ? 1 : '1',
+      schema: esTexto
+        ? {
+            type: 'string',
+            minLength: 1,
+            maxLength: esDireccion || identidad === 'AgentCode' ? 200 : 50,
+          }
+        : esEntero
+          ? { type: 'integer', minimum: -2147483648, maximum: 2147483647 }
+          : { type: 'string', pattern: '^[1-9][0-9]{0,18}$', maxLength: 19 },
+      example:
+        identidad === 'CardCode'
+          ? 'C00001'
+          : identidad === 'AgentCode'
+            ? 'SUP01'
+            : esEntero
+              ? 1
+              : '1',
       description: detalleClave,
     });
   const respuesta = esquemaRespuestaSocios(tabla);
@@ -223,9 +253,13 @@ export function crearControladorSocios(
     },
   };
 
-  @Controller(`admin/socios-negocio/empresas/:empresaId/${tabla.nombre}`)
+  @Controller(
+    `admin/${esCatalogoArticulos(tabla.nombre) ? 'catalogo' : 'socios-negocio'}/empresas/:empresaId/${tabla.nombre}`,
+  )
   @ApiParam({ name: 'empresaId', type: Number, example: 1 })
-  @ApiTags(`Socios de negocio · ${tabla.nombre}`)
+  @ApiTags(
+    `${esCatalogoArticulos(tabla.nombre) ? 'Catálogo' : 'Socios de negocio'} · ${tabla.nombre}`,
+  )
   @ApiExtraModels(tabla.Dto, EdicionDto, ResumenLoteDto)
   @ApiBadRequestResponse({
     description:
@@ -246,7 +280,7 @@ export function crearControladorSocios(
     description: 'Límite de solicitudes alcanzado; reintentar más tarde.',
     schema: errores,
   })
-  // Excepción pública expresa para las nueve tablas de socios de negocio.
+  // Las rutas por tabla tbl_* son públicas por solicitud expresa del usuario.
   class ControladorTablaSocios {
     constructor(
       @Inject(SociosNegocioService) readonly servicio: SociosNegocioService,
@@ -286,6 +320,9 @@ export function crearControladorSocios(
         | SocioParams
         | RegistroSociosParams
         | CodigoCatalogoParams
+        | ListaPrecioParams
+        | VendedorParams
+        | SupervisorParams
         | DireccionParams,
       @Query(consulta(true)) q: ConsultaDireccion,
     ) {
@@ -384,6 +421,9 @@ export function crearControladorSocios(
         | SocioParams
         | RegistroSociosParams
         | CodigoCatalogoParams
+        | ListaPrecioParams
+        | VendedorParams
+        | SupervisorParams
         | DireccionParams,
       @Body(new CrearSociosPipe(EdicionDto, false)) d: EntradaSocio,
       @Query(consulta(false)) q: ConsultaDireccion,
@@ -418,6 +458,9 @@ export function crearControladorSocios(
         | SocioParams
         | RegistroSociosParams
         | CodigoCatalogoParams
+        | ListaPrecioParams
+        | VendedorParams
+        | SupervisorParams
         | DireccionParams,
       @Query(consulta(false)) q: ConsultaDireccion,
     ) {

@@ -20,7 +20,7 @@ export function configurarSwagger(app: INestApplication) {
   const documentConfig = new DocumentBuilder()
     .setTitle('Comercia API')
     .setDescription(
-      'Documentación pública de la API de Comercia. tbl_oitm es el maestro oficial de artículos; tbl_itm1 contiene precios por lista. Artículos se identifican por ItemCode y socios de tbl_ocrd por CardCode, dentro de empresaId; nunca por id técnico. Precios y líneas usan sus claves compuestas completas (PriceList, ListNum, LINENUM). Ambas tablas y Socios de negocio admiten CRUD y bulk sin sesión. tbl_ospp, tbl_spp1 y tbl_spp2 conservan sesión y permisos de superadministrador. Todos los catálogos se separan por empresa y conservan nombres y mayúsculas de negocio. Las rutas /productos adaptan maestro y precios para la pantalla existente y usan ItemCode/PriceList.',
+      'Documentación pública de la API de Comercia. Las rutas por tabla tbl_* son públicas y admiten carga individual o bulk. tbl_oitm es el maestro de artículos y tbl_itm1 contiene precios por lista; tbl_omrc, tbl_oscn y tbl_oitb completan el catálogo de artículos, y tbl_jtiposubcanales los catálogos de socios. Todos se separan por empresa y conservan los nombres y tipos originales de negocio. Las rutas /productos adaptan artículos y precios para la pantalla existente.',
     )
     .setVersion('1.0.0')
     .addBearerAuth()

@@ -22,7 +22,7 @@
     "test:planificacion": "npm run build && node test/planificacion-migration.integration.mjs",
     "test:productos": "node test/productos-migration.integration.mjs",
     "test:catalogo-v2": "node test/catalogo-v2-migration.integration.mjs && node test/swagger.integration.mjs",
-    "test:socios": "node test/socios-negocio-migration.integration.mjs && node test/canales-plurales-migration.integration.mjs && node test/socios-negocio-http.integration.mjs",
+    "test:socios": "node test/socios-negocio-migration.integration.mjs && node test/canales-plurales-migration.integration.mjs && node test/catalogos-erp-adicionales-migration.integration.mjs && node test/socios-negocio-http.integration.mjs",
     "test:swagger": "node test/swagger.integration.mjs",
     "test:usuarios": "node test/usuarios-erp.integration.mjs",
     "test:http-body": "node test/http-body.integration.mjs",

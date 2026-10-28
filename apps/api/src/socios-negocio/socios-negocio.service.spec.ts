@@ -168,17 +168,27 @@ describe('Socios de negocio públicos y separados por empresa', () => {
         expect.objectContaining({ where: { empresaId: 20 }, skip: 0, take: 7 }),
       );
       const valor =
-        tabla.nombre === 'tbl_ocrd' || tabla.nombre === 'tbl_crd1'
+        tabla.nombre === 'tbl_ocrd' ||
+        tabla.nombre === 'tbl_crd1' ||
+        tabla.nombre === 'tbl_oagp'
           ? '000123'
-          : tabla.identidad
+          : tabla.identidad ||
+              tabla.nombre === 'tbl_opln' ||
+              tabla.nombre === 'tbl_oslp'
             ? 7
             : '9007199254740993';
       const referencia =
         tabla.nombre === 'tbl_ocrd' || tabla.nombre === 'tbl_crd1'
           ? { CardCode: valor }
-          : tabla.identidad
-            ? { Code: 7 }
-            : { id: 9007199254740993n };
+          : tabla.nombre === 'tbl_oagp'
+            ? { AgentCode: valor }
+            : tabla.nombre === 'tbl_oslp'
+              ? { SlpCode: 7 }
+              : tabla.nombre === 'tbl_opln'
+                ? { ListNum: 7 }
+                : tabla.identidad
+                  ? { Code: 7 }
+                  : { id: 9007199254740993n };
       await service.obtener(tabla, 20, valor);
       const lectura =
         tabla.nombre === 'tbl_crd1'
@@ -216,6 +226,165 @@ describe('Socios de negocio públicos y separados por empresa', () => {
         where: { empresaId: 20, id: 9007199254740993n, ...referencia },
         select: { id: true },
       });
+    },
+  );
+
+  it('tbl_opln usa ListNum y empresa para consultar, editar y eliminar, sin buscar por id', async () => {
+    const { modelos, service } = preparar();
+    const tabla = TABLAS_SOCIOS.tbl_opln;
+    const repositorio = modelos.socioNegocioListaPrecio;
+    const fila = { id: 7n, empresaId: 20, ListNum: 42, ListName: 'Lista' };
+    repositorio.findFirst.mockResolvedValue(fila);
+
+    expect(await service.obtener(tabla, 20, 42)).toMatchObject({
+      id: '7',
+      ListNum: 42,
+    });
+    expect(repositorio.findFirst).toHaveBeenLastCalledWith(
+      expect.objectContaining({ where: { empresaId: 20, ListNum: 42 } }),
+    );
+    await service.editar(tabla, 20, 42, { ListName: 'Actualizada' });
+    expect(repositorio.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 7n, empresaId: 20, ListNum: 42 },
+        data: { ListName: 'Actualizada' },
+      }),
+    );
+    await service.eliminar(tabla, 20, 42);
+    expect(repositorio.delete).toHaveBeenCalledWith({
+      where: { id: 7n, empresaId: 20, ListNum: 42 },
+      select: { id: true },
+    });
+    expect(modelos.socioNegocio.count).toHaveBeenCalledWith({
+      where: { empresaId: 20, ListNum: 42 },
+    });
+
+    repositorio.findFirst.mockResolvedValue(null);
+    await expect(service.obtener(tabla, 20, 7)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    expect(repositorio.findFirst).toHaveBeenLastCalledWith(
+      expect.objectContaining({ where: { empresaId: 20, ListNum: 7 } }),
+    );
+    await expect(service.obtener(tabla, 21, 42)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    expect(repositorio.findFirst).toHaveBeenLastCalledWith(
+      expect.objectContaining({ where: { empresaId: 21, ListNum: 42 } }),
+    );
+    await expect(service.obtener(tabla, 20, '1e3')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+  });
+
+  it('tbl_opln protege el ListNum usado por socios al cambiarlo o eliminarlo', async () => {
+    const { modelos, service } = preparar();
+    const fila = { id: 7n, empresaId: 20, ListNum: 42, ListName: 'Lista' };
+    modelos.socioNegocioListaPrecio.findFirst.mockResolvedValue(fila);
+    modelos.socioNegocio.count.mockResolvedValue(1);
+    await expect(
+      service.editar(TABLAS_SOCIOS.tbl_opln, 20, 42, { ListNum: 43 }),
+    ).rejects.toBeInstanceOf(ConflictException);
+    await expect(
+      service.eliminar(TABLAS_SOCIOS.tbl_opln, 20, 42),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(modelos.socioNegocio.count).toHaveBeenCalledWith({
+      where: { empresaId: 20, ListNum: 42 },
+    });
+    expect(modelos.socioNegocioListaPrecio.update).not.toHaveBeenCalled();
+    expect(modelos.socioNegocioListaPrecio.delete).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    {
+      tabla: TABLAS_SOCIOS.tbl_oslp,
+      campo: 'SlpCode',
+      codigo: 42,
+      cambio: { SlpName: 'Actualizado' },
+    },
+    {
+      tabla: TABLAS_SOCIOS.tbl_oagp,
+      campo: 'AgentCode',
+      codigo: '00042',
+      cambio: { AgentName: 'Actualizado' },
+    },
+  ])(
+    '$tabla.nombre usa $campo y empresa, sin buscar por id',
+    async ({ tabla, campo, codigo, cambio }) => {
+      const { modelos, service } = preparar();
+      const repositorio = modelos[tabla.modelo];
+      const fila = { id: 7n, empresaId: 20, [campo]: codigo };
+      repositorio.findFirst.mockResolvedValue(fila);
+      expect(await service.obtener(tabla, 20, codigo)).toMatchObject({
+        id: '7',
+        [campo]: codigo,
+      });
+      expect(repositorio.findFirst).toHaveBeenLastCalledWith(
+        expect.objectContaining({ where: { empresaId: 20, [campo]: codigo } }),
+      );
+      await service.editar(tabla, 20, codigo, cambio);
+      expect(repositorio.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 7n, empresaId: 20, [campo]: codigo },
+          data: cambio,
+        }),
+      );
+      await service.eliminar(tabla, 20, codigo);
+      expect(repositorio.delete).toHaveBeenCalledWith({
+        where: { id: 7n, empresaId: 20, [campo]: codigo },
+        select: { id: true },
+      });
+      expect(modelos.socioNegocio.count).toHaveBeenCalledWith({
+        where: { empresaId: 20, [campo]: codigo },
+      });
+      repositorio.findFirst.mockResolvedValue(null);
+      await expect(service.obtener(tabla, 20, '7')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      expect(repositorio.findFirst).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          where: { empresaId: 20, [campo]: campo === 'SlpCode' ? 7 : '7' },
+        }),
+      );
+      await expect(service.obtener(tabla, 21, codigo)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      expect(repositorio.findFirst).toHaveBeenLastCalledWith(
+        expect.objectContaining({ where: { empresaId: 21, [campo]: codigo } }),
+      );
+    },
+  );
+
+  it.each([
+    { tabla: TABLAS_SOCIOS.tbl_oslp, campo: 'SlpCode', codigo: 42, nuevo: 43 },
+    {
+      tabla: TABLAS_SOCIOS.tbl_oagp,
+      campo: 'AgentCode',
+      codigo: '00042',
+      nuevo: '00043',
+    },
+  ])(
+    '$tabla.nombre protege $campo usado por socios',
+    async ({ tabla, campo, codigo, nuevo }) => {
+      const { modelos, service } = preparar();
+      const repositorio = modelos[tabla.modelo];
+      repositorio.findFirst.mockResolvedValue({
+        id: 7n,
+        empresaId: 20,
+        [campo]: codigo,
+      });
+      modelos.socioNegocio.count.mockResolvedValue(1);
+      await expect(
+        service.editar(tabla, 20, codigo, { [campo]: nuevo }),
+      ).rejects.toBeInstanceOf(ConflictException);
+      await expect(service.eliminar(tabla, 20, codigo)).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+      expect(modelos.socioNegocio.count).toHaveBeenCalledWith({
+        where: { empresaId: 20, [campo]: codigo },
+      });
+      expect(repositorio.update).not.toHaveBeenCalled();
+      expect(repositorio.delete).not.toHaveBeenCalled();
     },
   );
 

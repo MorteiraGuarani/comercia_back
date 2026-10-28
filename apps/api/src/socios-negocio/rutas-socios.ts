@@ -9,8 +9,21 @@ export const NOMBRES_TABLAS_SOCIOS = [
   'tbl_ocrg',
   'tbl_octg',
   'tbl_opln',
+  'tbl_omrc',
+  'tbl_oscn',
+  'tbl_oitb',
+  'tbl_jtiposubcanales',
 ] as const;
 
+const CATALOGOS_ARTICULOS = new Set<string>([
+  'tbl_omrc',
+  'tbl_oscn',
+  'tbl_oitb',
+]);
+export const esCatalogoArticulos = (tabla: string) =>
+  CATALOGOS_ARTICULOS.has(tabla);
+
 export const RUTAS_LOTE_SOCIOS = NOMBRES_TABLAS_SOCIOS.map(
-  (tabla) => `/api/v1/admin/socios-negocio/empresas/:empresaId/${tabla}`,
+  (tabla) =>
+    `/api/v1/admin/${esCatalogoArticulos(tabla) ? 'catalogo' : 'socios-negocio'}/empresas/:empresaId/${tabla}`,
 );

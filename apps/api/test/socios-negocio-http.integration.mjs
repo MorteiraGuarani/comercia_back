@@ -24,6 +24,9 @@ const {
   MAX_SOCIOS_POR_LOTE,
 } = require('../dist/src/socios-negocio/tablas-socios.js');
 const {
+  esCatalogoArticulos,
+} = require('../dist/src/socios-negocio/rutas-socios.js');
+const {
   ejemploRespuestaSocios,
 } = require('../dist/src/socios-negocio/utils/swagger-socios.js');
 const calls = [];
@@ -151,18 +154,32 @@ try {
         ).length,
       0,
     ),
-    47,
+    67,
   );
   for (const t of Object.values(TABLAS_SOCIOS)) {
-    const route = '/api/v1/admin/socios-negocio/empresas/1/' + t.nombre;
+    const route =
+      '/api/v1/admin/' +
+      (esCatalogoArticulos(t.nombre) ? 'catalogo' : 'socios-negocio') +
+      '/empresas/1/' +
+      t.nombre;
     const locator =
       t.nombre === 'tbl_ocrd' || t.nombre === 'tbl_crd1'
         ? '{CardCode}'
-        : t.identidad
-          ? '{Code}'
-          : '{id}';
+        : t.nombre === 'tbl_opln'
+          ? '{ListNum}'
+          : t.nombre === 'tbl_oslp'
+            ? '{SlpCode}'
+            : t.nombre === 'tbl_oagp'
+              ? '{AgentCode}'
+              : t.identidad
+                ? '{Code}'
+                : '{id}';
     const code =
-      t.nombre === 'tbl_ocrd' || t.nombre === 'tbl_crd1' ? 'C0001' : '1';
+      t.nombre === 'tbl_ocrd' || t.nombre === 'tbl_crd1'
+        ? 'C0001'
+        : t.nombre === 'tbl_oagp'
+          ? 'SUP01'
+          : '1';
     const path = route.replace('/empresas/1/', '/empresas/{empresaId}/');
     for (const [p, method] of [
       [path, 'get'],
@@ -264,21 +281,112 @@ try {
             ? 'x'.repeat(201)
             : t.nombre === 'tbl_ocrd'
               ? 'x'.repeat(51)
-              : '9223372036854775808'),
+              : t.nombre === 'tbl_oagp'
+                ? 'x'.repeat(201)
+                : '9223372036854775808'),
       )
       .expect(400);
     if (t.nombre === 'tbl_ocrd') {
       const codigoLargo = '0'.repeat(50);
-      await request(http).get(route + '/' + codigoLargo).expect(200);
+      await request(http)
+        .get(route + '/' + codigoLargo)
+        .expect(200);
       assert.equal(calls.at(-1).id, codigoLargo);
       for (const campo of ['validFor', 'frozenFor']) {
         const before = calls.length;
-        await request(http).post(route).send({ ...t.ejemplo, [campo]: null }).expect(400);
-        await request(http).put(route + '/' + code).send({ [campo]: null }).expect(400);
+        await request(http)
+          .post(route)
+          .send({ ...t.ejemplo, [campo]: null })
+          .expect(400);
+        await request(http)
+          .put(route + '/' + code)
+          .send({ [campo]: null })
+          .expect(400);
         assert.equal(calls.length, before);
       }
     }
   }
+  const fabricantes = '/api/v1/admin/catalogo/empresas/1/tbl_omrc';
+  await request(http)
+    .post(fabricantes)
+    .send({ FirmCode: null, FirmName: null })
+    .expect(201);
+  await request(http)
+    .post(fabricantes)
+    .send({ FirmCode: 2147483648 })
+    .expect(400);
+  await request(http)
+    .post(fabricantes)
+    .send({ FirmName: 'x'.repeat(201) })
+    .expect(400);
+  const grupos = '/api/v1/admin/catalogo/empresas/1/tbl_oitb';
+  await request(http)
+    .post(grupos)
+    .send({ ItmsGrpCod: 2147483647, ItmsGrpNam: null })
+    .expect(201);
+  await request(http).post(grupos).send({ ItmsGrpCod: null }).expect(400);
+  await request(http).post(grupos).send({}).expect(400);
+  await request(http).post(grupos).send({ ItmsGrpCod: 2147483648 }).expect(400);
+  const sustitutos = '/api/v1/admin/catalogo/empresas/1/tbl_oscn';
+  const codigo = {
+    ItemCode: 'I'.repeat(100),
+    CardCode: 'C'.repeat(200),
+    Substitute: 'S'.repeat(200),
+    Descriptio: 'D'.repeat(300),
+  };
+  await request(http).post(sustitutos).send(codigo).expect(201);
+  await request(http)
+    .post(sustitutos)
+    .send({ ...codigo, ItemCode: 'I'.repeat(101) })
+    .expect(400);
+  await request(http)
+    .post(sustitutos)
+    .send({ ...codigo, CardCode: 'C'.repeat(201) })
+    .expect(400);
+  await request(http)
+    .post(sustitutos)
+    .send({ ...codigo, Substitute: null })
+    .expect(400);
+  await request(http)
+    .post(sustitutos)
+    .send({ ...codigo, Descriptio: 'D'.repeat(301) })
+    .expect(400);
+  const parcialCatalogo = await request(http)
+    .post(sustitutos)
+    .send([
+      { ItemCode: '001', CardCode: 'C1', Substitute: 'A' },
+      { ItemCode: '002', CardCode: 'C1', Substitute: null },
+    ])
+    .expect(201);
+  assert.equal(parcialCatalogo.body.invalidas, 1);
+  assert.equal(calls.at(-1).data.filas[0].ItemCode, '001');
+  const tipos = '/api/v1/admin/socios-negocio/empresas/1/tbl_jtiposubcanales';
+  await request(http)
+    .post(tipos)
+    .send({ Code: '001', U_Descripcion: null })
+    .expect(201);
+  assert.equal(calls.at(-1).data.Code, '001');
+  await request(http).post(tipos).send({ Code: null }).expect(400);
+  await request(http)
+    .post(tipos)
+    .send({ Code: 'x'.repeat(51) })
+    .expect(400);
+  await request(http)
+    .post(tipos)
+    .send({ Code: '001', U_Descripcion: 'x'.repeat(121) })
+    .expect(400);
+  const bulkCatalogo = Array.from({ length: 5000 }, (_, i) => ({
+    ItemCode: String(i),
+    CardCode: 'C1',
+    Substitute: 'S',
+    Descriptio: 'x'.repeat(200),
+  }));
+  assert.ok(Buffer.byteLength(JSON.stringify(bulkCatalogo)) > 1024 * 1024);
+  await request(http)
+    .post(sustitutos)
+    .send(bulkCatalogo)
+    .timeout(30000)
+    .expect(201);
   for (const deleted of ['tbl_jcanal', 'tbl_jsubcanal']) {
     assert.ok(
       !Object.keys(doc.paths).some((p) => p.split('/').includes(deleted)),
@@ -319,6 +427,57 @@ try {
       .expect(400);
     assert.equal(calls.length, before);
   }
+  for (const [table, key] of [
+    ['tbl_oslp', 'SlpCode'],
+    ['tbl_oagp', 'AgentCode'],
+  ]) {
+    const base = '/api/v1/admin/socios-negocio/empresas/1/' + table;
+    const path = '/api/v1/admin/socios-negocio/empresas/{empresaId}/' + table;
+    assert.ok(!doc.paths[path + '/{id}']);
+    for (const method of ['get', 'put', 'delete']) {
+      const op = doc.paths[path + '/{' + key + '}'][method];
+      assert.ok(op.parameters.some((p) => p.name === key && p.required));
+      assert.ok(!op.security?.length);
+    }
+    const value = table === 'tbl_oslp' ? '0007' : '00%2FSUP';
+    const expected = table === 'tbl_oslp' ? 7 : '00/SUP';
+    await request(http)
+      .get(base + '/' + value)
+      .expect(200);
+    assert.equal(calls.at(-1).id, expected);
+    const body = table === 'tbl_oslp' ? { SlpName: 'X' } : { AgentName: 'X' };
+    await request(http)
+      .put(base + '/' + value)
+      .send(body)
+      .expect(200);
+    assert.equal(calls.at(-1).id, expected);
+    await request(http)
+      .delete(base + '/' + value)
+      .expect(200);
+    assert.equal(calls.at(-1).id, expected);
+    const invalids =
+      table === 'tbl_oslp'
+        ? ['1e3', '1.5', '2147483648', '-2147483649', 'no-codigo']
+        : ['x'.repeat(201)];
+    for (const invalid of invalids) {
+      for (const method of ['get', 'delete'])
+        await request(http)
+          [method](base + '/' + invalid)
+          .expect(400);
+      await request(http)
+        .put(base + '/' + invalid)
+        .send(body)
+        .expect(400);
+    }
+  }
+  const vendedores = '/api/v1/admin/socios-negocio/empresas/1/tbl_oslp';
+  await request(http).get(vendedores + '/0').expect(200);
+  assert.equal(calls.at(-1).id, 0);
+  await request(http).delete(vendedores + '/-1').expect(200);
+  assert.equal(calls.at(-1).id, -1);
+  const supervisores = '/api/v1/admin/socios-negocio/empresas/1/tbl_oagp';
+  await request(http).get(supervisores + '/0007').expect(200);
+  assert.equal(calls.at(-1).id, '0007');
   for (const table of ['tbl_jcanales', 'tbl_jsubcanales']) {
     const route = '/api/v1/admin/socios-negocio/empresas/1/' + table;
     await request(http)
@@ -329,6 +488,45 @@ try {
       await request(http)
         .get(route + '/' + invalid)
         .expect(400);
+  }
+  const opln = '/api/v1/admin/socios-negocio/empresas/1/tbl_opln';
+  const oplnPath = '/api/v1/admin/socios-negocio/empresas/{empresaId}/tbl_opln';
+  assert.ok(!doc.paths[oplnPath + '/{id}']);
+  for (const method of ['get', 'put', 'delete']) {
+    const operation = doc.paths[oplnPath + '/{ListNum}'][method];
+    assert.ok(
+      operation.parameters.some((p) => p.name === 'ListNum' && p.required),
+    );
+    assert.ok(!operation.security?.length);
+  }
+  await request(http)
+    .get(opln + '/0007')
+    .expect(200);
+  assert.equal(calls.at(-1).id, 7);
+  await request(http)
+    .put(opln + '/0')
+    .send({ ListName: 'Actualizada' })
+    .expect(200);
+  assert.equal(calls.at(-1).id, 0);
+  await request(http)
+    .delete(opln + '/-1')
+    .expect(200);
+  assert.equal(calls.at(-1).id, -1);
+  for (const invalid of [
+    '1e3',
+    '1.5',
+    '2147483648',
+    '-2147483649',
+    'no-codigo',
+  ]) {
+    for (const method of ['get', 'delete'])
+      await request(http)
+        [method](opln + '/' + invalid)
+        .expect(400);
+    await request(http)
+      .put(opln + '/' + invalid)
+      .send({ ListName: 'X' })
+      .expect(400);
   }
   const socios = '/api/v1/admin/socios-negocio/empresas/1/tbl_ocrd';
   await request(http)
@@ -402,7 +600,7 @@ try {
     .expect(413);
   assert.ok(calls.every((c) => c.empresa === 1));
   console.log(
-    'OK: 47 operaciones públicas, nueve DTOs y ejemplos, filas inválidas salteadas, nombres exactos y bulk >1 MiB con límites acotados',
+    'OK: 67 operaciones públicas, trece DTOs y ejemplos, filas inválidas salteadas, nombres exactos y bulk >1 MiB con límites acotados',
   );
 } finally {
   await app.close();

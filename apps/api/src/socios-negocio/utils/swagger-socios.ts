@@ -16,7 +16,7 @@ export function esquemaRespuestaSocios(
             type: 'string',
             example: '1',
             description:
-              'ID técnico interno como texto. Socios y direcciones se consultan por CardCode; canales/subcanales por Code, siempre dentro de empresaId.',
+              'ID técnico interno como texto. Socios y direcciones se consultan por CardCode; canales/subcanales por Code; listas por ListNum; vendedores por SlpCode y supervisores por AgentCode, siempre dentro de empresaId.',
             readOnly: true,
           },
         },

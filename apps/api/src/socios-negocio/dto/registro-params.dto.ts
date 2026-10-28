@@ -47,6 +47,58 @@ export class CodigoCatalogoParams extends EmpresaSociosParams {
   Code!: number;
 }
 
+export class ListaPrecioParams extends EmpresaSociosParams {
+  @ApiProperty({
+    type: 'integer',
+    minimum: -2147483648,
+    maximum: 2147483647,
+    example: 1,
+    description:
+      'ListNum original de la lista de precios dentro de la empresa, no el id técnico.',
+  })
+  @Transform(({ obj, key }: { obj: Record<string, unknown>; key: string }) =>
+    typeof obj[key] === 'string' && /^-?\d+$/.test(obj[key])
+      ? Number(obj[key])
+      : Number.NaN,
+  )
+  @IsInt()
+  @Min(-2147483648)
+  @Max(2147483647)
+  ListNum!: number;
+}
+
+export class VendedorParams extends EmpresaSociosParams {
+  @ApiProperty({
+    type: 'integer',
+    minimum: -2147483648,
+    maximum: 2147483647,
+    example: 1,
+    description: 'SlpCode original del vendedor dentro de la empresa.',
+  })
+  @Transform(({ obj, key }: { obj: Record<string, unknown>; key: string }) =>
+    typeof obj[key] === 'string' && /^-?\d+$/.test(obj[key])
+      ? Number(obj[key])
+      : Number.NaN,
+  )
+  @IsInt()
+  @Min(-2147483648)
+  @Max(2147483647)
+  SlpCode!: number;
+}
+
+export class SupervisorParams extends EmpresaSociosParams {
+  @ApiProperty({
+    type: String,
+    minLength: 1,
+    maxLength: 200,
+    example: 'SUP01',
+    description: 'AgentCode exacto del supervisor dentro de la empresa.',
+  })
+  @IsString()
+  @Length(1, 200)
+  AgentCode!: string;
+}
+
 export class SelectorDireccionDto {
   @IsOptional()
   @IsString()

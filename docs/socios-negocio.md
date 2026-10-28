@@ -20,16 +20,18 @@ Base: `/api/v1/admin/socios-negocio/empresas/{empresaId}`.
 | tbl_crd1 | `/tbl_crd1/{CardCode}`; GET devuelve lista paginada | CardCode + Address + Street + AdresType |
 | tbl_jcanales | `/tbl_jcanales/{Code}` | Code |
 | tbl_jsubcanales | `/tbl_jsubcanales/{Code}` | Code |
-| tbl_oagp | `/tbl_oagp/{id}` | AgentCode |
-| tbl_oslp | `/tbl_oslp/{id}` | SlpCode |
+| tbl_oagp | `/tbl_oagp/{AgentCode}` | AgentCode |
+| tbl_oslp | `/tbl_oslp/{SlpCode}` | SlpCode |
 | tbl_ocrg | `/tbl_ocrg/{id}` | GroupCode |
 | tbl_octg | `/tbl_octg/{id}` | GroupNum |
-| tbl_opln | `/tbl_opln/{id}` | ListNum |
+| tbl_opln | `/tbl_opln/{ListNum}` | ListNum |
 
 Los códigos de socios/direcciones son texto exacto y conservan ceros iniciales.
-`Code` de canales/subcanales es un entero int4. Estas rutas nunca buscan por id
+`Code` de canales/subcanales, `ListNum` de tbl_opln y `SlpCode` de tbl_oslp son enteros int4; `AgentCode` de tbl_oagp es texto exacto. Estas rutas nunca buscan por id
 técnico como alternativa. Para renombrar una clave, usar su valor original en la
 URL y el nuevo en el cuerpo. Codificar caracteres especiales de la URL.
+Las filas con `ListNum`, `SlpCode` o `AgentCode` nulo permanecen visibles en el listado;
+las rutas individuales requieren el código correspondiente.
 
 GET de colección lista con `buscar`, `page` y `limit`; los resultados tienen
 `{items,total,page,limit,totalPages}`, con 7 filas por defecto y máximo 50.

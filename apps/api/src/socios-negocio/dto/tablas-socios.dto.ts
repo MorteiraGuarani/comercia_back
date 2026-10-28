@@ -4,6 +4,109 @@ import {
   CodigoIdentidadSocio,
   BanderaSocio,
 } from '../utils/campos-dto';
+import { CampoTabla } from '../../productos/utils/campo-catalogo';
+
+export class FabricanteArticuloDto {
+  @CampoTabla({
+    tipo: 'entero',
+    small: false,
+    requerido: false,
+    nullable: true,
+    descripcion: 'Código int4 del fabricante; admite null.',
+    ejemplo: 1,
+  })
+  FirmCode?: number | null;
+  @CampoTabla({
+    tipo: 'texto',
+    longitud: 200,
+    requerido: false,
+    nullable: true,
+    descripcion: 'Nombre del fabricante.',
+    ejemplo: 'Fabricante de ejemplo',
+  })
+  FirmName?: string | null;
+}
+
+export class CodigoArticuloSocioDto {
+  @CampoTabla({
+    tipo: 'texto',
+    longitud: 100,
+    requerido: true,
+    nullable: false,
+    descripcion: 'Código original del artículo.',
+    ejemplo: 'A0001',
+  })
+  ItemCode!: string;
+  @CampoTabla({
+    tipo: 'texto',
+    longitud: 200,
+    requerido: true,
+    nullable: false,
+    descripcion: 'Código original del socio.',
+    ejemplo: 'C0001',
+  })
+  CardCode!: string;
+  @CampoTabla({
+    tipo: 'texto',
+    longitud: 200,
+    requerido: true,
+    nullable: false,
+    descripcion: 'Código alternativo del artículo para el socio.',
+    ejemplo: 'ALT0001',
+  })
+  Substitute!: string;
+  @CampoTabla({
+    tipo: 'texto',
+    longitud: 300,
+    requerido: false,
+    nullable: true,
+    descripcion: 'Descripción original del código alternativo.',
+    ejemplo: 'Artículo de ejemplo',
+  })
+  Descriptio?: string | null;
+}
+
+export class GrupoArticuloDto {
+  @CampoTabla({
+    tipo: 'entero',
+    small: false,
+    requerido: true,
+    nullable: false,
+    descripcion: 'Código int4 del grupo de artículos.',
+    ejemplo: 100,
+  })
+  ItmsGrpCod!: number;
+  @CampoTabla({
+    tipo: 'texto',
+    longitud: 200,
+    requerido: false,
+    nullable: true,
+    descripcion: 'Nombre del grupo de artículos.',
+    ejemplo: 'Grupo de ejemplo',
+  })
+  ItmsGrpNam?: string | null;
+}
+
+export class TipoSubcanalDto {
+  @CampoTabla({
+    tipo: 'texto',
+    longitud: 50,
+    requerido: true,
+    nullable: false,
+    descripcion: 'Código original de tipo de subcanal como texto.',
+    ejemplo: '001',
+  })
+  Code!: string;
+  @CampoTabla({
+    tipo: 'texto',
+    longitud: 120,
+    requerido: false,
+    nullable: true,
+    descripcion: 'Descripción del tipo de subcanal.',
+    ejemplo: 'Tipo de ejemplo',
+  })
+  U_Descripcion?: string | null;
+}
 
 export class SocioNegocioDto {
   @TextoSocio(50, false, undefined)
