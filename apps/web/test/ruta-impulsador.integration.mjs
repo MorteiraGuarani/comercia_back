@@ -49,7 +49,7 @@ let inventarios = 0;
 const { TarjetaAgendaRepositor } = cargar("components/campo/tarjeta-agenda-repositor.tsx", {
   "next/link": { default: stub }, "@/utils/estado-jornada": estados, "@/utils/fechas": fechas, "@/utils/duracion": cargar("utils/duracion.ts"),
   "@/hooks/use-resumen-tareas-local": { useResumenTareasLocal: (...args) => { consultarTareas = args[3]; return args[3] ? { hechas: 1, total: 3 } : null; } },
-  "./ui/status-stamp": { StatusStamp: stub }, "./ui/estado-ruta-simple": { EstadoRutaSimple }, "./ui/foto-local": { FotoLocal: stub }, "./ui/iconos-campo": iconos,
+  "./ui/status-stamp": { StatusStamp: stub }, "./ui/estado-ruta-simple": { EstadoRutaSimple }, "./ui/foto-local": { FotoLocal: stub }, "./ui/texto-expandible": { TextoExpandible: ({ texto }) => texto }, "./ui/iconos-campo": iconos,
 });
 const base = { agenda: agenda(1), orden: 1, abierta: true, alternar: stub, qsFecha: `fecha=${hoy}`, visitaAbierta: null, onMapa: stub, onNovedad: () => { novedades++; } };
 let tarjeta = TarjetaAgendaRepositor({ ...base, soloConsulta: true });

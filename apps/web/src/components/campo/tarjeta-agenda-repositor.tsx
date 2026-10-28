@@ -6,7 +6,7 @@ import { useResumenTareasLocal } from "@/hooks/use-resumen-tareas-local";
 import type { EstadoRuta } from "@/types/estado-jornada";
 import type { AgendaCampo, VisitaCampo } from "@/types/campo";
 import { EstadoRutaSimple } from "./ui/estado-ruta-simple";
-import { FotoLocal } from "./ui/foto-local";
+import { TextoExpandible } from "./ui/texto-expandible";
 import {
   IconoAlerta,
   IconoCaja,
@@ -273,45 +273,40 @@ export function TarjetaAgendaRepositor({
           id={idDetalle}
           className="space-y-2.5 border-t border-line/70 py-2.5 pl-3.5 pr-2.5 sm:space-y-3 sm:py-3 sm:pl-4 sm:pr-3"
         >
-          <div className="flex min-w-0 gap-3">
-            <FotoLocal
-              nombre={a.local.nombre}
-              className="w-[30%] max-w-32 shrink-0 self-start"
-            />
-            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+          {/* Sin foto: en el celular cada línea de alto cuenta. */}
+          <div className="min-w-0 space-y-1">
+            <p className="flex min-w-0 items-center gap-1.5 text-xs text-foreground">
+              <IconoPin className="h-3.5 w-3.5 shrink-0 text-muted" />
+              {a.local.direccion ? (
+                <TextoExpandible texto={a.local.direccion} />
+              ) : (
+                <span className="text-muted">Sin dirección cargada</span>
+              )}
+            </p>
+            {a.esBackup ? (
               <p className="flex min-w-0 items-start gap-1.5 text-xs text-foreground">
-                <IconoPin className="mt-px h-3.5 w-3.5 shrink-0 text-muted" />
+                <IconoContacto className="mt-px h-3.5 w-3.5 shrink-0 text-muted" />
                 <span className="min-w-0 break-words">
-                  {a.local.direccion || (
-                    <span className="text-muted">Sin dirección cargada</span>
-                  )}
+                  Reemplazo de {a.titular}
                 </span>
               </p>
-              {a.esBackup ? (
-                <p className="flex min-w-0 items-start gap-1.5 text-xs text-foreground">
-                  <IconoContacto className="mt-px h-3.5 w-3.5 shrink-0 text-muted" />
-                  <span className="min-w-0 break-words">
-                    Reemplazo de {a.titular}
-                  </span>
-                </p>
-              ) : null}
+            ) : null}
 
-              {soloConsulta ? (
-                <div
-                  className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted sm:text-xs"
-                  aria-label="Horario de atención"
-                >
-                  <IconoReloj className="h-3.5 w-3.5 shrink-0" />
-                  {horarios.length
-                    ? horarios.map((h) => (
-                        <span key={h.id} className="font-mono">
-                          {h.entrada}–{h.salida}
-                        </span>
-                      ))
-                    : "Sin horario fijado"}
-                </div>
-              ) : null}
-            </div>
+            {soloConsulta ? (
+              <div
+                className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted sm:text-xs"
+                aria-label="Horario de atención"
+              >
+                <IconoReloj className="h-3.5 w-3.5 shrink-0" />
+                {horarios.length
+                  ? horarios.map((h) => (
+                      <span key={h.id} className="font-mono">
+                        {h.entrada}–{h.salida}
+                      </span>
+                    ))
+                  : "Sin horario fijado"}
+              </div>
+            ) : null}
           </div>
 
           <div className="grid auto-cols-fr grid-flow-col gap-1.5">
@@ -370,7 +365,11 @@ export function TarjetaAgendaRepositor({
               type="button"
               onClick={onNovedad}
               disabled={!enVisita}
-              title={enVisita ? undefined : "Iniciá la visita para reportar una novedad"}
+              title={
+                enVisita
+                  ? undefined
+                  : "Iniciá la visita para reportar una novedad"
+              }
               aria-label={`Reportar una novedad de ${a.local.nombre}`}
               className={btnInfo}
             >
