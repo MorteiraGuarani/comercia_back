@@ -49,7 +49,7 @@ const service = {
       id,
       query: q,
     });
-    return t.nombre === 'tbl_crd1'
+    return t.nombre === 'tbl_crd1' || t.nombre === 'tbl_oscn'
       ? {
           items: [ejemploRespuestaSocios(t)],
           total: 1,
@@ -163,19 +163,31 @@ try {
       '/empresas/1/' +
       t.nombre;
     const locator =
-      t.nombre === 'tbl_ocrd' || t.nombre === 'tbl_crd1'
+      t.nombre === 'tbl_ocrd' ||
+      t.nombre === 'tbl_crd1' ||
+      t.nombre === 'tbl_oscn'
         ? '{CardCode}'
-        : t.nombre === 'tbl_opln'
-          ? '{ListNum}'
-          : t.nombre === 'tbl_oslp'
-            ? '{SlpCode}'
-            : t.nombre === 'tbl_oagp'
-              ? '{AgentCode}'
-              : t.identidad
-                ? '{Code}'
-                : '{id}';
+        : t.nombre === 'tbl_oitb'
+          ? '{ItmsGrpCod}'
+          : t.nombre === 'tbl_omrc'
+            ? '{FirmCode}'
+            : t.nombre === 'tbl_ocrg'
+              ? '{GroupCode}'
+              : t.nombre === 'tbl_octg'
+                ? '{GroupNum}'
+                : t.nombre === 'tbl_opln'
+                  ? '{ListNum}'
+                  : t.nombre === 'tbl_oslp'
+                    ? '{SlpCode}'
+                    : t.nombre === 'tbl_oagp'
+                      ? '{AgentCode}'
+                      : t.identidad
+                        ? '{Code}'
+                        : '{id}';
     const code =
-      t.nombre === 'tbl_ocrd' || t.nombre === 'tbl_crd1'
+      t.nombre === 'tbl_ocrd' ||
+      t.nombre === 'tbl_crd1' ||
+      t.nombre === 'tbl_oscn'
         ? 'C0001'
         : t.nombre === 'tbl_oagp'
           ? 'SUP01'
@@ -277,7 +289,7 @@ try {
       .get(
         route +
           '/' +
-          (t.nombre === 'tbl_crd1'
+          (t.nombre === 'tbl_crd1' || t.nombre === 'tbl_oscn'
             ? 'x'.repeat(201)
             : t.nombre === 'tbl_ocrd'
               ? 'x'.repeat(51)
@@ -305,6 +317,82 @@ try {
         assert.equal(calls.length, before);
       }
     }
+  }
+  for (const [tabla, campo] of [
+    ['tbl_ocrg', 'GroupCode'],
+    ['tbl_octg', 'GroupNum'],
+    ['tbl_oitb', 'ItmsGrpCod'],
+    ['tbl_omrc', 'FirmCode'],
+  ]) {
+    const grupo = ['tbl_oitb', 'tbl_omrc'].includes(tabla)
+      ? 'catalogo'
+      : 'socios-negocio';
+    const ruta = `/api/v1/admin/${grupo}/empresas/1/${tabla}`;
+    const path = `/api/v1/admin/${grupo}/empresas/{empresaId}/${tabla}`;
+    assert.ok(!doc.paths[`${path}/{id}`]);
+    for (const method of ['get', 'put', 'delete']) {
+      const op = doc.paths[`${path}/{${campo}}`][method];
+      const parametro = op.parameters.find((p) => p.name === campo);
+      assert.equal(parametro.schema.type, 'integer');
+      assert.equal(parametro.schema.minimum, -2147483648);
+      assert.equal(parametro.schema.maximum, 2147483647);
+    }
+    for (const [method, servicio] of [
+      ['get', 'obtener'],
+      ['put', 'editar'],
+      ['delete', 'eliminar'],
+    ]) {
+      let req = request(http)[method](`${ruta}/-1`);
+      if (method === 'put')
+        req = req.send(
+          tabla === 'tbl_ocrg'
+            ? { GroupName: 'Nuevo' }
+            : tabla === 'tbl_octg'
+              ? { PymntGroup: 'Nuevo' }
+              : tabla === 'tbl_oitb'
+                ? { ItmsGrpNam: 'Nuevo' }
+                : { FirmName: 'Nuevo' },
+        );
+      await req.expect(200);
+      assert.equal(calls.at(-1).method, servicio);
+      assert.equal(calls.at(-1).empresa, 1);
+      assert.equal(calls.at(-1).id, -1);
+    }
+    for (const invalido of ['1.5', '1e2', '2147483648', '-2147483649']) {
+      const antes = calls.length;
+      await request(http).get(`${ruta}/${invalido}`).expect(400);
+      assert.equal(calls.length, antes);
+    }
+  }
+  const oscnPath = '/api/v1/admin/catalogo/empresas/{empresaId}/tbl_oscn';
+  assert.ok(!doc.paths[oscnPath + '/{id}']);
+  for (const method of ['get', 'put', 'delete']) {
+    assert.ok(
+      doc.paths[oscnPath + '/{CardCode}'][method].parameters.some(
+        (p) => p.name === 'articulo',
+      ),
+    );
+  }
+  const oscn = '/api/v1/admin/catalogo/empresas/1/tbl_oscn/0001';
+  const articulo = JSON.stringify({ ItemCode: '001', Substitute: 'ALT' });
+  await request(http)
+    .get(oscn + '?page=2&limit=10&articulo=' + encodeURIComponent(articulo))
+    .expect(200);
+  assert.equal(calls.at(-1).id, '0001');
+  assert.equal(calls.at(-1).query.articulo, articulo);
+  for (const method of ['put', 'delete']) {
+    let req = request(http)[method](
+      oscn + '?articulo=' + encodeURIComponent(articulo),
+    );
+    if (method === 'put') req = req.send({ Descriptio: 'Nuevo' });
+    await req.expect(200);
+    assert.equal(calls.at(-1).id, '0001');
+    assert.equal(calls.at(-1).selector, articulo);
+    const invalido = request(http)[method](
+      oscn + '?articulo=' + encodeURIComponent('{"ItemCode":"001"}'),
+    );
+    if (method === 'put') invalido.send({ Descriptio: 'X' });
+    await invalido.expect(400);
   }
   const fabricantes = '/api/v1/admin/catalogo/empresas/1/tbl_omrc';
   await request(http)
@@ -471,12 +559,18 @@ try {
     }
   }
   const vendedores = '/api/v1/admin/socios-negocio/empresas/1/tbl_oslp';
-  await request(http).get(vendedores + '/0').expect(200);
+  await request(http)
+    .get(vendedores + '/0')
+    .expect(200);
   assert.equal(calls.at(-1).id, 0);
-  await request(http).delete(vendedores + '/-1').expect(200);
+  await request(http)
+    .delete(vendedores + '/-1')
+    .expect(200);
   assert.equal(calls.at(-1).id, -1);
   const supervisores = '/api/v1/admin/socios-negocio/empresas/1/tbl_oagp';
-  await request(http).get(supervisores + '/0007').expect(200);
+  await request(http)
+    .get(supervisores + '/0007')
+    .expect(200);
   assert.equal(calls.at(-1).id, '0007');
   for (const table of ['tbl_jcanales', 'tbl_jsubcanales']) {
     const route = '/api/v1/admin/socios-negocio/empresas/1/' + table;

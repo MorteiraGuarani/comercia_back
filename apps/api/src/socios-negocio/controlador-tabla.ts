@@ -31,11 +31,17 @@ import {
 import {
   CodigoCatalogoParams,
   ListaPrecioParams,
+  GrupoSocioParams,
+  CondicionPagoParams,
+  FabricanteParams,
+  GrupoArticuloParams,
   VendedorParams,
   SupervisorParams,
   DireccionParams,
   SelectorDireccionDto,
   ConsultaDireccionesDto,
+  SelectorArticuloDto,
+  ConsultaArticulosSocioDto,
   SinConsultaDto,
 } from './dto/registro-params.dto';
 import type { ConsultaDireccion } from './interfaces/consulta-direccion.interface';
@@ -64,13 +70,20 @@ export function crearControladorSocios(
   tabla: TablaSociosDefinicion,
 ): Type<object> {
   const esDireccion = tabla.nombre === 'tbl_crd1';
+  const esCodigoArticulo = tabla.nombre === 'tbl_oscn';
+  const esListadoPorCodigo = esDireccion || esCodigoArticulo;
   const identificadores: Record<string, { campo: string; dto: Type<object> }> =
     {
       tbl_ocrd: { campo: 'CardCode', dto: SocioParams },
       tbl_crd1: { campo: 'CardCode', dto: DireccionParams },
+      tbl_oscn: { campo: 'CardCode', dto: DireccionParams },
+      tbl_omrc: { campo: 'FirmCode', dto: FabricanteParams },
+      tbl_oitb: { campo: 'ItmsGrpCod', dto: GrupoArticuloParams },
       tbl_jcanales: { campo: 'Code', dto: CodigoCatalogoParams },
       tbl_jsubcanales: { campo: 'Code', dto: CodigoCatalogoParams },
       tbl_opln: { campo: 'ListNum', dto: ListaPrecioParams },
+      tbl_ocrg: { campo: 'GroupCode', dto: GrupoSocioParams },
+      tbl_octg: { campo: 'GroupNum', dto: CondicionPagoParams },
       tbl_oslp: { campo: 'SlpCode', dto: VendedorParams },
       tbl_oagp: { campo: 'AgentCode', dto: SupervisorParams },
     };
@@ -78,7 +91,15 @@ export function crearControladorSocios(
   const identidad = identificador?.campo ?? 'id';
   const ruta = `:${identidad}`;
   const Parametros = identificador?.dto ?? RegistroSociosParams;
-  const esEntero = ['Code', 'ListNum', 'SlpCode'].includes(identidad);
+  const esEntero = [
+    'Code',
+    'ListNum',
+    'SlpCode',
+    'GroupCode',
+    'GroupNum',
+    'FirmCode',
+    'ItmsGrpCod',
+  ].includes(identidad);
   const esTexto = identidad === 'CardCode' || identidad === 'AgentCode';
   const consulta = (listado: boolean) =>
     new ValidationPipe({
@@ -86,26 +107,35 @@ export function crearControladorSocios(
         ? listado
           ? ConsultaDireccionesDto
           : SelectorDireccionDto
-        : SinConsultaDto,
+        : esCodigoArticulo
+          ? listado
+            ? ConsultaArticulosSocioDto
+            : SelectorArticuloDto
+          : SinConsultaDto,
       transform: true,
       whitelist: true,
       forbidNonWhitelisted: true,
     });
   const documentarDireccion = (listado = false) =>
     applyDecorators(
-      ...(esDireccion
+      ...(esListadoPorCodigo
         ? [
             ApiQuery({
-              name: 'direccion',
+              name: esDireccion ? 'direccion' : 'articulo',
               required: false,
               type: String,
-              example: JSON.stringify({
-                Address: 'Sucursal de ejemplo',
-                Street: 'Calle de ejemplo 123',
-                AdresType: 'S',
-              }),
-              description:
-                'Selector JSON opcional con Address, Street y AdresType originales, incluyendo null donde corresponda. Usar encodeURIComponent. En PUT/DELETE identifica una sola dirección; sin selector se opera solo si CardCode tiene exactamente una fila, en otro caso 409 sin cambios. No acepta id técnico.',
+              example: JSON.stringify(
+                esDireccion
+                  ? {
+                      Address: 'Sucursal de ejemplo',
+                      Street: 'Calle de ejemplo 123',
+                      AdresType: 'S',
+                    }
+                  : { ItemCode: 'A0001', Substitute: 'ALT0001' },
+              ),
+              description: esDireccion
+                ? 'Selector JSON opcional con Address, Street y AdresType originales, incluyendo null donde corresponda. Usar encodeURIComponent. En PUT/DELETE identifica una sola dirección; sin selector se opera solo si CardCode tiene exactamente una fila, en otro caso 409 sin cambios. No acepta id técnico.'
+                : 'Selector JSON opcional con ItemCode y Substitute originales. Usar encodeURIComponent. En PUT/DELETE identifica una sola fila; sin selector se opera solo si CardCode tiene exactamente una fila, en otro caso 409 sin cambios. No acepta id técnico.',
             }),
             ...(listado
               ? [
@@ -147,6 +177,10 @@ export function crearControladorSocios(
       | RegistroSociosParams
       | CodigoCatalogoParams
       | ListaPrecioParams
+      | GrupoSocioParams
+      | CondicionPagoParams
+      | FabricanteParams
+      | GrupoArticuloParams
       | VendedorParams
       | SupervisorParams
       | DireccionParams,
@@ -157,11 +191,19 @@ export function crearControladorSocios(
         ? p.Code
         : 'ListNum' in p
           ? p.ListNum
-          : 'SlpCode' in p
-            ? p.SlpCode
-            : 'AgentCode' in p
-              ? p.AgentCode
-              : p.id;
+          : 'GroupCode' in p
+            ? p.GroupCode
+            : 'GroupNum' in p
+              ? p.GroupNum
+              : 'FirmCode' in p
+                ? p.FirmCode
+                : 'ItmsGrpCod' in p
+                  ? p.ItmsGrpCod
+                  : 'SlpCode' in p
+                    ? p.SlpCode
+                    : 'AgentCode' in p
+                      ? p.AgentCode
+                      : p.id;
   const documentarCodigo = () =>
     ApiParam({
       name: identidad,
@@ -169,7 +211,8 @@ export function crearControladorSocios(
         ? {
             type: 'string',
             minLength: 1,
-            maxLength: esDireccion || identidad === 'AgentCode' ? 200 : 50,
+            maxLength:
+              esListadoPorCodigo || identidad === 'AgentCode' ? 200 : 50,
           }
         : esEntero
           ? { type: 'integer', minimum: -2147483648, maximum: 2147483647 }
@@ -304,13 +347,15 @@ export function crearControladorSocios(
     @ApiOperation({
       summary: esDireccion
         ? 'Listar direcciones por CardCode'
-        : `Consultar una fila de ${tabla.nombre} por ${identidad}`,
-      description: `${acceso} ${detalleClave} ${esDireccion ? 'Devuelve todas las direcciones de ese CardCode con paginación 7/50; direccion permite filtrar una clave de dirección completa.' : ''}`,
+        : esCodigoArticulo
+          ? 'Listar códigos de artículo por CardCode'
+          : `Consultar una fila de ${tabla.nombre} por ${identidad}`,
+      description: `${acceso} ${detalleClave} ${esDireccion ? 'Devuelve todas las direcciones de ese CardCode con paginación 7/50; direccion permite filtrar una clave de dirección completa.' : esCodigoArticulo ? 'Devuelve los códigos de artículo de ese CardCode con paginación 7/50; articulo permite filtrar por ItemCode y Substitute.' : ''}`,
     })
     @documentarDireccion(true)
     @ApiOkResponse({
-      schema: esDireccion ? esquemaPaginaSocios(tabla) : respuesta,
-      example: esDireccion
+      schema: esListadoPorCodigo ? esquemaPaginaSocios(tabla) : respuesta,
+      example: esListadoPorCodigo
         ? { items: [ejemplo], total: 1, page: 1, limit: 7, totalPages: 1 }
         : ejemplo,
     })
@@ -321,6 +366,10 @@ export function crearControladorSocios(
         | RegistroSociosParams
         | CodigoCatalogoParams
         | ListaPrecioParams
+        | GrupoSocioParams
+        | CondicionPagoParams
+        | FabricanteParams
+        | GrupoArticuloParams
         | VendedorParams
         | SupervisorParams
         | DireccionParams,
@@ -422,6 +471,10 @@ export function crearControladorSocios(
         | RegistroSociosParams
         | CodigoCatalogoParams
         | ListaPrecioParams
+        | GrupoSocioParams
+        | CondicionPagoParams
+        | FabricanteParams
+        | GrupoArticuloParams
         | VendedorParams
         | SupervisorParams
         | DireccionParams,
@@ -433,7 +486,7 @@ export function crearControladorSocios(
         p.empresaId,
         codigo(p),
         d,
-        q.direccion,
+        esCodigoArticulo ? q.articulo : q.direccion,
       );
     }
 
@@ -459,12 +512,21 @@ export function crearControladorSocios(
         | RegistroSociosParams
         | CodigoCatalogoParams
         | ListaPrecioParams
+        | GrupoSocioParams
+        | CondicionPagoParams
+        | FabricanteParams
+        | GrupoArticuloParams
         | VendedorParams
         | SupervisorParams
         | DireccionParams,
       @Query(consulta(false)) q: ConsultaDireccion,
     ) {
-      return this.servicio.eliminar(tabla, p.empresaId, codigo(p), q.direccion);
+      return this.servicio.eliminar(
+        tabla,
+        p.empresaId,
+        codigo(p),
+        esCodigoArticulo ? q.articulo : q.direccion,
+      );
     }
   }
   Object.defineProperty(ControladorTablaSocios, 'name', {

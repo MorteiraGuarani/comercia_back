@@ -12,6 +12,7 @@ import {
 } from 'class-validator';
 import { ConsultaSociosDto, EmpresaSociosParams } from './consulta-socios.dto';
 import { leerSelectorDireccion } from '../utils/selector-direccion';
+import { leerSelectorArticulo } from '../utils/selector-articulo';
 
 export class DireccionParams extends EmpresaSociosParams {
   @ApiProperty({
@@ -67,6 +68,86 @@ export class ListaPrecioParams extends EmpresaSociosParams {
   ListNum!: number;
 }
 
+export class GrupoSocioParams extends EmpresaSociosParams {
+  @ApiProperty({
+    type: 'integer',
+    minimum: -2147483648,
+    maximum: 2147483647,
+    example: 1,
+    description:
+      'GroupCode original del grupo de socios en la empresa, nunca id técnico.',
+  })
+  @Transform(({ obj, key }: { obj: Record<string, unknown>; key: string }) =>
+    typeof obj[key] === 'string' && /^-?\d+$/.test(obj[key])
+      ? Number(obj[key])
+      : Number.NaN,
+  )
+  @IsInt()
+  @Min(-2147483648)
+  @Max(2147483647)
+  GroupCode!: number;
+}
+
+export class CondicionPagoParams extends EmpresaSociosParams {
+  @ApiProperty({
+    type: 'integer',
+    minimum: -2147483648,
+    maximum: 2147483647,
+    example: -1,
+    description:
+      'GroupNum original de la condición de pago en la empresa, nunca id técnico.',
+  })
+  @Transform(({ obj, key }: { obj: Record<string, unknown>; key: string }) =>
+    typeof obj[key] === 'string' && /^-?\d+$/.test(obj[key])
+      ? Number(obj[key])
+      : Number.NaN,
+  )
+  @IsInt()
+  @Min(-2147483648)
+  @Max(2147483647)
+  GroupNum!: number;
+}
+
+export class FabricanteParams extends EmpresaSociosParams {
+  @ApiProperty({
+    type: 'integer',
+    minimum: -2147483648,
+    maximum: 2147483647,
+    example: 1,
+    description:
+      'FirmCode original del fabricante en la empresa, nunca id técnico.',
+  })
+  @Transform(({ obj, key }: { obj: Record<string, unknown>; key: string }) =>
+    typeof obj[key] === 'string' && /^-?\d+$/.test(obj[key])
+      ? Number(obj[key])
+      : Number.NaN,
+  )
+  @IsInt()
+  @Min(-2147483648)
+  @Max(2147483647)
+  FirmCode!: number;
+}
+
+export class GrupoArticuloParams extends EmpresaSociosParams {
+  @ApiProperty({
+    type: 'integer',
+    minimum: -2147483648,
+    maximum: 2147483647,
+    example: 100,
+    description:
+      'ItmsGrpCod original del grupo de artículos en la empresa, nunca id técnico.',
+  })
+  @Transform(({ obj, key }: { obj: Record<string, unknown>; key: string }) =>
+    typeof obj[key] === 'string' && /^-?\d+$/.test(obj[key])
+      ? Number(obj[key])
+      : Number.NaN,
+  )
+  @IsInt()
+  @Min(-2147483648)
+  @Max(2147483647)
+  ItmsGrpCod!: number;
+}
+
 export class VendedorParams extends EmpresaSociosParams {
   @ApiProperty({
     type: 'integer',
@@ -116,5 +197,23 @@ export class SelectorDireccionDto {
 export class ConsultaDireccionesDto extends IntersectionType(
   ConsultaSociosDto,
   SelectorDireccionDto,
+) {}
+export class SelectorArticuloDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(4000)
+  @ValidateBy({
+    name: 'selectorArticulo',
+    validator: {
+      validate: (value: unknown) => leerSelectorArticulo(value) !== null,
+      defaultMessage: () =>
+        'articulo debe ser JSON con ItemCode y Substitute originales',
+    },
+  })
+  articulo?: string;
+}
+export class ConsultaArticulosSocioDto extends IntersectionType(
+  ConsultaSociosDto,
+  SelectorArticuloDto,
 ) {}
 export class SinConsultaDto {}

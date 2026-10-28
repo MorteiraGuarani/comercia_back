@@ -78,6 +78,117 @@ function preparar() {
 }
 
 describe('Socios de negocio públicos y separados por empresa', () => {
+  it('OSCN lista por CardCode y exige selector para modificar si hay varias filas', async () => {
+    const { modelos, service } = preparar();
+    const tabla = TABLAS_SOCIOS.tbl_oscn;
+    const repo = modelos.codigoArticuloSocio;
+    const primera = {
+      id: 11n,
+      CardCode: '0001',
+      ItemCode: 'A',
+      Substitute: 'ALT1',
+    };
+    const segunda = { ...primera, id: 12n, ItemCode: 'B', Substitute: 'ALT2' };
+    repo.findMany.mockResolvedValue([primera, segunda]);
+    await service.obtener(tabla, 20, '0001', { page: 1, limit: 7 });
+    expect(repo.findMany).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        where: { empresaId: 20, CardCode: '0001' },
+        skip: 0,
+        take: 7,
+      }),
+    );
+    await expect(
+      service.editar(tabla, 20, '0001', { Descriptio: 'Nuevo' }),
+    ).rejects.toBeInstanceOf(ConflictException);
+    await expect(service.eliminar(tabla, 20, '0001')).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+    expect(repo.update).not.toHaveBeenCalled();
+    expect(repo.delete).not.toHaveBeenCalled();
+    const selector = JSON.stringify({ ItemCode: 'B', Substitute: 'ALT2' });
+    repo.findMany.mockResolvedValue([segunda]);
+    await service.editar(tabla, 20, '0001', { Descriptio: 'Nuevo' }, selector);
+    expect(repo.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          id: 12n,
+          empresaId: 20,
+          CardCode: '0001',
+          ItemCode: 'B',
+          Substitute: 'ALT2',
+        },
+      }),
+    );
+    await service.eliminar(tabla, 20, '0001', selector);
+    expect(repo.delete).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          id: 12n,
+          empresaId: 20,
+          CardCode: '0001',
+          ItemCode: 'B',
+          Substitute: 'ALT2',
+        },
+      }),
+    );
+    await expect(
+      service.eliminar(tabla, 20, '0001', '{"ItemCode":"B"}'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+  it.each([
+    {
+      tabla: TABLAS_SOCIOS.tbl_ocrg,
+      modelo: 'socioNegocioGrupo',
+      clave: 'GroupCode',
+      valor: 202,
+      campo: 'GroupName',
+    },
+    {
+      tabla: TABLAS_SOCIOS.tbl_octg,
+      modelo: 'socioNegocioCondicionPago',
+      clave: 'GroupNum',
+      valor: -1,
+      campo: 'PymntGroup',
+    },
+  ] as const)(
+    'consulta, edita y elimina $tabla.nombre por $clave y empresa, no por id',
+    async ({ tabla, modelo, clave, valor, campo }) => {
+      const { modelos, service } = preparar();
+      const repo = modelos[modelo];
+      const fila = {
+        id: 987654n,
+        empresaId: 20,
+        [clave]: valor,
+        [campo]: 'Anterior',
+      };
+      repo.findFirst.mockResolvedValue(fila);
+      repo.update.mockResolvedValue({ ...fila, [campo]: 'Nuevo' });
+      await service.obtener(tabla, 20, valor);
+      expect(repo.findFirst).toHaveBeenLastCalledWith(
+        expect.objectContaining({ where: { empresaId: 20, [clave]: valor } }),
+      );
+      await service.editar(tabla, 20, valor, { [campo]: 'Nuevo' });
+      expect(repo.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 987654n, empresaId: 20, [clave]: valor },
+        }),
+      );
+      await service.eliminar(tabla, 20, valor);
+      expect(repo.delete).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 987654n, empresaId: 20, [clave]: valor },
+        }),
+      );
+      repo.findFirst.mockResolvedValue(null);
+      await expect(service.obtener(tabla, 21, valor)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      expect(repo.findFirst).toHaveBeenLastCalledWith(
+        expect.objectContaining({ where: { empresaId: 21, [clave]: valor } }),
+      );
+    },
+  );
   it('no elige una dirección arbitraria y selecciona por clave original incluyendo NULL', async () => {
     const { modelos, service } = preparar();
     const tabla = TABLAS_SOCIOS.tbl_crd1;
@@ -170,28 +281,43 @@ describe('Socios de negocio públicos y separados por empresa', () => {
       const valor =
         tabla.nombre === 'tbl_ocrd' ||
         tabla.nombre === 'tbl_crd1' ||
+        tabla.nombre === 'tbl_oscn' ||
         tabla.nombre === 'tbl_oagp'
           ? '000123'
           : tabla.identidad ||
               tabla.nombre === 'tbl_opln' ||
-              tabla.nombre === 'tbl_oslp'
+              tabla.nombre === 'tbl_oslp' ||
+              tabla.nombre === 'tbl_ocrg' ||
+              tabla.nombre === 'tbl_octg' ||
+              tabla.nombre === 'tbl_oitb' ||
+              tabla.nombre === 'tbl_omrc'
             ? 7
             : '9007199254740993';
       const referencia =
-        tabla.nombre === 'tbl_ocrd' || tabla.nombre === 'tbl_crd1'
+        tabla.nombre === 'tbl_ocrd' ||
+        tabla.nombre === 'tbl_crd1' ||
+        tabla.nombre === 'tbl_oscn'
           ? { CardCode: valor }
           : tabla.nombre === 'tbl_oagp'
             ? { AgentCode: valor }
-            : tabla.nombre === 'tbl_oslp'
-              ? { SlpCode: 7 }
-              : tabla.nombre === 'tbl_opln'
-                ? { ListNum: 7 }
-                : tabla.identidad
-                  ? { Code: 7 }
-                  : { id: 9007199254740993n };
+            : tabla.nombre === 'tbl_ocrg'
+              ? { GroupCode: 7 }
+              : tabla.nombre === 'tbl_octg'
+                ? { GroupNum: 7 }
+                : tabla.nombre === 'tbl_oitb'
+                  ? { ItmsGrpCod: 7 }
+                  : tabla.nombre === 'tbl_omrc'
+                    ? { FirmCode: 7 }
+                    : tabla.nombre === 'tbl_oslp'
+                      ? { SlpCode: 7 }
+                      : tabla.nombre === 'tbl_opln'
+                        ? { ListNum: 7 }
+                        : tabla.identidad
+                          ? { Code: 7 }
+                          : { id: 9007199254740993n };
       await service.obtener(tabla, 20, valor);
       const lectura =
-        tabla.nombre === 'tbl_crd1'
+        tabla.nombre === 'tbl_crd1' || tabla.nombre === 'tbl_oscn'
           ? repositorio.findMany
           : repositorio.findFirst;
       expect(lectura).toHaveBeenCalledWith(

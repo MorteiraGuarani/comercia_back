@@ -132,12 +132,17 @@ export class SociosNegocioService {
     id: string | number,
     query: ConsultaDireccion = {},
   ) {
-    if (tabla.nombre === 'tbl_crd1')
+    if (tabla.nombre === 'tbl_crd1' || tabla.nombre === 'tbl_oscn')
       return this.listar(
         tabla,
         empresaId,
         query,
-        filtroRegistroSocios(tabla, empresaId, id, query.direccion),
+        filtroRegistroSocios(
+          tabla,
+          empresaId,
+          id,
+          tabla.nombre === 'tbl_oscn' ? query.articulo : query.direccion,
+        ),
       );
     await this.empresa(empresaId);
     return respuestaSocios(tabla, await this.fila(tabla, empresaId, id));
@@ -322,7 +327,7 @@ export class SociosNegocioService {
     const modelo = this.modelo(tx, tabla);
     const where = filtroRegistroSocios(tabla, empresaId, referencia, direccion);
     const filas =
-      tabla.nombre === 'tbl_crd1'
+      tabla.nombre === 'tbl_crd1' || tabla.nombre === 'tbl_oscn'
         ? await modelo.findMany({
             where,
             select: seleccionSocios(tabla),
@@ -334,7 +339,9 @@ export class SociosNegocioService {
       throw new NotFoundException('Registro no disponible en esta empresa');
     if (filas.length > 1)
       throw new ConflictException(
-        'CardCode tiene varias direcciones; indicar direccion con Address, Street y AdresType originales',
+        tabla.nombre === 'tbl_oscn'
+          ? 'CardCode tiene varios artículos; indicar articulo con ItemCode y Substitute originales'
+          : 'CardCode tiene varias direcciones; indicar direccion con Address, Street y AdresType originales',
       );
     return filas[0];
   }

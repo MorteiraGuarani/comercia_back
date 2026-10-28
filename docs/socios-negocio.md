@@ -22,16 +22,34 @@ Base: `/api/v1/admin/socios-negocio/empresas/{empresaId}`.
 | tbl_jsubcanales | `/tbl_jsubcanales/{Code}` | Code |
 | tbl_oagp | `/tbl_oagp/{AgentCode}` | AgentCode |
 | tbl_oslp | `/tbl_oslp/{SlpCode}` | SlpCode |
-| tbl_ocrg | `/tbl_ocrg/{id}` | GroupCode |
-| tbl_octg | `/tbl_octg/{id}` | GroupNum |
+| tbl_ocrg | `/tbl_ocrg/{GroupCode}` | GroupCode |
+| tbl_octg | `/tbl_octg/{GroupNum}` | GroupNum |
 | tbl_opln | `/tbl_opln/{ListNum}` | ListNum |
 
 Los códigos de socios/direcciones son texto exacto y conservan ceros iniciales.
-`Code` de canales/subcanales, `ListNum` de tbl_opln y `SlpCode` de tbl_oslp son enteros int4; `AgentCode` de tbl_oagp es texto exacto. Estas rutas nunca buscan por id
+`Code` de canales/subcanales, `GroupCode` de tbl_ocrg, `GroupNum` de tbl_octg, `ListNum` de tbl_opln y `SlpCode` de tbl_oslp son enteros int4; `AgentCode` de tbl_oagp es texto exacto. Estas rutas nunca buscan por id
 técnico como alternativa. Para renombrar una clave, usar su valor original en la
 URL y el nuevo en el cuerpo. Codificar caracteres especiales de la URL.
-Las filas con `ListNum`, `SlpCode` o `AgentCode` nulo permanecen visibles en el listado;
+Las filas con `GroupCode`, `GroupNum`, `ListNum`, `SlpCode` o `AgentCode` nulo permanecen visibles en el listado;
 las rutas individuales requieren el código correspondiente.
+
+En el catálogo, bajo `/api/v1/admin/catalogo/empresas/{empresaId}`, las rutas
+individuales de grupos de artículos y fabricantes usan `/tbl_oitb/{ItmsGrpCod}`
+y `/tbl_omrc/{FirmCode}`. Ambos códigos son enteros int4. Un fabricante sin
+`FirmCode` permanece visible en la lista, pero no tiene ruta individual por código.
+
+`GET /tbl_oscn/{CardCode}` devuelve las filas del socio, paginadas. Para editar o
+eliminar, si existe una sola fila basta el `CardCode`; si hay varias se devuelve
+409 hasta indicar `articulo`, un JSON codificado en la URL con los valores
+originales de `ItemCode` y `Substitute`, por ejemplo:
+
+```js
+const articulo = encodeURIComponent(JSON.stringify({ ItemCode: '001', Substitute: 'ALT' }));
+const url = `/api/v1/admin/catalogo/empresas/1/tbl_oscn/C0001?articulo=${articulo}`;
+```
+
+El mismo selector puede filtrar el GET. El código del socio conserva sus ceros
+iniciales; los tres campos de la clave deben corresponder a la misma empresa.
 
 GET de colección lista con `buscar`, `page` y `limit`; los resultados tienen
 `{items,total,page,limit,totalPages}`, con 7 filas por defecto y máximo 50.

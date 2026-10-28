@@ -2,6 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import type { TablaSociosDefinicion } from '../interfaces/tabla-socios.interface';
 import type { EntradaSocio } from '../interfaces/registro-socio.interface';
 import { leerSelectorDireccion } from './selector-direccion';
+import { leerSelectorArticulo } from './selector-articulo';
 
 export function filtroRegistroSocios(
   tabla: TablaSociosDefinicion,
@@ -9,6 +10,13 @@ export function filtroRegistroSocios(
   referencia: string | number,
   direccion?: string,
 ): EntradaSocio {
+  if (tabla.nombre === 'tbl_oscn') {
+    const selector =
+      direccion === undefined ? {} : leerSelectorArticulo(direccion);
+    if (selector === null)
+      throw new BadRequestException('Selector de artículo inválido');
+    return { empresaId, CardCode: String(referencia), ...selector };
+  }
   if (tabla.nombre === 'tbl_ocrd' || tabla.nombre === 'tbl_crd1') {
     const selector =
       direccion === undefined ? {} : leerSelectorDireccion(direccion);
@@ -31,14 +39,26 @@ export function filtroRegistroSocios(
     tabla.nombre === 'tbl_jcanales' ||
     tabla.nombre === 'tbl_jsubcanales' ||
     tabla.nombre === 'tbl_opln' ||
-    tabla.nombre === 'tbl_oslp'
+    tabla.nombre === 'tbl_oslp' ||
+    tabla.nombre === 'tbl_ocrg' ||
+    tabla.nombre === 'tbl_octg' ||
+    tabla.nombre === 'tbl_oitb' ||
+    tabla.nombre === 'tbl_omrc'
   ) {
     const campo =
-      tabla.nombre === 'tbl_opln'
-        ? 'ListNum'
-        : tabla.nombre === 'tbl_oslp'
-          ? 'SlpCode'
-          : 'Code';
+      tabla.nombre === 'tbl_oitb'
+        ? 'ItmsGrpCod'
+        : tabla.nombre === 'tbl_omrc'
+          ? 'FirmCode'
+          : tabla.nombre === 'tbl_ocrg'
+            ? 'GroupCode'
+            : tabla.nombre === 'tbl_octg'
+              ? 'GroupNum'
+              : tabla.nombre === 'tbl_opln'
+                ? 'ListNum'
+                : tabla.nombre === 'tbl_oslp'
+                  ? 'SlpCode'
+                  : 'Code';
     const codigo = Number(referencia);
     if (
       !/^-?\d+$/.test(String(referencia)) ||
