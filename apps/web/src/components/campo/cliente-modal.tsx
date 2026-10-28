@@ -66,6 +66,8 @@ export function ClienteModal({
     Phone1: formatearTelefono(inicial?.telefono ?? ""),
     Address: inicial?.address ?? "",
     Street: inicial?.street ?? "",
+    // Los locales nuevos arrancan con 200 m, igual que el valor de la base.
+    radioMetros: String(inicial?.radioMetros ?? 200),
   });
   // Sin punto marcado no se envía nada y se conserva la ubicación actual.
   const [punto, setPunto] = useState(
@@ -120,6 +122,7 @@ export function ClienteModal({
               Phone1: telefono.e164,
               Address: form.Address.trim(),
               Street: form.Street.trim(),
+              radioMetros: Number(form.radioMetros),
               ...punto,
             }),
           },
@@ -395,6 +398,25 @@ export function ClienteModal({
                     />
                   </label>
                 </div>
+                <label className="block min-w-0 space-y-1.5 text-sm font-semibold sm:max-w-xs">
+                  <span>Radio de marcación (metros)</span>
+                  <input
+                    type="number"
+                    name="radioMetros"
+                    required
+                    min={20}
+                    max={1000}
+                    step={1}
+                    inputMode="numeric"
+                    aria-describedby="radio-pista"
+                    value={form.radioMetros}
+                    onChange={cambiar("radioMetros")}
+                    className={campoClase}
+                  />
+                  <span id="radio-pista" className="block text-xs font-normal text-muted">
+                    Distancia máxima al punto del mapa para iniciar y finalizar la visita. De 20 a 1000 m.
+                  </span>
+                </label>
                 <div className="min-w-0 space-y-1.5">
                   <p className="text-sm font-semibold">Ubicación en el mapa</p>
                   <div className="overflow-hidden rounded-xl border border-line">

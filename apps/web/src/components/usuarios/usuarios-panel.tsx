@@ -1,6 +1,6 @@
 "use client";
 
-import { calcularDvRucPy } from "@/utils/ruc";
+import { baseRuc, calcularDvRucPy } from "@/utils/ruc";
 import { formatearTelefono, partesCelular } from "@/utils/telefono";
 import { formatoFecha } from "@/utils/fechas";
 import { useCallback, useEffect, useState } from "react";
@@ -64,8 +64,6 @@ const FORM_INICIAL: FormUsuario = {
   isActive: true,
 };
 
-// Base del RUC tal como la edita el formulario (dígitos antes del verificador).
-const baseRuc = (ruc: string | null) => (ruc ?? "").split("-")[0].replace(/\D/g, "").slice(0, 8);
 
 function ListaUsuariosMovil({
   usuarios,

@@ -176,7 +176,7 @@ try {
   );
   assert.equal(
     document.querySelector("input").getAttribute("placeholder"),
-    "Buscar por nombre o código de cliente…",
+    "Buscar local o código",
   );
   assert.doesNotMatch(
     document.body.textContent,
@@ -205,6 +205,7 @@ try {
   assert.equal(ediciones[0].url, "/campo/locales/00001");
   assert.equal(ediciones[0].cuerpo.CardName, "Almacén Norte");
   assert.equal(ediciones[0].cuerpo.CardCode, undefined);
+  assert.equal(ediciones[0].cuerpo.radioMetros, 100, "La edición conserva el radio de marcación del local");
   assert.equal(document.querySelector('[role="dialog"]'), null, "Guardar Información cierra su modal");
 
   await act(async () => click(document.querySelector('[aria-label="Itinerario de Almacén Central"]')));

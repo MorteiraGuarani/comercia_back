@@ -95,6 +95,8 @@ model SocioNegocio {
   AgentCode String? @db.VarChar(32)
   U_Latitud String? @db.VarChar(30)
   U_Longitud String? @db.VarChar(30)
+  // Radio (m) alrededor de U_Latitud/U_Longitud para marcar entrada y salida.
+  U_RadioMetros Int @default(200)
   U_jCANAL String? @db.VarChar(50)
   U_jSUBCANAL String? @db.VarChar(50)
   U_SubCanal String? @db.VarChar(50)
@@ -459,6 +461,9 @@ model Usuario {
   ruc                     String?                   @unique
   celular                 String
   legajo                  String?                   @db.VarChar(64)
+  /// Foto de perfil: ruta relativa a UPLOADS_DIR y su tipo, la sube el propio usuario.
+  fotoPerfil              String?                   @map("foto_perfil") @db.VarChar(255)
+  fotoPerfilMime          String?                   @map("foto_perfil_mime") @db.VarChar(40)
   rolId                   Int?                      @map("rol_id")
   rol                     Rol?                      @relation(fields: [rolId, empresaId], references: [id, empresaId], onDelete: NoAction, onUpdate: NoAction)
   superiorId              Int?                      @map("superior_id")

@@ -1,6 +1,7 @@
 import { OmitType } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
+  IsInt,
   IsNumber,
   IsOptional,
   IsString,
@@ -10,6 +11,7 @@ import {
   Min,
 } from 'class-validator';
 import { trimString } from '../../common/utils/transforms';
+import { RADIO_LOCAL_MAX, RADIO_LOCAL_MIN } from '../utils/local-ocrd';
 
 /** Alta de cliente en OCRD y, si se informa, su dirección de entrega en CRD1. */
 export class CrearLocalCampoDto {
@@ -64,6 +66,17 @@ export class CrearLocalCampoDto {
   @Min(-180)
   @Max(180)
   longitud?: number;
+
+  /** Radio de marcación en metros (U_RadioMetros); sin dato se usa 200 al crear. */
+  @IsOptional()
+  @IsInt({ message: 'El radio debe ser un número entero de metros' })
+  @Min(RADIO_LOCAL_MIN, {
+    message: `El radio mínimo es de ${RADIO_LOCAL_MIN} m`,
+  })
+  @Max(RADIO_LOCAL_MAX, {
+    message: `El radio máximo es de ${RADIO_LOCAL_MAX} m`,
+  })
+  radioMetros?: number;
 }
 
 /** Edición: el código de cliente es la clave y no cambia. */

@@ -1,6 +1,10 @@
 // Validación del RUC paraguayo con dígito verificador (módulo 11, algoritmo de
 // la SET). Mantener sincronizado con apps/api/src/common/utils/ruc.ts.
 
+/** Base del RUC tal como la editan los formularios (dígitos antes del verificador). */
+export const baseRuc = (ruc: string | null) =>
+  (ruc ?? "").split("-")[0].replace(/\D/g, "").slice(0, 8);
+
 export function calcularDvRucPy(base: string): number {
   let k = 2;
   let total = 0;

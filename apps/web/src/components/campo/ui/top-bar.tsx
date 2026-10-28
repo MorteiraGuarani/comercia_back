@@ -17,9 +17,10 @@ export function TopBar({
 }: TopBarProps) {
   return (
     <div
-      className={`flex w-full min-w-0 flex-col gap-3 border-b border-line bg-surface-raised px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-6 sm:py-4 lg:px-8 ${className}`}
+      className={`flex w-full min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-line bg-surface-raised px-4 py-3 sm:px-6 sm:py-4 lg:px-8 ${className}`}
     >
-      <div className="flex w-full min-w-0 items-start gap-3 sm:w-auto sm:flex-[1_1_16rem] sm:items-center">
+      {/* Las acciones quedan a la derecha del título; si no entran, bajan solas. */}
+      <div className="flex min-w-0 flex-[1_1_10rem] items-center gap-3">
         {onBack && (
           <button
             type="button"
@@ -55,7 +56,7 @@ export function TopBar({
         </div>
       </div>
       {right && (
-        <div className="flex w-full max-w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:self-auto">{right}</div>
+        <div className="flex max-w-full min-w-0 flex-wrap items-center justify-end gap-2">{right}</div>
       )}
     </div>
   );

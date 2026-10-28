@@ -7,6 +7,9 @@ export interface UsuarioSesion {
   nombreLogin: string;
   ruc: string | null;
   celular: string;
+  legajo: string | null;
+  /** Cambia con cada foto nueva; null si no tiene foto de perfil. */
+  fotoPerfilVersion: string | null;
   esSuperadmin: boolean;
   puedeAdministrarUsuarios: boolean;
   empresa: { id: number; nombre: string };

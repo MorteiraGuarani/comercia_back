@@ -742,7 +742,7 @@ export function SupervisionPanel({
                     {
                       valor: resumen.rutas.completadas,
                       clase: "bg-emerald-600 dark:bg-emerald-500",
-                      etiqueta: "hechas",
+                      etiqueta: "visitados",
                     },
                     {
                       valor: resumen.rutas.enCurso,
@@ -762,7 +762,7 @@ export function SupervisionPanel({
                   ]}
                   conteos={[
                     {
-                      etiqueta: "Hechas",
+                      etiqueta: "Visitados",
                       valor: resumen.rutas.completadas,
                       clase: "text-emerald-700 dark:text-emerald-300",
                     },

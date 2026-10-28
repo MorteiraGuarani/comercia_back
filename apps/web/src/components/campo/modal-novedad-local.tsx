@@ -1,12 +1,12 @@
 "use client";
 
+import { mostrarToast } from "@/components/toast/toast-controller";
 import { useState } from "react";
 import { Modal } from "@/components/modal";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { crearNovedadCampo } from "@/lib/api-adjuntos-campo";
 import { mensajeError } from "@/utils/error";
 import { SelectorFotosCampo } from "./selector-fotos-campo";
-import { IconoCheck } from "./ui/iconos-campo";
 import { SelectorTipoNovedad } from "./ui/selector-tipo-novedad";
 import type { TipoNovedad } from "@/types/campo";
 
@@ -34,7 +34,6 @@ export function ModalNovedadLocal({
   const [descripcion, setDescripcion] = useState("");
   const [fotos, setFotos] = useState<File[]>([]);
   const [enviando, setEnviando] = useState(false);
-  const [enviada, setEnviada] = useState(false);
   const [error, setError] = useState("");
   const completo = titulo.trim().length >= 2 && descripcion.trim().length >= 3;
 
@@ -54,7 +53,12 @@ export function ModalNovedadLocal({
         },
         fotos,
       );
-      setEnviada(true);
+      mostrarToast(
+        "exito",
+        "Tu supervisor ya fue notificado.",
+        "Novedad enviada",
+      );
+      cerrar();
     } catch (e) {
       setError(mensajeError(e, "No se pudo enviar la novedad"));
     } finally {
@@ -71,99 +75,97 @@ export function ModalNovedadLocal({
         if (!enviando) cerrar();
       }}
     >
-      {enviada ? (
-        <div className="space-y-3 py-4 text-center">
-          <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
-            <IconoCheck className="h-6 w-6" />
-          </span>
-          <p className="text-base font-bold text-foreground">Novedad enviada</p>
-          <p className="text-sm text-muted">Tu supervisor ya fue notificado.</p>
+      <form
+        className="space-y-3"
+        onSubmit={(evento) => {
+          evento.preventDefault();
+          void enviar();
+        }}
+      >
+        <p className="text-xs text-muted">
+          {tarea ? `En ${local.nombre}. ` : ""}
+          Contá el imprevisto (local cerrado, faltante de stock, reclamo de
+          precio…) para que tu supervisor intervenga.
+        </p>
+
+        <fieldset disabled={enviando} className="min-w-0">
+          <legend className="mb-1 text-xs font-semibold text-foreground">
+            Tipo
+          </legend>
+          <SelectorTipoNovedad valor={tipo} onCambiar={setTipo} />
+        </fieldset>
+
+        <div>
+          <label
+            htmlFor="novedad-titulo"
+            className="mb-1 block text-xs font-semibold text-foreground"
+          >
+            Asunto
+          </label>
+          <input
+            id="novedad-titulo"
+            type="text"
+            value={titulo}
+            maxLength={120}
+            onChange={(e) => setTitulo(e.target.value)}
+            placeholder="Ej.: local cerrado por inventario"
+            disabled={enviando}
+            className={campo}
+          />
+        </div>
+
+        <div>
+          <label
+            htmlFor="novedad-descripcion"
+            className="mb-1 block text-xs font-semibold text-foreground"
+          >
+            Descripción
+          </label>
+          <textarea
+            id="novedad-descripcion"
+            value={descripcion}
+            rows={3}
+            maxLength={1000}
+            onChange={(e) => setDescripcion(e.target.value)}
+            placeholder="Detallá lo que pasó"
+            disabled={enviando}
+            className={`${campo} resize-y`}
+          />
+        </div>
+
+        <SelectorFotosCampo
+          archivos={fotos}
+          onChange={setFotos}
+          disabled={enviando}
+        />
+
+        {error ? (
+          <p
+            role="alert"
+            className="rounded-lg bg-red-50 p-2.5 text-sm text-red-700 dark:bg-red-950/60 dark:text-red-200"
+          >
+            {error}
+          </p>
+        ) : null}
+
+        <div className="flex flex-col-reverse gap-2 border-t border-line pt-3 sm:flex-row sm:justify-end">
           <button
             type="button"
             onClick={cerrar}
-            className="min-h-11 w-full cursor-pointer rounded-lg bg-foreground px-4 text-sm font-semibold text-background hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2"
+            disabled={enviando}
+            className="min-h-11 cursor-pointer whitespace-nowrap rounded-lg border border-line px-4 text-sm font-semibold text-foreground hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Listo
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            disabled={!completo || enviando}
+            className="min-h-11 cursor-pointer whitespace-nowrap rounded-lg bg-foreground px-4 text-sm font-semibold text-background hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Enviar novedad
           </button>
         </div>
-      ) : (
-        <form
-          className="space-y-3"
-          onSubmit={(evento) => {
-            evento.preventDefault();
-            void enviar();
-          }}
-        >
-          <p className="text-xs text-muted">
-            {tarea ? `En ${local.nombre}. ` : ""}
-            Contá el imprevisto (local cerrado, faltante de stock, reclamo de
-            precio…) para que tu supervisor intervenga.
-          </p>
-
-          <fieldset disabled={enviando} className="min-w-0">
-            <legend className="mb-1 text-xs font-semibold text-foreground">Tipo</legend>
-            <SelectorTipoNovedad valor={tipo} onCambiar={setTipo} />
-          </fieldset>
-
-          <div>
-            <label htmlFor="novedad-titulo" className="mb-1 block text-xs font-semibold text-foreground">
-              Asunto
-            </label>
-            <input
-              id="novedad-titulo"
-              type="text"
-              value={titulo}
-              maxLength={120}
-              onChange={(e) => setTitulo(e.target.value)}
-              placeholder="Ej.: local cerrado por inventario"
-              disabled={enviando}
-              className={campo}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="novedad-descripcion" className="mb-1 block text-xs font-semibold text-foreground">
-              Descripción
-            </label>
-            <textarea
-              id="novedad-descripcion"
-              value={descripcion}
-              rows={3}
-              maxLength={1000}
-              onChange={(e) => setDescripcion(e.target.value)}
-              placeholder="Detallá lo que pasó"
-              disabled={enviando}
-              className={`${campo} resize-y`}
-            />
-          </div>
-
-          <SelectorFotosCampo archivos={fotos} onChange={setFotos} disabled={enviando} />
-
-          {error ? (
-            <p role="alert" className="rounded-lg bg-red-50 p-2.5 text-sm text-red-700 dark:bg-red-950/60 dark:text-red-200">
-              {error}
-            </p>
-          ) : null}
-
-          <div className="flex flex-col-reverse gap-2 border-t border-line pt-3 sm:flex-row sm:justify-end">
-            <button
-              type="button"
-              onClick={cerrar}
-              disabled={enviando}
-              className="min-h-11 cursor-pointer whitespace-nowrap rounded-lg border border-line px-4 text-sm font-semibold text-foreground hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={!completo || enviando}
-              className="min-h-11 cursor-pointer whitespace-nowrap rounded-lg bg-foreground px-4 text-sm font-semibold text-background hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Enviar novedad
-            </button>
-          </div>
-        </form>
-      )}
+      </form>
       <PantallaCarga visible={enviando} mensaje="Enviando novedad" />
     </Modal>
   );

@@ -47,7 +47,7 @@ let entradas = 0;
 let salidas = 0;
 let inventarios = 0;
 const { TarjetaAgendaRepositor } = cargar("components/campo/tarjeta-agenda-repositor.tsx", {
-  "next/link": { default: stub }, "@/utils/estado-jornada": estados, "@/utils/fechas": fechas, "@/utils/duracion": cargar("utils/duracion.ts"),
+  "next/link": { default: stub }, "@/utils/estado-jornada": estados, "@/utils/fechas": fechas, "@/utils/duracion": cargar("utils/duracion.ts"), "@/components/ui": { colorFinalizar: "" },
   "@/hooks/use-resumen-tareas-local": { useResumenTareasLocal: (...args) => { consultarTareas = args[3]; return args[3] ? { hechas: 1, total: 3 } : null; } },
   "./ui/status-stamp": { StatusStamp: stub }, "./ui/estado-ruta-simple": { EstadoRutaSimple }, "./ui/foto-local": { FotoLocal: stub }, "./ui/texto-expandible": { TextoExpandible: ({ texto }) => texto }, "./ui/iconos-campo": iconos,
 });

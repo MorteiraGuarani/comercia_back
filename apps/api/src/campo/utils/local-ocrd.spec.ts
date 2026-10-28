@@ -16,12 +16,14 @@ describe('local-ocrd', () => {
         CardName: '  ',
         U_Latitud: '-25.3',
         U_Longitud: null,
+        U_RadioMetros: 250,
       }),
     ).toMatchObject({
       id: 'C001',
       nombre: 'C001',
       latitud: -25.3,
       longitud: null,
+      radioMetros: 250,
     });
   });
 });

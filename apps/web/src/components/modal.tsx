@@ -5,6 +5,12 @@ import { createPortal } from "react-dom";
 import { useDestinoPortal } from "@/hooks/use-destino-portal";
 import { useHojaDeslizable } from "@/hooks/use-hoja-deslizable";
 
+const CAMPOS_ENFOCABLES = [
+  'input:not([type="hidden"]):not([type="file"]):not([type="checkbox"]):not([type="radio"]):not([readonly]):not([disabled]):not([tabindex="-1"])',
+  "textarea:not([readonly]):not([disabled])",
+  "select:not([disabled])",
+].join(", ");
+
 // Las hojas móviles también se minimizan desde el fondo o arrastrando su cabecera.
 // Usan el mismo cierre que la X para conservar las confirmaciones del formulario.
 export function Modal({
@@ -53,9 +59,16 @@ export function Modal({
     if (!abierto || !destinoPortal) {
       return;
     }
-    // Foco: entra al modal al abrir, vuelve al disparador al cerrar
+    // Foco: entra al primer campo del modal (en el celular cada toque cuenta) y
+    // vuelve al disparador al cerrar. Un selector con búsqueda no se enfoca solo:
+    // abriría su desplegable sin que lo pidan.
     disparadorRef.current = document.activeElement as HTMLElement | null;
-    panelRef.current?.focus({ preventScroll: true });
+    const campo = Array.from(
+      panelRef.current?.querySelectorAll<HTMLElement>(CAMPOS_ENFOCABLES) ?? [],
+    ).find((el) => (el.getClientRects?.().length ?? 1) > 0);
+    if (campo && campo.getAttribute("role") !== "combobox")
+      campo.focus({ preventScroll: true });
+    else panelRef.current?.focus({ preventScroll: true });
     const overflowAnterior = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 

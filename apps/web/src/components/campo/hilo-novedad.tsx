@@ -1,5 +1,6 @@
 "use client";
 
+import { btnFinalizar } from "@/components/ui";
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { usePanel } from "@/components/panel/contexto";
@@ -132,7 +133,7 @@ export function HiloNovedad({ id, onActualizado }: { id: number; onActualizado?:
       {puedeCerrar && (
         <div className="sticky bottom-0 z-10 rounded-xl border border-line bg-surface-raised p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-lg">
           {!confirmandoCierre ? (
-            <button type="button" onClick={() => setConfirmandoCierre(true)} className="min-h-11 w-full cursor-pointer rounded-lg border border-line px-4 text-sm font-semibold text-foreground hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 sm:w-auto">{puedeGestionar ? "Cerrar novedad resuelta" : "Cancelar mi novedad"}</button>
+            <button type="button" onClick={() => setConfirmandoCierre(true)} className={`${btnFinalizar} w-full sm:w-auto`}>{puedeGestionar ? "Cerrar novedad resuelta" : "Cancelar mi novedad"}</button>
           ) : (
             <div className="space-y-2">
               <label htmlFor={`cierre-novedad-${id}`} className="block text-sm font-semibold">{puedeGestionar ? "Resolución final" : "Motivo de cancelación"}</label>

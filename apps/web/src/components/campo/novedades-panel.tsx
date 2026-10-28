@@ -1,5 +1,6 @@
 "use client";
 
+import { mostrarToast } from "@/components/toast/toast-controller";
 import React, { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { TOKENS, btnMasCampo } from "./tokens";
@@ -122,6 +123,7 @@ export function NovedadesPanel({
       setTitulo("");
       setDescripcion("");
       setFotos([]);
+      mostrarToast("exito", "Tu supervisor ya fue notificado.", "Novedad enviada");
       cargar();
     } catch (e: unknown) {
       setErrorFormulario(

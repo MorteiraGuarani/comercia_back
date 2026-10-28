@@ -27,6 +27,7 @@ import {
   IconoContacto,
   IconoReloj,
   IconoTareas,
+  IconoEquipo,
   IconoTelefono,
 } from "./ui/iconos-campo";
 import { RUTA } from "@/utils/estado-jornada";
@@ -435,7 +436,7 @@ function Indicadores({
         <BarraSegmentos
           total={r.total}
           segmentos={[
-            { valor: r.completadas, clase: "bg-emerald-600 dark:bg-emerald-500", etiqueta: "hechas" },
+            { valor: r.completadas, clase: "bg-emerald-600 dark:bg-emerald-500", etiqueta: "visitados" },
             { valor: r.enCurso, clase: RAYADO_EN_CURSO, etiqueta: "en curso" },
             { valor: r.incompletas, clase: "bg-orange-500 dark:bg-orange-400", etiqueta: "sin salida" },
             { valor: r.ausentes, clase: "bg-red-600 dark:bg-red-500", etiqueta: "sin visitar" },
@@ -639,7 +640,7 @@ function ListaEquipo({
                   hechas={c.ruta.completadas}
                   total={c.ruta.total}
                   segmentos={[
-                    { valor: c.ruta.completadas, clase: "bg-emerald-600 dark:bg-emerald-500", etiqueta: "hechas" },
+                    { valor: c.ruta.completadas, clase: "bg-emerald-600 dark:bg-emerald-500", etiqueta: "visitados" },
                     { valor: c.ruta.enCurso, clase: RAYADO_EN_CURSO, etiqueta: "en curso" },
                   ]}
                 />
@@ -756,7 +757,7 @@ function DetalleIndicador({
   if (indicador === "visitas") {
     const r = resumen.rutas;
     const conteos = [
-      { clave: "hechas", etiqueta: "Hechas", valor: r.completadas, clase: "text-emerald-700 dark:text-emerald-300" },
+      { clave: "hechas", etiqueta: "Visitados", valor: r.completadas, clase: "text-emerald-700 dark:text-emerald-300" },
       { clave: "en_curso", etiqueta: "En curso", valor: r.enCurso, clase: "text-sky-700 dark:text-sky-300" },
       { clave: "pendientes", etiqueta: "Pendientes", valor: r.pendientes },
       { clave: "sin_visitar", etiqueta: "Sin visitar", valor: r.ausentes + r.incompletas, clase: "text-red-700 dark:text-red-300" },
@@ -767,7 +768,7 @@ function DetalleIndicador({
         <div className={`${panel} space-y-2.5`}>
           <ConteosFiltro etiqueta="Filtrar avance por estado de la ruta" total={r.total} items={conteos} activo={filtro} onFiltro={setFiltro} />
           <p className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted">
-            <span className="inline-flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-sm bg-emerald-600 dark:bg-emerald-500" />Hecha</span>
+            <span className="inline-flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-sm bg-emerald-600 dark:bg-emerald-500" />Visitado</span>
             <span className="inline-flex items-center gap-1"><i className={`h-2.5 w-2.5 rounded-sm ${RAYADO_EN_CURSO}`} />En curso</span>
             <span className="inline-flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-sm bg-orange-500 dark:bg-orange-400" />Sin salida</span>
             <span className="inline-flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-sm bg-red-600 dark:bg-red-500" />Sin visitar</span>
@@ -788,7 +789,7 @@ function DetalleIndicador({
                       total={c.ruta.total}
                       alto="h-1.5"
                       segmentos={[
-                        { valor: c.ruta.completadas, clase: "bg-emerald-600 dark:bg-emerald-500", etiqueta: "hechas" },
+                        { valor: c.ruta.completadas, clase: "bg-emerald-600 dark:bg-emerald-500", etiqueta: "visitados" },
                         { valor: c.ruta.enCurso, clase: RAYADO_EN_CURSO, etiqueta: "en curso" },
                         { valor: c.ruta.incompletas, clase: "bg-orange-500 dark:bg-orange-400", etiqueta: "sin salida" },
                         { valor: c.ruta.ausentes, clase: "bg-red-600 dark:bg-red-500", etiqueta: "sin visitar" },
@@ -951,18 +952,41 @@ function HojaColaborador({
 
   return (
     <>
-      {item ? (
-        <div className="flex items-center gap-3">
-          <Avatar c={item} grande />
-          <div className="min-w-0">
-            <p className="truncate text-xs text-muted">{item.zona}</p>
-            <span className={`mt-0.5 inline-block rounded-md px-1.5 text-[11px] font-bold ${PRESENTISMO_UI[item.estadoPresentismo].pill}`}>
-              {PRESENTISMO_UI[item.estadoPresentismo].etiqueta}
-              {unDia && item.inicioJornada ? ` · ${item.inicioJornada}` : ""}
-            </span>
-          </div>
+      <div className="flex min-w-0 items-center gap-3">
+        {item ? (
+          <>
+            <Avatar c={item} grande />
+            <div className="min-w-0">
+              <p className="truncate text-xs text-muted">{item.zona}</p>
+              <span className={`mt-0.5 inline-block rounded-md px-1.5 text-[11px] font-bold ${PRESENTISMO_UI[item.estadoPresentismo].pill}`}>
+                {PRESENTISMO_UI[item.estadoPresentismo].etiqueta}
+                {unDia && item.inicioJornada ? ` · ${item.inicioJornada}` : ""}
+              </span>
+            </div>
+          </>
+        ) : null}
+        {/* Acciones redondas arriba: no ocupan una fila entera abajo. */}
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          {telefonoValido(telefono) ? (
+            <a
+              href={hrefTelefono(telefono)}
+              aria-label={`Llamar a ${item?.nombre ?? "la persona"}`}
+              title="Llamar"
+              className={`grid h-11 w-11 place-items-center rounded-full bg-brand-700 text-white transition-colors hover:bg-brand-800 dark:bg-brand-500 dark:text-brand-950 dark:hover:brightness-110 ${enfoque}`}
+            >
+              <IconoTelefono className="h-5 w-5" />
+            </a>
+          ) : null}
+          <Link
+            href="/panel/gestion-campo/visitas"
+            aria-label="Ver en Presentismo"
+            title="Ver en Presentismo"
+            className={`grid h-11 w-11 place-items-center rounded-full border border-line bg-surface-raised text-foreground transition-colors hover:border-brand-500 hover:bg-surface-soft ${enfoque}`}
+          >
+            <IconoEquipo className="h-5 w-5" />
+          </Link>
         </div>
-      ) : null}
+      </div>
 
       {item ? (
         <div className="grid grid-cols-2 gap-2">
@@ -1037,23 +1061,6 @@ function HojaColaborador({
         </>
       )}
 
-      <div className="grid grid-cols-2 gap-2">
-        {telefonoValido(telefono) ? (
-          <a
-            href={hrefTelefono(telefono)}
-            className={`flex min-h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg bg-brand-700 px-3 text-sm font-semibold text-white hover:bg-brand-800 dark:bg-brand-500 dark:text-brand-950 dark:hover:brightness-110 ${enfoque}`}
-          >
-            <IconoTelefono className="h-4 w-4" />
-            Llamar
-          </a>
-        ) : null}
-        <Link
-          href="/panel/gestion-campo/visitas"
-          className={`flex min-h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-line bg-surface-raised px-3 text-sm font-semibold text-foreground hover:border-brand-500 hover:bg-surface-soft ${enfoque} ${telefonoValido(telefono) ? "" : "col-span-2"}`}
-        >
-          Ver en Presentismo
-        </Link>
-      </div>
     </>
   );
 }

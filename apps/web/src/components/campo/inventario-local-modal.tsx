@@ -312,6 +312,7 @@ export function InventarioLocalModal({
         itemcode,
         itemname: items.find((i) => i.itemcode === itemcode)?.itemname ?? itemcode,
       }));
+    let completo = false;
     await op.ejecutar("Guardando inventario", async () => {
       await guardarCambios(usuarioId, localId, [...nuevos, ...cambios]);
       setEdiciones(pendientes);
@@ -326,7 +327,9 @@ export function InventarioLocalModal({
           (quedan ? " Guardado en este equipo. Se envía solo cuando vuelva la conexión." : "") +
           (faltan ? ` ${faltan} ${faltan === 1 ? "producto pendiente" : "productos pendientes"}: completá o revisá su cantidad y vencimiento.` : ""),
       );
+      completo = !faltan;
     });
+    if (completo) onCerrar();
   }
 
   // Agregar o quitar es inmediato en el equipo; el envío sigue en segundo plano.

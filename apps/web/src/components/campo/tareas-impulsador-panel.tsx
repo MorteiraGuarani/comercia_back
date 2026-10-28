@@ -1,4 +1,5 @@
 "use client";
+import { colorFinalizar } from "@/components/ui";
 import type { PeriodoFiltro } from "@/types/periodo-filtro";
 import dynamic from "next/dynamic";
 import { RUTA } from "@/utils/estado-jornada";
@@ -627,7 +628,7 @@ export function TareasImpulsadorPanel({
                                 onClick={() =>
                                   completarTarea(ag.local.id, t.id)
                                 }
-                                className="min-h-11 px-3 py-2 rounded text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 transition-colors disabled:opacity-50 disabled:cursor-wait cursor-pointer shadow-sm dark:bg-emerald-700 dark:text-white dark:hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                                className={`min-h-11 cursor-pointer rounded px-3 py-2 text-xs font-bold transition-colors disabled:cursor-wait disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${colorFinalizar}`}
                               >
                                 {completandoId === t.id
                                   ? "Guardando…"

@@ -204,6 +204,7 @@ export function PanelComentarios({
       {/* Formulario: el dueño comenta y el líder responde en el mismo hilo. */}
       <form onSubmit={handleEnviar} className="space-y-3">
         <textarea
+          autoFocus
           value={texto}
           onFocus={marcarLeidosAlResponder}
           onChange={(e) => {

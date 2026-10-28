@@ -1,5 +1,6 @@
 "use client";
 
+import { btnFinalizar, colorFinalizar } from "@/components/ui";
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import { formatoHora } from "@/utils/fechas";
@@ -216,7 +217,7 @@ export function VisitaRepositor({
         </p>
         <Link
           href={rutaMiRuta}
-          className={`flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand-700 px-4 text-sm font-bold text-white shadow-sm hover:bg-brand-800 dark:bg-brand-500 dark:text-brand-950 dark:hover:brightness-110 ${enfoque}`}
+          className={`${btnFinalizar} min-h-12 w-full`}
         >
           <IconoSalida className="h-4 w-4" />
           Finalizar visita
@@ -420,7 +421,7 @@ function ListaTareas({
                         type="button"
                         disabled={acciones.ocupadoId !== null}
                         onClick={() => acciones.onCompletar(t.id)}
-                        className={`flex min-h-11 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-lg bg-emerald-700 px-3 text-xs font-bold text-white transition-colors hover:bg-emerald-800 disabled:cursor-wait disabled:opacity-50 dark:bg-emerald-600 dark:hover:bg-emerald-500 ${enfoque}`}
+                        className={`flex min-h-11 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3 text-xs font-bold transition-colors disabled:cursor-wait disabled:opacity-50 ${colorFinalizar} ${enfoque}`}
                       >
                         <IconoCheck className="h-3.5 w-3.5" />
                         {acciones.ocupadoId === t.id ? "Guardando…" : "Completar"}

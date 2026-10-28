@@ -45,6 +45,13 @@ import type {
 } from './interfaces/usuario-admin.interface';
 import { ListarSuperioresDto } from './dto/listar-superiores.dto';
 import { relanzarDuplicado } from '../common/utils/error-prisma';
+import { existsSync, unlinkSync } from 'fs';
+import {
+  resolverRutaFoto,
+  validarArchivoImagen,
+} from '../campo/utils/multer-config';
+import { CARPETA_FOTOS_PERFIL } from './utils/multer-foto-perfil';
+import type { ActualizarPerfilDto } from './dto/perfil.dto';
 import { filtroLocales, nombreLocal } from '../campo/utils/local-ocrd';
 
 const SELECT_USUARIO_ADMIN = {
@@ -674,6 +681,104 @@ export class UsuariosService {
     }
   }
 
+  /**
+   * "Mis datos": cada usuario cambia solo su nombre, apellido, correo, RUC y
+   * celular, con las mismas reglas que el ABM (RUC con dígito y celular E.164).
+   */
+  async actualizarPerfil(
+    usuarioId: number,
+    dto: ActualizarPerfilDto,
+  ): Promise<void> {
+    const ruc =
+      dto.ruc === undefined
+        ? undefined
+        : normalizarRucUsuario(dto.ruc, dto.celularPais ?? 'PY');
+    const celular =
+      dto.celular === undefined
+        ? undefined
+        : normalizarCelular(dto.celular, dto.celularPais ?? 'PY');
+    const unicos = [
+      dto.correo === undefined ? null : { correo: dto.correo },
+      ruc === undefined ? null : { ruc },
+    ].filter((f) => f !== null);
+    const duplicado = unicos.length
+      ? await this.prisma.usuario.findFirst({
+          where: { id: { not: usuarioId }, OR: unicos },
+          select: { correo: true },
+        })
+      : null;
+    if (duplicado)
+      throw new ConflictException(
+        duplicado.correo === dto.correo
+          ? MENSAJES_DUPLICADO.correo
+          : MENSAJES_DUPLICADO.ruc,
+      );
+    try {
+      await this.prisma.usuario.update({
+        where: { id: usuarioId },
+        data: {
+          nombre: dto.nombre,
+          apellido: dto.apellido,
+          correo: dto.correo,
+          ruc,
+          celular,
+        },
+        select: { id: true },
+      });
+    } catch (error: unknown) {
+      relanzarDuplicado(error, 'Ya existe un usuario con ese correo o RUC');
+    }
+  }
+
+  /** Guarda la foto de perfil propia y borra la anterior del disco. */
+  async guardarFotoPerfil(
+    usuarioId: number,
+    file: Express.Multer.File,
+  ): Promise<void> {
+    validarArchivoImagen(file);
+    const anterior = await this.prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      select: { fotoPerfil: true },
+    });
+    await this.prisma.usuario.update({
+      where: { id: usuarioId },
+      data: {
+        fotoPerfil: `${CARPETA_FOTOS_PERFIL}/${file.filename}`,
+        fotoPerfilMime: file.mimetype,
+      },
+      select: { id: true },
+    });
+    if (anterior?.fotoPerfil) borrarArchivo(anterior.fotoPerfil);
+  }
+
+  async quitarFotoPerfil(usuarioId: number): Promise<void> {
+    const anterior = await this.prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      select: { fotoPerfil: true },
+    });
+    await this.prisma.usuario.update({
+      where: { id: usuarioId },
+      data: { fotoPerfil: null, fotoPerfilMime: null },
+      select: { id: true },
+    });
+    if (anterior?.fotoPerfil) borrarArchivo(anterior.fotoPerfil);
+  }
+
+  /** Ruta en disco y tipo de la foto propia; null si no tiene o se perdió el archivo. */
+  async fotoPerfil(
+    usuarioId: number,
+  ): Promise<{ ruta: string; mime: string } | null> {
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      select: { fotoPerfil: true, fotoPerfilMime: true },
+    });
+    if (!usuario?.fotoPerfil) return null;
+    const ruta = resolverRutaFoto(usuario.fotoPerfil);
+    return existsSync(ruta)
+      ? { ruta, mime: usuario.fotoPerfilMime ?? 'image/jpeg' }
+      : null;
+  }
+
   async eliminar(usuarioId: number, id: number): Promise<{ ok: true }> {
     return this.eliminarCon(await this.contexto(usuarioId), id);
   }
@@ -749,4 +854,12 @@ async function procesarLote<T, R>(
     resultados,
     errores,
   };
+}
+
+function borrarArchivo(relativa: string): void {
+  try {
+    unlinkSync(resolverRutaFoto(relativa));
+  } catch {
+    // Si ya no estaba en el disco no hay nada que limpiar.
+  }
 }

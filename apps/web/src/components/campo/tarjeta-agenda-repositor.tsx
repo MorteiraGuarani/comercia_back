@@ -1,4 +1,5 @@
 "use client";
+import { colorFinalizar } from "@/components/ui";
 import { RUTA } from "@/utils/estado-jornada";
 import { formatoFechaCalendario, formatoHora } from "@/utils/fechas";
 import { formatoDuracionMinutos } from "@/utils/duracion";
@@ -93,7 +94,7 @@ const ESTILO: Record<EstadoRuta, { franja: string; pill: string }> = {
 const btnBase =
   "flex min-h-11 min-w-0 grow basis-[calc(50%-0.25rem)] cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm";
 const btnPrincipal = `${btnBase} bg-brand-700 text-white shadow-sm hover:bg-brand-800 dark:bg-brand-500 dark:text-brand-950 dark:hover:brightness-110`;
-const btnSalida = `${btnBase} border border-red-300 bg-red-50 text-red-700 hover:bg-red-100 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300 dark:hover:bg-red-950/70`;
+const btnSalida = `${btnBase} ${colorFinalizar}`;
 // Tareas e inventario, dentro del bloque de información del local.
 // En el celular, ícono arriba y texto abajo: así Tareas, Inventario y Novedad entran en una fila.
 const btnInfo =

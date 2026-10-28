@@ -1,6 +1,6 @@
 import { diskStorage } from 'multer';
 import { extname, isAbsolute, join, resolve } from 'path';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 import { BadRequestException } from '@nestjs/common';
 import { existsSync, mkdirSync, unlinkSync } from 'fs';
 import {
@@ -64,7 +64,7 @@ export const multerConfigAdjuntosCampo: MulterOptions = {
       cb(null, dir);
     },
     filename: (req, file, cb) => {
-      cb(null, `${uuidv4()}${extname(file.originalname).toLowerCase()}`);
+      cb(null, `${randomUUID()}${extname(file.originalname).toLowerCase()}`);
     },
   }),
   limits: { fileSize: MAX_FILE_SIZE, files: 5 },
@@ -92,7 +92,7 @@ export const multerConfigFotosTareas: MulterOptions = {
       cb(null, dir);
     },
     filename: (req, file, cb) => {
-      const uniqueId = uuidv4();
+      const uniqueId = randomUUID();
       const ext = extname(file.originalname);
       cb(null, `${uniqueId}${ext}`);
     },

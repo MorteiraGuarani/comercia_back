@@ -9,6 +9,9 @@ export interface UsuarioSesion {
   nombreLogin: string;
   ruc: string | null;
   celular: string;
+  legajo: string | null;
+  /** Cambia cuando cambia la foto (sirve para no mostrar una vieja de la caché); null sin foto. */
+  fotoPerfilVersion: string | null;
   esSuperadmin: boolean;
   puedeAdministrarUsuarios: boolean;
   empresa: { id: number; nombre: string };

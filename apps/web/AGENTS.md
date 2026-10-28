@@ -111,6 +111,10 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   cubre `button` y `[role="button"]`; para divs/spans/filas clickeables agregar
   `cursor-pointer` explícito.
 - Además del hover, incluir `focus-visible` (anillo de foco) para uso con teclado.
+- **Finalizar, terminar, completar o cerrar algo** (Finalizar Visita, Finalizar
+  tarea, Cerrar novedad, Completar…) usa siempre el rojo claro: `btnFinalizar`
+  de `src/components/ui.ts`, o `colorFinalizar` sobre un botón de otro tamaño.
+  No usar verde ni el color de marca para estas acciones.
 - Deshabilitados: `disabled:opacity-50 disabled:cursor-not-allowed`.
 
 ## Feedback global de procedimientos
@@ -145,7 +149,21 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   Mientras se arrastran pueden volver a subirse; el cierre se decide al soltar.
   Usar `useHojaDeslizable` y el mismo callback de cierre para conservar las
   confirmaciones de cambios pendientes. El contenido conserva su scroll normal.
-- Al abrir, el foco pasa al modal; al cerrar, vuelve al elemento que lo abrió.
+- Al abrir, el foco pasa al **primer campo** del modal (lo hace `Modal`): en el
+  celular se escribe sin tocar antes. Un selector con búsqueda (`role="combobox"`)
+  no se enfoca solo para no abrir su lista. Si el campo aparece después de
+  cargar datos, usar `autoFocus` en ese campo. Al cerrar, el foco vuelve al
+  elemento que lo abrió.
+- Todo modal tiene una salida visible abajo: "Cancelar" en formularios, o
+  `textoCerrar="Cerrar"` / `"Listo"` de `Modal` cuando no hay formulario.
+- **Al terminar bien** (guardar, enviar, finalizar) el modal se cierra solo y el
+  resultado se avisa con `mostrarToast`: verde (`exito`) si salió bien, amarillo
+  (`alerta`) si quedó pendiente o falta algo del usuario, rojo (`error`) si falló.
+  Si falla, el modal queda abierto con el motivo. Excepción: los hilos de
+  conversación (comentarios, respuestas de novedades) siguen abiertos al enviar.
+- Las acciones de un toque que no necesitan datos (Iniciar/Finalizar visita)
+  no abren modal: se ejecutan directo con `PantallaCarga` y avisan con toast.
+  Los toasts se cierran solos a los 7 segundos.
 - Si el modal tiene un formulario con cambios sin guardar, "Cancelar"/X/Esc
   pueden pedir confirmación antes de descartar.
 

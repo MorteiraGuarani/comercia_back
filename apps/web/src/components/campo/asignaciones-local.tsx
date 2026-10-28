@@ -1,4 +1,5 @@
 "use client";
+import { btnFinalizar } from "@/components/ui";
 import React, { useEffect, useState, type ReactNode } from "react";
 import { apiFetch } from "@/lib/api";
 import { ToleranciasHorario } from "@/components/tolerancias-horario";
@@ -567,12 +568,7 @@ export function ModalBackups({
           className="flex justify-end pt-3 border-t"
           style={{ borderColor: TOKENS.line }}
         >
-          <button
-            type="button"
-            onClick={cerrar}
-            className="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider text-background"
-            style={{ backgroundColor: TOKENS.ink }}
-          >
+          <button type="button" onClick={cerrar} className={btnFinalizar}>
             Finalizar
           </button>
         </div>

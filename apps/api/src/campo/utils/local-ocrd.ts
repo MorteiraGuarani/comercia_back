@@ -5,8 +5,9 @@ import { esRucParaguayoValido, normalizarRucPy } from '../../common/utils/ruc';
 import type { PrismaService } from '../../prisma/prisma.service';
 import { ZONA_CAMPO } from './calendario';
 
-/** OCRD no guarda radio: todos los locales usan el mismo geocerco. */
-export const RADIO_LOCAL_METROS = 100;
+/** Rango que admite el ABM para el radio de marcación (U_RadioMetros, 200 por defecto). */
+export const RADIO_LOCAL_MIN = 20;
+export const RADIO_LOCAL_MAX = 1000;
 
 /** Campos de tbl_ocrd que la operación de campo usa como local. */
 export const LOCAL_OCRD_SELECT = {
@@ -14,6 +15,7 @@ export const LOCAL_OCRD_SELECT = {
   CardName: true,
   U_Latitud: true,
   U_Longitud: true,
+  U_RadioMetros: true,
 } as const;
 
 /** SAP guarda U_Latitud/U_Longitud como texto; admite coma decimal. */
@@ -40,6 +42,7 @@ export function aLocalCampo(
     CardName: string | null;
     U_Latitud: string | null;
     U_Longitud: string | null;
+    U_RadioMetros: number;
   },
   direccion = '',
 ) {
@@ -49,7 +52,7 @@ export function aLocalCampo(
     direccion,
     latitud: coordenadaOcrd(l.U_Latitud),
     longitud: coordenadaOcrd(l.U_Longitud),
-    radioMetros: RADIO_LOCAL_METROS,
+    radioMetros: l.U_RadioMetros,
     zonaHoraria: ZONA_CAMPO,
   };
 }

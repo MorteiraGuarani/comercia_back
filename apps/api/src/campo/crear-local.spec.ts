@@ -73,12 +73,13 @@ describe('Alta de clientes desde PDV y rutas', () => {
         operacion({ socioNegocio, socioNegocioDireccion }),
     );
     socioNegocio.create.mockImplementation(
-      ({ data }: { data: typeof cliente }) =>
+      ({ data }: { data: typeof cliente & { U_RadioMetros?: number } }) =>
         Promise.resolve({
           CardCode: data.CardCode,
           CardName: data.CardName,
           U_Latitud: null,
           U_Longitud: null,
+          U_RadioMetros: data.U_RadioMetros ?? 200,
         }),
     );
     socioNegocioDireccion.create.mockResolvedValue({
@@ -137,6 +138,7 @@ describe('Alta de clientes desde PDV y rutas', () => {
           Phone1: true,
           U_Latitud: true,
           U_Longitud: true,
+          U_RadioMetros: true,
         },
       }),
     );
@@ -156,7 +158,7 @@ describe('Alta de clientes desde PDV y rutas', () => {
       direccion: 'Calle 123',
       latitud: null,
       longitud: null,
-      radioMetros: 100,
+      radioMetros: 200,
       zonaHoraria: 'America/Asuncion',
       ruc: '',
       telefono: '',
@@ -189,6 +191,20 @@ describe('Alta de clientes desde PDV y rutas', () => {
         }) as unknown,
       }),
     );
+  });
+
+  it('guarda el radio de marcación elegido y rechaza uno fuera de rango', async () => {
+    const respuesta = await crear({ ...cliente, radioMetros: 350 }).expect(201);
+    expect(socioNegocio.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ U_RadioMetros: 350 }) as unknown,
+      }),
+    );
+    expect(respuesta.body).toMatchObject({ radioMetros: 350 });
+    socioNegocio.create.mockClear();
+    await crear({ ...cliente, radioMetros: 5 }).expect(400);
+    await crear({ ...cliente, radioMetros: 1500 }).expect(400);
+    expect(socioNegocio.create).not.toHaveBeenCalled();
   });
 
   it('permite omitir RUC y dirección sin crear una fila vacía en CRD1', async () => {

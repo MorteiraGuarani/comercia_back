@@ -7,7 +7,7 @@ import { usePanel } from "@/components/panel/contexto";
 import { Modal } from "@/components/modal";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { mostrarToast } from "@/components/toast/toast-controller";
-import { errorBox } from "@/components/ui";
+import { colorFinalizar, errorBox } from "@/components/ui";
 import { TablaCampo } from "./tabla-campo";
 import { SubidorFotos } from "./subidor-fotos";
 import { PanelComentarios } from "./panel-comentarios";
@@ -15,8 +15,8 @@ import type { AgendaCampo, TareaJornadaCampo, VisitaCampo } from "@/types/campo"
 
 const btnTarea =
   "inline-flex min-h-11 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border border-line bg-surface-raised px-3 text-xs font-semibold text-foreground transition-colors hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50";
-const btnTerminar =
-  "inline-flex min-h-11 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg bg-emerald-700 px-3 text-xs font-bold text-white transition-colors hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50 dark:bg-emerald-700 dark:hover:bg-emerald-800";
+// Mismo rojo claro que "Finalizar Visita".
+const btnTerminar = `inline-flex min-h-11 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg px-3 text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50 ${colorFinalizar}`;
 
 /**
  * Tareas de un local de la ruta: todo lo de la visita se hace acá (fotos,
@@ -47,26 +47,31 @@ export function TareasDeLocal({
       : t.visitasCompletadas.length > 0;
 
   // Misma cola que usaba Mis tareas: sin señal queda guardado y se envía después.
+  // Al finalizar una tarea el modal se cierra solo: se vuelve directo al local.
   function terminar(t: TareaJornadaCampo) {
     if (!visita) return;
-    void op.ejecutar("Terminando tarea", async () => {
-      const r = await enviarAccionTarea(
-        usuario.id,
-        `/campo/jornada/visitas/${visita.id}/tareas/${t.id}`,
-        "Terminar tarea",
-      );
-      if (r.pendiente)
-        mostrarToast(
-          "alerta",
-          "Guardado en el dispositivo: la tarea se confirma cuando vuelva la conexión.",
+    void op
+      .ejecutar("Finalizando tarea", async () => {
+        const r = await enviarAccionTarea(
+          usuario.id,
+          `/campo/jornada/visitas/${visita.id}/tareas/${t.id}`,
+          "Terminar tarea",
         );
-      lista.refrescar();
-    });
+        if (r.pendiente)
+          mostrarToast(
+            "alerta",
+            "Guardado en el dispositivo: la tarea se confirma cuando vuelva la conexión.",
+          );
+        else mostrarToast("exito", `Finalizaste «${t.nombre}».`, "Tarea finalizada");
+      })
+      .then((ok) => {
+        if (ok) cerrar();
+      });
   }
 
   const acciones = (t: TareaJornadaCampo) =>
     visita ? (
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap justify-end gap-1.5">
         {t.requiereFotos ? (
           <button type="button" className={btnTarea} onClick={() => setFotos(t)}>
             <IconoCamara className="h-3.5 w-3.5" />
@@ -88,9 +93,9 @@ export function TareasDeLocal({
             className={btnTerminar}
             disabled={!!op.mensaje}
             onClick={() => terminar(t)}
-            aria-label={`Terminar ${t.nombre}`}
+            aria-label={`Finalizar ${t.nombre}`}
           >
-            Terminar Tarea
+            Finalizar
           </button>
         )}
       </div>

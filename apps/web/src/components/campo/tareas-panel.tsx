@@ -1,5 +1,6 @@
 "use client";
 
+import { mostrarToast } from "@/components/toast/toast-controller";
 import React, { useState, useEffect } from "react";
 import { apiFetch } from "@/lib/api";
 import { useListaCampo, useOperacionCampo } from "@/hooks/use-lista-campo";
@@ -499,6 +500,7 @@ export function TareasPanel() {
                     }),
                 )
               ) {
+                mostrarToast("exito", "Los cambios ya están en el catálogo.", "Tarea guardada");
                 setForm(null);
                 lista.refrescar();
               }

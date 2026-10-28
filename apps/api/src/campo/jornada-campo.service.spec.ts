@@ -12,6 +12,8 @@ const socio = {
   CardName: 'Centro',
   U_Latitud: '-25.3',
   U_Longitud: '-57.6',
+  // 0.001° de latitud ≈ 111 m: queda fuera de este radio.
+  U_RadioMetros: 100,
 };
 
 function contexto() {

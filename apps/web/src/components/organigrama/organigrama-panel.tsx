@@ -9,6 +9,7 @@ import { PantallaCarga } from "@/components/pantalla-carga";
 import { usePanel } from "@/components/panel/contexto";
 import { btnGhost, errorBox, inputBase } from "@/components/ui";
 import { TopBar } from "@/components/campo/ui/top-bar";
+import { IconoRefrescar } from "@/components/campo/ui/iconos-campo";
 import { mensajeError } from "@/utils/error";
 import { normalizarBusqueda } from "@/utils/texto";
 import {
@@ -52,11 +53,13 @@ function Tarjeta({
   nodo,
   raiz,
   resaltado,
+  mostrarEquipo,
   onAbrir,
 }: {
   nodo: NodoOrganigrama;
   raiz: boolean;
   resaltado: boolean;
+  mostrarEquipo: boolean;
   onAbrir: (p: PersonaOrganigrama) => void;
 }) {
   const p = nodo.persona;
@@ -85,7 +88,7 @@ function Tarjeta({
         </span>
       </span>
       <span className={styles.chips}>
-        {p.equipo ? (
+        {mostrarEquipo && p.equipo ? (
           <span className={styles.chip}>{p.equipo.nombre}</span>
         ) : null}
         <span className={styles.chip} data-tono={estado.tono}>
@@ -119,6 +122,7 @@ function Rama({
   raiz,
   abiertos,
   resaltados,
+  mostrarEquipo,
   onPlegar,
   onAbrir,
 }: {
@@ -126,6 +130,7 @@ function Rama({
   raiz: boolean;
   abiertos: Set<number>;
   resaltados: Set<number>;
+  mostrarEquipo: boolean;
   onPlegar: (id: number) => void;
   onAbrir: (p: PersonaOrganigrama) => void;
 }) {
@@ -137,6 +142,7 @@ function Rama({
         nodo={nodo}
         raiz={raiz}
         resaltado={resaltados.has(nodo.persona.id)}
+        mostrarEquipo={mostrarEquipo}
         onAbrir={onAbrir}
       />
       {nodo.hijos.length ? (
@@ -159,6 +165,7 @@ function Rama({
               raiz={false}
               abiertos={abiertos}
               resaltados={resaltados}
+              mostrarEquipo={mostrarEquipo}
               onPlegar={onPlegar}
               onAbrir={onAbrir}
             />
@@ -450,6 +457,10 @@ export function OrganigramaPanel() {
       ].sort(),
     [personas],
   );
+  // Un líder ve solo su equipo: decir de qué equipo es cada uno sobra. Con varios
+  // equipos (superadmin) se mantienen la leyenda, las etiquetas y el filtro.
+  const variosEquipos =
+    new Set(personas.map((p) => p.equipo?.nombre ?? "")).size > 1;
   const roles = useMemo(
     () => [...new Set(personas.flatMap((p) => (p.rol ? [p.rol] : [])))].sort(),
     [personas],
@@ -492,13 +503,11 @@ export function OrganigramaPanel() {
       setFiltros(SIN_FILTROS);
     setAbiertos((actual) => new Set([...actual, ...caminoHasta(personas, id)]));
     requestAnimationFrame(() =>
-      document
-        .getElementById(`org-${id}`)
-        ?.scrollIntoView({
-          block: "center",
-          inline: "center",
-          behavior: "smooth",
-        }),
+      document.getElementById(`org-${id}`)?.scrollIntoView({
+        block: "center",
+        inline: "center",
+        behavior: "smooth",
+      }),
     );
   }
 
@@ -564,46 +573,23 @@ export function OrganigramaPanel() {
         }
         onBack={() => router.back()}
         right={
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            {usuario.esSuperadmin && empresas.length > 1 ? (
-              <label className="flex min-w-0 items-center gap-2 text-sm">
-                <span className="sr-only">Empresa</span>
-                <select
-                  value={empresaId ?? datos?.empresa.id ?? ""}
-                  onChange={(e) => setEmpresaId(Number(e.target.value))}
-                  className={`${inputBase} min-h-11 w-auto max-w-56`}
-                >
-                  {empresas.map((e) => (
-                    <option key={e.id} value={e.id}>
-                      {e.nombre}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ) : null}
-            <button
-              type="button"
-              className={`${btnGhost} grid h-11 w-11 place-items-center p-0`}
-              onClick={() => setRecarga((n) => n + 1)}
-              disabled={cargando}
-              aria-label="Actualizar organigrama"
-              title="Actualizar organigrama"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                className={`h-5 w-5 ${cargando ? "animate-spin" : ""}`}
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
+          // Sin selector de empresa no queda nada arriba: no se dibuja la fila vacía.
+          usuario.esSuperadmin && empresas.length > 1 ? (
+            <label className="flex min-w-0 items-center gap-2 text-sm">
+              <span className="sr-only">Empresa</span>
+              <select
+                value={empresaId ?? datos?.empresa.id ?? ""}
+                onChange={(e) => setEmpresaId(Number(e.target.value))}
+                className={`${inputBase} min-h-11 w-auto max-w-56`}
               >
-                <path d="M20 7v5h-5M4 17v-5h5" />
-                <path d="M5.6 9a7 7 0 0 1 11.55-2.6L20 12M4 12l2.85 5.6A7 7 0 0 0 18.4 15" />
-              </svg>
-            </button>
-          </div>
+                {empresas.map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.nombre}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : undefined
         }
       />
       <PantallaCarga
@@ -686,13 +672,26 @@ export function OrganigramaPanel() {
                     />
                   </svg>
                 </button>
-                <span className="text-xs text-muted" role="status">
-                  {texto
-                    ? `${coincidencias.length} ${coincidencias.length === 1 ? "coincidencia" : "coincidencias"}`
-                    : conFiltros
-                      ? `${coinciden} de ${personas.length}`
-                      : `${personas.length} ${personas.length === 1 ? "persona" : "personas"}`}
-                </span>
+                {/* Solo al buscar o filtrar: sin eso no hace falta repetir cuántas personas hay. */}
+                {texto || conFiltros ? (
+                  <span className="text-xs text-muted" role="status">
+                    {texto
+                      ? `${coincidencias.length} ${coincidencias.length === 1 ? "coincidencia" : "coincidencias"}`
+                      : `${coinciden} de ${personas.length}`}
+                  </span>
+                ) : null}
+                <button
+                  type="button"
+                  className={`${btnGhost} ml-auto grid h-11 w-11 shrink-0 place-items-center p-0`}
+                  onClick={() => setRecarga((n) => n + 1)}
+                  disabled={cargando}
+                  aria-label="Actualizar organigrama"
+                  title="Actualizar organigrama"
+                >
+                  <IconoRefrescar
+                    className={`h-5 w-5 ${cargando ? "motion-safe:animate-spin" : ""}`}
+                  />
+                </button>
               </div>
 
               <div
@@ -700,10 +699,11 @@ export function OrganigramaPanel() {
                 hidden={!herramientasAbiertas}
                 className="space-y-3 rounded-xl border border-line bg-surface-raised p-3"
               >
-                  <div
-                    className="flex min-w-0 flex-wrap items-center gap-2"
-                    aria-label="Filtros del organigrama"
-                  >
+                <div
+                  className="flex min-w-0 flex-wrap items-center gap-2"
+                  aria-label="Filtros del organigrama"
+                >
+                  {variosEquipos ? (
                     <label className="min-w-0">
                       <span className="sr-only">Equipo</span>
                       <select
@@ -722,192 +722,197 @@ export function OrganigramaPanel() {
                         <option value="-">Sin equipo operativo</option>
                       </select>
                     </label>
-                    <label className="min-w-0">
-                      <span className="sr-only">Rol</span>
-                      <select
-                        value={filtros.rol}
-                        onChange={(e) =>
-                          cambiarFiltros({ ...filtros, rol: e.target.value })
-                        }
-                        className={selectFiltro}
-                      >
-                        <option value="">Todos los roles</option>
-                        {roles.map((r) => (
-                          <option key={r} value={r}>
-                            {r}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="min-w-0">
-                      <span className="sr-only">Estado de hoy</span>
-                      <select
-                        value={filtros.hoy}
-                        onChange={(e) =>
-                          cambiarFiltros({
-                            ...filtros,
-                            hoy: e.target.value as FiltrosOrganigrama["hoy"],
-                          })
-                        }
-                        className={selectFiltro}
-                      >
-                        {FILTROS_HOY.map(([valor, etiqueta]) => (
-                          <option key={valor} value={valor}>
-                            {etiqueta}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-line bg-surface-raised px-3 text-sm hover:bg-surface-soft">
-                      <input
-                        type="checkbox"
-                        checked={filtros.alertas}
-                        onChange={(e) =>
-                          cambiarFiltros({
-                            ...filtros,
-                            alertas: e.target.checked,
-                          })
-                        }
-                      />
-                      Solo con alertas
-                    </label>
-                    {conFiltros ? (
-                      <button
-                        type="button"
-                        className={btnHerramienta}
-                        onClick={() => setFiltros(SIN_FILTROS)}
-                      >
-                        Limpiar filtros
-                      </button>
-                    ) : null}
-                  </div>
+                  ) : null}
+                  <label className="min-w-0">
+                    <span className="sr-only">Rol</span>
+                    <select
+                      value={filtros.rol}
+                      onChange={(e) =>
+                        cambiarFiltros({ ...filtros, rol: e.target.value })
+                      }
+                      className={selectFiltro}
+                    >
+                      <option value="">Todos los roles</option>
+                      {roles.map((r) => (
+                        <option key={r} value={r}>
+                          {r}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="min-w-0">
+                    <span className="sr-only">Estado de hoy</span>
+                    <select
+                      value={filtros.hoy}
+                      onChange={(e) =>
+                        cambiarFiltros({
+                          ...filtros,
+                          hoy: e.target.value as FiltrosOrganigrama["hoy"],
+                        })
+                      }
+                      className={selectFiltro}
+                    >
+                      {FILTROS_HOY.map(([valor, etiqueta]) => (
+                        <option key={valor} value={valor}>
+                          {etiqueta}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-line bg-surface-raised px-3 text-sm hover:bg-surface-soft">
+                    <input
+                      type="checkbox"
+                      checked={filtros.alertas}
+                      onChange={(e) =>
+                        cambiarFiltros({
+                          ...filtros,
+                          alertas: e.target.checked,
+                        })
+                      }
+                    />
+                    Solo con alertas
+                  </label>
+                  {conFiltros ? (
+                    <button
+                      type="button"
+                      className={btnHerramienta}
+                      onClick={() => setFiltros(SIN_FILTROS)}
+                    >
+                      Limpiar filtros
+                    </button>
+                  ) : null}
+                </div>
 
+                <div
+                  className="flex min-w-0 flex-wrap items-center gap-2"
+                  role="toolbar"
+                  aria-label="Herramientas del organigrama"
+                >
+                  {conAlertas.length ? (
+                    <button
+                      type="button"
+                      onClick={() => setVerAlertas(true)}
+                      className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border border-amber-300 bg-amber-50 px-3 text-sm font-semibold text-amber-950 hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100 dark:hover:bg-amber-900"
+                    >
+                      ⚠ {conAlertas.length}{" "}
+                      {conAlertas.length === 1 ? "alerta" : "alertas"}
+                    </button>
+                  ) : null}
                   <div
-                    className="flex min-w-0 flex-wrap items-center gap-2"
-                    role="toolbar"
-                    aria-label="Herramientas del organigrama"
+                    className="flex items-center gap-1"
+                    role="group"
+                    aria-label="Zoom"
                   >
-                    {conAlertas.length ? (
-                      <button
-                        type="button"
-                        onClick={() => setVerAlertas(true)}
-                        className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border border-amber-300 bg-amber-50 px-3 text-sm font-semibold text-amber-950 hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100 dark:hover:bg-amber-900"
-                      >
-                        ⚠ {conAlertas.length}{" "}
-                        {conAlertas.length === 1 ? "alerta" : "alertas"}
-                      </button>
-                    ) : null}
-                    <div
-                      className="flex items-center gap-1"
-                      role="group"
-                      aria-label="Zoom"
-                    >
-                      <button
-                        type="button"
-                        className={btnHerramienta}
-                        aria-label="Alejar"
-                        disabled={zoom <= ZOOM_MIN}
-                        onClick={() => cambiarZoom(zoom / 1.25)}
-                      >
-                        −
-                      </button>
-                      <button
-                        type="button"
-                        className={btnHerramienta}
-                        onClick={() => cambiarZoom(1)}
-                        title="Volver al 100%"
-                      >
-                        {Math.round(zoom * 100)}%
-                      </button>
-                      <button
-                        type="button"
-                        className={btnHerramienta}
-                        aria-label="Acercar"
-                        disabled={zoom >= ZOOM_MAX}
-                        onClick={() => cambiarZoom(zoom * 1.25)}
-                      >
-                        +
-                      </button>
-                      <button
-                        type="button"
-                        className={btnHerramienta}
-                        onClick={ajustar}
-                        title="Que entre todo en la vista"
-                      >
-                        Ajustar
-                      </button>
-                    </div>
                     <button
                       type="button"
                       className={btnHerramienta}
-                      onClick={() => setAbiertos(conHijos(visible, Infinity))}
+                      aria-label="Alejar"
+                      disabled={zoom <= ZOOM_MIN}
+                      onClick={() => cambiarZoom(zoom / 1.25)}
                     >
-                      Abrir todo
+                      −
                     </button>
                     <button
                       type="button"
                       className={btnHerramienta}
-                      onClick={() => setAbiertos(new Set())}
+                      onClick={() => cambiarZoom(1)}
+                      title="Volver al 100%"
                     >
-                      Plegar todo
+                      {Math.round(zoom * 100)}%
                     </button>
-                    <div
-                      className="flex items-center gap-1"
-                      role="group"
-                      aria-label="Exportar lo que está desplegado"
-                    >
-                      <button
-                        type="button"
-                        className={btnHerramienta}
-                        onClick={() => void exportar("jpg")}
-                        disabled={!!exportando}
-                      >
-                        JPG
-                      </button>
-                      <button
-                        type="button"
-                        className={btnHerramienta}
-                        onClick={() => void exportar("pdf")}
-                        disabled={!!exportando}
-                      >
-                        PDF
-                      </button>
-                    </div>
                     <button
                       type="button"
-                      className={`${btnHerramienta} ml-auto`}
-                      onClick={alternarCompleta}
-                      aria-pressed={completa}
+                      className={btnHerramienta}
+                      aria-label="Acercar"
+                      disabled={zoom >= ZOOM_MAX}
+                      onClick={() => cambiarZoom(zoom * 1.25)}
                     >
-                      {completa
-                        ? "Salir de pantalla completa"
-                        : "Pantalla completa"}
+                      +
+                    </button>
+                    <button
+                      type="button"
+                      className={btnHerramienta}
+                      onClick={ajustar}
+                      title="Que entre todo en la vista"
+                    >
+                      Ajustar
                     </button>
                   </div>
+                  <button
+                    type="button"
+                    className={btnHerramienta}
+                    onClick={() => setAbiertos(conHijos(visible, Infinity))}
+                  >
+                    Abrir todo
+                  </button>
+                  <button
+                    type="button"
+                    className={btnHerramienta}
+                    onClick={() => setAbiertos(new Set())}
+                  >
+                    Plegar todo
+                  </button>
+                  <div
+                    className="flex items-center gap-1"
+                    role="group"
+                    aria-label="Exportar lo que está desplegado"
+                  >
+                    <button
+                      type="button"
+                      className={btnHerramienta}
+                      onClick={() => void exportar("jpg")}
+                      disabled={!!exportando}
+                    >
+                      JPG
+                    </button>
+                    <button
+                      type="button"
+                      className={btnHerramienta}
+                      onClick={() => void exportar("pdf")}
+                      disabled={!!exportando}
+                    >
+                      PDF
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    className={`${btnHerramienta} ml-auto`}
+                    onClick={alternarCompleta}
+                    aria-pressed={completa}
+                  >
+                    {completa
+                      ? "Salir de pantalla completa"
+                      : "Pantalla completa"}
+                  </button>
+                </div>
               </div>
 
               <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
-                <span className="inline-flex items-center gap-1.5">
-                  <span
-                    className="h-2.5 w-2.5 rounded-full bg-accent"
-                    aria-hidden
-                  />{" "}
-                  Impulsadores
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <span
-                    className="h-2.5 w-2.5 rounded-full bg-brand-500"
-                    aria-hidden
-                  />{" "}
-                  Repositores
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <span
-                    className="h-2.5 w-2.5 rounded-full bg-muted"
-                    aria-hidden
-                  />{" "}
-                  Sin equipo operativo
-                </span>
+                {variosEquipos ? (
+                  <>
+                    <span className="inline-flex items-center gap-1.5">
+                      <span
+                        className="h-2.5 w-2.5 rounded-full bg-accent"
+                        aria-hidden
+                      />{" "}
+                      Impulsadores
+                    </span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <span
+                        className="h-2.5 w-2.5 rounded-full bg-brand-500"
+                        aria-hidden
+                      />{" "}
+                      Repositores
+                    </span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <span
+                        className="h-2.5 w-2.5 rounded-full bg-muted"
+                        aria-hidden
+                      />{" "}
+                      Sin equipo operativo
+                    </span>
+                  </>
+                ) : null}
                 <span className="hidden sm:inline">
                   Arrastrá para moverte · Ctrl + rueda para el zoom · Tocá una
                   persona para ver su ficha
@@ -978,6 +983,7 @@ export function OrganigramaPanel() {
                           raiz
                           abiertos={abiertos}
                           resaltados={resaltados}
+                          mostrarEquipo={variosEquipos}
                           onPlegar={(id) =>
                             setAbiertos((actual) => {
                               const nuevo = new Set(actual);
@@ -1004,7 +1010,8 @@ export function OrganigramaPanel() {
       </div>
 
       {verAlertas ? (
-        <Modal textoCerrar="Cerrar"
+        <Modal
+          textoCerrar="Cerrar"
           titulo={`Alertas de jerarquía (${conAlertas.length})`}
           abierto
           onCerrar={() => setVerAlertas(false)}
@@ -1048,7 +1055,8 @@ export function OrganigramaPanel() {
       ) : null}
 
       {ficha ? (
-        <Modal textoCerrar="Cerrar"
+        <Modal
+          textoCerrar="Cerrar"
           titulo={ficha.nombre}
           abierto
           onCerrar={() => setFicha(null)}

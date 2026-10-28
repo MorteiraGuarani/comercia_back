@@ -49,7 +49,7 @@ import {
 } from "@/utils/fechas";
 import { SelectorFechaFiltro } from "./ui/selector-fecha-filtro";
 import { PantallaCarga } from "@/components/pantalla-carga";
-import { btnPrimary, errorBox } from "@/components/ui";
+import { btnFinalizar, btnPrimary, errorBox } from "@/components/ui";
 
 // Acciones secundarias de la tabla: compactas, con ícono y en una fila.
 const btnAccion =
@@ -160,47 +160,68 @@ function AgendaDelDia({
     setRevision((n) => n + 1);
   }
 
-  // Finalizar Visita no abre formulario: registra la salida con el teléfono en
-  // Ucheck y el resultado llega en un toast. Sin Ucheck sigue el modal con GPS.
-  const [finalizando, setFinalizando] = useState("");
-  async function finalizarVisita(v: VisitaCampo) {
+  // Iniciar y Finalizar Visita no abren formulario: registran la marca con el
+  // teléfono en Ucheck y el resultado siempre llega en un toast. Sin Ucheck
+  // (marca con el GPS del navegador) sigue el modal.
+  const [marcando, setMarcando] = useState<{ nombre: string; entrada: boolean } | null>(null);
+  async function marcarVisita(m: NonNullable<typeof marca>) {
     if (!esRepositor) {
-      setMarca({
-        asignacionId: v.asignacionId,
-        visitaId: v.id,
-        nombre: v.local.nombre,
-        radioMetros: v.local.radioMetros,
-      });
+      setMarca(m);
       return;
     }
-    if (finalizando) return;
-    setFinalizando(v.local.nombre);
+    if (marcando) return;
+    const entrada = !m.visitaId;
+    const accion = entrada ? "iniciar" : "finalizar";
+    setMarcando({ nombre: m.nombre, entrada });
     try {
       const r = await apiFetch<{ estado?: "CONFIRMADA" | "PENDIENTE"; mensaje?: string }>(
-        `/campo/jornada/repositor/visitas/${v.id}/salida`,
-        { method: "POST", body: JSON.stringify({ nota: "" }) },
+        entrada
+          ? "/campo/jornada/repositor/entrada"
+          : `/campo/jornada/repositor/visitas/${m.visitaId}/salida`,
+        {
+          method: "POST",
+          body: JSON.stringify(
+            entrada
+              ? { nota: "", asignacionId: m.asignacionId, horarioId: m.horarioId }
+              : { nota: "" },
+          ),
+        },
       );
+      const titulo = entrada ? "Visita iniciada" : "Visita finalizada";
       if (r.estado === "PENDIENTE")
         mostrarToast(
           "alerta",
-          r.mensaje ?? "Salida guardada en Ucheck, pendiente de sincronización.",
-          "Visita finalizada",
+          r.mensaje ??
+            `${entrada ? "Entrada" : "Salida"} guardada en Ucheck, pendiente de sincronización.`,
+          titulo,
         );
       else
-        mostrarToast("exito", `Finalizaste la visita a ${v.local.nombre}.`, "Visita finalizada");
+        mostrarToast(
+          "exito",
+          `${entrada ? "Iniciaste" : "Finalizaste"} la visita a ${m.nombre}.`,
+          titulo,
+        );
       actualizar();
+      if (entrada) notificarJornadaMarcada();
     } catch (e) {
       // 4xx: falta algo de tu lado (tareas, teléfono, radio); lo demás es un error.
       const aviso = e instanceof ApiError && e.status >= 400 && e.status < 500;
       mostrarToast(
         aviso ? "alerta" : "error",
-        mensajeError(e, "No se pudo finalizar la visita."),
-        "No se finalizó la visita",
+        mensajeError(e, `No se pudo ${accion} la visita.`),
+        `No se ${entrada ? "inició" : "finalizó"} la visita`,
       );
     } finally {
-      setFinalizando("");
+      setMarcando(null);
     }
   }
+  const finalizarVisita = (v: VisitaCampo) =>
+    marcarVisita({
+      asignacionId: v.asignacionId,
+      visitaId: v.id,
+      nombre: v.local.nombre,
+      radioMetros: v.local.radioMetros,
+    });
 
   const hoy = new URLSearchParams(qsFecha).get("fecha") === hoyStr;
 
@@ -671,7 +692,7 @@ function AgendaDelDia({
             visitaAbierta={abierta}
             onInventario={conInventario ? () => setInventarioDe(a.local.id) : undefined}
             onEntrada={(horarioId) =>
-              setMarca({
+              void marcarVisita({
                 asignacionId: a.id,
                 horarioId,
                 nombre: a.local.nombre,
@@ -698,8 +719,8 @@ function AgendaDelDia({
             <div className="flex min-w-[17rem] flex-col items-start gap-2">
               {aqui ? (
                 <button
-                  className={btnPrimary}
-                  disabled={!!finalizando}
+                  className={btnFinalizar}
+                  disabled={!!marcando}
                   onClick={() => void finalizarVisita(abierta)}
                 >
                   Finalizar Visita
@@ -707,8 +728,9 @@ function AgendaDelDia({
               ) : proximo !== undefined ? (
                 <button
                   className={btnPrimary}
+                  disabled={!!marcando}
                   onClick={() =>
-                    setMarca({
+                    void marcarVisita({
                       asignacionId: a.id,
                       horarioId: proximo?.id,
                       nombre: a.local.nombre,
@@ -767,9 +789,9 @@ function AgendaDelDia({
         detalle="Usamos tu GPS, los horarios y la distancia entre locales."
       />
       <PantallaCarga
-        visible={!!finalizando}
-        mensaje="Finalizando visita"
-        detalle={`Registrando la salida de ${finalizando} en Ucheck.`}
+        visible={!!marcando}
+        mensaje={marcando?.entrada ? "Iniciando visita" : "Finalizando visita"}
+        detalle={`Registrando la ${marcando?.entrada ? "entrada" : "salida"} de ${marcando?.nombre ?? ""} en Ucheck.`}
       />
       {mapa ? <MapaLocal local={mapa} cerrar={() => setMapa(null)} /> : null}
       {novedadDe ? (

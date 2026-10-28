@@ -224,6 +224,7 @@ export class CatalogoCampoService {
             empresaId: u.empresaId,
             CardCode: dto.CardCode,
             CardName: dto.CardName,
+            U_RadioMetros: dto.radioMetros,
             ...datosCliente,
             ...ubicacion,
           },
@@ -268,7 +269,12 @@ export class CatalogoCampoService {
       return await this.prisma.$transaction(async (tx) => {
         const { count } = await tx.socioNegocio.updateMany({
           where: delCliente,
-          data: { CardName: dto.CardName, ...datosCliente, ...ubicacion },
+          data: {
+            CardName: dto.CardName,
+            U_RadioMetros: dto.radioMetros,
+            ...datosCliente,
+            ...ubicacion,
+          },
         });
         if (!count) throw new NotFoundException('Cliente no disponible');
         const actual =

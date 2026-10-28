@@ -122,13 +122,13 @@ export function LocalesPanel() {
                 setBusqueda(valor);
                 lista.setPage(1);
               }}
-              placeholder="Buscar por nombre o código de cliente…"
+              placeholder="Buscar local o código"
               etiqueta="Buscar local en Itinerario"
             />
           </div>
           {!lista.error && (
             <span className="shrink-0 rounded-lg border border-line bg-surface-raised px-3 py-2 font-mono text-xs font-bold text-foreground">
-              {totalRegistros} locales
+              {totalRegistros} {totalRegistros === 1 ? "local" : "locales"}
             </span>
           )}
         </div>

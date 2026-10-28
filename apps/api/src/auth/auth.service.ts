@@ -26,7 +26,6 @@ import {
   esErrorDuplicado,
 } from '../common/utils/error-prisma';
 
-
 @Injectable()
 export class AuthService {
   constructor(
@@ -229,6 +228,9 @@ export class AuthService {
     nombreLogin: string;
     ruc: string | null;
     celular: string;
+    legajo: string | null;
+    fotoPerfil: string | null;
+    updatedAt: Date;
     esSuperadmin: boolean;
     empresa: { id: number; nombre: string };
     rol: {
@@ -250,6 +252,10 @@ export class AuthService {
       nombreLogin: usuario.nombreLogin,
       ruc: usuario.ruc,
       celular: usuario.celular,
+      legajo: usuario.legajo,
+      fotoPerfilVersion: usuario.fotoPerfil
+        ? usuario.updatedAt.toISOString()
+        : null,
       esSuperadmin: usuario.esSuperadmin,
       puedeAdministrarUsuarios: puedeAdministrarUsuarios(
         usuario.esSuperadmin,

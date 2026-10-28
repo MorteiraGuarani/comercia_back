@@ -3,6 +3,7 @@ import { AuthModule } from '../auth/auth.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { AdminUsuariosController } from './admin-usuarios.controller';
 import { UsuariosController } from './usuarios.controller';
+import { PerfilController } from './perfil.controller';
 import { UsuariosService } from './usuarios.service';
 import { VinculosUcheckController } from './vinculos-ucheck.controller';
 import { VinculosUcheckService } from './vinculos-ucheck.service';
@@ -11,6 +12,7 @@ import { VinculosUcheckService } from './vinculos-ucheck.service';
   imports: [PrismaModule, AuthModule],
   controllers: [
     UsuariosController,
+    PerfilController,
     AdminUsuariosController,
     VinculosUcheckController,
   ],

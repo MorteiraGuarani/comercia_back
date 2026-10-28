@@ -18,11 +18,11 @@ import { BotonTema } from "@/components/boton-tema";
 import { BadgeNotificaciones } from "@/components/campo/badge-notificaciones";
 import { SincronizadorInventario } from "@/components/campo/sincronizador-inventario";
 import { EmisorUbicacion } from "@/components/campo/emisor-ubicacion";
-import { Modal } from "@/components/modal";
+import { PerfilModal } from "@/components/perfil/perfil-modal";
+import { urlFotoPerfil } from "@/lib/api-perfil";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { PanelProvider } from "@/components/panel/contexto";
 import { IconoModulo, resolverIconoPagina } from "@/components/panel/iconos";
-import { btnGhost } from "@/components/ui";
 import { EVENTO_PLATAFORMA_ACTUALIZADA } from "@/lib/eventos-plataforma";
 import { BotonSubir } from "@/components/boton-subir";
 import { etiquetaPaginaMenu, sinMisTareas } from "@/utils/nombres-menu";
@@ -240,9 +240,18 @@ export default function PanelLayout({
                   aria-expanded={menuAbierto}
                   className="flex min-h-11 items-center gap-1 rounded-xl px-1 py-1 transition hover:bg-surface-soft focus-visible:ring-2 focus-visible:ring-brand-600/40 sm:gap-2.5 sm:px-2 sm:py-1.5"
                 >
-                  <span className="grid h-9 w-9 place-items-center rounded-full border border-brand-700/10 bg-brand-100 text-sm font-extrabold text-brand-900 dark:bg-brand-950 dark:text-brand-100">
-                    {iniciales}
-                  </span>
+                  {usuario.fotoPerfilVersion ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={urlFotoPerfil(usuario.fotoPerfilVersion)}
+                      alt=""
+                      className="h-9 w-9 rounded-full border border-brand-700/10 object-cover"
+                    />
+                  ) : (
+                    <span className="grid h-9 w-9 place-items-center rounded-full border border-brand-700/10 bg-brand-100 text-sm font-extrabold text-brand-900 dark:bg-brand-950 dark:text-brand-100">
+                      {iniciales}
+                    </span>
+                  )}
                   <span className="hidden min-w-0 max-w-44 text-left sm:block">
                     <span className="block truncate text-sm font-semibold leading-tight">
                       {usuario.nombre} {usuario.apellido}
@@ -526,51 +535,13 @@ export default function PanelLayout({
             </div>
           </nav>
 
-          {/* Modal Mis Datos: se cierra solo con X, Escape o el botón Cerrar */}
-          <Modal
-            titulo="Mis Datos"
-            abierto={datosAbierto}
-            onCerrar={() => setDatosAbierto(false)}
-          >
-            <div className="flex items-center gap-3">
-              <span className="grid h-12 w-12 place-items-center rounded-full bg-brand-100 text-base font-extrabold text-brand-900 dark:bg-brand-950 dark:text-brand-100">
-                {iniciales}
-              </span>
-              <div>
-                <p className="font-semibold">
-                  {usuario.nombre} {usuario.apellido}
-                </p>
-                <p className="text-sm text-muted">{usuario.empresa.nombre}</p>
-              </div>
-            </div>
-            <dl className="mt-5 grid grid-cols-[auto_1fr] gap-x-8 gap-y-2 text-sm">
-              <dt className="text-muted">Usuario</dt>
-              <dd className="break-all">{usuario.nombreLogin}</dd>
-              <dt className="text-muted">Correo</dt>
-              <dd className="break-all">{usuario.correo}</dd>
-              <dt className="text-muted">RUC</dt>
-              <dd>{usuario.ruc}</dd>
-              <dt className="text-muted">Celular</dt>
-              <dd>{usuario.celular}</dd>
-              <dt className="text-muted">Rol</dt>
-              <dd>
-                {usuario.rol?.descripcion ?? (
-                  <span className="rounded bg-amber-50 px-2 py-0.5 text-amber-700 dark:bg-amber-950 dark:text-amber-300">
-                    Pendiente de asignación
-                  </span>
-                )}
-              </dd>
-            </dl>
-            <div className="mt-6 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setDatosAbierto(false)}
-                className={btnGhost}
-              >
-                Cerrar
-              </button>
-            </div>
-          </Modal>
+          {datosAbierto ? (
+            <PerfilModal
+              usuario={usuario}
+              onActualizado={setUsuario}
+              onCerrar={() => setDatosAbierto(false)}
+            />
+          ) : null}
           <PantallaCarga
             visible={cerrandoSesion}
             mensaje="Cerrando sesión"
