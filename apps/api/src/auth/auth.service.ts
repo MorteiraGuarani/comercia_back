@@ -17,7 +17,10 @@ import {
   normalizarRucUsuario,
 } from './utils/datos-usuario';
 import { LoginSimDto } from './dto/login-sim.dto';
-import { puedeAdministrarUsuarios } from '../common/utils/permisos-usuario';
+import {
+  puedeAdministrarUsuarios,
+  puedeEditarPerfil,
+} from '../common/utils/permisos-usuario';
 import type { UsuarioSesion } from './interfaces/usuario-sesion.interface';
 import type { TokenPayload } from './interfaces/token-payload.interface';
 import type { AsignacionUsuario } from './interfaces/asignacion-usuario.interface';
@@ -266,6 +269,10 @@ export class AuthService {
         : null,
       esSuperadmin: usuario.esSuperadmin,
       puedeAdministrarUsuarios: puedeAdministrarUsuarios(
+        usuario.esSuperadmin,
+        usuario.rol?.descripcion ?? null,
+      ),
+      puedeEditarPerfil: puedeEditarPerfil(
         usuario.esSuperadmin,
         usuario.rol?.descripcion ?? null,
       ),

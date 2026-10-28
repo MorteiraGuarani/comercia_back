@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { AyudaApp } from "./ayuda-app";
 
 interface SaludoRutaProps {
   nombre: string;
@@ -71,7 +70,6 @@ export function SaludoRuta({
             </h1>
             <p className="mt-0.5 text-xs text-muted sm:text-sm">{resumen}</p>
           </div>
-          <AyudaApp />
         </div>
         <div className="mt-2.5 min-w-0">{children}</div>
       </div>

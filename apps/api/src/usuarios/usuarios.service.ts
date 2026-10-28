@@ -26,7 +26,10 @@ import {
   respuestaPaginada,
   type RespuestaPaginada,
 } from '../common/utils/paginacion';
-import { puedeAdministrarUsuarios } from '../common/utils/permisos-usuario';
+import {
+  puedeAdministrarUsuarios,
+  puedeEditarPerfil,
+} from '../common/utils/permisos-usuario';
 import { filtrosBusquedaUsuario } from '../common/utils/busqueda-usuario';
 import type { Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -709,10 +712,26 @@ export class UsuariosService {
    * "Mis datos": cada usuario cambia solo su nombre, apellido, correo, RUC y
    * celular, con las mismas reglas que el ABM (RUC con dígito y celular E.164).
    */
+  /** Los roles de campo solo ven "Mis datos": lo cambia un administrador. */
+  private async perfilEditable(usuarioId: number) {
+    const u = await this.prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      select: {
+        esSuperadmin: true,
+        fotoPerfil: true,
+        rol: { select: { descripcion: true } },
+      },
+    });
+    if (!u || !puedeEditarPerfil(u.esSuperadmin, u.rol?.descripcion ?? null))
+      throw new ForbiddenException('Tus datos los actualiza un administrador');
+    return u;
+  }
+
   async actualizarPerfil(
     usuarioId: number,
     dto: ActualizarPerfilDto,
   ): Promise<void> {
+    await this.perfilEditable(usuarioId);
     const ruc =
       dto.ruc === undefined
         ? undefined
@@ -760,26 +779,27 @@ export class UsuariosService {
     file: Express.Multer.File,
   ): Promise<void> {
     validarArchivoImagen(file);
-    const anterior = await this.prisma.usuario.findUnique({
-      where: { id: usuarioId },
-      select: { fotoPerfil: true },
-    });
+    const nueva = `${CARPETA_FOTOS_PERFIL}/${file.filename}`;
+    // Sin permiso, la foto recién recibida no queda en el disco.
+    const anterior = await this.perfilEditable(usuarioId).catch(
+      (error: unknown) => {
+        borrarArchivo(nueva);
+        throw error;
+      },
+    );
     await this.prisma.usuario.update({
       where: { id: usuarioId },
       data: {
-        fotoPerfil: `${CARPETA_FOTOS_PERFIL}/${file.filename}`,
+        fotoPerfil: nueva,
         fotoPerfilMime: file.mimetype,
       },
       select: { id: true },
     });
-    if (anterior?.fotoPerfil) borrarArchivo(anterior.fotoPerfil);
+    if (anterior.fotoPerfil) borrarArchivo(anterior.fotoPerfil);
   }
 
   async quitarFotoPerfil(usuarioId: number): Promise<void> {
-    const anterior = await this.prisma.usuario.findUnique({
-      where: { id: usuarioId },
-      select: { fotoPerfil: true },
-    });
+    const anterior = await this.perfilEditable(usuarioId);
     await this.prisma.usuario.update({
       where: { id: usuarioId },
       data: { fotoPerfil: null, fotoPerfilMime: null },

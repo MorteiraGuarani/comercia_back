@@ -165,7 +165,7 @@ const comun = {
   "next/link": { default: Link }, "@/components/panel/contexto": { usePanel: () => panel },
   "@/lib/api": {}, "@/utils/fechas": { ...fechas, fechaEnZonaIso: () => hoy }, "@/utils/periodo-inicio": periodos,
   "./ui/tablero-campo": ui, "./ui/barra-segmentos": { BarraSegmentos: stub }, "./ui/iconos-campo": {},
-  "./ui/periodo-inicio": { SelectorPeriodoInicio: stub }, "./ui/saludo-ruta": { SaludoRuta: stub }, "@/utils/hoy-en-campo": calculos, "@/utils/estado-jornada": { RUTA: {} },
+  "./ui/periodo-inicio": { SelectorPeriodoInicio: stub }, "./ui/saludo-ruta": { SaludoRuta: stub }, "./ui/ayuda-app": { AyudaApp: () => null }, "@/utils/hoy-en-campo": calculos, "@/utils/estado-jornada": { RUTA: {} },
 };
 const estadoHoy = estadoReact();
 const { Indicadores, DetalleIndicador } = cargar("components/campo/hoy-en-campo.tsx", {

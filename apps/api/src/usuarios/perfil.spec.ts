@@ -1,4 +1,4 @@
-import { ConflictException } from '@nestjs/common';
+import { ConflictException, ForbiddenException } from '@nestjs/common';
 import type { AuthService } from '../auth/auth.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import { UsuariosService } from './usuarios.service';
@@ -16,7 +16,11 @@ describe('Mis datos (perfil propio)', () => {
   function preparar() {
     const prisma = {
       usuario: {
-        findUnique: jest.fn(),
+        findUnique: jest.fn().mockResolvedValue({
+          esSuperadmin: false,
+          fotoPerfil: null,
+          rol: { descripcion: 'BOFFICE_REPOSITORES' },
+        }),
         findFirst: jest.fn().mockResolvedValue(null),
         update: jest.fn().mockResolvedValue({ id: 7 }),
       },
@@ -51,6 +55,28 @@ describe('Mis datos (perfil propio)', () => {
     });
   });
 
+  it('los roles de campo solo ven sus datos: no editan ni cambian la foto', async () => {
+    const { prisma, service } = preparar();
+    for (const descripcion of [
+      'REPOSITOR',
+      'SUPERVISOR_REPOSITORES',
+      'TEAMLEADER',
+    ]) {
+      prisma.usuario.findUnique.mockResolvedValue({
+        esSuperadmin: false,
+        fotoPerfil: null,
+        rol: { descripcion },
+      });
+      await expect(
+        service.actualizarPerfil(7, { nombre: 'Ana' }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      await expect(service.quitarFotoPerfil(7)).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+    }
+    expect(prisma.usuario.update).not.toHaveBeenCalled();
+  });
+
   it('no deja usar el correo de otra cuenta', async () => {
     const { prisma, service } = preparar();
     prisma.usuario.findFirst.mockResolvedValue({ correo: 'ana@example.com' });
@@ -67,7 +93,9 @@ describe('Mis datos (perfil propio)', () => {
       .spyOn(archivos, 'resolverRutaFoto')
       .mockReturnValue('no-existe/vieja.jpg');
     prisma.usuario.findUnique.mockResolvedValue({
+      esSuperadmin: false,
       fotoPerfil: 'perfiles/vieja.jpg',
+      rol: { descripcion: 'MANAGER VENTAS' },
     });
     await service.guardarFotoPerfil(7, {
       filename: 'nueva.png',

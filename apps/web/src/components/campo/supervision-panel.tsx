@@ -624,7 +624,7 @@ export function SupervisionPanel({
     <div className={`campo-screen ${styles.screen}`}>
       <header className={styles.header}>
         <div>
-          <h1>Presentismo</h1>
+          <h1>Desempeño</h1>
           <p>
             Equipo comercial · {resumen?.fecha ?? periodo.etiqueta}
             {actualizado ? ` · Actualizado ${actualizado}` : ""}

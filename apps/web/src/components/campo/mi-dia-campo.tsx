@@ -1,5 +1,6 @@
 "use client";
 
+import { AyudaApp } from "./ui/ayuda-app";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { apiFetch } from "@/lib/api";
@@ -211,11 +212,14 @@ export function MiDiaCampo() {
                 Tus indicadores de {cuando}
                 <span className="hidden font-normal normal-case tracking-normal sm:inline"> · tocá para ir al detalle</span>
               </span>
-              <BotonActualizarTablero
-                cargando={cargando}
-                actualizado={formatoHora(datos.actualizado)}
-                onActualizar={actualizar}
-              />
+              <div className="flex shrink-0 items-center gap-1.5">
+                <BotonActualizarTablero
+                  cargando={cargando}
+                  actualizado={formatoHora(datos.actualizado)}
+                  onActualizar={actualizar}
+                />
+                <AyudaApp />
+              </div>
             </div>
             <div className="grid min-w-0 grid-cols-2 gap-2.5 lg:grid-cols-4 lg:gap-3">
               <TarjetaIndicador

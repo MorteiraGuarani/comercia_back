@@ -17,7 +17,7 @@ import {
 import { mensajeError } from "@/utils/error";
 import { prepararImagen } from "@/utils/preparar-imagen";
 import { baseRuc, calcularDvRucPy } from "@/utils/ruc";
-import { partesCelular } from "@/utils/telefono";
+import { formatearTelefono, partesCelular } from "@/utils/telefono";
 import type { UsuarioSesion } from "@/types/usuario";
 
 const PAISES: { codigo: CountryCode; nombre: string }[] = [
@@ -41,9 +41,9 @@ function formularioDe(u: UsuarioSesion) {
 }
 
 /**
- * "Mis Datos" para todos los roles: foto de perfil, y nombre, apellido,
- * correo, RUC y celular editables. Usuario, rol, empresa y legajo solo se ven:
- * los cambia un administrador.
+ * "Mis Datos" para todos los roles. Superadmin y roles administrativos editan
+ * foto, nombre, apellido, correo, RUC y celular; los roles de campo solo los
+ * ven. Usuario, rol, empresa y legajo los cambia siempre un administrador.
  */
 export function PerfilModal({
   usuario,
@@ -76,6 +76,9 @@ export function PerfilModal({
   };
   const hayCambios = Object.keys(cambios).length > 0;
   const iniciales = `${usuario.nombre[0] ?? ""}${usuario.apellido[0] ?? ""}`.toUpperCase();
+  const rolTexto = usuario.esSuperadmin
+    ? "Superadmin"
+    : (usuario.rol?.descripcion ?? "Pendiente de asignación");
 
   async function ejecutar(mensaje: string, accion: () => Promise<UsuarioSesion>, exito: string) {
     setOperacion(mensaje);
@@ -116,6 +119,58 @@ export function PerfilModal({
       return;
     onCerrar();
   }
+
+  if (!usuario.puedeEditarPerfil)
+    return (
+      <Modal titulo="Mis Datos" abierto onCerrar={onCerrar} ancho="lg" hojaMovil textoCerrar="Cerrar">
+        <div className="min-w-0 space-y-4">
+          <div className="flex min-w-0 items-center gap-4">
+            {usuario.fotoPerfilVersion ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={urlFotoPerfil(usuario.fotoPerfilVersion)}
+                alt="Tu foto de perfil"
+                className="h-20 w-20 shrink-0 rounded-full border border-line object-cover"
+              />
+            ) : (
+              <span
+                aria-hidden="true"
+                className="grid h-20 w-20 shrink-0 place-items-center rounded-full bg-brand-100 text-2xl font-extrabold text-brand-900 dark:bg-brand-950 dark:text-brand-100"
+              >
+                {iniciales}
+              </span>
+            )}
+            <p className="min-w-0 truncate text-base font-semibold text-foreground">
+              {usuario.nombre} {usuario.apellido}
+            </p>
+          </div>
+          <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-6 gap-y-2 rounded-xl border border-line bg-surface-soft p-3 text-sm">
+            {(
+              [
+                ["Nombre", usuario.nombre],
+                ["Apellido", usuario.apellido],
+                ["Correo electrónico", usuario.correo],
+                ["RUC", usuario.ruc],
+                ["Teléfono celular", usuario.celular ? formatearTelefono(usuario.celular) : null],
+                ["Usuario", usuario.nombreLogin],
+                ["Rol", rolTexto],
+                ["Empresa", usuario.empresa.nombre],
+                ["Legajo", usuario.legajo],
+                ["Equipo", usuario.rol?.equipoCampo?.nombre],
+              ] as const
+            ).map(([etiqueta, valor]) => (
+              <div key={etiqueta} className="contents">
+                <dt className="text-muted">{etiqueta}</dt>
+                <dd className="break-words text-foreground">{valor || "—"}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="text-xs text-muted">
+            Si algún dato está mal, pedile a un administrador que lo actualice.
+          </p>
+        </div>
+      </Modal>
+    );
 
   return (
     <Modal titulo="Mis Datos" abierto onCerrar={() => void cerrar()} ancho="lg" hojaMovil>
@@ -303,11 +358,7 @@ export function PerfilModal({
             <dt className="text-muted">Usuario</dt>
             <dd className="break-all text-foreground">{usuario.nombreLogin}</dd>
             <dt className="text-muted">Rol</dt>
-            <dd className="text-foreground">
-              {usuario.esSuperadmin
-                ? "Superadmin"
-                : (usuario.rol?.descripcion ?? "Pendiente de asignación")}
-            </dd>
+            <dd className="text-foreground">{rolTexto}</dd>
             <dt className="text-muted">Empresa</dt>
             <dd className="break-words text-foreground">{usuario.empresa.nombre}</dd>
             <dt className="text-muted">Legajo</dt>

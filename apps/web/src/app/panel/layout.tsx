@@ -181,7 +181,7 @@ export default function PanelLayout({
         ),
     ),
   ];
-  // Presentismo va segundo, después de Inicio (supervisores y team leaders).
+  // Desempeño (gestion-campo/visitas) va segundo, después de Inicio (supervisores y team leaders).
   const presentismo = enlaces.findIndex(
     (e) => e.href === "/panel/gestion-campo/visitas",
   );

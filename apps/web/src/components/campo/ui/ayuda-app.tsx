@@ -70,7 +70,7 @@ export function AyudaApp() {
                 Estados de visitas y presentismo
               </h3>
               <p className="text-xs text-muted">
-                Son los mismos en Inicio, Itinerario y Presentismo, para todos
+                Son los mismos en Inicio, Itinerario y Desempeño, para todos
                 los roles.
               </p>
               <ul className="space-y-2">

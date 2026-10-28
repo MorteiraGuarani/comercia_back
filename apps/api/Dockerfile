@@ -9,7 +9,7 @@ WORKDIR /app
 FROM base AS deps
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/
-RUN npm ci --workspace=api --ignore-scripts
+RUN npm ci --workspace=api --ignore-scripts --fetch-retries=5 --fetch-timeout=600000
 
 # ---------- Build (prisma generate + nest build) ----------
 FROM base AS build
@@ -23,7 +23,7 @@ RUN npx prisma generate && npm run build
 FROM base AS prod-deps
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/
-RUN npm ci --workspace=api --omit=dev --ignore-scripts && npm cache clean --force
+RUN npm ci --workspace=api --omit=dev --ignore-scripts --fetch-retries=5 --fetch-timeout=600000 && npm cache clean --force
 
 # ---------- Runtime ----------
 FROM node:22-alpine AS runner

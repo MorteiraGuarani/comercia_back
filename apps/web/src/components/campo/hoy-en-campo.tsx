@@ -1,4 +1,5 @@
 "use client";
+import { AyudaApp } from "./ui/ayuda-app";
 import type { PeriodoFiltro } from "@/types/periodo-filtro";
 
 import Link from "next/link";
@@ -256,11 +257,14 @@ export function HoyEnCampo() {
                 {periodo.clave === "hoy" ? "Indicadores del día" : `Indicadores · ${cuando}`}
                 <span className="hidden font-normal normal-case tracking-normal sm:inline"> · tocá para ver el detalle</span>
               </span>
-              <BotonActualizarTablero
-                cargando={cargando}
-                actualizado={datos ? formatoHora(datos.actualizado) : null}
-                onActualizar={actualizar}
-              />
+              <div className="flex shrink-0 items-center gap-1.5">
+                <BotonActualizarTablero
+                  cargando={cargando}
+                  actualizado={datos ? formatoHora(datos.actualizado) : null}
+                  onActualizar={actualizar}
+                />
+                <AyudaApp />
+              </div>
             </div>
             <Indicadores
               resumen={resumen}

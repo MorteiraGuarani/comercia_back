@@ -37,7 +37,7 @@ export class PerfilController {
   @ApiOperation({
     summary: 'Editar mis datos',
     description:
-      'Nombre, apellido, correo, RUC y celular del usuario de la sesión. Rol, superior, legajo y usuario no se editan acá (400).',
+      'Nombre, apellido, correo, RUC y celular del usuario de la sesión. Solo superadmin y roles administrativos (back office, manager…); los roles de campo reciben 403. Rol, superior, legajo y usuario no se editan acá (400).',
   })
   async actualizar(
     @Req() r: RequestConUsuario,
@@ -59,7 +59,8 @@ export class PerfilController {
   })
   @ApiOperation({
     summary: 'Subir mi foto de perfil',
-    description: 'JPG, PNG o WebP de hasta 5 MB. Reemplaza la anterior.',
+    description:
+      'JPG, PNG o WebP de hasta 5 MB. Reemplaza la anterior. Los roles de campo reciben 403.',
   })
   async subirFoto(
     @Req() r: RequestConUsuario,

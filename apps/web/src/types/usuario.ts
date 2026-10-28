@@ -42,6 +42,8 @@ export interface UsuarioSesion {
   fotoPerfilVersion: string | null;
   esSuperadmin: boolean;
   puedeAdministrarUsuarios: boolean;
+  /** Superadmin y roles administrativos; los de campo solo ven "Mis datos". */
+  puedeEditarPerfil?: boolean;
   empresa: { id: number; nombre: string };
   rol: {
     id: number;

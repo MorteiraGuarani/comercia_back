@@ -9,7 +9,7 @@ WORKDIR /app
 FROM base AS deps
 COPY package.json package-lock.json ./
 COPY apps/web/package.json apps/web/
-RUN npm ci --workspace=web --ignore-scripts
+RUN npm ci --workspace=web --ignore-scripts --fetch-retries=5 --fetch-timeout=600000
 
 # ---------- Build ----------
 FROM base AS build

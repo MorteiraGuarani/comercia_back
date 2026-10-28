@@ -14,6 +14,8 @@ export interface UsuarioSesion {
   fotoPerfilVersion: string | null;
   esSuperadmin: boolean;
   puedeAdministrarUsuarios: boolean;
+  /** Puede cambiar sus propios datos y foto en "Mis datos". */
+  puedeEditarPerfil: boolean;
   empresa: { id: number; nombre: string };
   rol: {
     id: number;
