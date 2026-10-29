@@ -215,10 +215,33 @@ export class SocioNegocioVendedorDto {
 }
 
 export class SocioNegocioGrupoDto {
-  @EnteroSocio('int4', undefined)
-  GroupCode?: number | null;
-  @TextoSocio(200, true, undefined)
-  GroupName?: string | null;
+  @CampoTabla({
+    tipo: 'entero',
+    small: false,
+    requerido: false,
+    nullable: true,
+    descripcion: 'Codigo del grupo de socios en la empresa.',
+    ejemplo: 1,
+  })
+  Code?: number | null;
+  @CampoTabla({
+    tipo: 'texto',
+    longitud: 200,
+    requerido: false,
+    nullable: true,
+    descripcion: 'Nombre del grupo de socios.',
+    ejemplo: 'Grupo de ejemplo',
+  })
+  Name?: string | null;
+  @CampoTabla({
+    tipo: 'texto',
+    longitud: 200,
+    requerido: false,
+    nullable: true,
+    descripcion: 'Tipo del grupo de socios.',
+    ejemplo: 'Cliente',
+  })
+  Type?: string | null;
 }
 
 export class SocioNegocioCondicionPagoDto {

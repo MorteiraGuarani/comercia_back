@@ -22,15 +22,15 @@ Base: `/api/v1/admin/socios-negocio/empresas/{empresaId}`.
 | tbl_jsubcanales | `/tbl_jsubcanales/{Code}` | Code |
 | tbl_oagp | `/tbl_oagp/{AgentCode}` | AgentCode |
 | tbl_oslp | `/tbl_oslp/{SlpCode}` | SlpCode |
-| tbl_ocrg | `/tbl_ocrg/{GroupCode}` | GroupCode |
+| tbl_ocrg | `/tbl_ocrg/{Code}` | Code |
 | tbl_octg | `/tbl_octg/{GroupNumber}` | GroupNumber |
 | tbl_opln | `/tbl_opln/{ListNum}` | ListNum |
 
 Los códigos de socios/direcciones son texto exacto y conservan ceros iniciales.
-`Code` de canales/subcanales, `GroupCode` de tbl_ocrg, `GroupNumber` de tbl_octg, `ListNum` de tbl_opln y `SlpCode` de tbl_oslp son enteros int4; `AgentCode` de tbl_oagp es texto exacto. Estas rutas nunca buscan por id
+`Code` de canales/subcanales, `Code` de tbl_ocrg, `GroupNumber` de tbl_octg, `ListNum` de tbl_opln y `SlpCode` de tbl_oslp son enteros int4; `AgentCode` de tbl_oagp es texto exacto. Estas rutas nunca buscan por id
 técnico como alternativa. Para renombrar una clave, usar su valor original en la
 URL y el nuevo en el cuerpo. Codificar caracteres especiales de la URL.
-Las filas con `GroupCode`, `GroupNumber`, `ListNum`, `SlpCode` o `AgentCode` nulo permanecen visibles en el listado;
+Las filas con `Code` de tbl_ocrg, `GroupNumber`, `ListNum`, `SlpCode` o `AgentCode` nulo permanecen visibles en el listado;
 las rutas individuales requieren el código correspondiente.
 
 En el catálogo, bajo `/api/v1/admin/catalogo/empresas/{empresaId}`, las rutas
@@ -117,7 +117,7 @@ del mismo lote y serializando las escrituras. Para bulk idempotente enviar Code.
 
 | Campo | Catálogo |
 | --- | --- |
-| GroupCode | tbl_ocrg.GroupCode |
+| GroupCode | tbl_ocrg.Code |
 | GroupNum | tbl_octg.GroupNumber |
 | ListNum | tbl_opln.ListNum |
 | SlpCode | tbl_oslp.SlpCode |
@@ -147,3 +147,5 @@ Verificación sin navegador: compilación, pruebas del servicio y
 de datos en la migración, conflictos, empresa, NULL, bulk, Swagger y HTTP.
 
 `tbl_octg` contiene `GroupNumber` (int4), `PaymentTermsGroupName` (varchar 250) y `PriceListNo` (int4), todos opcionales. La clave de la ruta es `GroupNumber`; `tbl_ocrd.GroupNum` se relaciona con ese campo dentro de la empresa. La recreación de la tabla elimina sus registros anteriores.
+
+`tbl_ocrg` contiene `Code` (int4), `Name` y `Type` (varchar 200), todos opcionales. La clave de la ruta es `Code`; `tbl_ocrd.GroupCode` se relaciona con ese campo dentro de la empresa. La recreación elimina los registros anteriores.

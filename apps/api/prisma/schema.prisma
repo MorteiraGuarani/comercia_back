@@ -237,10 +237,11 @@ model SocioNegocioGrupo {
   id BigInt @id @default(autoincrement())
   empresaId Int @map("empresa_id")
   empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
-  GroupCode Int?
-  GroupName String? @db.VarChar(200)
-  @@unique([empresaId, GroupCode], map: "uq_tbl_ocrg_empresa_clave")
-  @@index([empresaId, GroupName], map: "idx_tbl_ocrg_groupname")
+  Code Int?
+  Name String? @db.VarChar(200)
+  Type String? @db.VarChar(200)
+  @@unique([empresaId, Code], map: "uq_tbl_ocrg_empresa_clave")
+  @@index([empresaId, Name], map: "idx_tbl_ocrg_name")
   @@map("tbl_ocrg")
 }
 

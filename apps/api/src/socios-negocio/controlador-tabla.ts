@@ -82,7 +82,7 @@ export function crearControladorSocios(
       tbl_jcanales: { campo: 'Code', dto: CodigoCatalogoParams },
       tbl_jsubcanales: { campo: 'Code', dto: CodigoCatalogoParams },
       tbl_opln: { campo: 'ListNum', dto: ListaPrecioParams },
-      tbl_ocrg: { campo: 'GroupCode', dto: GrupoSocioParams },
+      tbl_ocrg: { campo: 'Code', dto: GrupoSocioParams },
       tbl_octg: { campo: 'GroupNumber', dto: CondicionPagoParams },
       tbl_oslp: { campo: 'SlpCode', dto: VendedorParams },
       tbl_oagp: { campo: 'AgentCode', dto: SupervisorParams },
@@ -95,7 +95,6 @@ export function crearControladorSocios(
     'Code',
     'ListNum',
     'SlpCode',
-    'GroupCode',
     'GroupNumber',
     'FirmCode',
     'Number',
@@ -191,19 +190,17 @@ export function crearControladorSocios(
         ? p.Code
         : 'ListNum' in p
           ? p.ListNum
-          : 'GroupCode' in p
-            ? p.GroupCode
-            : 'GroupNumber' in p
-              ? p.GroupNumber
-              : 'FirmCode' in p
-                ? p.FirmCode
-                : 'Number' in p
-                  ? p.Number
-                  : 'SlpCode' in p
-                    ? p.SlpCode
-                    : 'AgentCode' in p
-                      ? p.AgentCode
-                      : p.id;
+          : 'GroupNumber' in p
+            ? p.GroupNumber
+            : 'FirmCode' in p
+              ? p.FirmCode
+              : 'Number' in p
+                ? p.Number
+                : 'SlpCode' in p
+                  ? p.SlpCode
+                  : 'AgentCode' in p
+                    ? p.AgentCode
+                    : p.id;
   const documentarCodigo = () =>
     ApiParam({
       name: identidad,

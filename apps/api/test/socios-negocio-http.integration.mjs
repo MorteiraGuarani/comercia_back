@@ -172,7 +172,7 @@ try {
           : t.nombre === 'tbl_omrc'
             ? '{FirmCode}'
             : t.nombre === 'tbl_ocrg'
-              ? '{GroupCode}'
+              ? '{Code}'
               : t.nombre === 'tbl_octg'
                 ? '{GroupNumber}'
                 : t.nombre === 'tbl_opln'
@@ -319,7 +319,7 @@ try {
     }
   }
   for (const [tabla, campo] of [
-    ['tbl_ocrg', 'GroupCode'],
+    ['tbl_ocrg', 'Code'],
     ['tbl_octg', 'GroupNumber'],
     ['tbl_oitb', 'Number'],
     ['tbl_omrc', 'FirmCode'],
@@ -346,7 +346,7 @@ try {
       if (method === 'put')
         req = req.send(
           tabla === 'tbl_ocrg'
-            ? { GroupName: 'Nuevo' }
+            ? { Name: 'Nuevo' }
             : tabla === 'tbl_octg'
               ? { PaymentTermsGroupName: 'Nuevo' }
               : tabla === 'tbl_oitb'
@@ -394,6 +394,18 @@ try {
     if (method === 'put') invalido.send({ Descriptio: 'X' });
     await invalido.expect(400);
   }
+  const ocrg = '/api/v1/admin/socios-negocio/empresas/1/tbl_ocrg';
+  const ocrgSchema = doc.components.schemas.SocioNegocioGrupoDto;
+  assert.deepEqual(Object.keys(ocrgSchema.properties).sort(), ['Code', 'Name', 'Type']);
+  assert.equal(ocrgSchema.properties.Name.maxLength, 200);
+  assert.equal(ocrgSchema.properties.Type.maxLength, 200);
+  assert.ok(doc.paths['/api/v1/admin/socios-negocio/empresas/{empresaId}/tbl_ocrg/{Code}']);
+  assert.ok(!doc.paths['/api/v1/admin/socios-negocio/empresas/{empresaId}/tbl_ocrg/{GroupCode}']);
+  await request(http).post(ocrg).send({ Code: 2147483647, Name: 'x'.repeat(200), Type: null }).expect(201);
+  await request(http).post(ocrg).send({ Code: null, Name: null, Type: null }).expect(201);
+  await request(http).post(ocrg).send({ Code: 2147483648 }).expect(400);
+  await request(http).post(ocrg).send({ Type: 'x'.repeat(201) }).expect(400);
+  await request(http).post(ocrg).send({ GroupCode: 1 }).expect(400);
   const fabricantes = '/api/v1/admin/catalogo/empresas/1/tbl_omrc';
   await request(http)
     .post(fabricantes)

@@ -50,15 +50,13 @@ export function filtroRegistroSocios(
         ? 'Number'
         : tabla.nombre === 'tbl_omrc'
           ? 'FirmCode'
-          : tabla.nombre === 'tbl_ocrg'
-            ? 'GroupCode'
-            : tabla.nombre === 'tbl_octg'
-              ? 'GroupNumber'
-              : tabla.nombre === 'tbl_opln'
-                ? 'ListNum'
-                : tabla.nombre === 'tbl_oslp'
-                  ? 'SlpCode'
-                  : 'Code';
+          : tabla.nombre === 'tbl_octg'
+            ? 'GroupNumber'
+            : tabla.nombre === 'tbl_opln'
+              ? 'ListNum'
+              : tabla.nombre === 'tbl_oslp'
+                ? 'SlpCode'
+                : 'Code';
     const codigo = Number(referencia);
     if (
       !/^-?\d+$/.test(String(referencia)) ||

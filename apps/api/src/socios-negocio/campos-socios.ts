@@ -57,7 +57,7 @@ export const CAMPOS_SOCIOS = {
   },
   GroupCode: {
     description:
-      'Código de grupo de clientes; referencia lógica a tbl_ocrg.GroupCode de la empresa.',
+      'Código de grupo de clientes; referencia lógica a tbl_ocrg.Code de la empresa.',
     example: 1,
   },
   GroupNum: {

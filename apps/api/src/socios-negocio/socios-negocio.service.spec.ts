@@ -140,9 +140,9 @@ describe('Socios de negocio públicos y separados por empresa', () => {
     {
       tabla: TABLAS_SOCIOS.tbl_ocrg,
       modelo: 'socioNegocioGrupo',
-      clave: 'GroupCode',
+      clave: 'Code',
       valor: 202,
-      campo: 'GroupName',
+      campo: 'Name',
     },
     {
       tabla: TABLAS_SOCIOS.tbl_octg,
@@ -301,7 +301,7 @@ describe('Socios de negocio públicos y separados por empresa', () => {
           : tabla.nombre === 'tbl_oagp'
             ? { AgentCode: valor }
             : tabla.nombre === 'tbl_ocrg'
-              ? { GroupCode: 7 }
+              ? { Code: 7 }
               : tabla.nombre === 'tbl_octg'
                 ? { GroupNumber: 7 }
                 : tabla.nombre === 'tbl_oitb'
@@ -659,7 +659,7 @@ describe('Socios de negocio públicos y separados por empresa', () => {
     });
     modelos.socioNegocio.count.mockResolvedValue(1);
     await expect(
-      service.editar(TABLAS_SOCIOS.tbl_ocrg, 20, '1', { GroupCode: 2 }),
+      service.editar(TABLAS_SOCIOS.tbl_ocrg, 20, '1', { Code: 2 }),
     ).rejects.toBeInstanceOf(ConflictException);
     expect(modelos.socioNegocio.count).toHaveBeenCalledWith({
       where: { empresaId: 20, GroupCode: 1 },
@@ -715,6 +715,30 @@ describe('Socios de negocio públicos y separados por empresa', () => {
         take: 10,
       }),
     );
+  });
+
+  it('resuelve el grupo de socios por Code dentro de la empresa', async () => {
+    const { modelos, service } = preparar();
+    modelos.socioNegocio.findFirst.mockResolvedValue({
+      id: 1n,
+      CardCode: 'A',
+      GroupCode: 7,
+    });
+    modelos.socioNegocioGrupo.findFirst.mockResolvedValue({
+      id: 2n,
+      Code: 7,
+      Name: 'Grupo',
+      Type: 'Cliente',
+    });
+    const resultado = await service.relaciones(20, 'A');
+    expect(modelos.socioNegocioGrupo.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { empresaId: 20, Code: 7 } }),
+    );
+    expect(resultado.tbl_ocrg).toMatchObject({
+      Code: 7,
+      Name: 'Grupo',
+      Type: 'Cliente',
+    });
   });
 
   it('resuelve la condicion de pago por GroupNumber dentro de la empresa', async () => {

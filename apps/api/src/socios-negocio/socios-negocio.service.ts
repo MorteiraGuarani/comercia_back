@@ -448,7 +448,7 @@ export class SociosNegocioService {
       tbl_jcanales,
       tbl_jsubcanales,
     ] = await Promise.all([
-      resolver(TABLAS_SOCIOS.tbl_ocrg, 'GroupCode', socio.GroupCode),
+      resolver(TABLAS_SOCIOS.tbl_ocrg, 'Code', socio.GroupCode),
       resolver(TABLAS_SOCIOS.tbl_octg, 'GroupNumber', socio.GroupNum),
       resolver(TABLAS_SOCIOS.tbl_opln, 'ListNum', socio.ListNum),
       resolver(TABLAS_SOCIOS.tbl_oagp, 'AgentCode', socio.AgentCode),
