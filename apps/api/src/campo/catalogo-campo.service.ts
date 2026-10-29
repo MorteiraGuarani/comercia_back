@@ -4,12 +4,15 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  PayloadTooLargeException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import type { Prisma } from '../../generated/prisma/client';
 import { rangoPaginacion, respuestaPaginada } from '../common/utils/paginacion';
 import { CampoAccesoService } from './campo-acceso.service';
 import { ConsultaCampoDto, TareaCampoDto } from './dto/campo.dto';
+import { ConsultaLocalesCampoDto } from './dto/administracion.dto';
+import { distanciaMetros } from '../common/utils/geo';
 import { TAREA_CAMPO_SELECT } from './utils/selectores';
 import {
   aClientePdv,
@@ -39,6 +42,10 @@ import type { UsuarioConAcceso } from '../plataforma/interfaces/usuario-con-acce
 import { CrearLocalCampoDto, EditarLocalCampoDto } from './dto/crear-local.dto';
 import { relanzarDuplicado } from '../common/utils/error-prisma';
 
+// "Más cercanos" ordena todo el alcance en memoria antes de paginar; un
+// supervisor tiene decenas de locales, nunca miles.
+const LIMITE_CERCANIA = 2000;
+
 @Injectable()
 export class CatalogoCampoService {
   constructor(
@@ -66,7 +73,7 @@ export class CatalogoCampoService {
     };
   }
 
-  async locales(usuarioId: number, query: ConsultaCampoDto) {
+  async locales(usuarioId: number, query: ConsultaLocalesCampoDto) {
     // Selector compartido con el ABM de tareas; devuelve solo datos de su empresa.
     const u = await this.acceso
       .gestionar(usuarioId, 'locales')
@@ -121,6 +128,9 @@ export class CatalogoCampoService {
               { nombre: { contains: buscar, mode: 'insensitive' } },
               { apellido: { contains: buscar, mode: 'insensitive' } },
               { nombreLogin: { contains: buscar, mode: 'insensitive' } },
+              { legajo: { contains: buscar, mode: 'insensitive' } },
+              { ERP_Repositor: { contains: buscar, mode: 'insensitive' } },
+              { ERP_Impulsador: { contains: buscar, mode: 'insensitive' } },
             ],
           }
         : {}),
@@ -134,6 +144,10 @@ export class CatalogoCampoService {
           id: true,
           nombre: true,
           apellido: true,
+          nombreLogin: true,
+          legajo: true,
+          ERP_Repositor: true,
+          ERP_Impulsador: true,
           rol: { select: { descripcion: true } },
         },
         orderBy: [{ nombre: 'asc' }, { apellido: 'asc' }, { id: 'asc' }],
@@ -146,6 +160,9 @@ export class CatalogoCampoService {
         id: x.id,
         nombre: `${x.nombre} ${x.apellido}`,
         descripcion: x.rol?.descripcion ?? 'Sin rol',
+        // Código visible en la lista: el del ERP o, si no hay, el usuario.
+        codigo:
+          x.ERP_Repositor || x.ERP_Impulsador || x.legajo || x.nombreLogin,
       })),
       total,
       page,
@@ -171,17 +188,58 @@ export class CatalogoCampoService {
     );
   }
 
+  /** Códigos de la página pedida, del local más cercano al más lejano. */
+  private async paginaPorCercania(
+    where: Prisma.SocioNegocioWhereInput,
+    lat: number,
+    lng: number,
+    skip: number,
+    take: number,
+  ) {
+    const puntos = await this.prisma.socioNegocio.findMany({
+      where,
+      select: { CardCode: true, U_Latitud: true, U_Longitud: true },
+      take: LIMITE_CERCANIA + 1,
+    });
+    if (puntos.length > LIMITE_CERCANIA)
+      throw new PayloadTooLargeException(
+        'Hay demasiados locales para ordenarlos por cercanía; buscá por nombre o código',
+      );
+    const metros = (p: (typeof puntos)[number]) => {
+      const a = Number(p.U_Latitud);
+      const b = Number(p.U_Longitud);
+      // Sin ubicación cargada: al final.
+      return p.U_Latitud && p.U_Longitud && Number.isFinite(a + b)
+        ? distanciaMetros(lat, lng, a, b)
+        : Infinity;
+    };
+    return {
+      total: puntos.length,
+      codigos: puntos
+        .map((p) => ({ codigo: p.CardCode, metros: metros(p) }))
+        .sort((x, y) => x.metros - y.metros || x.codigo.localeCompare(y.codigo))
+        .slice(skip, skip + take)
+        .map((p) => p.codigo),
+    };
+  }
+
   private async paginaLocales(
     empresaId: number,
     where: Prisma.SocioNegocioWhereInput,
     asignacion: Prisma.AsignacionCampoWhereInput,
-    query: ConsultaCampoDto,
+    query: ConsultaLocalesCampoDto,
   ) {
     const { skip, take, page, limit } = rangoPaginacion(query);
+    const cercania =
+      query.lat !== undefined && query.lng !== undefined
+        ? await this.paginaPorCercania(where, query.lat, query.lng, skip, take)
+        : null;
     const [total, filas] = await Promise.all([
-      this.prisma.socioNegocio.count({ where }),
+      cercania?.total ?? this.prisma.socioNegocio.count({ where }),
       this.prisma.socioNegocio.findMany({
-        where,
+        where: cercania
+          ? { AND: [where, { CardCode: { in: cercania.codigos } }] }
+          : where,
         select: {
           ...CLIENTE_OCRD_SELECT,
           asignaciones: {
@@ -202,10 +260,15 @@ export class CatalogoCampoService {
           },
         },
         orderBy: [{ CardName: 'asc' }, { CardCode: 'asc' }],
-        skip,
-        take,
+        ...(cercania ? {} : { skip, take }),
       }),
     ]);
+    if (cercania)
+      filas.sort(
+        (a, b) =>
+          cercania.codigos.indexOf(a.CardCode) -
+          cercania.codigos.indexOf(b.CardCode),
+      );
     const direcciones = await direccionesLocales(
       this.prisma,
       empresaId,

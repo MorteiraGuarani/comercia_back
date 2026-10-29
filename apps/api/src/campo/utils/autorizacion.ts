@@ -7,6 +7,11 @@ import {
   exigirEquipoCampo,
   EQUIPO_CAMPO_SELECT,
 } from './equipo-campo';
+import {
+  alcanceDeGestor,
+  filtroPersonalGestor,
+  SELECT_ALCANCE_GESTOR,
+} from './equipos-gestion';
 
 /** Cliente de Prisma o transacción: solo se necesita consultar usuarios. */
 type ConsultaUsuarios = Pick<Prisma.TransactionClient, 'usuario'>;
@@ -61,10 +66,24 @@ export async function obtenerEquipoCompleto(
       id: true,
       empresaId: true,
       isActive: true,
-      rol: { select: { equipoCampoId: true } },
+      ...SELECT_ALCANCE_GESTOR,
     },
   });
-  if (!lider?.isActive || !lider.rol?.equipoCampoId) return [];
+  if (!lider?.isActive || !lider.rol) return [];
+  if (lider.rol.equipoCampoId === null) {
+    // Jefaturas sin equipo propio: el personal de los equipos que supervisan.
+    const alcance = alcanceDeGestor(lider);
+    if (!alcance) return [];
+    const personal = await prisma.usuario.findMany({
+      where: {
+        ...filtroPersonalGestor(lider.empresaId, alcance),
+        id: { not: lider.id },
+      },
+      select: { id: true },
+      take: 10000,
+    });
+    return [lider.id, ...personal.map((u) => u.id)];
+  }
   // La consulta incluye empresa y estado en cada nivel; un rol compartido nunca
   // concede acceso a los subordinados de otro líder.
   const subordinados = await subordinadosEnCadena(prisma, lider.id, {
@@ -83,8 +102,17 @@ export async function obtenerEquipoCompleto(
  */
 export async function obtenerColaboradoresGestionados(
   prisma: ConsultaUsuarios,
-  lider: { id: number; empresaId: number; equipoCampo?: EquipoCampoDto | null },
+  lider: {
+    id: number;
+    empresaId: number;
+    equipoCampo?: EquipoCampoDto | null;
+    gestor?: boolean;
+  },
 ): Promise<number[]> {
+  if (lider.gestor)
+    return (await obtenerEquipoCompleto(prisma, lider.id)).filter(
+      (id) => id !== lider.id,
+    );
   const equipo = exigirEquipoCampo(lider.equipoCampo);
   if (equipo.tipo !== 'REPOSITOR')
     return (await obtenerEquipoCompleto(prisma, lider.id)).filter(

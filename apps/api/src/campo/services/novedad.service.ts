@@ -299,7 +299,11 @@ export class NovedadService {
 
     if (
       usuarioId !== novedad.usuarioId &&
-      !(await obtenerSuperioresActivos(this.prisma, empresaId, [novedad.usuarioId])).includes(usuarioId)
+      !(
+        await obtenerSuperioresActivos(this.prisma, empresaId, [
+          novedad.usuarioId,
+        ])
+      ).includes(usuarioId)
     ) {
       throw new ForbiddenException('No tienes acceso a esta novedad');
     }

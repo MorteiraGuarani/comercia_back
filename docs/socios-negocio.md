@@ -34,7 +34,7 @@ Las filas con `GroupCode`, `GroupNum`, `ListNum`, `SlpCode` o `AgentCode` nulo p
 las rutas individuales requieren el código correspondiente.
 
 En el catálogo, bajo `/api/v1/admin/catalogo/empresas/{empresaId}`, las rutas
-individuales de grupos de artículos y fabricantes usan `/tbl_oitb/{ItmsGrpCod}`
+individuales de grupos de artículos y fabricantes usan `/tbl_oitb/{Number}`
 y `/tbl_omrc/{FirmCode}`. Ambos códigos son enteros int4. Un fabricante sin
 `FirmCode` permanece visible en la lista, pero no tiene ruta individual por código.
 

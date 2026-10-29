@@ -6,6 +6,9 @@
 .ft-body { font-family: 'IBM Plex Sans', sans-serif; }
 .ft-mono { font-family: 'IBM Plex Mono', monospace; }
 
+.pwa-instalacion { min-width: 0; }
+.pwa-instalacion__ayuda { margin: 0.5rem 0; padding: 0 0.75rem; font-size: 0.8125rem; line-height: 1.5; color: var(--muted); overflow-wrap: anywhere; }
+
 /* Modo oscuro por CLASE (.dark en <html>): automático según el dispositivo por
    defecto, con botón manual en el navbar que persiste en localStorage("tema").
    El script inline de layout.tsx aplica la clase antes del primer pintado. */

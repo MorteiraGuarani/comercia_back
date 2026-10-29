@@ -235,3 +235,84 @@ describe('Alcance de Itinerario del supervisor impulsador', () => {
     expect(prisma.usuario.findMany).not.toHaveBeenCalled();
   });
 });
+
+describe('Administración del supervisor', () => {
+  it('busca colaboradores también por código y lo muestra', async () => {
+    const { prisma, service } = preparar();
+    prisma.usuario.findMany
+      .mockReset()
+      .mockResolvedValueOnce([{ id: 2 }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          id: 2,
+          nombre: 'Ana',
+          apellido: 'Paz',
+          nombreLogin: 'ana.paz',
+          legajo: null,
+          ERP_Repositor: 'R-15',
+          ERP_Impulsador: null,
+          rol: { descripcion: 'Repositor' },
+        },
+      ]);
+    prisma.usuario.count.mockResolvedValue(1);
+    const respuesta = await service.colaboradoresLocales(1, { buscar: 'R-15' });
+    expect(respuesta.items).toEqual([
+      { id: 2, nombre: 'Ana Paz', descripcion: 'Repositor', codigo: 'R-15' },
+    ]);
+    expect(prisma.usuario.count).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        OR: expect.arrayContaining([
+          { ERP_Repositor: { contains: 'R-15', mode: 'insensitive' } },
+        ]) as unknown,
+      }) as unknown,
+    });
+  });
+
+  it('ordena del local más cercano al más lejano y deja sin ubicación al final', async () => {
+    const { prisma, service } = preparar();
+    // Direcciones de CRD1: no participan del orden.
+    Object.assign(prisma, { $queryRaw: jest.fn().mockResolvedValue([]) });
+    const local = (
+      CardCode: string,
+      lat: string | null,
+      lng: string | null,
+    ) => ({
+      CardCode,
+      U_Latitud: lat,
+      U_Longitud: lng,
+    });
+    prisma.socioNegocio.findMany
+      // Puntos de todo el alcance para ordenar.
+      .mockResolvedValueOnce([
+        local('LEJOS', '-25.40', '-57.40'),
+        local('SIN', null, null),
+        local('CERCA', '-25.30', '-57.60'),
+        local('MEDIO', '-25.35', '-57.55'),
+      ])
+      // Datos completos de la página, en cualquier orden.
+      .mockResolvedValueOnce(
+        ['MEDIO', 'CERCA'].map((CardCode) => ({
+          CardCode,
+          CardName: CardCode,
+          asignaciones: [],
+        })),
+      );
+    const respuesta = await service.locales(1, {
+      lat: -25.3,
+      lng: -57.6,
+      page: 1,
+      limit: 2,
+    });
+    expect(respuesta.total).toBe(4);
+    expect(respuesta.items.map((l) => l.id)).toEqual(['CERCA', 'MEDIO']);
+    expect(prisma.socioNegocio.findMany).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        where: {
+          AND: [expect.anything(), { CardCode: { in: ['CERCA', 'MEDIO'] } }],
+        },
+      }),
+    );
+    expect(prisma.socioNegocio.count).not.toHaveBeenCalled();
+  });
+});

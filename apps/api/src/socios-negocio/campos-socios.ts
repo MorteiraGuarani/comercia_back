@@ -161,7 +161,10 @@ export const CAMPOS_SOCIOS = {
     description: 'Vendedor activo en SAP (Y/N). Por defecto Y.',
     example: 'Y',
   },
-  Fax: { description: 'Fax del vendedor, conservado como texto.', example: '021000000' },
+  Fax: {
+    description: 'Fax del vendedor, conservado como texto.',
+    example: '021000000',
+  },
   GroupName: {
     description: 'Nombre del grupo de clientes.',
     example: 'Minoristas',

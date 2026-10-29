@@ -33,8 +33,9 @@ export default function PanelInicioPage() {
   // Equipos de campo (repositores o impulsadores): el líder ve "Hoy en campo"
   // con su equipo y el personal de campo ve "Tu día" con lo suyo.
   const equipoActivo = usuario.rol?.equipoCampo?.activo === true;
+  // Las jefaturas (jefe de canal, gerencia) ven "Hoy en campo" de sus equipos.
   const esLiderCampo =
-    equipoActivo &&
+    (equipoActivo || usuario.rol?.gestionaEquipos === true) &&
     modulos.some(
       (m) => m.ruta === "gestion-campo" && m.paginas.some((p) => p.ruta === "visitas"),
     );

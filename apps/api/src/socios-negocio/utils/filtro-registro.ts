@@ -47,7 +47,7 @@ export function filtroRegistroSocios(
   ) {
     const campo =
       tabla.nombre === 'tbl_oitb'
-        ? 'ItmsGrpCod'
+        ? 'Number'
         : tabla.nombre === 'tbl_omrc'
           ? 'FirmCode'
           : tabla.nombre === 'tbl_ocrg'

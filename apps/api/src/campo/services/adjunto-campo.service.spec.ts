@@ -2,7 +2,9 @@ import { ForbiddenException } from '@nestjs/common';
 import type { PrismaService } from '../../prisma/prisma.service';
 import { AdjuntoCampoService } from './adjunto-campo.service';
 
-jest.mock('../utils/multer-config', () => ({ validarArchivoImagen: jest.fn() }));
+jest.mock('../utils/multer-config', () => ({
+  validarArchivoImagen: jest.fn(),
+}));
 
 describe('adjuntos de novedades para superiores', () => {
   it('permite las imágenes al autor y sus superiores, sin exponerlas a otras cadenas o empresas', async () => {
@@ -13,14 +15,12 @@ describe('adjuntos de novedades para superiores', () => {
     ];
     const prisma = {
       adjuntoCampo: {
-        findFirst: jest
-          .fn()
-          .mockResolvedValue({
-            id: 8,
-            novedad: { usuarioId: 3 },
-            aviso: null,
-            rutaArchivo: 'prueba.jpg',
-          }),
+        findFirst: jest.fn().mockResolvedValue({
+          id: 8,
+          novedad: { usuarioId: 3 },
+          aviso: null,
+          rutaArchivo: 'prueba.jpg',
+        }),
       },
       usuario: {
         findMany: jest.fn(

@@ -13,9 +13,9 @@ describe('loginDesdeCorreo', () => {
 
 describe('mensajeErrorLote', () => {
   it('devuelve el mensaje de la validación o del conflicto, nunca el interno', () => {
-    expect(
-      mensajeErrorLote(new BadRequestException(['uno', 'dos'])),
-    ).toBe('uno. dos');
+    expect(mensajeErrorLote(new BadRequestException(['uno', 'dos']))).toBe(
+      'uno. dos',
+    );
     expect(mensajeErrorLote(new ConflictException('Duplicado'))).toBe(
       'Duplicado',
     );

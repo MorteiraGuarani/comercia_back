@@ -18,6 +18,7 @@ export function TarjetaPdv({
   onItinerario,
   onAsignacion,
   sinDetalle = false,
+  distancia = null,
 }: {
   local: LocalCampo;
   onInformacion: () => void;
@@ -25,6 +26,8 @@ export function TarjetaPdv({
   onAsignacion: () => void;
   /** Supervisores: sin dirección ni a cargo (ya filtran por la persona). */
   sinDetalle?: boolean;
+  /** Distancia desde el teléfono, ya formateada ("2.3 km"). */
+  distancia?: string | null;
 }) {
   const asignaciones = local.asignaciones ?? [];
   const ubicado = local.latitud !== null && local.longitud !== null;
@@ -51,6 +54,11 @@ export function TarjetaPdv({
             <IconoAlerta className="h-3.5 w-3.5 shrink-0" />
             Sin ubicación cargada
           </span>
+        ) : distancia ? (
+          <p className="flex items-center gap-1.5 text-sm font-semibold text-brand-700 dark:text-brand-300">
+            <IconoPin className="h-4 w-4 shrink-0 text-accent-ink" />A{" "}
+            {distancia} de vos
+          </p>
         ) : null
       ) : (
         <>

@@ -10,10 +10,7 @@ import {
   ActualizarEjecutableDto,
   CrearEjecutableDto,
 } from './dto/ejecutable.dto';
-import {
-  ActualizarConexionDto,
-  CrearConexionDto,
-} from './dto/conexion.dto';
+import { ActualizarConexionDto, CrearConexionDto } from './dto/conexion.dto';
 import type {
   ConexionDto,
   EjecutableDto,

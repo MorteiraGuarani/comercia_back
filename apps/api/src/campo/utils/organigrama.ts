@@ -13,15 +13,19 @@ export function alertasOrganigrama(
 ): Map<number, AlertaOrganigrama[]> {
   const porId = new Map(personas.map((p) => [p.id, p]));
   const conACargo = new Set(
-    personas.filter((p) => p.activo && p.superiorId !== null).map((p) => p.superiorId),
+    personas
+      .filter((p) => p.activo && p.superiorId !== null)
+      .map((p) => p.superiorId),
   );
   const alertas = new Map<number, AlertaOrganigrama[]>();
   for (const p of personas) {
     const lista: AlertaOrganigrama[] = [];
     if (p.activo) {
       if (!p.tieneRol) lista.push('SIN_ROL');
-      else if (p.equipoId === null) lista.push('SIN_EQUIPO');
-      const superior = p.superiorId === null ? undefined : porId.get(p.superiorId);
+      // Las jefaturas supervisan varios equipos sin pertenecer a uno.
+      else if (p.equipoId === null && !p.gestor) lista.push('SIN_EQUIPO');
+      const superior =
+        p.superiorId === null ? undefined : porId.get(p.superiorId);
       if (p.superiorId !== null && !superior && p.id !== raizId)
         lista.push('SUPERIOR_FUERA');
       if (superior && !superior.activo) lista.push('SUPERIOR_INACTIVO');

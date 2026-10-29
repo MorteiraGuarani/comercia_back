@@ -17,6 +17,8 @@ export interface PersonaJerarquia {
   superiorId: number | null;
   tieneRol: boolean;
   equipoId: number | null;
+  /** Rol de jefatura: supervisa varios equipos sin pertenecer a uno. */
+  gestor?: boolean;
 }
 
 export interface PersonaOrganigrama {

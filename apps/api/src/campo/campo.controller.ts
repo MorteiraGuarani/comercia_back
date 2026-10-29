@@ -39,6 +39,12 @@ import { OrganigramaService } from './services/organigrama.service';
 import { ConsultaOrganigramaDto } from './dto/organigrama.dto';
 import { SupervisionService } from './services/supervision.service';
 import { AdjuntoCampoService } from './services/adjunto-campo.service';
+import { CampoAccesoService } from './campo-acceso.service';
+import { ConsultaLocalesCampoDto } from './dto/administracion.dto';
+import {
+  ElegirEquipoGestionDto,
+  ListarEquiposGestionDto,
+} from './dto/equipo-gestion.dto';
 import {
   AsignacionCampoDto,
   BackupCampoDto,
@@ -88,7 +94,34 @@ export class CampoController {
     private readonly supervisionService: SupervisionService,
     private readonly organigramaService: OrganigramaService,
     private readonly adjuntoCampoService: AdjuntoCampoService,
+    private readonly acceso: CampoAccesoService,
   ) {}
+
+  @Get('equipos-gestion')
+  @ApiOperation({
+    summary: 'Equipos que supervisa la jefatura',
+    description:
+      'Solo roles de jefatura (jefe de canal, back office de canal, gerencia), configurados en Roles con "Supervisa varios equipos"; el resto recibe 403. Lista paginada y buscable por nombre: { id, nombre, tipo, activo }.',
+  })
+  equiposGestion(
+    @Req() r: RequestConUsuario,
+    @Query() q: ListarEquiposGestionDto,
+  ) {
+    return this.acceso.equiposGestion(r.usuarioId, q);
+  }
+
+  @Put('equipos-gestion/activo')
+  @ApiOperation({
+    summary: 'Elegir con qué equipo trabaja la jefatura',
+    description:
+      'equipoId debe ser uno de sus equipos (403 si no); null vuelve a todos. Desempeño, Inicio y Ubicaciones muestran el elegido o todos juntos; las pantallas que administran (tareas, locales, horarios) exigen haber elegido uno. Responde { equipo }.',
+  })
+  elegirEquipoGestion(
+    @Req() r: RequestConUsuario,
+    @Body() dto: ElegirEquipoGestionDto,
+  ) {
+    return this.acceso.elegirEquipoGestion(r.usuarioId, dto.equipoId);
+  }
 
   @Get('locales/mapa') localesMapa(
     @Req() r: RequestConUsuario,
@@ -100,7 +133,7 @@ export class CampoController {
   @ApiOperation({
     summary: 'Repositores o impulsadores para filtrar locales',
     description:
-      'Requiere acceso a PDV y rutas. Lista paginada y buscable (nombre, apellido o usuario) de quienes atienden hoy algún local dentro del alcance del Itinerario: supervisores y team leaders ven solo su equipo. Responde { id, nombre, descripcion: rol }.',
+      'Requiere acceso a PDV y rutas. Lista paginada y buscable (nombre, apellido, usuario, legajo o código ERP de repositor/impulsador) de quienes atienden hoy algún local dentro del alcance del Itinerario: supervisores y team leaders ven solo su equipo. Responde { id, nombre, descripcion: rol, codigo }.',
   })
   colaboradoresLocales(
     @Req() r: RequestConUsuario,
@@ -112,9 +145,9 @@ export class CampoController {
   @ApiOperation({
     summary: 'Locales del Itinerario',
     description:
-      'Paginado y buscable. usuarioId filtra los locales que esa persona atiende hoy y localId (CardCode) uno solo; ambos dentro del alcance del Itinerario.',
+      'Paginado y buscable. usuarioId filtra los locales que esa persona atiende hoy y localId (CardCode) uno solo; ambos dentro del alcance del Itinerario. Con lat y lng ordena del más cercano al más lejano (los que no tienen ubicación, al final); 413 si el alcance supera 2000 locales.',
   })
-  locales(@Req() r: RequestConUsuario, @Query() q: ConsultaCampoDto) {
+  locales(@Req() r: RequestConUsuario, @Query() q: ConsultaLocalesCampoDto) {
     return this.catalogo.locales(r.usuarioId, q);
   }
   // Solo superadmin: locales de cualquier empresa (pestaña Locales de Administración).

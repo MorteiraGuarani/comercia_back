@@ -49,6 +49,10 @@ export interface UsuarioSesion {
     id: number;
     descripcion: string;
     equipoCampo: EquipoCampo | null;
+    /** Jefatura que supervisa varios equipos (sin equipo propio). */
+    gestionaEquipos?: boolean;
+    /** Equipo con el que eligió trabajar la jefatura; null = todos. */
+    equipoGestion?: EquipoCampo | null;
   } | null;
 }
 

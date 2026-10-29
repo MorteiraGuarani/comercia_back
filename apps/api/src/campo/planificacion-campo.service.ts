@@ -276,7 +276,7 @@ export class PlanificacionCampoService {
   async asignar(usuarioId: number, localId: string, dto: AsignacionCampoDto) {
     const u = await this.acceso.gestionar(usuarioId, 'locales');
     await this.acceso.local(u.empresaId, localId);
-    await this.acceso.subordinado(u.empresaId, u.id, dto.usuarioId);
+    await this.acceso.subordinado(u, dto.usuarioId);
     const fechas = vigenciaCampo(dto.fechaDesde, dto.fechaHasta);
     return this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM tbl_ocrd WHERE empresa_id = ${u.empresaId} AND "CardCode" = ${localId} FOR UPDATE`;
@@ -431,7 +431,7 @@ export class PlanificacionCampoService {
     dto: BackupCampoDto,
   ) {
     const { u, a } = await this.asignacionDelEquipo(usuarioId, asignacionId);
-    await this.acceso.subordinado(u.empresaId, u.id, dto.usuarioId);
+    await this.acceso.subordinado(u, dto.usuarioId);
     const fechas = vigenciaCampo(dto.fechaDesde, dto.fechaHasta);
     if (
       !fechas.fechaHasta ||

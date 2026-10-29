@@ -97,9 +97,9 @@ model GrupoArticulo {
   id BigInt @id @default(autoincrement())
   empresaId Int @map("empresa_id")
   empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
-  ItmsGrpCod Int
-  ItmsGrpNam String? @db.VarChar(200)
-  @@unique([empresaId, ItmsGrpCod], map: "uq_tbl_oitb_empresa_clave")
+  Number Int
+  GroupName String? @db.VarChar(200)
+  @@unique([empresaId, Number], map: "uq_tbl_oitb_empresa_clave")
   @@map("tbl_oitb")
 }
 
@@ -463,10 +463,26 @@ model Rol {
   equipoCampo EquipoCampo? @relation(fields: [equipoCampoId, empresaId], references: [id, empresaId], onDelete: NoAction, onUpdate: NoAction)
   permisosTareas AccionTareaCampo[] @default([]) @map("permisos_tareas")
   puedeVerSeguimiento Boolean @default(false) @map("puede_ver_seguimiento")
+  /// Jefaturas, back office de canal y gerencia: supervisan equipos sin ser
+  /// parte de uno, por eso excluyen equipoCampoId.
+  gestionaTodosEquipos Boolean @default(false) @map("gestiona_todos_equipos")
+  equiposGestion RolEquipoGestion[]
 
   @@unique([empresaId, descripcion])
   @@unique([id, empresaId])
   @@map("roles")
+}
+
+/// Equipos operativos que supervisa un rol de jefatura (ej. un canal).
+model RolEquipoGestion {
+  rolId Int @map("rol_id")
+  equipoCampoId Int @map("equipo_campo_id")
+  empresaId Int @map("empresa_id")
+  rol Rol @relation(fields: [rolId, empresaId], references: [id, empresaId], onDelete: Cascade, onUpdate: NoAction)
+  equipoCampo EquipoCampo @relation(fields: [equipoCampoId, empresaId], references: [id, empresaId], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([rolId, equipoCampoId])
+  @@map("roles_equipos_gestion")
 }
 
 model EquipoCampo {
@@ -477,6 +493,8 @@ model EquipoCampo {
   tipo DestinatarioTareaCampo
   activo Boolean @default(true)
   roles Rol[]
+  rolesGestion RolEquipoGestion[]
+  usuariosGestion Usuario[] @relation("EquipoGestionUsuario")
   tareas TareaCampo[]
   horarios HorarioCampo[]
 
@@ -508,6 +526,9 @@ model Usuario {
   fotoPerfilMime          String?                   @map("foto_perfil_mime") @db.VarChar(40)
   rolId                   Int?                      @map("rol_id")
   rol                     Rol?                      @relation(fields: [rolId, empresaId], references: [id, empresaId], onDelete: NoAction, onUpdate: NoAction)
+  /// Equipo con el que trabaja ahora quien gestiona varios; null = todos.
+  equipoGestionId         Int?                      @map("equipo_gestion_id")
+  equipoGestion           EquipoCampo?              @relation("EquipoGestionUsuario", fields: [equipoGestionId, empresaId], references: [id, empresaId], onDelete: NoAction, onUpdate: NoAction)
   superiorId              Int?                      @map("superior_id")
   superior                Usuario?                  @relation("UsuarioJerarquia", fields: [superiorId], references: [id])
   subordinados            Usuario[]                 @relation("UsuarioJerarquia")

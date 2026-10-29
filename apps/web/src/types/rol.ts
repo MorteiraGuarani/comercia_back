@@ -16,6 +16,10 @@ export interface RolAdmin {
   equipoCampo: EquipoCampo | null;
   permisosTareas: AccionTareaCampo[];
   puedeVerSeguimiento: boolean;
+  /** Jefaturas: supervisa todos los equipos de la empresa. */
+  gestionaTodosEquipos: boolean;
+  /** Jefaturas: equipos que supervisa (vacío si es de un equipo). */
+  equiposGestion: EquipoCampo[];
 }
 
 export interface FormRol {
@@ -23,9 +27,11 @@ export interface FormRol {
   descripcion: string;
   rolId: number | "";
   equipoCampoId: number | "";
-  modoEquipo: "ninguno" | "existente" | "nuevo";
+  modoEquipo: "ninguno" | "existente" | "nuevo" | "varios";
   nuevoEquipoNombre: string;
   nuevoEquipoTipo: "IMPULSADOR" | "REPOSITOR";
   permisosTareas: AccionTareaCampo[];
   puedeVerSeguimiento: boolean;
+  equiposGestionIds: number[];
+  gestionaTodosEquipos: boolean;
 }

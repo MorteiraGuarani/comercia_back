@@ -168,7 +168,7 @@ try {
       t.nombre === 'tbl_oscn'
         ? '{CardCode}'
         : t.nombre === 'tbl_oitb'
-          ? '{ItmsGrpCod}'
+          ? '{Number}'
           : t.nombre === 'tbl_omrc'
             ? '{FirmCode}'
             : t.nombre === 'tbl_ocrg'
@@ -321,7 +321,7 @@ try {
   for (const [tabla, campo] of [
     ['tbl_ocrg', 'GroupCode'],
     ['tbl_octg', 'GroupNum'],
-    ['tbl_oitb', 'ItmsGrpCod'],
+    ['tbl_oitb', 'Number'],
     ['tbl_omrc', 'FirmCode'],
   ]) {
     const grupo = ['tbl_oitb', 'tbl_omrc'].includes(tabla)
@@ -350,7 +350,7 @@ try {
             : tabla === 'tbl_octg'
               ? { PymntGroup: 'Nuevo' }
               : tabla === 'tbl_oitb'
-                ? { ItmsGrpNam: 'Nuevo' }
+                ? { GroupName: 'Nuevo' }
                 : { FirmName: 'Nuevo' },
         );
       await req.expect(200);
@@ -408,13 +408,27 @@ try {
     .send({ FirmName: 'x'.repeat(201) })
     .expect(400);
   const grupos = '/api/v1/admin/catalogo/empresas/1/tbl_oitb';
+  const esquemaGrupos = doc.components.schemas.GrupoArticuloDto;
+  assert.deepEqual(Object.keys(esquemaGrupos.properties).sort(), ['GroupName', 'Number']);
+  assert.ok(esquemaGrupos.required.includes('Number'));
+  assert.equal(esquemaGrupos.properties.GroupName.maxLength, 200);
+  assert.ok(doc.paths['/api/v1/admin/catalogo/empresas/{empresaId}/tbl_oitb/{Number}']);
+  assert.ok(!doc.paths['/api/v1/admin/catalogo/empresas/{empresaId}/tbl_oitb/{ItmsGrpCod}']);
   await request(http)
     .post(grupos)
-    .send({ ItmsGrpCod: 2147483647, ItmsGrpNam: null })
+    .send({ Number: 2147483647, GroupName: null })
     .expect(201);
-  await request(http).post(grupos).send({ ItmsGrpCod: null }).expect(400);
+  await request(http).post(grupos).send({ Number: null }).expect(400);
   await request(http).post(grupos).send({}).expect(400);
-  await request(http).post(grupos).send({ ItmsGrpCod: 2147483648 }).expect(400);
+  await request(http).post(grupos).send({ Number: 2147483648 }).expect(400);
+  await request(http).post(grupos).send({ Number: 1, GroupName: 'x'.repeat(201) }).expect(400);
+  await request(http).post(grupos).send({ ItmsGrpCod: 1, ItmsGrpNam: 'Anterior' }).expect(400);
+  const loteGrupos = await request(http).post(grupos).send([
+    { Number: 10, GroupName: 'Nuevo' },
+    { Number: null, GroupName: 'Inválido' },
+  ]).expect(201);
+  assert.equal(loteGrupos.body.invalidas, 1);
+  assert.equal(calls.at(-1).data.filas[0].Number, 10);
   const sustitutos = '/api/v1/admin/catalogo/empresas/1/tbl_oscn';
   const codigo = {
     ItemCode: 'I'.repeat(100),

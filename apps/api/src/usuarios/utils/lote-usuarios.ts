@@ -8,7 +8,7 @@ export function mensajeErrorLote(error: unknown): string {
     const respuesta = error.getResponse();
     const mensaje =
       typeof respuesta === 'object' && respuesta && 'message' in respuesta
-        ? (respuesta as { message: unknown }).message
+        ? respuesta.message
         : respuesta;
     return Array.isArray(mensaje) ? mensaje.join('. ') : String(mensaje);
   }

@@ -31,6 +31,11 @@ const SELECT_ROL_ADMIN = {
   equipoCampo: { select: EQUIPO_CAMPO_SELECT },
   permisosTareas: true,
   puedeVerSeguimiento: true,
+  gestionaTodosEquipos: true,
+  equiposGestion: {
+    select: { equipoCampo: { select: EQUIPO_CAMPO_SELECT } },
+    orderBy: { equipoCampo: { nombre: 'asc' } },
+  },
 } as const;
 
 import { aRolAdminDto } from './utils/rol-admin';
@@ -143,6 +148,32 @@ export class RolesService {
     return equipo.id;
   }
 
+  /** Jefaturas: un rol trabaja en un equipo o supervisa varios, nunca las dos cosas. */
+  private async resolverGestion(
+    tx: Prisma.TransactionClient,
+    empresaId: number,
+    dto: PlanificacionRolDto,
+    equipoCampoId: number | null,
+    actual: { todos: boolean; ids: number[] } = { todos: false, ids: [] },
+  ) {
+    const todos = dto.gestionaTodosEquipos ?? actual.todos;
+    const ids = todos ? [] : (dto.equiposGestionIds ?? actual.ids);
+    if (equipoCampoId !== null && (todos || ids.length))
+      throw new BadRequestException(
+        'Un rol trabaja en un equipo o supervisa varios, no las dos cosas',
+      );
+    if (
+      dto.equiposGestionIds?.length &&
+      (await tx.equipoCampo.count({
+        where: { id: { in: ids }, empresaId, activo: true },
+      })) !== ids.length
+    )
+      throw new BadRequestException(
+        'Algún equipo a supervisar no está disponible para esta empresa',
+      );
+    return { todos, ids };
+  }
+
   private async validarPadre(
     empresaId: number,
     rolId: number | null | undefined,
@@ -185,6 +216,12 @@ export class RolesService {
       const rol = await this.prisma.$transaction(async (tx) => {
         await tx.$queryRaw`SELECT id FROM empresas WHERE id = ${dto.empresaId} FOR UPDATE`;
         const equipoCampoId = await this.resolverEquipo(tx, dto.empresaId, dto);
+        const gestion = await this.resolverGestion(
+          tx,
+          dto.empresaId,
+          dto,
+          equipoCampoId,
+        );
         return tx.rol.create({
           data: {
             descripcion,
@@ -193,6 +230,12 @@ export class RolesService {
             equipoCampoId,
             permisosTareas: dto.permisosTareas ?? [],
             puedeVerSeguimiento: dto.puedeVerSeguimiento ?? false,
+            gestionaTodosEquipos: gestion.todos,
+            equiposGestion: {
+              createMany: {
+                data: gestion.ids.map((equipoCampoId) => ({ equipoCampoId })),
+              },
+            },
           },
           select: SELECT_ROL_ADMIN,
         });
@@ -214,7 +257,13 @@ export class RolesService {
     await this.autorizar(usuarioId);
     const existente = await this.prisma.rol.findUnique({
       where: { id },
-      select: { id: true, empresaId: true, equipoCampoId: true },
+      select: {
+        id: true,
+        empresaId: true,
+        equipoCampoId: true,
+        gestionaTodosEquipos: true,
+        equiposGestion: { select: { equipoCampoId: true } },
+      },
     });
     if (!existente) throw new NotFoundException('El rol no existe');
     await this.validarPadre(existente.empresaId, dto.rolId, id);
@@ -236,6 +285,16 @@ export class RolesService {
           throw new BadRequestException(
             'Cerrá las visitas abiertas antes de cambiar el equipo del rol',
           );
+        const gestion = await this.resolverGestion(
+          tx,
+          existente.empresaId,
+          dto,
+          equipoCampoId,
+          {
+            todos: existente.gestionaTodosEquipos,
+            ids: existente.equiposGestion.map((e) => e.equipoCampoId),
+          },
+        );
         return tx.rol.update({
           where: { id },
           data: {
@@ -244,6 +303,21 @@ export class RolesService {
             equipoCampoId,
             permisosTareas: dto.permisosTareas,
             puedeVerSeguimiento: dto.puedeVerSeguimiento,
+            // Renombrar o cambiar permisos no toca los equipos supervisados.
+            ...(dto.gestionaTodosEquipos !== undefined ||
+            dto.equiposGestionIds !== undefined
+              ? {
+                  gestionaTodosEquipos: gestion.todos,
+                  equiposGestion: {
+                    deleteMany: {},
+                    createMany: {
+                      data: gestion.ids.map((equipoCampoId) => ({
+                        equipoCampoId,
+                      })),
+                    },
+                  },
+                }
+              : {}),
           },
           select: SELECT_ROL_ADMIN,
         });

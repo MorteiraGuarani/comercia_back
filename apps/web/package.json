@@ -15,7 +15,8 @@
     "test:clientes": "node test/clientes.integration.mjs",
     "test:usuarios": "node test/usuarios-erp.integration.mjs",
     "test:inventario": "node test/inventario.integration.mjs",
-    "test:organigrama": "node test/organigrama.integration.mjs"
+    "test:organigrama": "node test/organigrama.integration.mjs",
+    "test:roles": "node test/roles-agrupados.integration.mjs"
   },
   "dependencies": {
     "dexie": "^4.4.6",

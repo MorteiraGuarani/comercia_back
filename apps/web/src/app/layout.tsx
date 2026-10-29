@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { ActualizadorDespliegue } from "@/components/actualizador-despliegue";
 import { RegistroServiceWorker } from "@/components/registro-service-worker";
+import { InstalacionPwaProvider } from "@/components/instalacion-pwa";
 import { ToastProvider } from "@/components/toast/toast-provider";
 import { ConfirmacionHost } from "@/components/confirmacion/confirmacion-host";
 import "./globals.css";
@@ -52,7 +53,9 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: scriptTema }} />
         <ActualizadorDespliegue />
         <RegistroServiceWorker />
-        <ToastProvider>{children}</ToastProvider>
+        <InstalacionPwaProvider>
+          <ToastProvider>{children}</ToastProvider>
+        </InstalacionPwaProvider>
         <ConfirmacionHost />
       </body>
     </html>

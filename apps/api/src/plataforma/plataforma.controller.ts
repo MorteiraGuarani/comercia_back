@@ -25,10 +25,7 @@ import {
   CrearEjecutableDto,
 } from './dto/ejecutable.dto';
 import { AsignarModuloDto } from './dto/asignacion.dto';
-import {
-  ActualizarConexionDto,
-  CrearConexionDto,
-} from './dto/conexion.dto';
+import { ActualizarConexionDto, CrearConexionDto } from './dto/conexion.dto';
 
 // Endpoint del usuario común: su menú (auth, sin superadmin)
 @ApiTags('plataforma')

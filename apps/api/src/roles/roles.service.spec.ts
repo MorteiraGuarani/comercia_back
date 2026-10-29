@@ -69,6 +69,8 @@ describe('RolesService', () => {
           equipoCampo: null,
           permisosTareas: [],
           puedeVerSeguimiento: false,
+          gestionaTodosEquipos: false,
+          equiposGestion: [],
         },
       ],
       total: 8,
@@ -139,6 +141,8 @@ describe('RolesService', () => {
           equipoCampoId: null,
           permisosTareas: [],
           puedeVerSeguimiento: false,
+          gestionaTodosEquipos: false,
+          equiposGestion: { createMany: { data: [] } },
         },
       }),
     );

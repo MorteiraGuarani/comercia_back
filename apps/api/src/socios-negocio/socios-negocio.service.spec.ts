@@ -305,7 +305,7 @@ describe('Socios de negocio públicos y separados por empresa', () => {
               : tabla.nombre === 'tbl_octg'
                 ? { GroupNum: 7 }
                 : tabla.nombre === 'tbl_oitb'
-                  ? { ItmsGrpCod: 7 }
+                  ? { Number: 7 }
                   : tabla.nombre === 'tbl_omrc'
                     ? { FirmCode: 7 }
                     : tabla.nombre === 'tbl_oslp'

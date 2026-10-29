@@ -9,4 +9,6 @@ export interface UsuarioConAcceso {
   equipoCampo: EquipoCampoDto | null;
   permisosTareas?: AccionTareaCampo[];
   puedeVerSeguimiento?: boolean;
+  /** Jefatura que supervisa varios equipos; equipoCampo es el que eligió (o null = todos). */
+  gestor?: boolean;
 }

@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import { BotonInstalarPwa } from "@/components/instalacion-pwa";
+import { btnGhost } from "@/components/ui";
 
 export function AuthShell({ children }: { children: ReactNode }) {
   return (
@@ -26,6 +28,9 @@ export function AuthShell({ children }: { children: ReactNode }) {
         <div className="w-full max-w-md [--border:#405a50] [--control-border:#658077] [--foreground:#fffaf3] [--muted:#b9c9c3] [--surface-raised:#183129] [--surface-soft:#203d34]">
           <div className="mb-10 lg:hidden"><BrandMark claro /></div>
           {children}
+          <div className="mt-5">
+            <BotonInstalarPwa className={`${btnGhost} w-full`} />
+          </div>
         </div>
       </section>
     </main>

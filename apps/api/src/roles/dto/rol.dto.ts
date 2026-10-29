@@ -51,6 +51,20 @@ export class PlanificacionRolDto {
   @IsOptional()
   @IsIn([DestinatarioTareaCampo.IMPULSADOR, DestinatarioTareaCampo.REPOSITOR])
   nuevoEquipoTipo?: DestinatarioTareaCampo;
+
+  /** Equipos que supervisa un rol de jefatura; excluye equipoCampoId. */
+  @ValidateIf((_obj, value: unknown) => value !== undefined)
+  @IsArray()
+  @ArrayUnique()
+  @ArrayMaxSize(50)
+  @IsInt({ each: true })
+  @Min(1, { each: true })
+  @Max(MAX_INT4, { each: true })
+  equiposGestionIds?: number[];
+
+  @ValidateIf((_obj, value: unknown) => value !== undefined)
+  @IsBoolean()
+  gestionaTodosEquipos?: boolean;
 }
 
 export class ListarEquiposCampoDto extends PaginacionDto {

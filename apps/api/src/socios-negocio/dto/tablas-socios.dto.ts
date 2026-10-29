@@ -75,7 +75,7 @@ export class GrupoArticuloDto {
     descripcion: 'Código int4 del grupo de artículos.',
     ejemplo: 100,
   })
-  ItmsGrpCod!: number;
+  Number!: number;
   @CampoTabla({
     tipo: 'texto',
     longitud: 200,
@@ -84,7 +84,7 @@ export class GrupoArticuloDto {
     descripcion: 'Nombre del grupo de artículos.',
     ejemplo: 'Grupo de ejemplo',
   })
-  ItmsGrpNam?: string | null;
+  GroupName?: string | null;
 }
 
 export class TipoSubcanalDto {

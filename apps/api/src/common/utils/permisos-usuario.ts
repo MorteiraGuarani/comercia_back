@@ -6,7 +6,7 @@ export function puedeAdministrarUsuarios(
 }
 
 /** Roles de campo (operativos y sus líderes): ven "Mis datos" pero no lo editan. */
-const ROLES_CAMPO = /^(repositor|impulsador|supervisor|teamleader)/;
+const ROLES_CAMPO = /^(repositor|impulsador|preventa|supervisor|teamleader)/;
 
 /**
  * "Mis datos" lo editan superadmin y los roles administrativos (back office,

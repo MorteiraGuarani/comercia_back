@@ -23,12 +23,26 @@ import {
 } from '../common/utils/permisos-usuario';
 import type { UsuarioSesion } from './interfaces/usuario-sesion.interface';
 import type { TokenPayload } from './interfaces/token-payload.interface';
+import type { EquipoCampoDto } from '../roles/interfaces/equipo-campo.interface';
 import type { AsignacionUsuario } from './interfaces/asignacion-usuario.interface';
 import type { DatosErpUsuario } from '../usuarios/interfaces/datos-erp-usuario.interface';
 import {
   camposDuplicados,
   esErrorDuplicado,
 } from '../common/utils/error-prisma';
+import { alcanceDeGestor } from '../campo/utils/equipos-gestion';
+
+// Lo que necesita aSesion(); la jefatura suma sus equipos y el elegido.
+const INCLUDE_SESION = {
+  empresa: true,
+  equipoGestion: true,
+  rol: {
+    include: {
+      equipoCampo: true,
+      equiposGestion: { select: { equipoCampoId: true } },
+    },
+  },
+} as const;
 
 @Injectable()
 export class AuthService {
@@ -107,7 +121,7 @@ export class AuthService {
           ERP_Impulsador: dto.ERP_Impulsador ?? null,
           passwordHash,
         },
-        include: { empresa: true, rol: { include: { equipoCampo: true } } },
+        include: INCLUDE_SESION,
       })
       .catch((e: unknown) => {
         // Carrera entre el chequeo y el insert: el índice único manda (409, no 500)
@@ -135,7 +149,7 @@ export class AuthService {
       where: {
         OR: [{ correo: dto.identificador }, { nombreLogin: dto.identificador }],
       },
-      include: { empresa: true, rol: { include: { equipoCampo: true } } },
+      include: INCLUDE_SESION,
     });
 
     // Mismo mensaje exista o no el usuario: no revelar quiénes están registrados
@@ -183,7 +197,7 @@ export class AuthService {
     // app necesita resolver el fallback antes de contar con un JWT.
     const usuarios = await this.prisma.usuario.findMany({
       where: { celular: { in: telefonos } },
-      include: { empresa: true, rol: { include: { equipoCampo: true } } },
+      include: INCLUDE_SESION,
       take: 2,
     });
     if (usuarios.length !== 1 || !usuarios[0].isActive) {
@@ -200,7 +214,7 @@ export class AuthService {
   async me(usuarioId: number): Promise<UsuarioSesion> {
     const usuario = await this.prisma.usuario.findUnique({
       where: { id: usuarioId },
-      include: { empresa: true, rol: { include: { equipoCampo: true } } },
+      include: INCLUDE_SESION,
     });
     if (!usuario || !usuario.isActive) {
       throw new UnauthorizedException();
@@ -213,7 +227,7 @@ export class AuthService {
   ): Promise<{ usuario: UsuarioSesion; token: string }> {
     const usuario = await this.prisma.usuario.findUnique({
       where: { id: usuarioId },
-      include: { empresa: true, rol: { include: { equipoCampo: true } } },
+      include: INCLUDE_SESION,
     });
     if (!usuario?.isActive) {
       throw new UnauthorizedException(
@@ -244,17 +258,17 @@ export class AuthService {
     updatedAt: Date;
     esSuperadmin: boolean;
     empresa: { id: number; nombre: string };
+    equipoGestion: EquipoCampoDto | null;
     rol: {
       id: number;
       descripcion: string;
-      equipoCampo: {
-        id: number;
-        nombre: string;
-        tipo: import('../../generated/prisma/client').DestinatarioTareaCampo;
-        activo: boolean;
-      } | null;
+      equipoCampoId: number | null;
+      gestionaTodosEquipos: boolean;
+      equiposGestion: { equipoCampoId: number }[];
+      equipoCampo: EquipoCampoDto | null;
     } | null;
   }): UsuarioSesion {
+    const alcance = alcanceDeGestor(usuario);
     return {
       id: usuario.id,
       nombre: usuario.nombre,
@@ -287,6 +301,15 @@ export class AuthService {
                   nombre: usuario.rol.equipoCampo.nombre,
                   tipo: usuario.rol.equipoCampo.tipo,
                   activo: usuario.rol.equipoCampo.activo,
+                }
+              : null,
+            gestionaEquipos: !!alcance,
+            equipoGestion: alcance?.activo
+              ? {
+                  id: alcance.activo.id,
+                  nombre: alcance.activo.nombre,
+                  tipo: alcance.activo.tipo,
+                  activo: alcance.activo.activo,
                 }
               : null,
           }

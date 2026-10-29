@@ -135,7 +135,7 @@ export class GrupoArticuloParams extends EmpresaSociosParams {
     maximum: 2147483647,
     example: 100,
     description:
-      'ItmsGrpCod original del grupo de artículos en la empresa, nunca id técnico.',
+      'Number original del grupo de artículos en la empresa, nunca id técnico.',
   })
   @Transform(({ obj, key }: { obj: Record<string, unknown>; key: string }) =>
     typeof obj[key] === 'string' && /^-?\d+$/.test(obj[key])
@@ -145,7 +145,7 @@ export class GrupoArticuloParams extends EmpresaSociosParams {
   @IsInt()
   @Min(-2147483648)
   @Max(2147483647)
-  ItmsGrpCod!: number;
+  Number!: number;
 }
 
 export class VendedorParams extends EmpresaSociosParams {

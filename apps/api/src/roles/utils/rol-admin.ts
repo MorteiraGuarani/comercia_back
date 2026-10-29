@@ -13,6 +13,13 @@ export function aRolAdminDto(rol: RolAdminFila): RolAdminDto {
     hijosCount: rol._count.hijos,
     permisosTareas: rol.permisosTareas ?? [],
     puedeVerSeguimiento: rol.puedeVerSeguimiento ?? false,
+    gestionaTodosEquipos: rol.gestionaTodosEquipos ?? false,
+    equiposGestion: (rol.equiposGestion ?? []).map(({ equipoCampo: e }) => ({
+      id: e.id,
+      nombre: e.nombre,
+      tipo: e.tipo,
+      activo: e.activo,
+    })),
     equipoCampo: rol.equipoCampo
       ? {
           id: rol.equipoCampo.id,

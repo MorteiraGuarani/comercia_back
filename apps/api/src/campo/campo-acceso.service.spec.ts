@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { CampoAccesoService } from './campo-acceso.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { AccesoPlataformaService } from '../plataforma/acceso-plataforma.service';
@@ -7,10 +7,11 @@ describe('Alcance de campo', () => {
   const equipoCampo = {
     id: 1,
     nombre: 'Impulsadores',
-    tipo: 'IMPULSADOR',
+    tipo: 'IMPULSADOR' as const,
     activo: true,
   };
   const usuariosDelEquipo = new Set([25, 30]);
+  const lider = { id: 20, empresaId: 10, equipoCampo };
   function preparar() {
     const prisma = {
       usuario: {
@@ -46,7 +47,7 @@ describe('Alcance de campo', () => {
   }
   it('rechaza usuarios fuera del equipo operativo del líder', async () => {
     const { prisma, plataforma, service } = preparar();
-    await expect(service.subordinado(10, 20, 40)).rejects.toBeInstanceOf(
+    await expect(service.subordinado(lider, 40)).rejects.toBeInstanceOf(
       NotFoundException,
     );
     expect(prisma.usuario.findFirst).toHaveBeenLastCalledWith(
@@ -69,8 +70,8 @@ describe('Alcance de campo', () => {
   });
   it('permite al supervisor asignar a los impulsadores de sus TeamLeaders', async () => {
     const { plataforma, service } = preparar();
-    await expect(service.subordinado(10, 20, 30)).resolves.toEqual({ id: 30 });
-    await expect(service.subordinado(10, 20, 25)).resolves.toEqual({ id: 25 });
+    await expect(service.subordinado(lider, 30)).resolves.toEqual({ id: 30 });
+    await expect(service.subordinado(lider, 25)).resolves.toEqual({ id: 25 });
     expect(plataforma.exigirAccesoAlgunaPagina).toHaveBeenCalledWith(
       30,
       'mi-jornada',
@@ -114,5 +115,61 @@ describe('Alcance de campo', () => {
       'mi-jornada',
       ['locales', 'tareas'],
     );
+  });
+
+  describe('jefaturas que supervisan varios equipos', () => {
+    const repositores = { ...equipoCampo, id: 2, tipo: 'REPOSITOR' };
+    function conJefe(fila: unknown) {
+      const plataforma = {
+        exigirAccesoPagina: jest
+          .fn()
+          .mockResolvedValue({ id: 7, empresaId: 10, equipoCampo: null }),
+      };
+      const prisma = {
+        usuario: { findFirst: jest.fn().mockResolvedValue(fila) },
+      };
+      return new CampoAccesoService(
+        prisma as unknown as PrismaService,
+        plataforma as unknown as AccesoPlataformaService,
+      );
+    }
+    const jefe = (equipoGestion: unknown, ids = [1, 2], todos = false) => ({
+      equipoGestion,
+      rol: {
+        equipoCampoId: null,
+        gestionaTodosEquipos: todos,
+        equiposGestion: ids.map((equipoCampoId) => ({ equipoCampoId })),
+      },
+    });
+
+    it('consulta todos sus equipos juntos sin elegir uno', async () => {
+      await expect(
+        conJefe(jefe(null)).gestionar(7, 'visitas'),
+      ).resolves.toMatchObject({ gestor: true, equipoCampo: null });
+    });
+
+    it('para administrar exige elegir uno de sus equipos', async () => {
+      await expect(
+        conJefe(jefe(null)).gestionar(7, 'tareas'),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      await expect(
+        conJefe(jefe(repositores)).gestionar(7, 'tareas'),
+      ).resolves.toMatchObject({ gestor: true, equipoCampo: repositores });
+    });
+
+    it('ignora un equipo elegido que ya no supervisa', async () => {
+      await expect(
+        conJefe(jefe(repositores, [1])).gestionar(7, 'tareas'),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      await expect(
+        conJefe(jefe(repositores, [], true)).gestionar(7, 'tareas'),
+      ).resolves.toMatchObject({ equipoCampo: repositores });
+    });
+
+    it('un rol sin equipo ni jefatura sigue sin acceso', async () => {
+      await expect(
+        conJefe(jefe(null, [])).gestionar(7, 'visitas'),
+      ).rejects.toThrow('equipo operativo');
+    });
   });
 });

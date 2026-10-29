@@ -3,8 +3,6 @@
 import React, { useMemo, useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { Paginacion } from "@/components/paginacion";
-import { SelectorPaginado } from "@/components/selector-paginado";
-import { btnPrimary } from "@/components/ui";
 import { usePanel } from "@/components/panel/contexto";
 import { useListaCampo } from "@/hooks/use-lista-campo";
 import { IconoMas } from "@/components/icono-mas";
@@ -13,6 +11,7 @@ import { TOKENS } from "./tokens";
 import { BuscadorCatalogo } from "./ui/filtros-catalogo";
 import { TopBar } from "./ui/top-bar";
 import { TarjetaPdv } from "./tarjeta-pdv";
+import { AdministracionSupervisor } from "./administracion-supervisor";
 import { AccionesItinerario } from "./acciones-itinerario";
 import { FotoLocal } from "./ui/foto-local";
 import { TextoExpandible } from "./ui/texto-expandible";
@@ -45,16 +44,8 @@ export function LocalesPanel() {
       .toLowerCase()
       .replace(/[^a-z]/g, "")
       .startsWith("supervisor");
-  const [colaboradorId, setColaboradorId] = useState<number | "">("");
-  const [localElegido, setLocalElegido] = useState("");
-  const [filtro, setFiltro] = useState<{
-    usuarioId?: number;
-    localId?: string;
-  }>({});
-  // El supervisor no carga nada hasta buscar; después la búsqueda se pliega.
-  const [buscado, setBuscado] = useState(false);
-  const [filtrosVisibles, setFiltrosVisibles] = useState(true);
-  const esperandoBusqueda = esSupervisor && !buscado;
+  // Supervisor: su búsqueda vuelve a consultar al cerrar un modal que guardó.
+  const [revisionSupervisor, setRevisionSupervisor] = useState(0);
   const [mostrarMapaCobertura, setMostrarMapaCobertura] = useState(false);
   const [busqueda, setBusqueda] = useState("");
   const [modal, setModal] = useState<{
@@ -73,15 +64,12 @@ export function LocalesPanel() {
 
   const endpoint = useMemo(() => {
     const params = new URLSearchParams();
-    if (esSupervisor) {
-      if (filtro.usuarioId) params.set("usuarioId", String(filtro.usuarioId));
-      if (filtro.localId) params.set("localId", filtro.localId);
-    } else if (busqueda.trim()) params.set("buscar", busqueda.trim());
+    if (busqueda.trim()) params.set("buscar", busqueda.trim());
     const qs = params.toString();
     return `/campo/locales${qs ? `?${qs}` : ""}`;
-  }, [busqueda, esSupervisor, filtro]);
+  }, [busqueda]);
 
-  const lista = useListaCampo<ClientePdv>(endpoint, 0, 7, !esperandoBusqueda);
+  const lista = useListaCampo<ClientePdv>(endpoint, 0, 7, !esSupervisor);
   const [revisionMapa, setRevisionMapa] = useState(0);
   const [configVencimientos, setConfigVencimientos] = useState(false);
 
@@ -94,7 +82,11 @@ export function LocalesPanel() {
     >
       <TopBar
         title="Administración"
-        subtitle="Clientes con su ubicación, horarios y personal asignado"
+        subtitle={
+          esSupervisor
+            ? "Buscá por colaborador o por local de venta"
+            : "Clientes con su ubicación, horarios y personal asignado"
+        }
         right={
           <>
             <button
@@ -141,276 +133,206 @@ export function LocalesPanel() {
         {mostrarMapaCobertura && <MapaClientes key={revisionMapa} />}
 
         {esSupervisor ? (
-          <form
-            id="filtros-administracion"
-            hidden={!filtrosVisibles}
-            aria-label="Buscar locales por repositor o impulsador"
-            className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
-            onSubmit={(e) => {
-              e.preventDefault();
-              // Solo la persona: todos sus locales; con local, solo ese.
-              setFiltro({
-                usuarioId: colaboradorId || undefined,
-                localId: (colaboradorId && localElegido) || undefined,
-              });
-              lista.setPage(1);
-              setBuscado(true);
-              setFiltrosVisibles(false);
-            }}
-          >
-            <SelectorPaginado<number>
-              url="/campo/locales/colaboradores"
-              etiqueta="Repositor o impulsador"
-              value={colaboradorId}
-              onChange={(id) => {
-                setColaboradorId(id);
-                setLocalElegido("");
-              }}
-              buscable
-              compacto
-              limite={5}
-              placeholder="Buscar repositor o impulsador"
-            />
-            {colaboradorId ? (
-              <SelectorPaginado<string>
-                key={colaboradorId}
-                url={`/campo/locales?usuarioId=${colaboradorId}`}
-                etiqueta="Local asignado"
-                value={localElegido}
-                onChange={setLocalElegido}
-                buscable
-                compacto
-                limite={5}
-                placeholder="Todos sus locales"
-              />
-            ) : (
-              <input
-                disabled
-                aria-label="Local asignado"
-                placeholder="Primero elegí a la persona"
-                className="h-11 w-full min-w-0 rounded-xl border border-line bg-surface-soft px-3 text-base text-muted placeholder:text-muted disabled:cursor-not-allowed sm:text-sm"
-              />
-            )}
-            <button type="submit" className={`${btnPrimary} h-11`}>
-              Buscar
-            </button>
-          </form>
-        ) : null}
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="min-w-0 flex-1">
-            {esSupervisor && buscado ? (
-              <button
-                type="button"
-                onClick={() => setFiltrosVisibles((v) => !v)}
-                aria-expanded={filtrosVisibles}
-                aria-controls="filtros-administracion"
-                className="inline-flex min-h-11 cursor-pointer items-center whitespace-nowrap rounded-lg border border-line bg-surface-raised px-3 text-sm font-semibold text-foreground transition-colors hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
-              >
-                {filtrosVisibles ? "Ocultar búsqueda" : "Mostrar búsqueda"}
-              </button>
-            ) : null}
-            {!esSupervisor ? (
-              <BuscadorCatalogo
-                valor={busqueda}
-                onCambio={(valor) => {
-                  setBusqueda(valor);
-                  lista.setPage(1);
-                }}
-                placeholder="Buscar local o código"
-                etiqueta="Buscar local en Administración"
-              />
-            ) : null}
-          </div>
-          {!lista.error && !esperandoBusqueda && (
-            <span className="shrink-0 rounded-lg border border-line bg-surface-raised px-3 py-2 font-mono text-xs font-bold text-foreground">
-              {totalRegistros} {totalRegistros === 1 ? "local" : "locales"}
-            </span>
-          )}
-        </div>
-
-        <div
-          data-inicio-listado
-          className="scroll-mt-20 rounded-xl border border-line bg-surface-raised shadow-xs overflow-hidden"
-          style={{ borderColor: TOKENS.line }}
-        >
-          {esperandoBusqueda ? (
-            <div className="px-4 py-12 text-center">
-              <div className="mx-auto mb-2.5 flex h-10 w-10 items-center justify-center rounded-full bg-surface-soft text-muted">
-                <IconoTienda className="h-5 w-5" />
-              </div>
-              <p className="text-sm font-bold text-foreground">
-                Elegí un repositor o impulsador
-              </p>
-              <p className="mx-auto mt-1 max-w-sm text-xs text-muted">
-                Si querés, también uno de sus locales, y tocá Buscar.
-              </p>
-            </div>
-          ) : lista.error ? (
-            <div role="alert" className="space-y-3 px-4 py-12 text-center">
-              <p className="text-sm text-red-700 dark:text-red-300">
-                {lista.error}
-              </p>
-              <button
-                type="button"
-                onClick={lista.refrescar}
-                disabled={lista.cargando}
-                className="min-h-11 cursor-pointer rounded-lg border border-line px-4 text-sm font-semibold text-foreground hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 disabled:cursor-not-allowed disabled:opacity-50 dark:border-line dark:text-foreground dark:hover:bg-surface-soft"
-              >
-                Reintentar
-              </button>
-            </div>
-          ) : lista.cargando && !lista.items.length ? (
-            <div className="py-16 text-center text-muted">
-              <div className="w-6 h-6 mx-auto border-2 border-foreground border-t-transparent rounded-full animate-spin mb-2.5" />
-              <p className="text-xs font-mono">Cargando itinerario…</p>
-            </div>
-          ) : lista.items.length === 0 ? (
-            <div className="py-12 px-4 text-center">
-              <div className="w-10 h-10 mx-auto rounded-full bg-surface-soft flex items-center justify-center text-muted mb-2.5">
-                <IconoTienda className="w-5 h-5" />
-              </div>
-              <p className="text-sm font-bold text-foreground">
-                No se encontraron clientes
-              </p>
-              <p className="text-xs text-muted mt-1 max-w-sm mx-auto">
-                {esSupervisor && filtro.usuarioId
-                  ? "Esta persona no tiene ese local asignado hoy."
-                  : busqueda
-                    ? "Probá con otro nombre o código de cliente."
-                    : "No hay locales disponibles para tu alcance."}
-              </p>
-            </div>
-          ) : (
-            <>
-              <ul
-                className="grid gap-2.5 p-2.5 md:hidden"
-                aria-label="Locales de Administración"
-              >
-                {lista.items.map((local) => (
-                  <li key={local.id} className="min-w-0">
-                    <TarjetaPdv
-                      local={local}
-                      onInformacion={() =>
-                        setModal({ cliente: local, pestana: "datos" })
-                      }
-                      onItinerario={() =>
-                        setModal({ cliente: local, pestana: "horarios" })
-                      }
-                      onAsignacion={() =>
-                        setModal({ cliente: local, pestana: "personal" })
-                      }
-                      sinDetalle={esSupervisor}
-                    />
-                  </li>
-                ))}
-              </ul>
-              <div className="hidden overflow-x-auto md:block">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-line bg-surface-soft text-[11px] font-bold uppercase tracking-wider text-muted">
-                      <th className="py-2.5 px-3.5">Acciones</th>
-                      <th className="py-2.5 px-3.5">Local</th>
-                      {!esSupervisor ? (
-                        <th className="py-2.5 px-3.5">Asignado</th>
-                      ) : null}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-line text-xs">
-                    {lista.items.map((local) => (
-                      <tr
-                        key={local.id}
-                        className="transition-colors hover:bg-surface-soft"
-                      >
-                        <td className="whitespace-nowrap px-3.5 py-2.5">
-                          <AccionesItinerario
-                            nombre={local.nombre}
-                            onInformacion={() =>
-                              setModal({ cliente: local, pestana: "datos" })
-                            }
-                            onItinerario={() =>
-                              setModal({ cliente: local, pestana: "horarios" })
-                            }
-                            onAsignacion={() =>
-                              setModal({ cliente: local, pestana: "personal" })
-                            }
-                          />
-                        </td>
-                        <td className="min-w-[240px] px-3.5 py-2.5">
-                          <div className="flex min-w-0 items-center gap-3">
-                            <FotoLocal
-                              nombre={local.nombre}
-                              className="w-16 shrink-0"
-                            />
-                            <div className="min-w-0 max-w-xs">
-                              <p className="text-sm font-bold text-foreground">
-                                <TextoExpandible texto={local.nombre} />
-                              </p>
-                              <p className="mt-0.5 font-mono text-[11px] text-muted">
-                                {local.id}
-                              </p>
-                              {local.direccion && !esSupervisor ? (
-                                <p className="text-[11px] text-muted">
-                                  <TextoExpandible texto={local.direccion} />
-                                </p>
-                              ) : null}
-                              {local.latitud === null && (
-                                <p className="mt-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-300">
-                                  Sin ubicación cargada
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        </td>
-                        {!esSupervisor ? (
-                          <td className="max-w-[260px] px-3.5 py-2.5">
-                            <div className="flex flex-wrap gap-1">
-                              {local.asignaciones?.length ? (
-                                local.asignaciones.map((asignacion) => (
-                                  <span
-                                    key={asignacion.id}
-                                    title={
-                                      asignacion.usuario.rol?.descripcion ??
-                                      undefined
-                                    }
-                                    className="inline-flex max-w-full items-center rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[11px] font-semibold text-sky-900 dark:border-sky-900 dark:bg-sky-950/50 dark:text-sky-200"
-                                  >
-                                    <span className="truncate">
-                                      {asignacion.usuario.nombre}{" "}
-                                      {asignacion.usuario.apellido}
-                                    </span>
-                                  </span>
-                                ))
-                              ) : (
-                                <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-300">
-                                  Sin asignar
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                        ) : null}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
-
-          {!lista.error && totalRegistros > 0 && (
-            <div className="flex justify-end border-t border-line bg-surface-soft px-4 pb-3 dark:border-line dark:bg-surface-soft">
-              <div className="w-full min-w-0 sm:w-auto">
-                <Paginacion
-                  page={lista.page}
-                  totalPages={lista.datos?.totalPages ?? 1}
-                  total={totalRegistros}
-                  limit={lista.limit}
-                  onPageChange={lista.setPage}
-                  onLimitChange={lista.setLimit}
+          <AdministracionSupervisor
+            usuarioId={usuario.id}
+            revision={revisionSupervisor}
+            onAbrir={(cliente, pestana) => setModal({ cliente, pestana })}
+          />
+        ) : (
+          <>
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="min-w-0 flex-1">
+                <BuscadorCatalogo
+                  valor={busqueda}
+                  onCambio={(valor) => {
+                    setBusqueda(valor);
+                    lista.setPage(1);
+                  }}
+                  placeholder="Buscar local o código"
+                  etiqueta="Buscar local en Administración"
                 />
               </div>
+              {!lista.error && (
+                <span className="shrink-0 rounded-lg border border-line bg-surface-raised px-3 py-2 font-mono text-xs font-bold text-foreground">
+                  {totalRegistros} {totalRegistros === 1 ? "local" : "locales"}
+                </span>
+              )}
             </div>
-          )}
-        </div>
+
+            <div
+              data-inicio-listado
+              className="scroll-mt-20 rounded-xl border border-line bg-surface-raised shadow-xs overflow-hidden"
+              style={{ borderColor: TOKENS.line }}
+            >
+              {lista.error ? (
+                <div role="alert" className="space-y-3 px-4 py-12 text-center">
+                  <p className="text-sm text-red-700 dark:text-red-300">
+                    {lista.error}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={lista.refrescar}
+                    disabled={lista.cargando}
+                    className="min-h-11 cursor-pointer rounded-lg border border-line px-4 text-sm font-semibold text-foreground hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 disabled:cursor-not-allowed disabled:opacity-50 dark:border-line dark:text-foreground dark:hover:bg-surface-soft"
+                  >
+                    Reintentar
+                  </button>
+                </div>
+              ) : lista.cargando && !lista.items.length ? (
+                <div className="py-16 text-center text-muted">
+                  <div className="w-6 h-6 mx-auto border-2 border-foreground border-t-transparent rounded-full animate-spin mb-2.5" />
+                  <p className="text-xs font-mono">Cargando itinerario…</p>
+                </div>
+              ) : lista.items.length === 0 ? (
+                <div className="py-12 px-4 text-center">
+                  <div className="w-10 h-10 mx-auto rounded-full bg-surface-soft flex items-center justify-center text-muted mb-2.5">
+                    <IconoTienda className="w-5 h-5" />
+                  </div>
+                  <p className="text-sm font-bold text-foreground">
+                    No se encontraron clientes
+                  </p>
+                  <p className="text-xs text-muted mt-1 max-w-sm mx-auto">
+                    {busqueda
+                      ? "Probá con otro nombre o código de cliente."
+                      : "No hay locales disponibles para tu alcance."}
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <ul
+                    className="grid gap-2.5 p-2.5 md:hidden"
+                    aria-label="Locales de Administración"
+                  >
+                    {lista.items.map((local) => (
+                      <li key={local.id} className="min-w-0">
+                        <TarjetaPdv
+                          local={local}
+                          onInformacion={() =>
+                            setModal({ cliente: local, pestana: "datos" })
+                          }
+                          onItinerario={() =>
+                            setModal({ cliente: local, pestana: "horarios" })
+                          }
+                          onAsignacion={() =>
+                            setModal({ cliente: local, pestana: "personal" })
+                          }
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="hidden overflow-x-auto md:block">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-line bg-surface-soft text-[11px] font-bold uppercase tracking-wider text-muted">
+                          <th className="py-2.5 px-3.5">Acciones</th>
+                          <th className="py-2.5 px-3.5">Local</th>
+                          <th className="py-2.5 px-3.5">Asignado</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-line text-xs">
+                        {lista.items.map((local) => (
+                          <tr
+                            key={local.id}
+                            className="transition-colors hover:bg-surface-soft"
+                          >
+                            <td className="whitespace-nowrap px-3.5 py-2.5">
+                              <AccionesItinerario
+                                nombre={local.nombre}
+                                onInformacion={() =>
+                                  setModal({ cliente: local, pestana: "datos" })
+                                }
+                                onItinerario={() =>
+                                  setModal({
+                                    cliente: local,
+                                    pestana: "horarios",
+                                  })
+                                }
+                                onAsignacion={() =>
+                                  setModal({
+                                    cliente: local,
+                                    pestana: "personal",
+                                  })
+                                }
+                              />
+                            </td>
+                            <td className="min-w-[240px] px-3.5 py-2.5">
+                              <div className="flex min-w-0 items-center gap-3">
+                                <FotoLocal
+                                  nombre={local.nombre}
+                                  className="w-16 shrink-0"
+                                />
+                                <div className="min-w-0 max-w-xs">
+                                  <p className="text-sm font-bold text-foreground">
+                                    <TextoExpandible texto={local.nombre} />
+                                  </p>
+                                  <p className="mt-0.5 font-mono text-[11px] text-muted">
+                                    {local.id}
+                                  </p>
+                                  {local.direccion ? (
+                                    <p className="text-[11px] text-muted">
+                                      <TextoExpandible
+                                        texto={local.direccion}
+                                      />
+                                    </p>
+                                  ) : null}
+                                  {local.latitud === null && (
+                                    <p className="mt-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-300">
+                                      Sin ubicación cargada
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="max-w-[260px] px-3.5 py-2.5">
+                              <div className="flex flex-wrap gap-1">
+                                {local.asignaciones?.length ? (
+                                  local.asignaciones.map((asignacion) => (
+                                    <span
+                                      key={asignacion.id}
+                                      title={
+                                        asignacion.usuario.rol?.descripcion ??
+                                        undefined
+                                      }
+                                      className="inline-flex max-w-full items-center rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[11px] font-semibold text-sky-900 dark:border-sky-900 dark:bg-sky-950/50 dark:text-sky-200"
+                                    >
+                                      <span className="truncate">
+                                        {asignacion.usuario.nombre}{" "}
+                                        {asignacion.usuario.apellido}
+                                      </span>
+                                    </span>
+                                  ))
+                                ) : (
+                                  <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-300">
+                                    Sin asignar
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+
+              {!lista.error && totalRegistros > 0 && (
+                <div className="flex justify-end border-t border-line bg-surface-soft px-4 pb-3 dark:border-line dark:bg-surface-soft">
+                  <div className="w-full min-w-0 sm:w-auto">
+                    <Paginacion
+                      page={lista.page}
+                      totalPages={lista.datos?.totalPages ?? 1}
+                      total={totalRegistros}
+                      limit={lista.limit}
+                      onPageChange={lista.setPage}
+                      onLimitChange={lista.setLimit}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </main>
 
       {configVencimientos && (
@@ -427,6 +349,7 @@ export function LocalesPanel() {
           onCerrar={() => {
             if (modal.pestana === "horarios" || modal.pestana === "personal") {
               lista.refrescar();
+              setRevisionSupervisor((valor) => valor + 1);
               setRevisionMapa((valor) => valor + 1);
             }
             setModal(null);
@@ -438,6 +361,7 @@ export function LocalesPanel() {
               lista.setPage(1);
             }
             lista.refrescar();
+            setRevisionSupervisor((valor) => valor + 1);
             setRevisionMapa((valor) => valor + 1);
           }}
         />

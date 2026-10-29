@@ -56,7 +56,9 @@ const CATEGORIAS_PRESET = [
 export function TareasPanel() {
   const op = useOperacionCampo();
   const { usuario } = usePanel();
-  const destinatario = destinatarioCampo(usuario.rol?.equipoCampo);
+  const destinatario = destinatarioCampo(
+    usuario.rol?.equipoCampo ?? usuario.rol?.equipoGestion,
+  );
 
   const [busqueda, setBusqueda] = useState("");
   const [categoriaFiltro, setCategoriaFiltro] = useState<string>("Todas");
@@ -500,7 +502,11 @@ export function TareasPanel() {
                     }),
                 )
               ) {
-                mostrarToast("exito", "Los cambios ya están en el catálogo.", "Tarea guardada");
+                mostrarToast(
+                  "exito",
+                  "Los cambios ya están en el catálogo.",
+                  "Tarea guardada",
+                );
                 setForm(null);
                 lista.refrescar();
               }
@@ -543,7 +549,8 @@ export function TareasPanel() {
                   className="min-h-11 w-full rounded-lg border border-line bg-surface-raised p-2.5 text-sm text-foreground focus-visible:ring-2 focus-visible:ring-focus"
                 >
                   <option value={form.destinatario}>
-                    {usuario.rol?.equipoCampo?.nombre ?? "Sin equipo"}
+                    {(usuario.rol?.equipoCampo ?? usuario.rol?.equipoGestion)
+                      ?.nombre ?? "Sin equipo"}
                   </option>
                 </select>
                 <p className="mt-1 text-xs text-muted">

@@ -107,12 +107,7 @@ describe('Personal de los ABM por equipo operativo', () => {
 
   it('rechaza un usuario que no pertenece al alcance sin crear asignación', async () => {
     const { plan, prisma, plataforma } = preparar();
-    prisma.usuario.findFirst
-      .mockReset()
-      .mockResolvedValueOnce({
-        rol: { equipoCampo: { id: 4, tipo: 'REPOSITOR', activo: true } },
-      })
-      .mockResolvedValueOnce(null);
+    prisma.usuario.findFirst.mockReset().mockResolvedValueOnce(null);
     await expect(
       plan.asignar(
         11,

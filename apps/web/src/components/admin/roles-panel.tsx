@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { SelectorPaginado } from "@/components/selector-paginado";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { IconoMas } from "@/components/icono-mas";
@@ -16,7 +16,8 @@ import {
 } from "@/components/ui";
 import { ApiError, apiFetch } from "@/lib/api";
 import type { RespuestaPaginada } from "@/types/paginacion";
-import type { RolAdmin, FormRol } from "@/types/rol";
+import type { EquipoCampo, RolAdmin, FormRol } from "@/types/rol";
+import { agruparRoles, esJefatura, type FilaRol } from "@/utils/agrupar-roles";
 
 const FORM_INICIAL: FormRol = {
   empresaId: "",
@@ -28,13 +29,89 @@ const FORM_INICIAL: FormRol = {
   nuevoEquipoTipo: "IMPULSADOR",
   permisosTareas: [],
   puedeVerSeguimiento: false,
+  equiposGestionIds: [],
+  gestionaTodosEquipos: false,
+};
+
+const TIPO_EQUIPO: Record<EquipoCampo["tipo"], string> = {
+  IMPULSADOR: "Visitas de impulsadores",
+  REPOSITOR: "Visitas y tareas de repositores",
 };
 
 // Permisos que el formulario edita y la tabla no mostraba.
 const permisosRol = (rol: RolAdmin) =>
   `Tareas: ${rol.permisosTareas.length ? rol.permisosTareas.map((p) => p.toLowerCase()).join(", ") : "sin permisos"}${rol.puedeVerSeguimiento ? " · Ve seguimiento" : ""}`;
 
-function ListaRolesMovil({
+const supervisa = (rol: RolAdmin) =>
+  rol.gestionaTodosEquipos
+    ? "Supervisa todos los equipos"
+    : `Supervisa: ${rol.equiposGestion.map((e) => e.nombre).join(", ")}`;
+
+function FilaDeRol({
+  fila: { rol, nivel, superiorFuera },
+  onEditar,
+  onEliminar,
+}: {
+  fila: FilaRol;
+  onEditar: (rol: RolAdmin) => void;
+  onEliminar: (rol: RolAdmin) => void;
+}) {
+  const enUso = rol.usuariosCount > 0 || rol.hijosCount > 0;
+  return (
+    <li
+      className="flex flex-col gap-3 border-t border-line py-3 pr-3 first:border-t-0 sm:flex-row sm:items-center sm:pr-4 [content-visibility:auto]"
+      // La sangría muestra de quién depende cada rol dentro del grupo.
+      style={{ paddingLeft: `${1 + Math.min(nivel, 4) * 1.25}rem` }}
+    >
+      <div className="min-w-0 flex-1">
+        <p className="flex min-w-0 items-baseline gap-1.5 font-semibold text-foreground">
+          {nivel > 0 ? (
+            <span aria-hidden className="text-muted">
+              └
+            </span>
+          ) : null}
+          <span className="break-words">{rol.descripcion}</span>
+        </p>
+        {superiorFuera && rol.padre ? (
+          <p className="mt-0.5 break-words text-xs text-muted">
+            Depende de:{" "}
+            <strong className="font-semibold text-foreground">
+              {rol.padre.descripcion}
+            </strong>
+          </p>
+        ) : null}
+        {esJefatura(rol) ? (
+          <p className="mt-0.5 break-words text-xs font-medium text-brand-800 dark:text-brand-200">
+            {supervisa(rol)}
+          </p>
+        ) : null}
+        <p className="mt-0.5 break-words text-xs text-muted">
+          {rol.usuariosCount} {rol.usuariosCount === 1 ? "usuario" : "usuarios"}{" "}
+          · {permisosRol(rol)}
+        </p>
+      </div>
+      <div className="flex shrink-0 gap-2">
+        <BotonEditar
+          onClick={() => onEditar(rol)}
+          etiqueta={`Editar rol ${rol.descripcion}`}
+        />
+        <button
+          type="button"
+          onClick={() => onEliminar(rol)}
+          disabled={enUso}
+          title={
+            enUso ? "El rol tiene usuarios o roles subordinados" : undefined
+          }
+          className="inline-flex min-h-11 items-center justify-center rounded-lg px-3 text-sm font-semibold text-red-700 transition hover:bg-red-50 focus-visible:ring-2 focus-visible:ring-red-600/40 disabled:cursor-not-allowed disabled:opacity-45 dark:text-red-300 dark:hover:bg-red-950"
+        >
+          Eliminar
+        </button>
+      </div>
+    </li>
+  );
+}
+
+function ListaRolesAgrupada({
   roles,
   onEditar,
   onEliminar,
@@ -43,65 +120,169 @@ function ListaRolesMovil({
   onEditar: (rol: RolAdmin) => void;
   onEliminar: (rol: RolAdmin) => void;
 }) {
+  const empresas = useMemo(() => agruparRoles(roles), [roles]);
   return (
-    <ul className="mt-5 space-y-3 md:hidden" aria-label="Roles">
-      {roles.map((rol) => {
-        const enUso = rol.usuariosCount > 0 || rol.hijosCount > 0;
-        return (
-          <li
-            key={rol.id}
-            className="rounded-xl border border-line bg-surface-raised p-4 [content-visibility:auto]"
-          >
-            <p className="break-words font-semibold text-foreground">
-              {rol.descripcion}
-            </p>
-            <p className="mt-1 text-sm text-muted">{rol.empresa.nombre}</p>
-            <p className="mt-1 text-xs text-muted">
-              Superior: {rol.padre?.descripcion ?? "Sin superior"}
-            </p>
-            <p className="mt-1 break-words text-xs text-muted">
-              Equipo operativo:{" "}
-              {rol.equipoCampo?.nombre ?? "Sin planificación de campo"}
-            </p>
-            <p className="mt-1 break-words text-xs text-muted">{permisosRol(rol)}</p>
-            <div className="mt-3 grid grid-cols-2 gap-2 border-t border-line pt-3 text-center text-xs">
-              <p className="rounded-lg bg-surface-soft px-2 py-2 text-muted">
-                <strong className="block text-sm text-foreground">
-                  {rol.usuariosCount}
-                </strong>
-                usuarios
-              </p>
-              <p className="rounded-lg bg-surface-soft px-2 py-2 text-muted">
-                <strong className="block text-sm text-foreground">
-                  {rol.hijosCount}
-                </strong>
-                roles subordinados
-              </p>
-            </div>
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <BotonEditar
-                onClick={() => onEditar(rol)}
-                etiqueta={`Editar rol ${rol.descripcion}`}
-                modo="texto"
-              />
-              <button
-                type="button"
-                onClick={() => onEliminar(rol)}
-                disabled={enUso}
-                title={
-                  enUso
-                    ? "El rol tiene usuarios o roles subordinados"
-                    : undefined
-                }
-                className="inline-flex min-h-11 items-center justify-center rounded-lg border border-red-300 px-3 text-sm font-semibold text-red-700 transition hover:bg-red-50 focus-visible:ring-2 focus-visible:ring-red-600/40 disabled:cursor-not-allowed disabled:opacity-45 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950"
+    <div className="mt-5 space-y-8">
+      {empresas.map(({ empresa, grupos }) => (
+        <section key={empresa.id} aria-label={`Roles de ${empresa.nombre}`}>
+          {empresas.length > 1 ? (
+            <h3 className="mb-3 text-base font-bold text-foreground">
+              {empresa.nombre}
+            </h3>
+          ) : null}
+          <div className="grid gap-4 xl:grid-cols-2">
+            {grupos.map((grupo) => (
+              <section
+                key={grupo.clave}
+                aria-label={grupo.titulo}
+                className="min-w-0 overflow-hidden rounded-xl border border-line bg-surface-raised"
               >
-                Eliminar
-              </button>
-            </div>
-          </li>
-        );
-      })}
-    </ul>
+                <header className="border-b border-line bg-surface-soft px-4 py-3">
+                  <h4 className="flex flex-wrap items-center gap-2 font-semibold text-foreground">
+                    {grupo.equipo ? (
+                      <span className="text-xs font-medium uppercase tracking-wide text-muted">
+                        Equipo
+                      </span>
+                    ) : null}
+                    {grupo.titulo}
+                    {grupo.equipo ? (
+                      <span className="rounded-full border border-line px-2 py-0.5 text-xs font-medium text-muted">
+                        {TIPO_EQUIPO[grupo.equipo.tipo]}
+                        {grupo.equipo.activo ? "" : " · inactivo"}
+                      </span>
+                    ) : null}
+                  </h4>
+                  <p className="mt-1 break-words text-xs text-muted">
+                    {grupo.equipo
+                      ? grupo.supervisadoPor.length
+                        ? `Lo supervisan: ${grupo.supervisadoPor.join(", ")}`
+                        : "Ninguna jefatura supervisa este equipo"
+                      : grupo.clave === "jefaturas"
+                        ? "Supervisan varios equipos sin pertenecer a uno"
+                        : "Sin planificación de campo"}
+                  </p>
+                </header>
+                {grupo.filas.length ? (
+                  <ul>
+                    {grupo.filas.map((fila) => (
+                      <FilaDeRol
+                        key={fila.rol.id}
+                        fila={fila}
+                        onEditar={onEditar}
+                        onEliminar={onEliminar}
+                      />
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="px-4 py-3 text-sm text-muted">
+                    Todavía no tiene roles propios.
+                  </p>
+                )}
+              </section>
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+function EquiposSupervisados({
+  empresaId,
+  todos,
+  ids,
+  onChange,
+}: {
+  empresaId: number;
+  todos: boolean;
+  ids: number[];
+  onChange: (
+    cambio: Pick<FormRol, "gestionaTodosEquipos" | "equiposGestionIds">,
+  ) => void;
+}) {
+  const [equipos, setEquipos] = useState<EquipoCampo[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let vigente = true;
+    apiFetch<RespuestaPaginada<EquipoCampo>>(
+      `/admin/roles/equipos?empresaId=${empresaId}&page=1&limit=50`,
+    )
+      .then((r) => {
+        if (vigente) setEquipos(r.items);
+      })
+      .catch((problema: unknown) => {
+        if (vigente)
+          setError(
+            problema instanceof ApiError
+              ? problema.message
+              : "No se pudieron cargar los equipos",
+          );
+      });
+    return () => {
+      vigente = false;
+    };
+  }, [empresaId]);
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs leading-relaxed text-muted">
+        Ve el desempeño de sus equipos juntos. Para administrar tareas, horarios
+        o locales elige uno arriba, en «Equipo con el que trabajás».
+      </p>
+      <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-line px-3 py-2 text-sm font-semibold text-foreground hover:bg-surface-soft focus-within:ring-2 focus-within:ring-focus">
+        <input
+          type="checkbox"
+          checked={todos}
+          onChange={(e) =>
+            onChange({
+              gestionaTodosEquipos: e.target.checked,
+              equiposGestionIds: ids,
+            })
+          }
+        />
+        Todos los equipos de la empresa (gerencia)
+      </label>
+      {todos ? null : error ? (
+        <p className={errorBox}>{error}</p>
+      ) : !equipos ? (
+        <p className="text-sm text-muted">Cargando equipos…</p>
+      ) : equipos.length === 0 ? (
+        <p className="text-sm text-muted">
+          No hay equipos activos. Creá el equipo primero desde el rol de su
+          supervisor.
+        </p>
+      ) : (
+        <fieldset className="space-y-1">
+          <legend className="sr-only">Equipos que supervisa</legend>
+          {equipos.map((e) => (
+            <label
+              key={e.id}
+              className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg px-2 text-sm text-foreground hover:bg-surface-soft focus-within:ring-2 focus-within:ring-focus"
+            >
+              <input
+                type="checkbox"
+                checked={ids.includes(e.id)}
+                onChange={(ev) =>
+                  onChange({
+                    gestionaTodosEquipos: false,
+                    equiposGestionIds: ev.target.checked
+                      ? [...ids, e.id]
+                      : ids.filter((id) => id !== e.id),
+                  })
+                }
+              />
+              <span>
+                {e.nombre}{" "}
+                <span className="text-xs text-muted">
+                  · {TIPO_EQUIPO[e.tipo]}
+                </span>
+              </span>
+            </label>
+          ))}
+        </fieldset>
+      )}
+    </div>
   );
 }
 
@@ -112,7 +293,8 @@ export function RolesPanel() {
     null,
   );
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(7);
+  // 50 (el máximo) para que cada grupo se vea completo.
+  const [limit, setLimit] = useState(50);
   const [editando, setEditando] = useState<RolAdmin | "nuevo" | null>(null);
   const [eliminando, setEliminando] = useState<RolAdmin | null>(null);
   const [form, setForm] = useState<FormRol>(FORM_INICIAL);
@@ -155,9 +337,15 @@ export function RolesPanel() {
             descripcion: rol.descripcion,
             rolId: rol.padre?.id ?? "",
             equipoCampoId: rol.equipoCampo?.id ?? "",
-            modoEquipo: rol.equipoCampo ? "existente" : "ninguno",
+            modoEquipo: rol.equipoCampo
+              ? "existente"
+              : esJefatura(rol)
+                ? "varios"
+                : "ninguno",
             permisosTareas: rol.permisosTareas ?? [],
             puedeVerSeguimiento: rol.puedeVerSeguimiento ?? false,
+            equiposGestionIds: rol.equiposGestion.map((e) => e.id),
+            gestionaTodosEquipos: rol.gestionaTodosEquipos,
           },
     );
     setError(null);
@@ -169,6 +357,15 @@ export function RolesPanel() {
     if (!editando || guardando || form.empresaId === "") return;
     if (form.modoEquipo === "existente" && form.equipoCampoId === "") {
       setError("Seleccioná un equipo operativo");
+      return;
+    }
+    const varios = form.modoEquipo === "varios";
+    if (
+      varios &&
+      !form.gestionaTodosEquipos &&
+      !form.equiposGestionIds.length
+    ) {
+      setError("Elegí los equipos que supervisa o marcá todos");
       return;
     }
     setGuardando(true);
@@ -193,6 +390,11 @@ export function RolesPanel() {
                   equipoCampoId:
                     form.modoEquipo === "existente" ? form.equipoCampoId : null,
                 }),
+            gestionaTodosEquipos: varios && form.gestionaTodosEquipos,
+            equiposGestionIds:
+              varios && !form.gestionaTodosEquipos
+                ? form.equiposGestionIds
+                : [],
           }),
         },
       );
@@ -284,7 +486,7 @@ export function RolesPanel() {
         </p>
       ) : (
         <>
-          <ListaRolesMovil
+          <ListaRolesAgrupada
             roles={roles}
             onEditar={abrir}
             onEliminar={(rol) => {
@@ -292,77 +494,6 @@ export function RolesPanel() {
               setEliminando(rol);
             }}
           />
-          <div className="mt-5 hidden overflow-x-auto rounded-xl border border-line bg-surface-raised md:block">
-            <table className="w-full min-w-[720px] text-left text-sm">
-              <thead className="bg-surface-soft">
-                <tr className="border-b border-line text-xs font-semibold uppercase tracking-wide text-foreground">
-                  <th className="px-4 py-3 font-medium">Rol</th>
-                  <th className="px-4 py-3 font-medium">Empresa</th>
-                  <th className="px-4 py-3 font-medium">Superior</th>
-                  <th className="px-4 py-3 text-center font-medium">
-                    Usuarios
-                  </th>
-                  <th className="px-4 py-3 text-center font-medium">
-                    Subordinados
-                  </th>
-                  <th className="px-4 py-3 text-right font-medium">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {roles.map((rol) => {
-                  const enUso = rol.usuariosCount > 0 || rol.hijosCount > 0;
-                  return (
-                    <tr
-                      key={rol.id}
-                      className="border-b border-line last:border-0 hover:bg-surface-soft"
-                    >
-                      <td className="px-4 py-3 font-semibold text-foreground">
-                        {rol.descripcion}
-                        <p className="mt-1 max-w-xs break-words text-xs font-normal text-muted">
-                          Equipo:{" "}
-                          {rol.equipoCampo?.nombre ?? "Sin planificación"}
-                        </p>
-                        <p className="mt-1 max-w-xs break-words text-xs font-normal text-muted">
-                          {permisosRol(rol)}
-                        </p>
-                      </td>
-                      <td className="px-4 py-3 text-muted">
-                        {rol.empresa.nombre}
-                      </td>
-                      <td className="px-4 py-3 text-muted">
-                        {rol.padre?.descripcion ?? "Sin superior"}
-                      </td>
-                      <td className="px-4 py-3 text-center [font-variant-numeric:tabular-nums]">
-                        {rol.usuariosCount}
-                      </td>
-                      <td className="px-4 py-3 text-center [font-variant-numeric:tabular-nums]">
-                        {rol.hijosCount}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex justify-end gap-2">
-                          <BotonEditar
-                            onClick={() => abrir(rol)}
-                            etiqueta={`Editar rol ${rol.descripcion}`}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setErrorEliminar(null);
-                              setEliminando(rol);
-                            }}
-                            disabled={enUso}
-                            className="inline-flex min-h-11 items-center justify-center rounded-lg px-3 text-sm font-semibold text-red-700 transition hover:bg-red-50 focus-visible:ring-2 focus-visible:ring-red-600/40 disabled:cursor-not-allowed disabled:opacity-45 dark:text-red-300 dark:hover:bg-red-950"
-                          >
-                            Eliminar
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
         </>
       )}
 
@@ -460,6 +591,10 @@ export function RolesPanel() {
                     ["ninguno", "Sin planificación de campo"],
                     ["existente", "Usar un equipo existente"],
                     ["nuevo", "Crear un equipo nuevo"],
+                    [
+                      "varios",
+                      "Supervisa varios equipos (jefatura, back office de canal, gerencia)",
+                    ],
                   ] as const
                 ).map(([modo, etiqueta]) => (
                   <label
@@ -497,6 +632,16 @@ export function RolesPanel() {
                   }
                   onChange={(id) =>
                     setForm((actual) => ({ ...actual, equipoCampoId: id }))
+                  }
+                />
+              ) : null}
+              {form.modoEquipo === "varios" ? (
+                <EquiposSupervisados
+                  empresaId={form.empresaId}
+                  todos={form.gestionaTodosEquipos}
+                  ids={form.equiposGestionIds}
+                  onChange={(cambio) =>
+                    setForm((actual) => ({ ...actual, ...cambio }))
                   }
                 />
               ) : null}

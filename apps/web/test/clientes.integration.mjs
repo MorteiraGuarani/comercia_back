@@ -224,26 +224,34 @@ try {
   assert.equal(document.querySelector('input[name="CardCode"]'), null);
   assert.equal(document.querySelector('[role="tablist"]'), null);
   await act(async () => click(document.querySelector('[aria-label="Cerrar"]')));
-  // Supervisor: busca por persona (5 sugerencias) y sus locales, sin dirección ni a cargo.
+  // Supervisor: busca por colaborador (y ve sus locales) o por local de venta.
   assert.match(document.body.textContent, /Calle 123/, "Los demás roles ven la dirección");
-  usuarioPanel = { rol: { descripcion: "SUPERVISOR_REPOSITORES", equipoCampo: { nombre: "Repositores" } } };
+  usuarioPanel = { id: 7, rol: { descripcion: "SUPERVISOR_REPOSITORES", equipoCampo: { nombre: "Repositores" } } };
   consultas.length = 0;
   await act(async () => root.render(createElement(LocalesPanel, { key: "supervisor" })));
-  // El selector consulta en un setTimeout(0).
-  await act(async () => new Promise((listo) => setTimeout(listo, 10)));
-  assert.ok(document.querySelector('[aria-label="Buscar locales por repositor o impulsador"]'));
-  assert.ok(consultas.includes("/campo/locales/colaboradores?page=1&limit=5&buscar="), consultas.join(" | "));
-  assert.equal(document.querySelector('input[aria-label="Local asignado"]').disabled, true, "El local se elige después de la persona");
+  assert.deepEqual(consultas, [], "No carga nada hasta buscar");
+  assert.match(document.body.textContent, /Buscá un colaborador/);
   assert.equal(document.querySelector('input[placeholder="Buscar local o código"]'), null);
-  assert.ok(!consultas.some((u) => u.startsWith("/campo/locales?page")), "No carga locales hasta buscar");
-  assert.match(document.body.textContent, /Elegí un repositor o impulsador/);
+  items = [{ id: 5, nombre: "Ana Paz", descripcion: "Repositor", codigo: "R-15" }];
+  await act(async () => ingresar("buscar-administracion", "ana"));
   await act(async () => enviar());
-  assert.ok(consultas.includes("/campo/locales?page=1&limit=7"), consultas.join(" | "));
-  assert.equal(document.querySelector("#filtros-administracion").hidden, true, "Al buscar se pliega la búsqueda");
-  await act(async () => click(document.querySelector('[aria-controls="filtros-administracion"]')));
-  assert.equal(document.querySelector("#filtros-administracion").hidden, false);
+  assert.ok(consultas.includes("/campo/locales/colaboradores?buscar=ana&page=1&limit=7"), consultas.join(" | "));
+  assert.match(document.body.textContent, /Ana Paz/);
+  assert.match(document.body.textContent, /R-15/);
+  items = [cliente];
+  await act(async () => click([...document.querySelectorAll("button")].find((b) => b.textContent.includes("Ana Paz"))));
+  assert.ok(consultas.includes("/campo/locales?usuarioId=5&page=1&limit=7"), consultas.join(" | "));
+  assert.match(document.body.textContent, /sus locales de hoy/);
+  await act(async () => click(document.querySelector('[aria-label="Volver a colaboradores"]')));
+  consultas.length = 0;
+  await act(async () => click([...document.querySelectorAll("button")].find((b) => b.textContent.includes("Local de venta"))));
+  assert.deepEqual(consultas, [], "Cambiar de modo no consulta");
+  assert.match(document.body.textContent, /Buscá un local de venta/);
+  await act(async () => ingresar("buscar-administracion", "central"));
+  await act(async () => enviar());
+  assert.ok(consultas.includes("/campo/locales?buscar=central&page=1&limit=7"), consultas.join(" | "));
   assert.doesNotMatch(document.body.textContent, /Calle 123|Asignado/);
-  console.log("OK: Administración, alta deshabilitada, Información/Itinerario/Asignación independientes, guardado, reintento y buscador por persona del supervisor; sin navegador.");
+  console.log("OK: Administración, alta deshabilitada, Información/Itinerario/Asignación independientes, guardado, reintento y búsqueda del supervisor por colaborador o local; sin navegador.");
 } finally {
   await act(async () => root.unmount());
 }

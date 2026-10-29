@@ -15,10 +15,12 @@ import type { UsuarioSesion } from "@/types/usuario";
 import type { ModuloMenu } from "@/types/plataforma";
 import { BrandMark } from "@/components/auth-shell";
 import { BotonTema } from "@/components/boton-tema";
+import { BotonInstalarPwa } from "@/components/instalacion-pwa";
 import { BadgeNotificaciones } from "@/components/campo/badge-notificaciones";
 import { SincronizadorInventario } from "@/components/campo/sincronizador-inventario";
 import { SincronizadorTareas } from "@/components/campo/sincronizador-tareas";
 import { EmisorUbicacion } from "@/components/campo/emisor-ubicacion";
+import { SelectorEquipoGestion } from "@/components/campo/selector-equipo-gestion";
 import { PerfilModal } from "@/components/perfil/perfil-modal";
 import { urlFotoPerfil } from "@/lib/api-perfil";
 import { PantallaCarga } from "@/components/pantalla-carga";
@@ -385,6 +387,7 @@ export default function PanelLayout({
                         </Link>
                       )}
                       <div className="my-1 border-t border-line" />
+                      <BotonInstalarPwa enMenu className={itemMenu} />
                       <button
                         type="button"
                         role="menuitem"
@@ -399,6 +402,9 @@ export default function PanelLayout({
               </div>
             </div>
           </header>
+          {usuario.rol?.gestionaEquipos && !usuario.esSuperadmin ? (
+            <SelectorEquipoGestion equipo={usuario.rol.equipoGestion ?? null} />
+          ) : null}
 
           <div className="flex min-w-0 flex-1">
             {/* Menú lateral (escritorio) */}

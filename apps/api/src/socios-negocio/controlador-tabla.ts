@@ -78,7 +78,7 @@ export function crearControladorSocios(
       tbl_crd1: { campo: 'CardCode', dto: DireccionParams },
       tbl_oscn: { campo: 'CardCode', dto: DireccionParams },
       tbl_omrc: { campo: 'FirmCode', dto: FabricanteParams },
-      tbl_oitb: { campo: 'ItmsGrpCod', dto: GrupoArticuloParams },
+      tbl_oitb: { campo: 'Number', dto: GrupoArticuloParams },
       tbl_jcanales: { campo: 'Code', dto: CodigoCatalogoParams },
       tbl_jsubcanales: { campo: 'Code', dto: CodigoCatalogoParams },
       tbl_opln: { campo: 'ListNum', dto: ListaPrecioParams },
@@ -98,7 +98,7 @@ export function crearControladorSocios(
     'GroupCode',
     'GroupNum',
     'FirmCode',
-    'ItmsGrpCod',
+    'Number',
   ].includes(identidad);
   const esTexto = identidad === 'CardCode' || identidad === 'AgentCode';
   const consulta = (listado: boolean) =>
@@ -197,8 +197,8 @@ export function crearControladorSocios(
               ? p.GroupNum
               : 'FirmCode' in p
                 ? p.FirmCode
-                : 'ItmsGrpCod' in p
-                  ? p.ItmsGrpCod
+                : 'Number' in p
+                  ? p.Number
                   : 'SlpCode' in p
                     ? p.SlpCode
                     : 'AgentCode' in p

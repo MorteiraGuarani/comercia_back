@@ -60,9 +60,13 @@ function contexto() {
       create: jest.fn().mockResolvedValue({ id: 4 }),
     },
     rol: {
-      findUnique: jest
-        .fn()
-        .mockResolvedValue({ id: 8, empresaId: 10, equipoCampoId: 2 }),
+      findUnique: jest.fn().mockResolvedValue({
+        id: 8,
+        empresaId: 10,
+        equipoCampoId: 2,
+        gestionaTodosEquipos: false,
+        equiposGestion: [],
+      }),
       create: jest.fn().mockResolvedValue({
         id: 8,
         descripcion: 'Cargo nuevo',
@@ -107,6 +111,8 @@ describe('Equipos operativos configurables', () => {
           equipoCampoId: 2,
           permisosTareas: [],
           puedeVerSeguimiento: false,
+          gestionaTodosEquipos: false,
+          equiposGestion: { createMany: { data: [] } },
         },
       }),
     );
@@ -145,6 +151,8 @@ describe('Equipos operativos configurables', () => {
           equipoCampoId: 4,
           permisosTareas: [],
           puedeVerSeguimiento: false,
+          gestionaTodosEquipos: false,
+          equiposGestion: { createMany: { data: [] } },
         },
       }),
     );
@@ -162,6 +170,51 @@ describe('Equipos operativos configurables', () => {
     ).rejects.toBeInstanceOf(ConflictException);
     expect(prisma.rol.create).not.toHaveBeenCalled();
     expect(prisma.equipoCampo.create).not.toHaveBeenCalled();
+  });
+
+  it('crea una jefatura que supervisa varios equipos sin equipo propio', async () => {
+    const { service, prisma } = contexto();
+    prisma.equipoCampo.count.mockResolvedValueOnce(2);
+    await service.crear(1, {
+      empresaId: 10,
+      descripcion: 'Jefe Canal Moderno',
+      equiposGestionIds: [2, 4],
+    });
+    expect(prisma.equipoCampo.count).toHaveBeenCalledWith({
+      where: { id: { in: [2, 4] }, empresaId: 10, activo: true },
+    });
+    expect(prisma.rol.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          equipoCampoId: null,
+          gestionaTodosEquipos: false,
+          equiposGestion: {
+            createMany: { data: [{ equipoCampoId: 2 }, { equipoCampoId: 4 }] },
+          },
+        }) as unknown,
+      }),
+    );
+  });
+
+  it('rechaza supervisar equipos de otra empresa o ser de un equipo y jefatura', async () => {
+    const { service, prisma } = contexto();
+    prisma.equipoCampo.count.mockResolvedValueOnce(1);
+    await expect(
+      service.crear(1, {
+        empresaId: 10,
+        descripcion: 'Jefe',
+        equiposGestionIds: [2, 99],
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      service.crear(1, {
+        empresaId: 10,
+        descripcion: 'Jefe',
+        equipoCampoId: 2,
+        gestionaTodosEquipos: true,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.rol.create).not.toHaveBeenCalled();
   });
 
   it('renombrar un rol conserva su equipo', async () => {

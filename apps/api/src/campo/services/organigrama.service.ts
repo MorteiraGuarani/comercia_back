@@ -12,7 +12,10 @@ import type {
   PersonaOrganigrama,
 } from '../interfaces/organigrama.interface';
 import { fechaCampo, relojCampo, ZONA_CAMPO } from '../utils/calendario';
-import { obtenerSubordinadosActivos } from '../utils/autorizacion';
+import {
+  obtenerEquipoCompleto,
+  obtenerSubordinadosActivos,
+} from '../utils/autorizacion';
 import { alertasOrganigrama } from '../utils/organigrama';
 
 // El organigrama se entrega completo (un árbol no se pagina); con tope.
@@ -56,9 +59,20 @@ export class OrganigramaService {
         throw new ForbiddenException('Sin acceso a esa empresa');
       empresaId = lider.empresaId;
       raizId = lider.id;
+      // Una jefatura ve su cadena y además el personal de sus equipos, así se
+      // nota quién todavía no depende de ella.
       ids = [
-        lider.id,
-        ...(await obtenerSubordinadosActivos(this.prisma, lider.id, empresaId)),
+        ...new Set([
+          lider.id,
+          ...(await obtenerSubordinadosActivos(
+            this.prisma,
+            lider.id,
+            empresaId,
+          )),
+          ...(lider.gestor
+            ? await obtenerEquipoCompleto(this.prisma, lider.id)
+            : []),
+        ]),
       ];
     }
     const empresa = await this.prisma.empresa.findUnique({
@@ -85,6 +99,8 @@ export class OrganigramaService {
           select: {
             descripcion: true,
             equipoCampo: { select: { id: true, nombre: true, tipo: true } },
+            gestionaTodosEquipos: true,
+            _count: { select: { equiposGestion: true } },
           },
         },
       },
@@ -132,6 +148,7 @@ export class OrganigramaService {
         superiorId: superiorDe(u),
         tieneRol: !!u.rol,
         equipoId: u.rol?.equipoCampo?.id ?? null,
+        gestor: !!u.rol?.gestionaTodosEquipos || !!u.rol?._count.equiposGestion,
       })),
       raizId,
     );

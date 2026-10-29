@@ -7,6 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
     description:
       "La plataforma de trabajo para equipos comerciales en calle y oficina.",
     lang: "es",
+    id: "/panel",
     start_url: "/panel",
     scope: "/",
     display: "standalone",

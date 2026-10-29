@@ -10,6 +10,8 @@ export interface RolAdminFila {
   equipoCampo?: EquipoCampoDto | null;
   permisosTareas?: AccionTareaCampo[];
   puedeVerSeguimiento?: boolean;
+  gestionaTodosEquipos?: boolean;
+  equiposGestion?: { equipoCampo: EquipoCampoDto }[];
 }
 
 export interface RolAdminDto {
@@ -22,4 +24,8 @@ export interface RolAdminDto {
   equipoCampo: EquipoCampoDto | null;
   permisosTareas: AccionTareaCampo[];
   puedeVerSeguimiento: boolean;
+  /** Jefaturas: supervisa todos los equipos de la empresa. */
+  gestionaTodosEquipos: boolean;
+  /** Jefaturas: equipos que supervisa (vacío si es de un equipo). */
+  equiposGestion: EquipoCampoDto[];
 }

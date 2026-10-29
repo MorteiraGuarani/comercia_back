@@ -57,6 +57,7 @@ export class SupervisionService {
     if (
       !equipoIds.includes(colaboradorId) &&
       (colaboradorId !== u.id ||
+        u.gestor ||
         exigirEquipoCampo(u.equipoCampo).tipo === 'REPOSITOR')
     )
       throw new ForbiddenException('No tienes acceso a este colaborador');
@@ -130,7 +131,7 @@ export class SupervisionService {
     const idsConsultar =
       subordinadosIds.length > 0
         ? subordinadosIds
-        : exigirEquipoCampo(u.equipoCampo).tipo === 'REPOSITOR'
+        : u.gestor || exigirEquipoCampo(u.equipoCampo).tipo === 'REPOSITOR'
           ? []
           : [u.id];
 
@@ -611,6 +612,7 @@ export class SupervisionService {
     if (
       !equipoIds.includes(colaboradorId) &&
       (colaboradorId !== u.id ||
+        u.gestor ||
         exigirEquipoCampo(u.equipoCampo).tipo === 'REPOSITOR')
     ) {
       throw new ForbiddenException('No tienes acceso a este colaborador');

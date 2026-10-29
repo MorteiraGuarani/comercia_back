@@ -191,7 +191,8 @@ export function ClienteModal({
     <>
       Equipo:{" "}
       <strong className="text-foreground">
-        {usuario.rol?.equipoCampo?.nombre ?? "Sin equipo operativo"}
+        {(usuario.rol?.equipoCampo ?? usuario.rol?.equipoGestion)?.nombre ??
+          "Sin equipo operativo"}
       </strong>
       . Los horarios y el personal se configuran para este equipo.
     </>
@@ -413,8 +414,12 @@ export function ClienteModal({
                     onChange={cambiar("radioMetros")}
                     className={campoClase}
                   />
-                  <span id="radio-pista" className="block text-xs font-normal text-muted">
-                    Distancia máxima al punto del mapa para iniciar y finalizar la visita. De 20 a 1000 m.
+                  <span
+                    id="radio-pista"
+                    className="block text-xs font-normal text-muted"
+                  >
+                    Distancia máxima al punto del mapa para iniciar y finalizar
+                    la visita. De 20 a 1000 m.
                   </span>
                 </label>
                 <div className="min-w-0 space-y-1.5">
