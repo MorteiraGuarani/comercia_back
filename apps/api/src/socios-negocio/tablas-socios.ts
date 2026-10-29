@@ -256,7 +256,11 @@ export const TABLAS_SOCIOS = {
     clave: ['GroupNumber'],
     predeterminados: {},
     busqueda: ['PaymentTermsGroupName'],
-    ejemplo: { GroupNumber: 1, PaymentTermsGroupName: 'Contado', PriceListNo: 1 },
+    ejemplo: {
+      GroupNumber: 1,
+      PaymentTermsGroupName: 'Contado',
+      PriceListNo: 1,
+    },
   },
   tbl_opln: {
     nombre: 'tbl_opln',

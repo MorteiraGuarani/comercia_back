@@ -719,13 +719,26 @@ describe('Socios de negocio públicos y separados por empresa', () => {
 
   it('resuelve la condicion de pago por GroupNumber dentro de la empresa', async () => {
     const { modelos, service } = preparar();
-    modelos.socioNegocio.findFirst.mockResolvedValue({ id: 1n, CardCode: 'A', GroupNum: 7 });
-    modelos.socioNegocioCondicionPago.findFirst.mockResolvedValue({ id: 2n, GroupNumber: 7, PaymentTermsGroupName: 'Contado', PriceListNo: 3 });
+    modelos.socioNegocio.findFirst.mockResolvedValue({
+      id: 1n,
+      CardCode: 'A',
+      GroupNum: 7,
+    });
+    modelos.socioNegocioCondicionPago.findFirst.mockResolvedValue({
+      id: 2n,
+      GroupNumber: 7,
+      PaymentTermsGroupName: 'Contado',
+      PriceListNo: 3,
+    });
     const resultado = await service.relaciones(20, 'A');
     expect(modelos.socioNegocioCondicionPago.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({ where: { empresaId: 20, GroupNumber: 7 } }),
     );
-    expect(resultado.tbl_octg).toMatchObject({ GroupNumber: 7, PaymentTermsGroupName: 'Contado', PriceListNo: 3 });
+    expect(resultado.tbl_octg).toMatchObject({
+      GroupNumber: 7,
+      PaymentTermsGroupName: 'Contado',
+      PriceListNo: 3,
+    });
   });
 
   it('mapea duplicados a 409 y propaga fallos para revertir el lote', async () => {
