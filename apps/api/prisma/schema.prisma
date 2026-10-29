@@ -248,10 +248,11 @@ model SocioNegocioCondicionPago {
   id BigInt @id @default(autoincrement())
   empresaId Int @map("empresa_id")
   empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
-  GroupNum Int?
-  PymntGroup String? @db.VarChar(200)
-  @@unique([empresaId, GroupNum], map: "uq_tbl_octg_empresa_clave")
-  @@index([empresaId, PymntGroup], map: "idx_tbl_octg_pymntgroup")
+  GroupNumber Int?
+  PaymentTermsGroupName String? @db.VarChar(250)
+  PriceListNo Int?
+  @@unique([empresaId, GroupNumber], map: "uq_tbl_octg_empresa_clave")
+  @@index([empresaId, PaymentTermsGroupName], map: "idx_tbl_octg_paymenttermsgroupname")
   @@map("tbl_octg")
 }
 

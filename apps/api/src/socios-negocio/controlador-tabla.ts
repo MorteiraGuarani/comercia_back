@@ -83,7 +83,7 @@ export function crearControladorSocios(
       tbl_jsubcanales: { campo: 'Code', dto: CodigoCatalogoParams },
       tbl_opln: { campo: 'ListNum', dto: ListaPrecioParams },
       tbl_ocrg: { campo: 'GroupCode', dto: GrupoSocioParams },
-      tbl_octg: { campo: 'GroupNum', dto: CondicionPagoParams },
+      tbl_octg: { campo: 'GroupNumber', dto: CondicionPagoParams },
       tbl_oslp: { campo: 'SlpCode', dto: VendedorParams },
       tbl_oagp: { campo: 'AgentCode', dto: SupervisorParams },
     };
@@ -96,7 +96,7 @@ export function crearControladorSocios(
     'ListNum',
     'SlpCode',
     'GroupCode',
-    'GroupNum',
+    'GroupNumber',
     'FirmCode',
     'Number',
   ].includes(identidad);
@@ -193,8 +193,8 @@ export function crearControladorSocios(
           ? p.ListNum
           : 'GroupCode' in p
             ? p.GroupCode
-            : 'GroupNum' in p
-              ? p.GroupNum
+            : 'GroupNumber' in p
+              ? p.GroupNumber
               : 'FirmCode' in p
                 ? p.FirmCode
                 : 'Number' in p

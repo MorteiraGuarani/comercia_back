@@ -31,7 +31,7 @@ export class SociosRelacionesController {
   @ApiOperation({
     summary: 'Resolver los catálogos relacionados con el socio',
     description:
-      'Público sin login ni token. El socio se identifica por CardCode exacto, nunca por id técnico. Todas las referencias se resuelven dentro de empresaId. GroupCode→tbl_ocrg; GroupNum→tbl_octg; ListNum→tbl_opln; AgentCode→tbl_oagp; SlpCode→tbl_oslp. U_jCANAL y U_jSUBCANAL conservan texto y, cuando representan un entero int4, se buscan en Code de tbl_jcanales/tbl_jsubcanales. Solo existen los catálogos plurales de canales y subcanales. Una referencia nula o todavía no cargada devuelve null; no se crean filas ficticias para -1. Las direcciones se consultan por separado con paginación.',
+      'Público sin login ni token. El socio se identifica por CardCode exacto, nunca por id técnico. Todas las referencias se resuelven dentro de empresaId. GroupCode→tbl_ocrg; GroupNum→tbl_octg.GroupNumber; ListNum→tbl_opln; AgentCode→tbl_oagp; SlpCode→tbl_oslp. U_jCANAL y U_jSUBCANAL conservan texto y, cuando representan un entero int4, se buscan en Code de tbl_jcanales/tbl_jsubcanales. Solo existen los catálogos plurales de canales y subcanales. Una referencia nula o todavía no cargada devuelve null; no se crean filas ficticias para -1. Las direcciones se consultan por separado con paginación.',
   })
   @ApiOkResponse({
     example: Object.fromEntries(

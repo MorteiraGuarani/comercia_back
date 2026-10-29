@@ -53,7 +53,7 @@ export function filtroRegistroSocios(
           : tabla.nombre === 'tbl_ocrg'
             ? 'GroupCode'
             : tabla.nombre === 'tbl_octg'
-              ? 'GroupNum'
+              ? 'GroupNumber'
               : tabla.nombre === 'tbl_opln'
                 ? 'ListNum'
                 : tabla.nombre === 'tbl_oslp'

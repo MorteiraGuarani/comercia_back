@@ -174,7 +174,7 @@ try {
             : t.nombre === 'tbl_ocrg'
               ? '{GroupCode}'
               : t.nombre === 'tbl_octg'
-                ? '{GroupNum}'
+                ? '{GroupNumber}'
                 : t.nombre === 'tbl_opln'
                   ? '{ListNum}'
                   : t.nombre === 'tbl_oslp'
@@ -320,7 +320,7 @@ try {
   }
   for (const [tabla, campo] of [
     ['tbl_ocrg', 'GroupCode'],
-    ['tbl_octg', 'GroupNum'],
+    ['tbl_octg', 'GroupNumber'],
     ['tbl_oitb', 'Number'],
     ['tbl_omrc', 'FirmCode'],
   ]) {
@@ -348,7 +348,7 @@ try {
           tabla === 'tbl_ocrg'
             ? { GroupName: 'Nuevo' }
             : tabla === 'tbl_octg'
-              ? { PymntGroup: 'Nuevo' }
+              ? { PaymentTermsGroupName: 'Nuevo' }
               : tabla === 'tbl_oitb'
                 ? { GroupName: 'Nuevo' }
                 : { FirmName: 'Nuevo' },

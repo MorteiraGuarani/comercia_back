@@ -23,14 +23,14 @@ Base: `/api/v1/admin/socios-negocio/empresas/{empresaId}`.
 | tbl_oagp | `/tbl_oagp/{AgentCode}` | AgentCode |
 | tbl_oslp | `/tbl_oslp/{SlpCode}` | SlpCode |
 | tbl_ocrg | `/tbl_ocrg/{GroupCode}` | GroupCode |
-| tbl_octg | `/tbl_octg/{GroupNum}` | GroupNum |
+| tbl_octg | `/tbl_octg/{GroupNumber}` | GroupNumber |
 | tbl_opln | `/tbl_opln/{ListNum}` | ListNum |
 
 Los códigos de socios/direcciones son texto exacto y conservan ceros iniciales.
-`Code` de canales/subcanales, `GroupCode` de tbl_ocrg, `GroupNum` de tbl_octg, `ListNum` de tbl_opln y `SlpCode` de tbl_oslp son enteros int4; `AgentCode` de tbl_oagp es texto exacto. Estas rutas nunca buscan por id
+`Code` de canales/subcanales, `GroupCode` de tbl_ocrg, `GroupNumber` de tbl_octg, `ListNum` de tbl_opln y `SlpCode` de tbl_oslp son enteros int4; `AgentCode` de tbl_oagp es texto exacto. Estas rutas nunca buscan por id
 técnico como alternativa. Para renombrar una clave, usar su valor original en la
 URL y el nuevo en el cuerpo. Codificar caracteres especiales de la URL.
-Las filas con `GroupCode`, `GroupNum`, `ListNum`, `SlpCode` o `AgentCode` nulo permanecen visibles en el listado;
+Las filas con `GroupCode`, `GroupNumber`, `ListNum`, `SlpCode` o `AgentCode` nulo permanecen visibles en el listado;
 las rutas individuales requieren el código correspondiente.
 
 En el catálogo, bajo `/api/v1/admin/catalogo/empresas/{empresaId}`, las rutas
@@ -118,7 +118,7 @@ del mismo lote y serializando las escrituras. Para bulk idempotente enviar Code.
 | Campo | Catálogo |
 | --- | --- |
 | GroupCode | tbl_ocrg.GroupCode |
-| GroupNum | tbl_octg.GroupNum |
+| GroupNum | tbl_octg.GroupNumber |
 | ListNum | tbl_opln.ListNum |
 | SlpCode | tbl_oslp.SlpCode |
 | AgentCode | tbl_oagp.AgentCode |
@@ -145,3 +145,5 @@ históricas para reproducir la evolución de la base.
 Verificación sin navegador: compilación, pruebas del servicio y
 `npm run test:socios --workspace=api`. Incluye PostgreSQL aislado, preservación
 de datos en la migración, conflictos, empresa, NULL, bulk, Swagger y HTTP.
+
+`tbl_octg` contiene `GroupNumber` (int4), `PaymentTermsGroupName` (varchar 250) y `PriceListNo` (int4), todos opcionales. La clave de la ruta es `GroupNumber`; `tbl_ocrd.GroupNum` se relaciona con ese campo dentro de la empresa. La recreación de la tabla elimina sus registros anteriores.

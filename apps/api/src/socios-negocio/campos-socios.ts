@@ -62,7 +62,7 @@ export const CAMPOS_SOCIOS = {
   },
   GroupNum: {
     description:
-      'Código de condición de pago; referencia lógica a tbl_octg.GroupNum de la empresa. En tbl_ocrd se usa -1 si se omite.',
+      'Código de condición de pago; referencia lógica a tbl_octg.GroupNumber de la empresa. En tbl_ocrd se usa -1 si se omite.',
     example: 1,
   },
   LicTradNum: {
@@ -169,7 +169,15 @@ export const CAMPOS_SOCIOS = {
     description: 'Nombre del grupo de clientes.',
     example: 'Minoristas',
   },
-  PymntGroup: {
+  GroupNumber: {
+    description: 'Codigo original de la condicion de pago; clave por empresa.',
+    example: 1,
+  },
+  PriceListNo: {
+    description: 'Numero de lista de precios asociado a la condicion de pago.',
+    example: 1,
+  },
+  PaymentTermsGroupName: {
     description: 'Nombre de la condición de pago.',
     example: 'Crédito a 30 días',
   },

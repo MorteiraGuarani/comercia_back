@@ -223,9 +223,11 @@ export class SocioNegocioGrupoDto {
 
 export class SocioNegocioCondicionPagoDto {
   @EnteroSocio('int4', undefined)
-  GroupNum?: number | null;
-  @TextoSocio(200, true, undefined)
-  PymntGroup?: string | null;
+  GroupNumber?: number | null;
+  @TextoSocio(250, true, undefined)
+  PaymentTermsGroupName?: string | null;
+  @EnteroSocio('int4', undefined)
+  PriceListNo?: number | null;
 }
 
 export class SocioNegocioListaPrecioDto {
