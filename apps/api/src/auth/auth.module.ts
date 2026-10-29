@@ -7,6 +7,7 @@ import { AuthService } from './auth.service';
 import { TOKEN_DURACION } from './auth.constants';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { SuperadminGuard } from './superadmin.guard';
+import { AdminTiGuard } from './admin-ti.guard';
 import { UcheckSsoService } from './ucheck-sso.service';
 
 @Module({
@@ -22,7 +23,19 @@ import { UcheckSsoService } from './ucheck-sso.service';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtAuthGuard, SuperadminGuard, UcheckSsoService],
-  exports: [AuthService, JwtAuthGuard, SuperadminGuard, JwtModule],
+  providers: [
+    AuthService,
+    JwtAuthGuard,
+    SuperadminGuard,
+    AdminTiGuard,
+    UcheckSsoService,
+  ],
+  exports: [
+    AuthService,
+    JwtAuthGuard,
+    SuperadminGuard,
+    AdminTiGuard,
+    JwtModule,
+  ],
 })
 export class AuthModule {}

@@ -13,6 +13,7 @@ export interface UsuarioSesion {
   /** Cambia cuando cambia la foto (sirve para no mostrar una vieja de la caché); null sin foto. */
   fotoPerfilVersion: string | null;
   esSuperadmin: boolean;
+  esAdminTi: boolean;
   puedeAdministrarUsuarios: boolean;
   /** Puede cambiar sus propios datos y foto en "Mis datos". */
   puedeEditarPerfil: boolean;

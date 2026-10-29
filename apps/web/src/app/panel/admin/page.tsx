@@ -22,12 +22,12 @@ export default function AdminPage() {
   // Doble candado: el guard del back protege los datos; esto evita mostrar la
   // pantalla a un no-superadmin que llegue por URL.
   useEffect(() => {
-    if (!usuario.esSuperadmin) {
+    if (!usuario.esSuperadmin && !usuario.esAdminTi) {
       router.replace("/panel");
     }
-  }, [usuario.esSuperadmin, router]);
+  }, [usuario.esSuperadmin, usuario.esAdminTi, router]);
 
-  if (!usuario.esSuperadmin) {
+  if (!usuario.esSuperadmin && !usuario.esAdminTi) {
     return null;
   }
 
@@ -42,7 +42,7 @@ export default function AdminPage() {
     <div className="w-full min-w-0 p-4 sm:p-6 lg:p-8">
       <h1 className="text-xl font-bold tracking-tight">Administración</h1>
       <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-        Gestioná usuarios, roles, empresas y el acceso a la plataforma.
+        {usuario.esSuperadmin ? "Gestioná usuarios, roles, empresas y el acceso a la plataforma." : "Gestioná usuarios y roles de todas las empresas."}
       </p>
 
       <div className="mt-6 flex gap-1 overflow-x-auto border-b border-zinc-200 dark:border-zinc-800">
@@ -60,7 +60,7 @@ export default function AdminPage() {
         >
           Roles
         </button>
-        <button
+        {usuario.esSuperadmin && <><button
           type="button"
           onClick={() => setTab("empresas")}
           className={`${tabClase("empresas")} whitespace-nowrap`}
@@ -89,11 +89,11 @@ export default function AdminPage() {
           Acceso por empresa
         </button>
         <button type="button" onClick={() => setTab("productos")} className={`${tabClase("productos")} whitespace-nowrap`}>Productos y precios</button>
-        <button type="button" onClick={() => setTab("locales")} className={`${tabClase("locales")} whitespace-nowrap`}>Locales</button>
+        <button type="button" onClick={() => setTab("locales")} className={`${tabClase("locales")} whitespace-nowrap`}>Locales</button></>}
       </div>
 
       <div className="mt-6">
-        {tab === "usuarios" && <UsuariosPanel soloSuperadmin />}
+        {tab === "usuarios" && <UsuariosPanel soloSuperadmin={usuario.esSuperadmin} />}
         {tab === "roles" && <RolesPanel />}
         {tab === "empresas" && <EmpresasAbmPanel />}
         {tab === "modulos" && <ModulosPanel />}

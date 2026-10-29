@@ -168,6 +168,11 @@ export default function PanelLayout({
     motivo?: string;
   }[] = [
     { href: "/panel", nombre: "Inicio", icono: "inicio", disabled: false },
+    ...(usuario.esAdminTi && !usuario.esSuperadmin ? [
+      { href: "/panel/organigrama", nombre: "Organigrama", icono: "inicio", disabled: false },
+      { href: "/panel/admin", nombre: "Administración", icono: "inicio", disabled: false },
+      { href: "/panel/ubicaciones", nombre: "Ubicaciones", icono: "inicio", disabled: false },
+    ] : []),
     ...modulos.flatMap((m) =>
       m.paginas
         .filter(
@@ -268,7 +273,7 @@ export default function PanelLayout({
             </div>
 
             <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
-              <BadgeNotificaciones />
+              {!usuario.esAdminTi && <BadgeNotificaciones />}
               <BotonTema />
               <div ref={menuRef} className="relative">
                 <button
@@ -346,7 +351,7 @@ export default function PanelLayout({
                           <IconoEngranaje /> Administración
                         </Link>
                       )}
-                      {usuario.puedeAdministrarUsuarios && (
+                      {usuario.puedeAdministrarUsuarios && !usuario.esAdminTi && (
                         <Link
                           role="menuitem"
                           href="/panel/usuarios"
@@ -356,7 +361,7 @@ export default function PanelLayout({
                           <IconoPersona /> Usuarios
                         </Link>
                       )}
-                      {usuario.esSuperadmin && (
+                      {(usuario.esSuperadmin || usuario.esAdminTi) && (
                         <Link
                           role="menuitem"
                           href="/panel/admin"
@@ -366,7 +371,7 @@ export default function PanelLayout({
                           <IconoEngranaje /> Administración
                         </Link>
                       )}
-                      {usuario.esSuperadmin && (
+                      {(usuario.esSuperadmin || usuario.esAdminTi) && (
                         <Link
                           role="menuitem"
                           href="/panel/organigrama"
@@ -376,7 +381,7 @@ export default function PanelLayout({
                           <IconoPersona /> Organigrama
                         </Link>
                       )}
-                      {usuario.esSuperadmin && (
+                      {(usuario.esSuperadmin || usuario.esAdminTi) && (
                         <Link
                           role="menuitem"
                           href="/panel/ubicaciones"

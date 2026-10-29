@@ -466,6 +466,7 @@ model Rol {
   /// Jefaturas, back office de canal y gerencia: supervisan equipos sin ser
   /// parte de uno, por eso excluyen equipoCampoId.
   gestionaTodosEquipos Boolean @default(false) @map("gestiona_todos_equipos")
+  esAdminTi Boolean @default(false) @map("es_admin_ti")
   equiposGestion RolEquipoGestion[]
 
   @@unique([empresaId, descripcion])

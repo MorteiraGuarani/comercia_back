@@ -262,6 +262,7 @@ export class AuthService {
     rol: {
       id: number;
       descripcion: string;
+      esAdminTi?: boolean;
       equipoCampoId: number | null;
       gestionaTodosEquipos: boolean;
       equiposGestion: { equipoCampoId: number }[];
@@ -282,10 +283,13 @@ export class AuthService {
         ? usuario.updatedAt.toISOString()
         : null,
       esSuperadmin: usuario.esSuperadmin,
-      puedeAdministrarUsuarios: puedeAdministrarUsuarios(
-        usuario.esSuperadmin,
-        usuario.rol?.descripcion ?? null,
-      ),
+      esAdminTi: usuario.rol?.esAdminTi ?? false,
+      puedeAdministrarUsuarios:
+        !!usuario.rol?.esAdminTi ||
+        puedeAdministrarUsuarios(
+          usuario.esSuperadmin,
+          usuario.rol?.descripcion ?? null,
+        ),
       puedeEditarPerfil: puedeEditarPerfil(
         usuario.esSuperadmin,
         usuario.rol?.descripcion ?? null,

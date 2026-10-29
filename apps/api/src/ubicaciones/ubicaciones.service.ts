@@ -142,9 +142,14 @@ export class UbicacionesService {
   private async alcance(usuarioId: number, empresaIdPedida?: number) {
     const yo = await this.prisma.usuario.findUnique({
       where: { id: usuarioId },
-      select: { empresaId: true, isActive: true, esSuperadmin: true },
+      select: {
+        empresaId: true,
+        isActive: true,
+        esSuperadmin: true,
+        rol: { select: { esAdminTi: true } },
+      },
     });
-    if (yo?.isActive && yo.esSuperadmin)
+    if (yo?.isActive && (yo.esSuperadmin || yo.rol?.esAdminTi))
       return { empresaId: empresaIdPedida ?? yo.empresaId, ids: null };
     const lider = await this.acceso.gestionar(usuarioId, PAGINA_UBICACIONES);
     if (empresaIdPedida !== undefined && empresaIdPedida !== lider.empresaId)

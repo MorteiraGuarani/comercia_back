@@ -46,9 +46,15 @@ export class OrganigramaService {
   ): Promise<OrganigramaRespuesta> {
     const yo = await this.prisma.usuario.findUnique({
       where: { id: usuarioId },
-      select: { empresaId: true, isActive: true, esSuperadmin: true },
+      select: {
+        empresaId: true,
+        isActive: true,
+        esSuperadmin: true,
+        rol: { select: { esAdminTi: true } },
+      },
     });
-    const superadmin = !!yo?.isActive && yo.esSuperadmin;
+    const superadmin =
+      !!yo?.isActive && (yo.esSuperadmin || !!yo.rol?.esAdminTi);
     let empresaId: number;
     let raizId: number | null = null;
     let ids: number[] | null = null;

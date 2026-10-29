@@ -13,7 +13,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { SuperadminGuard } from '../auth/superadmin.guard';
+import { AdminTiGuard } from '../auth/admin-ti.guard';
 import type { RequestConUsuario } from '../auth/interfaces/request-con-usuario.interface';
 import {
   ActualizarRolDto,
@@ -25,7 +25,7 @@ import { RolesService } from './roles.service';
 
 @ApiTags('administración')
 @Controller('admin/roles')
-@UseGuards(JwtAuthGuard, SuperadminGuard)
+@UseGuards(JwtAuthGuard, AdminTiGuard)
 export class RolesController {
   constructor(private readonly roles: RolesService) {}
 

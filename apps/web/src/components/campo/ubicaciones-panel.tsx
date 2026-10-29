@@ -71,11 +71,11 @@ export function UbicacionesPanel() {
   const cargando = persona ? recorridoTerminado !== consultaRecorrido : vivoTerminado !== consultaVivo;
 
   useEffect(() => {
-    if (!usuario.esSuperadmin) return;
-    apiFetch<{ empresas: { id: number; nombre: string }[] }>("/admin/usuarios/meta")
+    if (!usuario.esSuperadmin && !usuario.esAdminTi) return;
+    apiFetch<{ empresas: { id: number; nombre: string }[] }>(usuario.esSuperadmin ? "/admin/usuarios/meta" : "/usuarios/meta")
       .then((m) => setEmpresas(m.empresas))
       .catch(() => undefined);
-  }, [usuario.esSuperadmin]);
+  }, [usuario.esSuperadmin, usuario.esAdminTi]);
 
   useEffect(() => {
     if (persona) return;
@@ -180,7 +180,7 @@ export function UbicacionesPanel() {
         onBack={persona ? volver : undefined}
         right={
           <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto">
-            {usuario.esSuperadmin && empresas.length > 1 && !persona ? (
+            {(usuario.esSuperadmin || usuario.esAdminTi) && empresas.length > 1 && !persona ? (
               <label className="flex min-w-0 flex-1 items-center gap-2 text-sm sm:flex-none">
                 <span className="sr-only">Empresa</span>
                 <select

@@ -306,11 +306,11 @@ export function OrganigramaPanel() {
   const sinClick = useRef(false);
 
   useEffect(() => {
-    if (!usuario.esSuperadmin) return;
-    apiFetch<MetaUsuarios>("/admin/usuarios/meta")
+    if (!usuario.esSuperadmin && !usuario.esAdminTi) return;
+    apiFetch<MetaUsuarios>(usuario.esSuperadmin ? "/admin/usuarios/meta" : "/usuarios/meta")
       .then((m) => setEmpresas(m.empresas))
       .catch(() => undefined);
-  }, [usuario.esSuperadmin]);
+  }, [usuario.esSuperadmin, usuario.esAdminTi]);
 
   useEffect(() => {
     const control = new AbortController();
@@ -574,7 +574,7 @@ export function OrganigramaPanel() {
         onBack={() => router.back()}
         right={
           // Sin selector de empresa no queda nada arriba: no se dibuja la fila vacía.
-          usuario.esSuperadmin && empresas.length > 1 ? (
+          (usuario.esSuperadmin || usuario.esAdminTi) && empresas.length > 1 ? (
             <label className="flex min-w-0 items-center gap-2 text-sm">
               <span className="sr-only">Empresa</span>
               <select

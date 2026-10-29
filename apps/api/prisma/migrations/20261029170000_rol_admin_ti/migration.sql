@@ -1,0 +1,1 @@
+ALTER TABLE "roles" ADD COLUMN "es_admin_ti" BOOLEAN NOT NULL DEFAULT false;

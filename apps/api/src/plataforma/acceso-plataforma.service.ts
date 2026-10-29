@@ -85,9 +85,11 @@ export class AccesoPlataformaService {
           empresaId: true,
           rolId: true,
           isActive: true,
+          esSuperadmin: true,
           rol: {
             select: {
               descripcion: true,
+              esAdminTi: true,
               permisosTareas: true,
               puedeVerSeguimiento: true,
               equipoCampo: { select: EQUIPO_CAMPO_SELECT },
@@ -110,6 +112,8 @@ export class AccesoPlataformaService {
     if (!usuario || !usuario.isActive) {
       throw new UnauthorizedException();
     }
+    if (usuario.rol?.esAdminTi && !usuario.esSuperadmin)
+      throw new ForbiddenException('No tenés acceso a esta sección');
     const pagina = modulo?.paginas[0];
     // Mensaje neutro: no revela si el módulo/página existe (AGENTS.md)
     const sinAcceso = new ForbiddenException('No tenés acceso a esta sección');
@@ -230,9 +234,11 @@ export class AccesoPlataformaService {
         empresaId: true,
         rolId: true,
         isActive: true,
+        esSuperadmin: true,
         rol: {
           select: {
             descripcion: true,
+            esAdminTi: true,
             permisosTareas: true,
             puedeVerSeguimiento: true,
             equipoCampo: { select: EQUIPO_CAMPO_SELECT },
@@ -243,6 +249,8 @@ export class AccesoPlataformaService {
     if (!usuario || !usuario.isActive) {
       throw new UnauthorizedException();
     }
+    if (usuario.rol?.esAdminTi && !usuario.esSuperadmin)
+      throw new ForbiddenException('No tenés acceso a esta sección');
 
     const [modulos, paginasAsignadas] = await Promise.all([
       this.prisma.empresaModulo.findMany({

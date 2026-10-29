@@ -48,9 +48,16 @@ export class RolesService {
   private async autorizar(usuarioId: number): Promise<void> {
     const usuario = await this.prisma.usuario.findUnique({
       where: { id: usuarioId },
-      select: { esSuperadmin: true, isActive: true },
+      select: {
+        esSuperadmin: true,
+        isActive: true,
+        rol: { select: { esAdminTi: true } },
+      },
     });
-    if (!usuario?.isActive || !usuario.esSuperadmin) {
+    if (
+      !usuario?.isActive ||
+      !(usuario.esSuperadmin || usuario.rol?.esAdminTi)
+    ) {
       throw new ForbiddenException('Requiere permisos de superadministrador');
     }
   }

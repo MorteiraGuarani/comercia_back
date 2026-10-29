@@ -13,11 +13,18 @@ export class MiPlataformaService {
   async menu(usuarioId: number): Promise<ModuloMenu[]> {
     const usuario = await this.prisma.usuario.findUnique({
       where: { id: usuarioId },
-      select: { empresaId: true, rolId: true, isActive: true },
+      select: {
+        empresaId: true,
+        rolId: true,
+        isActive: true,
+        esSuperadmin: true,
+        rol: { select: { esAdminTi: true } },
+      },
     });
     if (!usuario || !usuario.isActive) {
       throw new UnauthorizedException();
     }
+    if (usuario.rol?.esAdminTi && !usuario.esSuperadmin) return [];
 
     // Módulos y páginas asignadas no dependen entre sí: van juntos.
     const [habilitados, paginasAsignadas] = await Promise.all([

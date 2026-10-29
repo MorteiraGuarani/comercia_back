@@ -107,6 +107,7 @@ interface ContextoAdmin {
   id: number;
   empresaId: number;
   esSuperadmin: boolean;
+  accesoGlobal: boolean;
 }
 
 function aUsuarioDto(usuario: UsuarioFila): UsuarioAdminDto {
@@ -155,11 +156,11 @@ export class UsuariosService {
         empresaId: true,
         esSuperadmin: true,
         isActive: true,
-        rol: { select: { descripcion: true } },
+        rol: { select: { descripcion: true, esAdminTi: true } },
       },
     });
     if (!actual || !actual.isActive) throw new UnauthorizedException();
-    if (!actual.esSuperadmin) {
+    if (!actual.esSuperadmin && !actual.rol?.esAdminTi) {
       const permitido = puedeAdministrarUsuarios(
         actual.esSuperadmin,
         actual.rol?.descripcion ?? null,
@@ -174,11 +175,12 @@ export class UsuariosService {
       id: actual.id,
       empresaId: actual.empresaId,
       esSuperadmin: actual.esSuperadmin,
+      accesoGlobal: actual.esSuperadmin || !!actual.rol?.esAdminTi,
     };
   }
 
   private empresaObjetivo(actual: ContextoAdmin, empresaId?: number): number {
-    if (actual.esSuperadmin) return empresaId ?? actual.empresaId;
+    if (actual.accesoGlobal) return empresaId ?? actual.empresaId;
     if (empresaId !== undefined && empresaId !== actual.empresaId) {
       throw new ForbiddenException('No podés administrar otra empresa');
     }
@@ -193,7 +195,7 @@ export class UsuariosService {
     const empresaId = this.empresaObjetivo(actual, query.empresaId);
     const where: Prisma.UsuarioWhereInput = {
       empresaId,
-      ...(actual.esSuperadmin ? {} : { esSuperadmin: false }),
+      ...(actual.accesoGlobal ? {} : { esSuperadmin: false }),
       AND: filtrosBusquedaUsuario(query.buscar, true),
     };
     const { skip, take, page, limit } = rangoPaginacion(query);
@@ -213,7 +215,7 @@ export class UsuariosService {
   async meta(usuarioId: number): Promise<MetaUsuariosDto> {
     const actual = await this.contexto(usuarioId);
     const empresas = await this.prisma.empresa.findMany({
-      where: actual.esSuperadmin ? {} : { id: actual.empresaId },
+      where: actual.accesoGlobal ? {} : { id: actual.empresaId },
       select: { id: true, nombre: true },
       orderBy: { nombre: 'asc' },
       take: 200,
@@ -314,7 +316,7 @@ export class UsuariosService {
     const objetivo = await this.prisma.usuario.findFirst({
       where: {
         id: objetivoId,
-        ...(actual.esSuperadmin ? {} : { empresaId: actual.empresaId }),
+        ...(actual.accesoGlobal ? {} : { empresaId: actual.empresaId }),
         esSuperadmin: false,
       },
       select: { id: true, empresaId: true, isActive: true },
@@ -625,9 +627,20 @@ export class UsuariosService {
     if (
       !objetivo ||
       objetivo.esSuperadmin ||
-      (!actual.esSuperadmin && objetivo.empresaId !== actual.empresaId)
+      (!actual.accesoGlobal && objetivo.empresaId !== actual.empresaId)
     ) {
       throw new NotFoundException('El usuario no existe');
+    }
+    if (
+      !actual.esSuperadmin &&
+      actual.accesoGlobal &&
+      id === actual.id &&
+      dto.rolId !== undefined &&
+      dto.rolId !== objetivo.rolId
+    ) {
+      throw new ForbiddenException(
+        'Solo un superadministrador puede cambiar tu rol',
+      );
     }
     const rolId = dto.rolId ?? objetivo.rolId;
     await this.validarAsignaciones(
@@ -854,7 +867,7 @@ export class UsuariosService {
     if (
       !objetivo ||
       objetivo.esSuperadmin ||
-      (!actual.esSuperadmin && objetivo.empresaId !== actual.empresaId)
+      (!actual.accesoGlobal && objetivo.empresaId !== actual.empresaId)
     ) {
       throw new NotFoundException('El usuario no existe');
     }
