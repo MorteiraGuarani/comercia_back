@@ -257,3 +257,4 @@ try {
 } finally {
   await db.close();
 }
+await import('./oitm-itemcode-100-migration.integration.mjs');

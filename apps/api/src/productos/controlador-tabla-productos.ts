@@ -71,7 +71,7 @@ export function crearControladorTablaProductos(
               : {
                   type: 'string',
                   minLength: 1,
-                  maxLength: t.nombre === 'tbl_oitm' ? 15 : 50,
+                  maxLength: t.nombre === 'tbl_oitm' ? 100 : 50,
                 },
           example: t.ejemplo[c],
           description:
@@ -287,7 +287,7 @@ export function crearControladorTablaProductos(
       summary: 'Editar ' + t.nombre,
       description:
         detalle +
-        ' Modifica los campos enviados y conserva los omitidos. null solo está permitido en campos nullable. Los cambios del maestro se reflejan en todas sus listas; cambiar su ItemCode actualiza tbl_itm1 mediante FK. Las referencias especiales usadas deben reasignarse primero.',
+        ' Modifica los campos enviados y conserva los omitidos. null solo está permitido en campos nullable. Los cambios del maestro se reflejan en todas sus listas; para cambiar una clave con referencias existentes, primero se deben eliminar o reasignar esas referencias.',
     })
     @ApiBody({ type: EdicionDto, examples: { edicion: { value: t.ejemplo } } })
     @ApiOkResponse({ schema: respuesta, example: ejemplo })

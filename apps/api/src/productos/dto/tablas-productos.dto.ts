@@ -2,10 +2,10 @@ import { CampoTabla } from '../utils/campo-catalogo';
 export class ArticuloDto {
   @CampoTabla({
     tipo: 'texto',
-    longitud: 15,
+    longitud: 100,
     requerido: true,
     nullable: false,
-    descripcion: 'Código único del artículo dentro de la empresa.',
+    descripcion: 'Código único global del artículo, hasta 100 caracteres.',
     ejemplo: 'A0001',
   })
   ItemCode!: string;

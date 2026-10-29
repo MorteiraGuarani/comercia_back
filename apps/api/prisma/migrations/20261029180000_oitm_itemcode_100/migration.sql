@@ -1,0 +1,1 @@
+ALTER TABLE "tbl_oitm" ALTER COLUMN "ItemCode" TYPE VARCHAR(100);

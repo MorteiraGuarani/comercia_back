@@ -12,11 +12,13 @@ import { ConsultaSociosDto } from '../../socios-negocio/dto/consulta-socios.dto'
 export class ConsultaTablasDto extends ConsultaSociosDto {
   @ApiPropertyOptional({
     example: 'A0001',
-    description: 'Filtrar código exacto de artículo.',
+    maxLength: 100,
+    description:
+      'Filtrar código exacto de artículo (hasta 100 caracteres en tbl_oitm).',
   })
   @IsOptional()
   @IsString()
-  @MaxLength(50)
+  @MaxLength(100)
   ItemCode?: string;
   @ApiPropertyOptional({
     example: 'C0001',

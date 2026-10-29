@@ -288,10 +288,26 @@ try {
   assert.ok(doc.components.schemas.ArticuloDto.properties.U_beas_vg);
   assert.ok(!doc.components.schemas.ArticuloDto.properties.TIPO);
   assert.ok(!Object.keys(doc.paths).some((p) => p.includes('/{id}')));
-  await request(http)
-    .post(master)
-    .send({ ItemCode: 'x'.repeat(16) })
-    .expect(400);
+  const codigo100 = 'x'.repeat(100);
+  assert.equal(doc.components.schemas.ArticuloDto.properties.ItemCode.maxLength, 100);
+  const claveOitm = '/api/v1/admin/catalogo/empresas/{empresaId}/tbl_oitm/{ItemCode}';
+  for (const method of ['get', 'put', 'patch', 'delete'])
+    assert.equal(doc.paths[claveOitm][method].parameters.find((p) => p.name === 'ItemCode').schema.maxLength, 100);
+  const filtro = doc.paths['/api/v1/admin/catalogo/empresas/{empresaId}/tbl_oitm'].get.parameters.find((p) => p.name === 'ItemCode');
+  assert.equal(filtro.schema.maxLength, 100);
+  await request(http).post(master).send({ ItemCode: codigo100 }).expect(201);
+  await request(http).post(master).send({ ItemCode: 'x'.repeat(101) }).expect(400);
+  await request(http).post(master).send([{ ItemCode: codigo100 }, { ItemCode: 'x'.repeat(101) }]).expect(201).expect((r) => {
+    assert.equal(r.body.invalidas, 1);
+    assert.equal(r.body.filasInvalidas[0].errores[0].campo, 'ItemCode');
+  });
+  await request(http).get(master + '?ItemCode=' + codigo100).expect(200);
+  await request(http).get(master + '?ItemCode=' + 'x'.repeat(101)).expect(400);
+  await request(http).get(master + '/' + codigo100).expect(404);
+  assert.deepEqual(reads.at(-1).where, { itemcode: codigo100 });
+  await request(http).get(master + '/' + 'x'.repeat(101)).expect(400);
+  await request(http).put(master + '/A0001').send({ ItemCode: codigo100 }).expect(200);
+  await request(http).put(master + '/A0001').send({ ItemCode: 'x'.repeat(101) }).expect(400);
   await request(http)
     .post(master)
     .send({ ItemCode: 'A', ItmsGrpCod: 32768 })

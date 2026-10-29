@@ -268,7 +268,7 @@ model SocioNegocioListaPrecio {
 
 // Maestro oficial de art?culos; precios por lista separados en tbl_itm1.
 model Producto {
-  itemcode String @unique(map: "uq_tbl_ocrd_itemcode") @map("ItemCode") @db.VarChar(15)
+  itemcode String @unique(map: "uq_tbl_ocrd_itemcode") @map("ItemCode") @db.VarChar(100)
   itemname String? @map("ItemName") @db.VarChar(200)
   iva Int? @map("TaxCodeAR") @db.SmallInt
   itmsgrpcode Int? @default(-1) @map("ItmsGrpCod") @db.SmallInt
