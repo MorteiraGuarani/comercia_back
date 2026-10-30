@@ -25,7 +25,7 @@ export function TarjetaPdv({
   sinDetalle = false,
   distancia = null,
 }: {
-  local: LocalCampo;
+  local: LocalCampo & { alias?: string };
   onInformacion: () => void;
   onItinerario: () => void;
   onAsignacion: () => void;
@@ -39,16 +39,17 @@ export function TarjetaPdv({
   const [verEquipo, setVerEquipo] = useState(false);
   const idEquipo = useId();
   const primera = asignaciones[0]?.usuario;
+  const titulo = local.alias ? `${local.nombre} - ${local.alias}` : local.nombre;
   return (
     <article className="min-w-0 space-y-2.5 rounded-xl border border-line bg-surface-raised p-3 [content-visibility:auto]">
       <div className="flex min-w-0 items-start gap-3">
         <FotoLocal nombre={local.nombre} className="w-14 shrink-0" />
         <div className="min-w-0 flex-1">
           <h3
-            title={local.nombre}
+            title={titulo}
             className="line-clamp-2 break-words text-[15px] font-bold leading-snug text-foreground"
           >
-            {local.nombre}
+            {titulo}
           </h3>
           <p className="truncate font-mono text-xs text-muted">{local.id}</p>
         </div>

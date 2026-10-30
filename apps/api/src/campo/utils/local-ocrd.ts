@@ -83,6 +83,7 @@ export function unirDireccion(address?: string | null, street?: string | null) {
 
 export const CLIENTE_OCRD_SELECT = {
   ...LOCAL_OCRD_SELECT,
+  AliasName: true,
   LicTradNum: true,
   Phone1: true,
 } as const;
@@ -112,6 +113,7 @@ export function telefonoOcrd(telefono?: string) {
 /** Cliente del ABM de PDV: el local más RUC y la dirección por partes. */
 export function aClientePdv(
   l: Parameters<typeof aLocalCampo>[0] & {
+    AliasName: string | null;
     LicTradNum: string | null;
     Phone1: string | null;
   },
@@ -119,6 +121,7 @@ export function aClientePdv(
 ) {
   return {
     ...aLocalCampo(l, unirDireccion(d?.address, d?.street)),
+    alias: l.AliasName?.trim() ?? '',
     ruc: l.LicTradNum ?? '',
     telefono: l.Phone1 ?? '',
     address: d?.address ?? '',
@@ -149,6 +152,7 @@ export function filtroLocales(
       ? {
           OR: [
             { CardName: { contains: buscar, mode: 'insensitive' } },
+            { AliasName: { contains: buscar, mode: 'insensitive' } },
             { CardCode: { contains: buscar, mode: 'insensitive' } },
           ],
         }

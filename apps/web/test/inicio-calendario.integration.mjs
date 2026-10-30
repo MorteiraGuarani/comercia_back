@@ -284,9 +284,10 @@ assert.deepEqual((await comprobarRol(personal, { error: true })).valor, {}, "Err
 const lider = await comprobarRol([modulo("gestion-campo", ["visitas", "tareas"])]);
 assert.equal(lider.valor["gestion-campo"], false);
 assert.ok(lider.pedidos[0].includes("supervision/resumen"));
+// Back office (sin Visitas): Tareas es el ABM, nunca se deshabilita por estar vacío.
 const gestor = await comprobarRol([modulo("gestion-campo", ["tareas"])]);
-assert.equal(gestor.valor["gestion-campo"], false);
-assert.ok(gestor.pedidos[0].startsWith("/campo/tareas?"));
+assert.deepEqual(gestor.pedidos, []);
+assert.equal(gestor.valor["gestion-campo"], undefined);
 assert.deepEqual((await comprobarRol([modulo("mi-jornada", ["locales"])])).pedidos, [], "No consulta páginas sin permiso");
 
 console.log("OK: calendario, asignaciones, KPI y accesos; Presentismo igual para todo supervisor: cinco filtros, porcentajes y llamada por icono.");

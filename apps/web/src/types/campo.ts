@@ -15,6 +15,8 @@ export type RespuestaLocalesCampo = RespuestaPaginada<ClientePdv>;
 
 /** Cliente del ABM de PDV y rutas: RUC y dirección de CRD1 por partes. */
 export interface ClientePdv extends LocalCampo {
+  /** AliasName de tbl_ocrd; vacío si no tiene. */
+  alias: string;
   ruc: string;
   /** E.164 (+595…); vacío si no tiene. */
   telefono: string;

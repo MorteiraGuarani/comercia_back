@@ -17,9 +17,11 @@ export function useDisponibilidadTareas(usuarioId: number | undefined, modulos: 
   const [revision, setRevision] = useState(0);
   // La autorización se deduce del menú, nunca del nombre del rol.
   const jornada = modulos.some((m) => m.ruta === "mi-jornada" && m.paginas.some((p) => p.ruta === "tareas"));
-  const gestion = modulos.some((m) => m.ruta === "gestion-campo" && m.paginas.some((p) => p.ruta === "tareas"));
-  const visitas = modulos.some((m) => m.ruta === "gestion-campo" && m.paginas.some((p) => p.ruta === "visitas"));
-  const clave = `${usuarioId}|${hoy}|${jornada}|${gestion}|${visitas}`;
+  // Sin Visitas (back office) «Tareas» es el ABM donde se crean: siempre habilitado, aunque esté vacío.
+  const gestion =
+    modulos.some((m) => m.ruta === "gestion-campo" && m.paginas.some((p) => p.ruta === "tareas")) &&
+    modulos.some((m) => m.ruta === "gestion-campo" && m.paginas.some((p) => p.ruta === "visitas"));
+  const clave = `${usuarioId}|${hoy}|${jornada}|${gestion}`;
 
   useEffect(() => {
     const actualizar = () => setRevision((n) => n + 1);
@@ -37,14 +39,11 @@ export function useDisponibilidadTareas(usuarioId: number | undefined, modulos: 
     if (jornada)
       void hayTareasAsignadas(`fecha=${hoy}`, controller.signal)
         .then((valor) => guardar("mi-jornada", valor)).catch(() => undefined);
-    if (gestion) {
-      const pedido = visitas
-        ? apiFetch<SupervisionResumenData>(`/campo/supervision/resumen?fecha=${hoy}`, { signal: controller.signal }).then((r) => r.tareas.total > 0)
-        : apiFetch<{ total: number }>("/campo/tareas?page=1&limit=1", { signal: controller.signal }).then((r) => r.total > 0);
-      void pedido.then((valor) => guardar("gestion-campo", valor)).catch(() => undefined);
-    }
+    if (gestion)
+      void apiFetch<SupervisionResumenData>(`/campo/supervision/resumen?fecha=${hoy}`, { signal: controller.signal })
+        .then((r) => guardar("gestion-campo", r.tareas.total > 0)).catch(() => undefined);
     return () => controller.abort();
-  }, [usuarioId, hoy, jornada, gestion, visitas, clave, pathname, revision]);
+  }, [usuarioId, hoy, jornada, gestion, clave, pathname, revision]);
 
   // Una falla de red no equivale a no tener tareas.
   return estado.clave === clave ? estado.valor : SIN_DATOS;
