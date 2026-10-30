@@ -132,6 +132,43 @@ describe('Alcance de Itinerario del supervisor impulsador', () => {
     });
   });
 
+  it('filtra los locales sin asignar o sin ubicación sin salir del equipo', async () => {
+    const sinAsignar = preparar();
+    await sinAsignar.service.locales(1, { estado: 'sin-asignar' });
+    expect(sinAsignar.prisma.socioNegocio.count).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        AND: [
+          {
+            asignaciones: {
+              none: expect.objectContaining({
+                activo: true,
+                usuario: expect.objectContaining({
+                  rol: { equipoCampoId: 4 },
+                }) as unknown,
+              }) as unknown,
+            },
+          },
+        ],
+      }) as unknown,
+    });
+    const sinUbicacion = preparar();
+    await sinUbicacion.service.locales(1, { estado: 'sin-ubicacion' });
+    expect(sinUbicacion.prisma.socioNegocio.count).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        AND: [
+          {
+            OR: [
+              { U_Latitud: null },
+              { U_Latitud: '' },
+              { U_Longitud: null },
+              { U_Longitud: '' },
+            ],
+          },
+        ],
+      }) as unknown,
+    });
+  });
+
   it('sugiere solo personas del equipo que atienden algún local hoy', async () => {
     const { prisma, service } = preparar();
     await service.colaboradoresLocales(1, { buscar: 'ana', limit: 5 });
@@ -253,12 +290,19 @@ describe('Administración del supervisor', () => {
           ERP_Repositor: 'R-15',
           ERP_Impulsador: null,
           rol: { descripcion: 'Repositor' },
+          _count: { asignacionesCampo: 12 },
         },
       ]);
     prisma.usuario.count.mockResolvedValue(1);
     const respuesta = await service.colaboradoresLocales(1, { buscar: 'R-15' });
     expect(respuesta.items).toEqual([
-      { id: 2, nombre: 'Ana Paz', descripcion: 'Repositor', codigo: 'R-15' },
+      {
+        id: 2,
+        nombre: 'Ana Paz',
+        descripcion: 'Repositor',
+        codigo: 'R-15',
+        locales: 12,
+      },
     ]);
     expect(prisma.usuario.count).toHaveBeenCalledWith({
       where: expect.objectContaining({

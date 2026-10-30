@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  PayloadTooLargeException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { rangoPaginacion, respuestaPaginada } from '../common/utils/paginacion';
@@ -17,10 +18,22 @@ import {
   BACKUP_CAMPO_SELECT,
   HORARIO_CAMPO_SELECT,
 } from './utils/selectores';
-import { validarHorario, vigenciaCampo } from './utils/calendario';
+import {
+  fechaCampo,
+  relojCampo,
+  validarHorario,
+  vigenciaCampo,
+} from './utils/calendario';
+import {
+  SeleccionLocalesDto,
+  TraspasoAsignacionesDto,
+} from './dto/traspaso.dto';
 import { Prisma } from '../../generated/prisma/client';
 import { destinatarioCampo, exigirEquipoCampo } from './utils/equipo-campo';
 import { filtroPersonalEquipoOperativo } from './utils/personal-equipo';
+
+// Un traspaso corre en una sola transacción: tope para que no la alargue de más.
+const LIMITE_TRASPASO = 500;
 
 @Injectable()
 export class PlanificacionCampoService {
@@ -403,6 +416,183 @@ export class PlanificacionCampoService {
         return { ok: true };
       },
       { isolationLevel: 'Serializable' },
+    );
+  }
+  /**
+   * Pasa locales de un titular a otro desde una fecha y, con intercambio, también
+   * al revés, en una sola transacción. Nunca cambia el titular de una asignación
+   * (las visitas y los eventos de Ucheck quedan a nombre de quien las hizo):
+   * cierra la del origen el día anterior y crea una nueva para el destino.
+   */
+  async traspasarAsignaciones(usuarioId: number, dto: TraspasoAsignacionesDto) {
+    const u = await this.acceso.gestionar(usuarioId, 'locales');
+    if (dto.origenId === dto.destinoId)
+      throw new BadRequestException('Elegí dos personas distintas');
+    // Los dos tienen que ser del equipo operativo del gestor: eso también
+    // garantiza el mismo rol (repositores con repositores, impulsadores con impulsadores).
+    await this.acceso.subordinado(u, dto.origenId);
+    await this.acceso.subordinado(u, dto.destinoId);
+    const fecha = fechaCampo(dto.fecha);
+    if (fecha < fechaCampo(relojCampo().fecha))
+      throw new BadRequestException('La fecha no puede ser anterior a hoy');
+    const anterior = new Date(fecha.getTime() - 86_400_000);
+    const vigenteEn: Prisma.AsignacionCampoWhereInput = {
+      empresaId: u.empresaId,
+      activo: true,
+      fechaDesde: { lte: fecha },
+      OR: [{ fechaHasta: null }, { fechaHasta: { gte: fecha } }],
+    };
+
+    return this.prisma.$transaction(
+      async (tx) => {
+        const elegir = async (titularId: number, sel: SeleccionLocalesDto) => {
+          if (!sel.todos && !sel.locales.length)
+            throw new BadRequestException('Elegí al menos un local');
+          const filas = await tx.asignacionCampo.findMany({
+            where: {
+              ...vigenteEn,
+              usuarioId: titularId,
+              localId: sel.todos ? { notIn: sel.excluir } : { in: sel.locales },
+            },
+            select: {
+              id: true,
+              localId: true,
+              fechaDesde: true,
+              fechaHasta: true,
+            },
+            orderBy: { localId: 'asc' },
+            take: LIMITE_TRASPASO + 1,
+          });
+          if (filas.length > LIMITE_TRASPASO)
+            throw new PayloadTooLargeException(
+              `Se pueden pasar hasta ${LIMITE_TRASPASO} locales por vez`,
+            );
+          const faltan = sel.todos
+            ? []
+            : sel.locales.filter((l) => !filas.some((f) => f.localId === l));
+          if (faltan.length)
+            throw new BadRequestException(
+              `No atiende estos locales en esa fecha: ${faltan.join(', ')}`,
+            );
+          return filas;
+        };
+        const ida = await elegir(dto.origenId, dto.seleccion);
+        const vuelta = dto.intercambio
+          ? await elegir(dto.destinoId, dto.intercambio)
+          : [];
+        const repetidos = ida.filter((a) =>
+          vuelta.some((b) => b.localId === a.localId),
+        );
+        if (repetidos.length)
+          throw new BadRequestException(
+            `Estos locales están en las dos listas: ${repetidos.map((a) => a.localId).join(', ')}`,
+          );
+
+        const omitidos: { localId: string; motivo: string }[] = [];
+        const pasar = async (filas: typeof ida, deId: number, aId: number) => {
+          let pasados = 0;
+          for (const a of filas) {
+            await tx.$queryRaw`SELECT id FROM tbl_ocrd WHERE empresa_id = ${u.empresaId} AND "CardCode" = ${a.localId} FOR UPDATE`;
+            // Cierre: si empezaba ese día o después, no llegó a regir.
+            await tx.asignacionCampo.update({
+              where: { id: a.id },
+              data:
+                a.fechaDesde >= fecha
+                  ? { activo: false }
+                  : { fechaHasta: anterior },
+            });
+            await tx.backupCampo.updateMany({
+              where: {
+                asignacionId: a.id,
+                activo: true,
+                fechaDesde: { gte: fecha },
+              },
+              data: { activo: false },
+            });
+            await tx.backupCampo.updateMany({
+              where: {
+                asignacionId: a.id,
+                activo: true,
+                fechaDesde: { lt: fecha },
+                fechaHasta: { gte: fecha },
+              },
+              data: { fechaHasta: anterior },
+            });
+            // shortcut: el local principal se limpia ya, aunque el cambio rija desde la fecha elegida.
+            await tx.usuario.updateMany({
+              where: {
+                id: deId,
+                empresaId: u.empresaId,
+                localPrincipalId: a.localId,
+              },
+              data: { localPrincipalId: null },
+            });
+            const yaLoAtiende = await tx.asignacionCampo.count({
+              where: {
+                empresaId: u.empresaId,
+                localId: a.localId,
+                usuarioId: aId,
+                activo: true,
+                fechaDesde: { lte: a.fechaHasta ?? new Date('9999-12-31') },
+                OR: [{ fechaHasta: null }, { fechaHasta: { gte: fecha } }],
+              },
+            });
+            if (yaLoAtiende) {
+              omitidos.push({
+                localId: a.localId,
+                motivo: 'Ya lo atendía: solo se cerró la asignación anterior',
+              });
+              continue;
+            }
+            const nueva = await tx.asignacionCampo.create({
+              data: {
+                empresaId: u.empresaId,
+                localId: a.localId,
+                usuarioId: aId,
+                fechaDesde: fecha,
+                fechaHasta: a.fechaHasta,
+              },
+              select: { id: true },
+            });
+            // Franjas propias vigentes: el nuevo titular atiende con los mismos horarios.
+            const franjas = await tx.horarioCampo.findMany({
+              where: {
+                asignacionId: a.id,
+                activo: true,
+                OR: [{ fechaHasta: null }, { fechaHasta: { gte: fecha } }],
+              },
+              select: {
+                empresaId: true,
+                localId: true,
+                destinatario: true,
+                equipoCampoId: true,
+                frecuencia: true,
+                intervalo: true,
+                diasSemana: true,
+                diasMes: true,
+                fechaDesde: true,
+                fechaHasta: true,
+                entrada: true,
+                salida: true,
+              },
+            });
+            if (franjas.length)
+              await tx.horarioCampo.createMany({
+                data: franjas.map((h) => ({
+                  ...h,
+                  asignacionId: nueva.id,
+                  fechaDesde: h.fechaDesde > fecha ? h.fechaDesde : fecha,
+                })),
+              });
+            pasados++;
+          }
+          return pasados;
+        };
+        const pasados = await pasar(ida, dto.origenId, dto.destinoId);
+        const intercambiados = await pasar(vuelta, dto.destinoId, dto.origenId);
+        return { pasados, intercambiados, omitidos };
+      },
+      { isolationLevel: 'Serializable', timeout: 120_000, maxWait: 10_000 },
     );
   }
   async backups(

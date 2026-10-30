@@ -573,3 +573,39 @@ export interface PropsAvisosPanel {
   /** Llega en true desde el "+" de la campana: abre la redacción al entrar. */
   abrirRedactar?: boolean;
 }
+
+/** Filtro rápido de Administración de locales ("" = todos). */
+export type EstadoLocales = "" | "sin-asignar" | "sin-ubicacion";
+
+/** Colaborador de Administración con la cantidad de locales que atiende hoy. */
+export interface ColaboradorLocales {
+  id: number;
+  nombre: string;
+  /** Rol. */
+  descripcion: string;
+  codigo: string;
+  locales: number;
+}
+
+/** Locales elegidos de un titular: todos menos los excluidos, o una lista. */
+export interface SeleccionLocales {
+  todos?: boolean;
+  excluir: string[];
+  locales: string[];
+}
+
+export interface PedidoTraspasoLocales {
+  origenId: number;
+  destinoId: number;
+  /** YYYY-MM-DD: desde ese día atiende el nuevo titular. */
+  fecha: string;
+  seleccion: SeleccionLocales;
+  /** Solo al intercambiar: locales del destino que pasan al origen. */
+  intercambio?: SeleccionLocales;
+}
+
+export interface ResultadoTraspasoLocales {
+  pasados: number;
+  intercambiados: number;
+  omitidos: { localId: string; motivo: string }[];
+}

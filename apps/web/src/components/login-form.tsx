@@ -34,7 +34,8 @@ export function LoginForm() {
 
   return (
     <>
-      <div>
+      {/* En escritorio el panel izquierdo ya muestra el eslogan. */}
+      <div className="lg:hidden">
         <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-[#efb37f]">
           Plataforma de gestión comercial
         </p>
@@ -47,7 +48,7 @@ export function LoginForm() {
         <div aria-hidden className="mt-4 h-1 w-14 rounded-full bg-[#d9955d]" />
       </div>
 
-      <form onSubmit={onSubmit} className="mt-6 flex flex-col gap-4.5">
+      <form onSubmit={onSubmit} className="mt-6 flex flex-col gap-4.5 lg:mt-0">
         <label className={labelBase}>
           Correo o nombre de usuario
           <input

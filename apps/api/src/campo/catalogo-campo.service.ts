@@ -85,23 +85,32 @@ export class CatalogoCampoService {
     const alcance = await this.alcanceItinerario(u, hoy);
     // usuarioId: los locales que esa persona atiende hoy. El alcance va en la
     // misma condición: alguien fuera de su equipo no devuelve locales.
+    const condiciones: Prisma.SocioNegocioWhereInput[] = [];
+    if (query.usuarioId)
+      condiciones.push({
+        asignaciones: {
+          some: { ...alcance.asignacion, usuarioId: query.usuarioId },
+        },
+      });
+    if (query.estado === 'sin-asignar')
+      condiciones.push({ asignaciones: { none: alcance.asignacion } });
+    // shortcut: un texto no numérico en U_Latitud cuenta como ubicado; SAP solo guarda números o vacío.
+    if (query.estado === 'sin-ubicacion')
+      condiciones.push({
+        OR: [
+          { U_Latitud: null },
+          { U_Latitud: '' },
+          { U_Longitud: null },
+          { U_Longitud: '' },
+        ],
+      });
     return this.paginaLocales(
       u.empresaId,
       {
         ...filtroLocales(u.empresaId, query.buscar),
         ...alcance.locales,
         ...(query.localId ? { CardCode: query.localId } : {}),
-        ...(query.usuarioId
-          ? {
-              AND: [
-                {
-                  asignaciones: {
-                    some: { ...alcance.asignacion, usuarioId: query.usuarioId },
-                  },
-                },
-              ],
-            }
-          : {}),
+        ...(condiciones.length ? { AND: condiciones } : {}),
       },
       alcance.asignacion,
       query,
@@ -149,6 +158,8 @@ export class CatalogoCampoService {
           ERP_Repositor: true,
           ERP_Impulsador: true,
           rol: { select: { descripcion: true } },
+          // Agrupar por colaborador: cuántos locales atiende hoy.
+          _count: { select: { asignacionesCampo: { where: vigente } } },
         },
         orderBy: [{ nombre: 'asc' }, { apellido: 'asc' }, { id: 'asc' }],
         skip,
@@ -163,6 +174,7 @@ export class CatalogoCampoService {
         // Código visible en la lista: el del ERP o, si no hay, el usuario.
         codigo:
           x.ERP_Repositor || x.ERP_Impulsador || x.legajo || x.nombreLogin,
+        locales: x._count.asignacionesCampo,
       })),
       total,
       page,

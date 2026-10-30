@@ -41,6 +41,7 @@ import { SupervisionService } from './services/supervision.service';
 import { AdjuntoCampoService } from './services/adjunto-campo.service';
 import { CampoAccesoService } from './campo-acceso.service';
 import { ConsultaLocalesCampoDto } from './dto/administracion.dto';
+import { TraspasoAsignacionesDto } from './dto/traspaso.dto';
 import {
   ElegirEquipoGestionDto,
   ListarEquiposGestionDto,
@@ -314,6 +315,18 @@ export class CampoController {
   ) {
     return this.plan.quitarAsignacion(r.usuarioId, id);
   }
+  @Post('asignaciones/traspaso')
+  @ApiOperation({
+    summary: 'Pasar o intercambiar locales entre dos colaboradores',
+    description:
+      'Requiere acceso a PDV y rutas; origen y destino tienen que ser del equipo operativo de quien gestiona. Desde la fecha elegida (hoy o después) cierra las asignaciones del origen y crea las del destino copiando sus franjas propias; con intercambio hace lo mismo al revés, todo en una transacción. seleccion admite { todos, excluir } o { locales } (hasta 500). Responde { pasados, intercambiados, omitidos }.',
+  })
+  traspasarAsignaciones(
+    @Req() r: RequestConUsuario,
+    @Body() d: TraspasoAsignacionesDto,
+  ) {
+    return this.plan.traspasarAsignaciones(r.usuarioId, d);
+  }
   @Get('asignaciones/:id/backups') backups(
     @Req() r: RequestConUsuario,
     @Param('id', ParseIntPipe) id: number,
@@ -342,10 +355,13 @@ export class CampoController {
     return this.jornada.visitas(r.usuarioId, q, true);
   }
 
-  @Get('jornada') agenda(
-    @Req() r: RequestConUsuario,
-    @Query() q: ConsultaCampoDto,
-  ) {
+  @Get('jornada')
+  @ApiOperation({
+    summary: 'Agenda de locales asignados con horario',
+    description:
+      'Incluye únicamente asignaciones con un horario activo de campo_horarios para el equipo y que ocurra dentro de las fechas consultadas. La franja de la asignación tiene prioridad sobre la general del local. Los locales sin horario aplicable quedan fuera de la agenda; se conservan sus datos y visitas registradas.',
+  })
+  agenda(@Req() r: RequestConUsuario, @Query() q: ConsultaCampoDto) {
     return this.jornada.agenda(r.usuarioId, q);
   }
   @Get('jornada/abierta') abierta(@Req() r: RequestConUsuario) {

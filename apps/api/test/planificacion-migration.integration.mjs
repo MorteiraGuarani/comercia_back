@@ -180,7 +180,7 @@ try {
     /equipo_check/,
   );
 
-  // Una franja del otro equipo nunca oculta un local ni reemplaza la franja propia.
+  // Una franja del otro equipo no habilita la agenda ni reemplaza la franja propia.
   await db.exec(`
     INSERT INTO campo_asignaciones(id,local_id,usuario_id) VALUES (6,4,1);
     INSERT INTO campo_horarios(local_id,destinatario,dias_semana) VALUES (4,'REPOSITOR','{2}');
@@ -221,7 +221,7 @@ try {
     UPDATE campo_horarios h SET empresa_id = l.empresa_id, "CardCode" = l."CardCode"
     FROM campo_locales l WHERE h.local_id = l.id;
   `);
-  const agenda = async (usuarioId, destinatario, hasta = '2026-10-05') => {
+  const agenda = async (usuarioId, destinatario, hasta = '2026-10-05', heredados = []) => {
     const sql = condicionAgenda(
       10,
       usuarioId,
@@ -230,6 +230,7 @@ try {
       typeof destinatario === 'number'
         ? destinatario
         : await grupoId(destinatario),
+      heredados,
     );
     const result = await db.query(
       `SELECT DISTINCT l.id FROM campo_asignaciones a
@@ -239,19 +240,37 @@ try {
     );
     return result.rows.map((x) => x.id);
   };
-  assert.deepEqual(await agenda(1, 'IMPULSADOR'), [1, 4]);
+  assert.deepEqual(await agenda(1, 'IMPULSADOR'), [1]);
   assert.deepEqual(await agenda(2, 'REPOSITOR'), [3]);
   assert.deepEqual(await agenda(2, 'REPOSITOR', '2026-10-06'), [1, 3]);
   assert.deepEqual(await agenda(3, 'REPOSITOR', '2026-10-06'), []);
+  // Sin horario del equipo, el local 4 queda fuera para el titular y sus líderes.
+  assert.deepEqual(await agenda(1, 'IMPULSADOR', '2026-10-06'), []);
+  assert.deepEqual(await agenda(90, 'IMPULSADOR', '2026-10-05', [1]), [1]);
+  const temporal = (await db.query(`INSERT INTO campo_horarios
+    (local_id,empresa_id,"CardCode",destinatario,equipo_campo_id,dias_semana,activo)
+    VALUES (4,10,'LOCAL-4','IMPULSADOR',$1,'{1}',false) RETURNING id`,
+    [await grupoId('IMPULSADOR')])).rows[0].id;
+  assert.deepEqual(await agenda(1, 'IMPULSADOR'), [1]);
+  await db.query("UPDATE campo_horarios SET activo=true,fecha_desde='2026-10-07' WHERE id=$1", [temporal]);
+  assert.deepEqual(await agenda(1, 'IMPULSADOR', '2026-10-06'), []);
+  await db.query("UPDATE campo_horarios SET fecha_desde='2026-10-01',fecha_hasta='2026-10-04' WHERE id=$1", [temporal]);
+  assert.deepEqual(await agenda(1, 'IMPULSADOR'), [1]);
+  await db.query("UPDATE campo_horarios SET fecha_hasta=NULL,dias_semana='{2}' WHERE id=$1", [temporal]);
+  assert.deepEqual(await agenda(1, 'IMPULSADOR'), [1]);
+  assert.deepEqual(await agenda(1, 'IMPULSADOR', '2026-10-06'), [4]);
+  await db.query("UPDATE campo_horarios SET dias_semana='{1}' WHERE id=$1", [temporal]);
+  assert.deepEqual(await agenda(1, 'IMPULSADOR'), [1, 4]);
+  await db.query('DELETE FROM campo_horarios WHERE id=$1', [temporal]);
   // Conservar un local no cambia su empresa ni su agenda. La FK compuesta
   // impide asociarlo a un cliente ajeno y admite un solo cliente a la vez.
   await db.exec('UPDATE campo_locales SET cliente_id=NULL WHERE id=1');
-  assert.deepEqual(await agenda(1, 'IMPULSADOR'), [1, 4]);
+  assert.deepEqual(await agenda(1, 'IMPULSADOR'), [1]);
   assert.deepEqual(await agenda(2, 'REPOSITOR', '2026-10-06'), [1, 3]);
   await assert.rejects(db.exec('UPDATE campo_locales SET cliente_id=2 WHERE id=1'), /campo_locales_cliente_id_empresa_id_fkey/);
   await db.exec('UPDATE campo_locales SET cliente_id=1 WHERE id=1');
   await db.exec('UPDATE campo_locales SET eliminado_en=now() WHERE id=1');
-  assert.deepEqual(await agenda(1, 'IMPULSADOR'), [4]);
+  assert.deepEqual(await agenda(1, 'IMPULSADOR'), []);
   assert.equal((await rows('SELECT COUNT(*)::int AS n FROM campo_visitas WHERE local_id=1'))[0].n, 3);
   assert.equal((await rows('SELECT COUNT(*)::int AS n FROM campo_tarea_fotos'))[0].n, 2);
   await db.exec('UPDATE campo_locales SET eliminado_en=NULL WHERE id=1');

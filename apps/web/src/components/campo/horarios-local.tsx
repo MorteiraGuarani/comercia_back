@@ -11,10 +11,26 @@ import { BotonEliminarCampo } from "./boton-eliminar-campo";
 import { EncabezadoSeccion } from "./ui/encabezado-seccion";
 import { StatusStamp } from "./ui/status-stamp";
 import { IconoMas } from "@/components/icono-mas";
-import { IconoCruz } from "./ui/iconos-campo";
 import type { FormHorarioCampo, HorarioCampo } from "@/types/campo";
 
 // Horarios de atención de un local, generales o por asignación.
+
+const DIAS_NOMBRE = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+const UNIDAD = { DIARIA: "día(s)", SEMANAL: "semana(s)", MENSUAL: "mes(es)" };
+const etiqueta =
+  "mb-1.5 block text-xs font-bold uppercase tracking-wider text-muted";
+const campo =
+  "w-full min-h-11 rounded-lg border bg-surface-raised p-2.5 font-mono text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-focus";
+const chipDia = (activo: boolean) =>
+  `min-h-11 min-w-11 cursor-pointer rounded-lg px-3 font-mono text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${
+    activo
+      ? "bg-foreground text-background hover:opacity-90"
+      : "bg-surface-soft text-muted hover:bg-line hover:text-foreground"
+  }`;
+const alternar = (lista: number[], valor: number) =>
+  lista.includes(valor)
+    ? lista.filter((d) => d !== valor)
+    : [...lista, valor].sort((a, b) => a - b);
 
 // ========== PESTAÑA: HORARIOS Y FRANJAS ==========
 
@@ -48,7 +64,7 @@ export function HorariosLocal({
       frecuencia: h?.frecuencia ?? "SEMANAL",
       intervalo: h?.intervalo ?? 1,
       diasSemana: h?.diasSemana ?? [1, 2, 3, 4, 5],
-      diasMes: h?.diasMes ?? [1],
+      diasMes: h?.diasMes?.length ? h.diasMes : [1],
       fechaDesde: h?.fechaDesde.slice(0, 10) ?? fechaEnZonaIso(new Date()),
       fechaHasta: h?.fechaHasta?.slice(0, 10) ?? "",
       entrada: h?.entrada ?? "08:00",
@@ -56,7 +72,310 @@ export function HorariosLocal({
     });
   }
 
-  const DIAS_NOMBRE = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+  const avisos = (
+    <>
+      {op.error && (
+        <div
+          role="alert"
+          className="p-3 rounded-lg border text-xs font-medium text-red-700 dark:text-red-200 bg-red-50 dark:bg-red-950/60 border-red-200 dark:border-red-900"
+        >
+          {op.error}
+        </div>
+      )}
+      <PantallaCarga
+        visible={!!op.mensaje}
+        mensaje={op.mensaje ?? "Procesando"}
+      />
+    </>
+  );
+
+  // Crear o editar una franja abre una vista propia dentro del modal, en vez de
+  // un formulario al final de la lista; "← Franjas" vuelve sin guardar.
+  if (form) {
+    const sinDias =
+      (form.frecuencia === "SEMANAL" && form.diasSemana.length === 0) ||
+      (form.frecuencia === "MENSUAL" && form.diasMes.length === 0);
+    return (
+      <div className="space-y-4">
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            if (sinDias) return;
+            if (
+              await op.ejecutar(
+                id ? "Guardando horario" : "Creando horario",
+                () =>
+                  apiFetch(`${ruta}${id ? `/${id}` : ""}`, {
+                    method: id ? "PUT" : "POST",
+                    // Un input date vacío llega como ""; el contrato de la API
+                    // usa null para representar una vigencia sin vencimiento.
+                    body: JSON.stringify({
+                      ...form,
+                      fechaHasta: form.fechaHasta?.trim()
+                        ? form.fechaHasta.slice(0, 10)
+                        : null,
+                    }),
+                  }),
+              )
+            ) {
+              setForm(null);
+              lista.refrescar();
+            }
+          }}
+          className="space-y-5"
+        >
+          <div className="space-y-1">
+            <button
+              type="button"
+              onClick={() => setForm(null)}
+              className="-ml-2 inline-flex min-h-11 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-sm font-semibold text-muted hover:bg-surface-soft hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            >
+              <span aria-hidden="true">←</span>
+              {asignacionId ? "Franjas propias" : "Franjas predeterminadas"}
+            </button>
+            <h3 className="text-lg font-bold text-foreground">
+              {id
+                ? `Editar franja ${form.entrada} – ${form.salida}`
+                : "Nueva franja"}
+            </h3>
+          </div>
+
+          <fieldset
+            className="min-w-0 space-y-3 rounded-xl border p-4"
+            style={{ borderColor: TOKENS.line }}
+          >
+            <legend className="px-1 text-sm font-bold text-foreground">
+              Cuándo se visita
+            </legend>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <label htmlFor="franja-frecuencia" className={etiqueta}>
+                  Frecuencia
+                </label>
+                <select
+                  id="franja-frecuencia"
+                  autoFocus
+                  value={form.frecuencia}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      frecuencia: e.target
+                        .value as FormHorarioCampo["frecuencia"],
+                    })
+                  }
+                  className={`${campo} font-sans`}
+                  style={{ borderColor: TOKENS.line }}
+                >
+                  <option value="DIARIA">Diaria</option>
+                  <option value="SEMANAL">Semanal</option>
+                  <option value="MENSUAL">Mensual</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="franja-intervalo" className={etiqueta}>
+                  Repetir cada
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    id="franja-intervalo"
+                    type="number"
+                    min={1}
+                    max={52}
+                    required
+                    value={form.intervalo}
+                    onChange={(e) =>
+                      setForm({ ...form, intervalo: Number(e.target.value) })
+                    }
+                    className={`${campo} max-w-24`}
+                    style={{ borderColor: TOKENS.line }}
+                  />
+                  <span className="text-sm text-muted">
+                    {UNIDAD[form.frecuencia]}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {form.frecuencia === "SEMANAL" && (
+              <div role="group" aria-labelledby="franja-dias-semana">
+                <p id="franja-dias-semana" className={etiqueta}>
+                  Días de la semana
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {DIAS_NOMBRE.map((dNom, idx) => {
+                    const seleccionado = form.diasSemana.includes(idx + 1);
+                    return (
+                      <button
+                        key={dNom}
+                        type="button"
+                        aria-pressed={seleccionado}
+                        onClick={() =>
+                          setForm({
+                            ...form,
+                            diasSemana: alternar(form.diasSemana, idx + 1),
+                          })
+                        }
+                        className={chipDia(seleccionado)}
+                      >
+                        {dNom}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {form.frecuencia === "MENSUAL" && (
+              <div role="group" aria-labelledby="franja-dias-mes">
+                <p id="franja-dias-mes" className={etiqueta}>
+                  Días del mes
+                </p>
+                <div className="grid grid-cols-7 gap-1.5 sm:max-w-md">
+                  {Array.from({ length: 31 }, (_, i) => i + 1).map((dia) => {
+                    const seleccionado = form.diasMes.includes(dia);
+                    return (
+                      <button
+                        key={dia}
+                        type="button"
+                        aria-pressed={seleccionado}
+                        aria-label={`Día ${dia}`}
+                        onClick={() =>
+                          setForm({
+                            ...form,
+                            diasMes: alternar(form.diasMes, dia),
+                          })
+                        }
+                        className={`${chipDia(seleccionado)} px-0`}
+                      >
+                        {dia}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            {sinDias && (
+              <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">
+                Elegí al menos un día.
+              </p>
+            )}
+          </fieldset>
+
+          <fieldset
+            className="min-w-0 space-y-3 rounded-xl border p-4"
+            style={{ borderColor: TOKENS.line }}
+          >
+            <legend className="px-1 text-sm font-bold text-foreground">
+              Horario
+            </legend>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <label htmlFor="franja-entrada" className={etiqueta}>
+                  Entrada *
+                </label>
+                <input
+                  id="franja-entrada"
+                  type="time"
+                  required
+                  value={form.entrada}
+                  onChange={(e) =>
+                    setForm({ ...form, entrada: e.target.value })
+                  }
+                  className={campo}
+                  style={{ borderColor: TOKENS.line }}
+                />
+              </div>
+              <div>
+                <label htmlFor="franja-salida" className={etiqueta}>
+                  Salida (hora límite) *
+                </label>
+                <input
+                  id="franja-salida"
+                  type="time"
+                  required
+                  value={form.salida}
+                  onChange={(e) => setForm({ ...form, salida: e.target.value })}
+                  className={campo}
+                  style={{ borderColor: TOKENS.line }}
+                />
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset
+            className="min-w-0 space-y-3 rounded-xl border p-4"
+            style={{ borderColor: TOKENS.line }}
+          >
+            <legend className="px-1 text-sm font-bold text-foreground">
+              Vigencia
+            </legend>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <label htmlFor="franja-desde" className={etiqueta}>
+                  Desde *
+                </label>
+                <input
+                  id="franja-desde"
+                  type="date"
+                  required
+                  value={form.fechaDesde}
+                  onChange={(e) =>
+                    setForm({ ...form, fechaDesde: e.target.value })
+                  }
+                  className={campo}
+                  style={{ borderColor: TOKENS.line }}
+                />
+              </div>
+              <div>
+                <label htmlFor="franja-hasta" className={etiqueta}>
+                  Hasta (opcional)
+                </label>
+                <input
+                  id="franja-hasta"
+                  type="date"
+                  min={form.fechaDesde}
+                  value={form.fechaHasta}
+                  onChange={(e) =>
+                    setForm({ ...form, fechaHasta: e.target.value })
+                  }
+                  className={campo}
+                  style={{ borderColor: TOKENS.line }}
+                />
+                <p className="mt-1 text-xs text-muted">
+                  Vacío: sin vencimiento.
+                </p>
+              </div>
+            </div>
+          </fieldset>
+
+          <div
+            className="flex flex-col-reverse gap-2 border-t pt-4 sm:flex-row sm:justify-end"
+            style={{ borderColor: TOKENS.line }}
+          >
+            <button
+              type="button"
+              onClick={() => setForm(null)}
+              className="min-h-11 cursor-pointer whitespace-nowrap rounded-lg border border-line bg-surface-raised px-4 text-sm font-semibold text-foreground hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={!!op.mensaje || sinDias}
+              className="min-h-11 cursor-pointer whitespace-nowrap rounded-lg bg-brand-700 px-5 text-sm font-semibold text-white hover:bg-brand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50 dark:bg-brand-500 dark:text-zinc-950 dark:hover:bg-brand-400"
+            >
+              {op.mensaje
+                ? "Guardando…"
+                : id
+                  ? "Guardar cambios"
+                  : "Crear franja"}
+            </button>
+          </div>
+        </form>
+        {avisos}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -97,15 +416,13 @@ export function HorariosLocal({
           <p className="text-xs text-muted mt-1">
             Agregá la primera franja de visita.
           </p>
-          {!form && (
-            <button
-              type="button"
-              onClick={() => abrir()}
-              className="mt-3 min-h-11 cursor-pointer whitespace-nowrap rounded-lg border border-line bg-surface-raised px-4 text-sm font-semibold text-foreground hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-            >
-              Agregar franja
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => abrir()}
+            className="mt-3 min-h-11 cursor-pointer whitespace-nowrap rounded-lg border border-line bg-surface-raised px-4 text-sm font-semibold text-foreground hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+          >
+            Agregar franja
+          </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-3">
@@ -217,232 +534,7 @@ export function HorariosLocal({
         </div>
       )}
 
-      {/* Formulario de Franja */}
-      {form && (
-        <form
-          onSubmit={async (e) => {
-            e.preventDefault();
-            if (
-              await op.ejecutar(
-                id ? "Guardando horario" : "Creando horario",
-                () =>
-                  apiFetch(`${ruta}${id ? `/${id}` : ""}`, {
-                    method: id ? "PUT" : "POST",
-                    // Un input date vacío llega como ""; el contrato de la API
-                    // usa null para representar una vigencia sin vencimiento.
-                    body: JSON.stringify({
-                      ...form,
-                      fechaHasta: form.fechaHasta?.trim()
-                        ? form.fechaHasta.slice(0, 10)
-                        : null,
-                    }),
-                  }),
-              )
-            ) {
-              setForm(null);
-              lista.refrescar();
-            }
-          }}
-          className="p-5 rounded-xl border space-y-4 bg-surface-raised shadow-sm mt-4"
-          style={{ borderColor: TOKENS.line }}
-        >
-          <div
-            className="flex min-w-0 items-start justify-between gap-3 border-b pb-2"
-            style={{ borderColor: TOKENS.line }}
-          >
-            <h5 className="text-xs font-bold uppercase tracking-wider text-foreground">
-              {id ? "Editar Franja Horaria" : "Nueva Franja Horaria"}
-            </h5>
-            <button
-              type="button"
-              onClick={() => setForm(null)}
-              className="text-xs font-bold text-muted hover:text-foreground inline-flex items-center gap-1 cursor-pointer"
-            >
-              <IconoCruz className="w-3 h-3" />
-              <span>Cerrar</span>
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">
-                Frecuencia
-              </label>
-              <select
-                value={form.frecuencia}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    frecuencia: e.target
-                      .value as FormHorarioCampo["frecuencia"],
-                  })
-                }
-                className="w-full p-2.5 rounded-lg border bg-surface-raised text-sm font-sans focus:outline-none focus:ring-2 focus:ring-focus"
-                style={{ borderColor: TOKENS.line }}
-              >
-                <option value="DIARIA">Diaria</option>
-                <option value="SEMANAL">Semanal</option>
-                <option value="MENSUAL">Mensual</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">
-                Repetir cada (intervalo)
-              </label>
-              <input
-                type="number"
-                min={1}
-                max={30}
-                required
-                value={form.intervalo}
-                onChange={(e) =>
-                  setForm({ ...form, intervalo: Number(e.target.value) })
-                }
-                className="w-full p-2.5 rounded-lg border bg-surface-raised text-sm font-mono focus:outline-none focus:ring-2 focus:ring-focus"
-                style={{ borderColor: TOKENS.line }}
-              />
-            </div>
-          </div>
-
-          {/* Días de la semana si es semanal */}
-          {form.frecuencia === "SEMANAL" && (
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1.5">
-                Días de Visita de la Semana
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {DIAS_NOMBRE.map((dNom, idx) => {
-                  const numDia = idx + 1;
-                  const seleccionado = form.diasSemana.includes(numDia);
-                  return (
-                    <button
-                      key={dNom}
-                      type="button"
-                      onClick={() => {
-                        setForm({
-                          ...form,
-                          diasSemana: seleccionado
-                            ? form.diasSemana.filter((d) => d !== numDia)
-                            : [...form.diasSemana, numDia].sort(),
-                        });
-                      }}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold font-mono transition-all ${
-                        seleccionado
-                          ? "bg-foreground text-background shadow-sm"
-                          : "bg-surface-soft text-muted hover:bg-surface-soft"
-                      }`}
-                    >
-                      {dNom}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Horas */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">
-                Hora Inicio (Entrada) *
-              </label>
-              <input
-                type="time"
-                required
-                value={form.entrada}
-                onChange={(e) => setForm({ ...form, entrada: e.target.value })}
-                className="w-full p-2.5 rounded-lg border bg-surface-raised text-sm font-mono focus:outline-none focus:ring-2 focus:ring-focus"
-                style={{ borderColor: TOKENS.line }}
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">
-                Hora Límite (Salida) *
-              </label>
-              <input
-                type="time"
-                required
-                value={form.salida}
-                onChange={(e) => setForm({ ...form, salida: e.target.value })}
-                className="w-full p-2.5 rounded-lg border bg-surface-raised text-sm font-mono focus:outline-none focus:ring-2 focus:ring-focus"
-                style={{ borderColor: TOKENS.line }}
-              />
-            </div>
-          </div>
-
-          {/* Fechas de vigencia */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">
-                Fecha Desde *
-              </label>
-              <input
-                type="date"
-                required
-                value={form.fechaDesde}
-                onChange={(e) =>
-                  setForm({ ...form, fechaDesde: e.target.value })
-                }
-                className="w-full p-2.5 rounded-lg border bg-surface-raised text-sm font-mono focus:outline-none focus:ring-2 focus:ring-focus"
-                style={{ borderColor: TOKENS.line }}
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">
-                Fecha Hasta (Opcional)
-              </label>
-              <input
-                type="date"
-                min={form.fechaDesde}
-                value={form.fechaHasta}
-                onChange={(e) =>
-                  setForm({ ...form, fechaHasta: e.target.value })
-                }
-                className="w-full p-2.5 rounded-lg border bg-surface-raised text-sm font-mono focus:outline-none focus:ring-2 focus:ring-focus"
-                style={{ borderColor: TOKENS.line }}
-              />
-            </div>
-          </div>
-
-          <div
-            className="flex flex-col-reverse gap-2 pt-2 border-t sm:flex-row sm:justify-end"
-            style={{ borderColor: TOKENS.line }}
-          >
-            <button
-              type="button"
-              onClick={() => setForm(null)}
-              className="px-4 py-2 rounded-lg border text-xs font-bold uppercase tracking-wider bg-surface-raised"
-              style={{ borderColor: TOKENS.line }}
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={!!op.mensaje}
-              className="px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider text-background shadow-sm transition-all hover:brightness-110"
-              style={{ backgroundColor: TOKENS.ink }}
-            >
-              {op.mensaje ? "Guardando..." : "Guardar Franja"}
-            </button>
-          </div>
-        </form>
-      )}
-
-      {op.error && (
-        <div
-          role="alert"
-          className="p-3 rounded-lg border text-xs font-medium text-red-700 dark:text-red-200 bg-red-50 dark:bg-red-950/60 border-red-200 dark:border-red-900"
-        >
-          {op.error}
-        </div>
-      )}
-      <PantallaCarga
-        visible={!!op.mensaje}
-        mensaje={op.mensaje ?? "Procesando"}
-      />
+      {avisos}
     </div>
   );
 }
