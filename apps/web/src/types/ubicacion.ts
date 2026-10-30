@@ -77,7 +77,9 @@ export interface TramoRecorrido {
 
 export interface Recorrido {
   persona: { id: number; nombre: string };
+  /** Último día del período; `dias` cuenta hacia atrás desde él. */
   fecha: string;
+  dias: number;
   visitas: VisitaRecorrido[];
   puntos: PuntoRecorrido[];
   tramos: TramoRecorrido[];

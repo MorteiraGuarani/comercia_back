@@ -10,7 +10,7 @@ import type { EquipoEnVivo, PersonaEnVivo, Recorrido, TramoRecorrido } from "@/t
 import { formatoDistancia } from "@/utils/distancia";
 import { formatoDuracionMinutos } from "@/utils/duracion";
 import { mensajeError } from "@/utils/error";
-import { formatoHora } from "@/utils/fechas";
+import { formatoFechaHora, formatoHora } from "@/utils/fechas";
 import { normalizarBusqueda } from "@/utils/texto";
 import { MINUTOS_SIN_SENAL, minutosDesde, textoHace, textoVelocidad } from "@/utils/ubicacion";
 import { MapaUbicaciones } from "./mapa-ubicaciones";
@@ -59,6 +59,8 @@ export function UbicacionesPanel() {
   const [foco, setFoco] = useState<{ latitud: number; longitud: number } | null>(null);
   const [persona, setPersona] = useState<{ id: number; nombre: string } | null>(null);
   const [fecha, setFecha] = useState(() => new Date().toLocaleDateString("en-CA"));
+  // 1: el día elegido; 7: la semana que termina ese día.
+  const [dias, setDias] = useState(1);
   const [recorrido, setRecorrido] = useState<Recorrido | null>(null);
   const [pageTramos, setPageTramos] = useState(1);
   const [limitTramos, setLimitTramos] = useState(7);
@@ -66,7 +68,7 @@ export function UbicacionesPanel() {
   // refrescos periódicos no cambian la consulta y quedan en segundo plano.
   const consultaVivo = `${empresaId}|${recarga}`;
   const [vivoTerminado, setVivoTerminado] = useState("");
-  const consultaRecorrido = persona ? `${persona.id}|${fecha}|${empresaId}|${recarga}` : "";
+  const consultaRecorrido = persona ? `${persona.id}|${fecha}|${dias}|${empresaId}|${recarga}` : "";
   const [recorridoTerminado, setRecorridoTerminado] = useState("");
   const cargando = persona ? recorridoTerminado !== consultaRecorrido : vivoTerminado !== consultaVivo;
 
@@ -113,7 +115,7 @@ export function UbicacionesPanel() {
     if (!persona) return;
     const control = new AbortController();
     apiFetch<Recorrido>(
-      `/campo/ubicaciones/recorrido/${persona.id}?fecha=${fecha}${empresaId ? `&empresaId=${empresaId}` : ""}`,
+      `/campo/ubicaciones/recorrido/${persona.id}?fecha=${fecha}&dias=${dias}${empresaId ? `&empresaId=${empresaId}` : ""}`,
       { signal: control.signal },
     )
       .then((r) => {
@@ -130,7 +132,7 @@ export function UbicacionesPanel() {
         if (!control.signal.aborted) setRecorridoTerminado(consultaRecorrido);
       });
     return () => control.abort();
-  }, [persona, fecha, empresaId, consultaRecorrido]);
+  }, [persona, fecha, dias, empresaId, consultaRecorrido]);
 
   const ahora = equipo ? Date.parse(equipo.actualizadaEn) : undefined;
   const personas = useMemo(() => equipo?.personas ?? [], [equipo]);
@@ -151,6 +153,8 @@ export function UbicacionesPanel() {
   const tramos = recorrido?.tramos ?? [];
   const paginaTramos = tramos.slice((pageTramos - 1) * limitTramos, pageTramos * limitTramos);
   const localDe = (t: TramoRecorrido) => recorrido?.visitas.find((v) => v.id === t.visitaId)?.local.nombre;
+  // En la semana cada hora necesita su día.
+  const hora = (recorrido?.dias ?? 1) > 1 ? formatoFechaHora : formatoHora;
 
   const verRecorrido = (p: PersonaEnVivo) => {
     setRecorrido(null);
@@ -172,7 +176,9 @@ export function UbicacionesPanel() {
         title={persona ? persona.nombre : "Ubicaciones"}
         subtitle={
           persona
-            ? "Recorrido del día"
+            ? dias > 1
+              ? `Recorrido de ${dias} días`
+              : "Recorrido del día"
             : equipo
               ? `${equipo.empresa.nombre} · ${personas.length} ${personas.length === 1 ? "persona" : "personas"} · actualizado ${formatoHora(equipo.actualizadaEn)}`
               : "Dónde está el equipo de campo"
@@ -200,8 +206,21 @@ export function UbicacionesPanel() {
               </label>
             ) : null}
             {persona ? (
+              <label className="flex min-w-0 items-center gap-2 text-sm">
+                <span className="sr-only">Período</span>
+                <select
+                  value={dias}
+                  onChange={(e) => setDias(Number(e.target.value))}
+                  className={`${inputBase} min-h-11 min-w-0 sm:w-auto`}
+                >
+                  <option value={1}>Día</option>
+                  <option value={7}>Semana</option>
+                </select>
+              </label>
+            ) : null}
+            {persona ? (
               <label className="flex min-w-0 flex-1 items-center gap-2 text-sm font-semibold text-foreground sm:flex-none">
-                Día
+                {dias > 1 ? "Hasta" : "Día"}
                 <input
                   type="date"
                   value={fecha}
@@ -254,7 +273,7 @@ export function UbicacionesPanel() {
                   tone="sub"
                   sub={
                     recorrido.resumen.inicio && recorrido.resumen.fin
-                      ? `De ${formatoHora(recorrido.resumen.inicio)} a ${formatoHora(recorrido.resumen.fin)}`
+                      ? `De ${hora(recorrido.resumen.inicio)} a ${hora(recorrido.resumen.fin)}`
                       : undefined
                   }
                 />
@@ -268,7 +287,8 @@ export function UbicacionesPanel() {
             />
             {recorrido && !recorrido.puntos.length ? (
               <p className="rounded-xl border border-line bg-surface-raised p-4 text-sm text-muted">
-                No hay ubicaciones registradas ese día. Se registran mientras la persona tiene la app abierta durante su jornada.
+                No hay ubicaciones registradas en ese período. Se registran durante el seguimiento laboral de la app de Ucheck,
+                también en segundo plano, y mientras Comercia está abierto en la jornada.
               </p>
             ) : null}
             {tramos.length ? (
@@ -291,7 +311,7 @@ export function UbicacionesPanel() {
                             {local ? ` · ${local}` : ""}
                           </p>
                           <p className="text-xs text-muted [font-variant-numeric:tabular-nums]">
-                            {formatoHora(t.desde)} – {formatoHora(t.hasta)} · {formatoDuracionMinutos(t.minutos)}
+                            {hora(t.desde)} – {formatoHora(t.hasta)} · {formatoDuracionMinutos(t.minutos)}
                             {t.tipo !== "parada" ? ` · ${formatoDistancia(t.metros)}` : ""}
                           </p>
                         </div>
@@ -300,7 +320,7 @@ export function UbicacionesPanel() {
                             type="button"
                             className={btnFila}
                             onClick={() => setFoco({ latitud: t.latitud!, longitud: t.longitud! })}
-                            aria-label={`Ver en el mapa la parada de las ${formatoHora(t.desde)}`}
+                            aria-label={`Ver en el mapa la parada de las ${hora(t.desde)}`}
                           >
                             Ver
                           </button>

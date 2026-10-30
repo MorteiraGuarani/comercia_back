@@ -25,7 +25,7 @@ import {
   PAGINA_UBICACIONES,
 } from './ubicaciones.constants';
 import { enJornada } from './utils/jornada';
-import { calcularRecorrido } from './utils/recorrido';
+import { calcularRecorrido, unirRecorridos } from './utils/recorrido';
 
 const DIA_MS = 24 * 60 * 60_000;
 // Ucheck acepta hasta 200 personas por consulta de últimas posiciones.
@@ -263,24 +263,39 @@ export class UbicacionesService {
     });
     if (!persona) throw sinAcceso;
     const dia = q.fecha ?? diaDe(new Date());
-    const fecha = fechaCampo(dia);
-    // Ventana amplia en UTC; se queda lo que cae en el día de campo pedido.
-    const [{ puntos }, visitas] = await Promise.all([
-      this.ucheck.pedir<{ puntos: PuntoUcheck[] }>(
-        '/comercia-integracion/ubicaciones/recorrido',
-        {
-          query: {
-            correo: persona.correo,
-            ucheckUsuarioId: persona.identidadUcheck
-              ? String(persona.identidadUcheck.ucheckUsuarioId)
-              : undefined,
-            desde: new Date(fecha.getTime() - DIA_MS / 2).toISOString(),
-            hasta: new Date(fecha.getTime() + DIA_MS * 1.5).toISOString(),
-          },
-        },
+    const dias = Array.from({ length: q.dias ?? 1 }, (_, i) =>
+      new Date(fechaCampo(dia).getTime() - i * DIA_MS)
+        .toISOString()
+        .slice(0, 10),
+    ).reverse();
+    // Un pedido por día: cada uno respeta el tope de puntos de Ucheck. Ventana
+    // amplia en UTC; se queda lo que cae en ese día de campo.
+    const [porDia, visitas] = await Promise.all([
+      Promise.all(
+        dias.map(async (d) => {
+          const fecha = fechaCampo(d);
+          const { puntos } = await this.ucheck.pedir<{ puntos: PuntoUcheck[] }>(
+            '/comercia-integracion/ubicaciones/recorrido',
+            {
+              query: {
+                correo: persona.correo,
+                ucheckUsuarioId: persona.identidadUcheck
+                  ? String(persona.identidadUcheck.ucheckUsuarioId)
+                  : undefined,
+                desde: new Date(fecha.getTime() - DIA_MS / 2).toISOString(),
+                hasta: new Date(fecha.getTime() + DIA_MS * 1.5).toISOString(),
+              },
+            },
+          );
+          return puntos.map(aPunto).filter((p) => diaDe(p.capturadaEn) === d);
+        }),
       ),
       this.prisma.visitaCampo.findMany({
-        where: { empresaId, usuarioId: persona.id, fecha },
+        where: {
+          empresaId,
+          usuarioId: persona.id,
+          fecha: { in: dias.map(fechaCampo) },
+        },
         select: {
           id: true,
           entrada: true,
@@ -290,7 +305,7 @@ export class UbicacionesService {
           local: { select: LOCAL_OCRD_SELECT },
         },
         orderBy: { entrada: 'asc' },
-        take: 200,
+        take: 200 * dias.length,
       }),
     ]);
     const locales = visitas.map((v) => {
@@ -310,10 +325,10 @@ export class UbicacionesService {
         nombre: `${persona.nombre} ${persona.apellido}`.trim(),
       },
       fecha: dia,
+      dias: dias.length,
       visitas: locales,
-      ...calcularRecorrido(
-        puntos.map(aPunto).filter((p) => diaDe(p.capturadaEn) === dia),
-        locales,
+      ...unirRecorridos(
+        porDia.map((puntos) => calcularRecorrido(puntos, locales)),
       ),
     };
   }

@@ -12,6 +12,8 @@ export const ANTIGUEDAD_MAXIMA_PING_MS = 48 * 60 * 60_000;
 /** Tolerancia para el reloj del equipo adelantado. */
 export const ADELANTO_MAXIMO_PING_MS = 2 * 60_000;
 export const MAX_PINGS_POR_LOTE = 50;
+/** El recorrido se pide por un día o por la semana que termina en `fecha`. */
+export const MAX_DIAS_RECORRIDO = 7;
 
 // El mapa en vivo se entrega completo (un mapa no se pagina); con tope y 413
 // en vez de truncar, como el organigrama. El recorrido lo limita Ucheck.

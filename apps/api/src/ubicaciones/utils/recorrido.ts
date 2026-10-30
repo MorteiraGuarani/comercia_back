@@ -125,3 +125,32 @@ export function calcularRecorrido(
     },
   };
 }
+
+/** Varios días calculados por separado: la noche no cuenta como «sin señal». */
+export function unirRecorridos(dias: CalculoRecorrido[]): CalculoRecorrido {
+  const resumenes = dias.map((d) => d.resumen);
+  const suma = (
+    campo:
+      | 'puntos'
+      | 'descartados'
+      | 'metros'
+      | 'minutosDetenido'
+      | 'minutosEnMovimiento'
+      | 'minutosSinDatos',
+  ) => resumenes.reduce((total, r) => total + r[campo], 0);
+  const conDatos = resumenes.filter((r) => r.inicio);
+  return {
+    puntos: dias.flatMap((d) => d.puntos),
+    tramos: dias.flatMap((d) => d.tramos),
+    resumen: {
+      puntos: suma('puntos'),
+      descartados: suma('descartados'),
+      metros: suma('metros'),
+      minutosDetenido: suma('minutosDetenido'),
+      minutosEnMovimiento: suma('minutosEnMovimiento'),
+      minutosSinDatos: suma('minutosSinDatos'),
+      inicio: conDatos[0]?.inicio ?? null,
+      fin: conDatos[conDatos.length - 1]?.fin ?? null,
+    },
+  };
+}

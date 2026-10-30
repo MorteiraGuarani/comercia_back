@@ -196,6 +196,32 @@ describe('UbicacionesService', () => {
     );
   });
 
+  it('la semana pide a Ucheck día por día y la noche no cuenta como sin señal', async () => {
+    const { prisma, ucheck, service } = armar();
+    prisma.visitaCampo.findMany.mockResolvedValue([]);
+    // Un punto al mediodía de cada día pedido.
+    ucheck.pedir.mockImplementation(((_: string, pedido: Pedido = {}) => {
+      const desde = new Date(String(pedido.query?.desde));
+      return Promise.resolve({
+        puntos: [
+          ping(new Date(desde.getTime() + 27 * 3_600_000).toISOString()),
+        ],
+      });
+    }) as never);
+    const r = await service.recorrido(1, 3, { fecha: '2026-10-22', dias: 3 });
+    expect(ucheck.pedir).toHaveBeenCalledTimes(3);
+    expect(r).toMatchObject({ fecha: '2026-10-22', dias: 3 });
+    expect(
+      r.puntos.map((p) => p.capturadaEn.toISOString().slice(0, 10)),
+    ).toEqual(['2026-10-20', '2026-10-21', '2026-10-22']);
+    expect(r.resumen).toMatchObject({ puntos: 3, minutosSinDatos: 0 });
+    const llamadas = prisma.visitaCampo.findMany.mock.calls as unknown[][];
+    const visitas = llamadas[llamadas.length - 1][0] as {
+      where: { fecha: { in: Date[] } };
+    };
+    expect(visitas.where.fecha.in).toHaveLength(3);
+  });
+
   it('manda a Ucheck solo las posiciones de la jornada', async () => {
     const { ucheck, service } = armar();
     const r = await service.registrar(3, {

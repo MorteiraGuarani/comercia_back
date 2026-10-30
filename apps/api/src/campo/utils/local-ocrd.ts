@@ -73,11 +73,15 @@ export function ubicacionOcrd(p: { latitud?: number; longitud?: number }) {
   };
 }
 
-/** Dirección visible: "Address, Street" de CRD1, omitiendo partes vacías. */
+/** Dirección visible: "Address, Street" de CRD1, omitiendo partes vacías o repetidas. */
 export function unirDireccion(address?: string | null, street?: string | null) {
+  // SAP suele repetir Address en Street con otros espacios ("X - LIMPIO" / "X -LIMPIO").
+  const clave = (texto: string) => texto.replace(/\s+/g, '').toLowerCase();
   return [address, street]
     .map((parte) => parte?.trim())
-    .filter(Boolean)
+    .filter((parte, i, partes): parte is string =>
+      Boolean(parte) && partes.findIndex((p) => p && clave(p) === clave(parte!)) === i,
+    )
     .join(', ');
 }
 

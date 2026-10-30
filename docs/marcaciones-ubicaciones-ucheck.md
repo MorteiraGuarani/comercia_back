@@ -58,12 +58,31 @@ guarda y COMERCIA trae la copia.
 
 ## Flujo de los pings de ubicación
 
-- La web de COMERCIA toma la posición cada 30 segundos durante la jornada y la
-  manda a COMERCIA, que la reenvía a UCHECK (`POST /comercia-integracion/ubicaciones`)
-  sin guardarla. El seguimiento de la app de UCHECK también deja su punto.
-- UCHECK guarda un punto cada 30 segundos por persona, durante 90 días.
-- El mapa en vivo y el recorrido del día de COMERCIA (*Ubicaciones*) los
-  consultan con GET (`ubicaciones/ultimas` y `ubicaciones/recorrido`).
+- **App de UCHECK (fuente principal).** El seguimiento laboral arranca solo
+  cuando la persona tiene agenda ese día en COMERCIA. Lo habilita el programa
+  (`COMERCIA`, `COMERCIA_TEAMLEADER` o `COMERCIA_REPOSITOR`), no el nombre del
+  rol. Corre en segundo plano con un servicio de Android y su notificación.
+  - Cada posición (Android entrega una cada ~10 s, a veces en tandas) se guarda
+    primero en una cola del teléfono, una cada 30 s, hasta ~16 h sin señal.
+  - La cola sale en lotes de hasta 100 por `POST /comercia-seguimiento/puntos`
+    con cada posición nueva, al abrir la app y al volver la red. Si falla, queda
+    para el próximo intento. Un lote que UCHECK rechaza por sus datos se descarta.
+  - UCHECK acepta solo puntos de la jornada de seguimiento vigente, tomados
+    entre su inicio y su fin.
+  - Aparte, la última posición va a `POST /comercia-seguimiento/contexto`
+    (vigencia de 60 s para marcar como repositor).
+  - Si Android tiene optimizada la batería de UCHECK, el punto del botón de
+    seguimiento se pone ámbar y el panel explica cómo quitar la restricción.
+- **Web de COMERCIA.** Toma la posición cada 30 segundos mientras está abierta
+  durante la jornada y la manda a COMERCIA, que la reenvía a UCHECK
+  (`POST /comercia-integracion/ubicaciones`) sin guardarla.
+- UCHECK guarda un punto cada 30 segundos por persona, durante 90 días. Los
+  lotes atrasados no duplican puntos ya guardados antes o después.
+- El mapa en vivo (refresco cada 15 s) y el recorrido de un día o de la semana
+  de COMERCIA (*Ubicaciones*) los consultan con GET (`ubicaciones/ultimas` y
+  `ubicaciones/recorrido`, un pedido por día). Cada día se calcula aparte, así
+  la noche no cuenta como «sin señal». En el mapa, un hueco de más de 20 min se
+  dibuja punteado.
 
 ## Tablas
 

@@ -5,13 +5,16 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { PersonaEnVivo, Recorrido } from "@/types/ubicacion";
 import { formatoDuracionMinutos } from "@/utils/duracion";
-import { formatoHora } from "@/utils/fechas";
+import { formatoFechaHora, formatoHora } from "@/utils/fechas";
 import { inicialesNombre } from "@/utils/foto-local";
 import { escaparHtml } from "@/utils/html";
 import { MINUTOS_SIN_SENAL, minutosDesde, textoHace, textoVelocidad } from "@/utils/ubicacion";
 import { CAPA_MAPA, CLASE_CAPA_OSCURA, useTemaOscuroMapa } from "./ui/use-tema-mapa";
 
 const TRAZO = "#0E65D8";
+const HUECO = "#7A7F7C";
+/** Igual que la API: más separados que esto, el tramo es «sin señal». */
+const HUECO_MS = 20 * 60_000;
 const ASUNCION: L.LatLngTuple = [-25.29, -57.6];
 
 const ficha = (texto: string, fondo: string, forma = "50%") =>
@@ -73,33 +76,47 @@ export function MapaUbicaciones({ personas, recorrido, ahora, encuadre, foco, et
     const visibles: L.LatLngTuple[] = [];
 
     if (recorrido) {
-      const linea = recorrido.puntos.map((p): L.LatLngTuple => [p.latitud, p.longitud]);
-      visibles.push(...linea);
-      if (linea.length > 1) L.polyline(linea, { color: TRAZO, weight: 4, opacity: 0.8 }).addTo(capa);
+      const hora = recorrido.dias > 1 ? formatoFechaHora : formatoHora;
+      // Un hueco sin señal se marca punteado: no se sabe por dónde fue.
+      const lineas: L.LatLngTuple[][] = [];
+      recorrido.puntos.forEach((p, i) => {
+        const previo = recorrido.puntos[i - 1];
+        const punto: L.LatLngTuple = [p.latitud, p.longitud];
+        visibles.push(punto);
+        if (previo && Date.parse(p.capturadaEn) - Date.parse(previo.capturadaEn) <= HUECO_MS) {
+          lineas[lineas.length - 1].push(punto);
+          return;
+        }
+        if (previo)
+          L.polyline([[previo.latitud, previo.longitud], punto], { color: HUECO, weight: 2, opacity: 0.8, dashArray: "6 8" }).addTo(capa);
+        lineas.push([punto]);
+      });
+      for (const linea of lineas)
+        if (linea.length > 1) L.polyline(linea, { color: TRAZO, weight: 4, opacity: 0.8 }).addTo(capa);
       for (const p of recorrido.puntos)
         L.circleMarker([p.latitud, p.longitud], { radius: 3, color: TRAZO, weight: 1, fillOpacity: 1 })
-          .bindTooltip(`${formatoHora(p.capturadaEn)} · ±${Math.round(p.precisionMetros)} m`)
+          .bindTooltip(`${hora(p.capturadaEn)} · ±${Math.round(p.precisionMetros)} m`)
           .addTo(capa);
       for (const t of recorrido.tramos)
         if (t.tipo === "parada" && t.latitud !== undefined && t.longitud !== undefined)
           L.circleMarker([t.latitud, t.longitud], { radius: 11, color: "#8b2635", weight: 3, fillColor: "#c98248", fillOpacity: 0.85 })
-            .bindPopup(popup(`Detenido ${formatoDuracionMinutos(t.minutos)}`, `${formatoHora(t.desde)} – ${formatoHora(t.hasta)}`))
+            .bindPopup(popup(`Detenido ${formatoDuracionMinutos(t.minutos)}`, `${hora(t.desde)} – ${formatoHora(t.hasta)}`))
             .addTo(capa);
       recorrido.visitas.forEach((v, i) => {
         if (v.latitud === null || v.longitud === null) return;
         visibles.push([v.latitud, v.longitud]);
         L.marker([v.latitud, v.longitud], { icon: icono(ficha(String(i + 1), "#1E2320", "9px")), title: v.local.nombre })
-          .bindPopup(popup(v.local.nombre, `Entrada ${formatoHora(v.entrada)} · Salida ${v.salida ? formatoHora(v.salida) : "sin marcar"}`))
+          .bindPopup(popup(v.local.nombre, `Entrada ${hora(v.entrada)} · Salida ${v.salida ? formatoHora(v.salida) : "sin marcar"}`))
           .addTo(capa);
       });
       const [inicio, fin] = [recorrido.puntos[0], recorrido.puntos[recorrido.puntos.length - 1]];
       if (inicio)
         L.circleMarker([inicio.latitud, inicio.longitud], { radius: 8, color: "#fff", weight: 3, fillColor: "#4F7A52", fillOpacity: 1 })
-          .bindPopup(popup("Primer punto", formatoHora(inicio.capturadaEn)))
+          .bindPopup(popup("Primer punto", hora(inicio.capturadaEn)))
           .addTo(capa);
       if (fin && fin !== inicio)
         L.circleMarker([fin.latitud, fin.longitud], { radius: 8, color: "#fff", weight: 3, fillColor: "#A32F2F", fillOpacity: 1 })
-          .bindPopup(popup("Último punto", formatoHora(fin.capturadaEn)))
+          .bindPopup(popup("Último punto", hora(fin.capturadaEn)))
           .addTo(capa);
     }
 

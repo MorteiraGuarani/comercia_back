@@ -395,7 +395,9 @@ export function LocalesPanel() {
                                 />
                                 <div className="min-w-0">
                                   <p className="text-sm font-bold leading-snug text-foreground">
-                                    <TextoExpandible texto={local.nombre} />
+                                    <TextoExpandible
+                                      texto={local.alias ? `${local.nombre} - ${local.alias}` : local.nombre}
+                                    />
                                   </p>
                                   <p className="mt-0.5 font-mono text-[11px] text-muted">
                                     {local.id}

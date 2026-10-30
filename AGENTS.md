@@ -123,9 +123,9 @@
   líder para quien tiene Presentismo. Tope de 2000 personas y 413 en vez de truncar.
 - **Excepción**: `GET /campo/ubicaciones/equipo` (última posición de hoy de cada
   persona para el mapa en vivo) y `GET /campo/ubicaciones/recorrido/:usuarioId`
-  (los puntos de un día para trazarlo) se entregan completos: un mapa no se
-  pagina. Superadmin ve la empresa; el líder con la página Ubicaciones, su cadena
-  (`obtenerEquipoCompleto`). Topes de 2000 personas y 5000 puntos, 413 en vez de truncar.
+  (los puntos de un día, o de hasta 7 con `dias`, para trazarlo) se entregan
+  completos: un mapa no se pagina. Superadmin ve la empresa; el líder con la página Ubicaciones, su cadena
+  (`obtenerEquipoCompleto`). Topes de 2000 personas y 5000 puntos por día, 413 en vez de truncar.
 - **Ucheck es la fuente de marcaciones y pings**: la entrada/salida de todo el
   equipo de campo se registra en Ucheck (`POST /comercia-integracion/marcar`) y
   Comercia trae su copia con GET (`marcaciones/pendientes` + confirmaciones,

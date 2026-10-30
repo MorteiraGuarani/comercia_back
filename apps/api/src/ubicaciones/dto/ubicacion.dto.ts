@@ -14,7 +14,10 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
-import { MAX_PINGS_POR_LOTE } from '../ubicaciones.constants';
+import {
+  MAX_DIAS_RECORRIDO,
+  MAX_PINGS_POR_LOTE,
+} from '../ubicaciones.constants';
 
 export class PingUbicacionDto {
   @IsNumber()
@@ -80,4 +83,12 @@ export class ConsultaRecorridoDto extends ConsultaUbicacionesDto {
   @Matches(/^\d{4}-\d{2}-\d{2}$/)
   @IsDateString({ strict: false })
   fecha?: string;
+
+  /** Días que termina `fecha`, incluido: 1 (el día) a 7 (la semana). */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(MAX_DIAS_RECORRIDO)
+  dias?: number;
 }
