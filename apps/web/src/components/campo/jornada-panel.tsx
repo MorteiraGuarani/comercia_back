@@ -632,7 +632,9 @@ function AgendaDelDia({
                           ? `Parada ${parada} · a ${formatoDistancia(metrosEntre(ruta.origen, a.local))}`
                           : "Sin visita todavía"}
                   </p>
-                  {a.esBackup ? (
+                  {a.heredada ? (
+                    <p className="text-muted">Local de {a.titular}</p>
+                  ) : a.esBackup ? (
                     <p className="text-muted">Reemplazás a {a.titular}</p>
                   ) : null}
                 </div>

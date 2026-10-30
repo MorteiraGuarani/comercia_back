@@ -21,29 +21,18 @@ function condicionHorario(diaSql: Prisma.Sql, equipoCampoId: number) {
     )`;
 }
 
-// Un TeamLeader comparte la ruta de sus colaboradores directos. La asignación
-// sigue siendo del impulsador; cada persona conserva su propia visita.
-function condicionEquipo(
-  usuarioId: number,
-  diaSql: Prisma.Sql,
-  equipoCampoId: number,
-) {
-  return Prisma.sql`EXISTS (
-    SELECT 1 FROM usuarios lider
-    JOIN roles rol ON rol.id = lider.rol_id AND rol.empresa_id = lider.empresa_id
-    JOIN usuarios colaborador ON colaborador.superior_id = lider.id
-    JOIN roles colaborador_rol ON colaborador_rol.id = colaborador.rol_id AND colaborador_rol.empresa_id = colaborador.empresa_id
-    WHERE lider.id = ${usuarioId} AND lider.is_active AND colaborador.is_active
-      AND colaborador.empresa_id = lider.empresa_id AND colaborador_rol.equipo_campo_id = ${equipoCampoId}
-      AND regexp_replace(lower(rol.descripcion), '[^a-z]', '', 'g')
-        IN ('teamleader', 'teamleaderimpulsador')
-      AND colaborador.id = COALESCE((
-        SELECT b.usuario_id FROM campo_backups b
-        WHERE b.asignacion_id = a.id AND b.activo
-          AND ${diaSql} BETWEEN b.fecha_desde AND b.fecha_hasta
-        ORDER BY b.id LIMIT 1
-      ), a.usuario_id)
-  )`;
+// Un líder (TeamLeader o supervisor) comparte la ruta de su cadena dentro del
+// equipo (`heredados`). La asignación sigue siendo de cada colaborador; cada
+// persona conserva su propia visita. El responsable del día es el backup
+// vigente o, si no hay, el titular.
+function condicionHeredada(heredados: number[], diaSql: Prisma.Sql) {
+  if (!heredados.length) return Prisma.sql`FALSE`;
+  return Prisma.sql`COALESCE((
+    SELECT b.usuario_id FROM campo_backups b
+    WHERE b.asignacion_id = a.id AND b.activo
+      AND ${diaSql} BETWEEN b.fecha_desde AND b.fecha_hasta
+    ORDER BY b.id LIMIT 1
+  ), a.usuario_id) = ANY(${heredados}::int[])`;
 }
 
 // Alias fijos de tablas (l = tbl_ocrd); todos los valores externos se parametrizan.
@@ -55,6 +44,7 @@ export function condicionAgenda(
   fecha: string,
   fechaFin = fecha,
   equipoCampoId: number,
+  heredados: number[] = [],
 ) {
   const tipoAsignacion = Prisma.sql`EXISTS (
     SELECT 1 FROM usuarios titular JOIN roles r ON r.id = titular.rol_id AND r.empresa_id = titular.empresa_id
@@ -74,7 +64,7 @@ export function condicionAgenda(
         )) OR EXISTS (
           SELECT 1 FROM campo_backups b WHERE b.asignacion_id = a.id AND b.activo AND b.usuario_id = ${usuarioId}
           AND ${dia} BETWEEN b.fecha_desde AND b.fecha_hasta
-        ) OR ${condicionEquipo(usuarioId, dia, equipoCampoId)}
+        ) OR ${condicionHeredada(heredados, dia)}
       ) AND (${condicionHorario(dia, equipoCampoId)})`;
   }
 
@@ -90,21 +80,15 @@ export function condicionAgenda(
       )) OR EXISTS (
         SELECT 1 FROM campo_backups b WHERE b.asignacion_id = a.id AND b.activo AND b.usuario_id = ${usuarioId}
         AND b.fecha_desde <= ${fechaFin}::date AND b.fecha_hasta >= ${fecha}::date
-      ) OR EXISTS (
-        SELECT 1 FROM usuarios lider
-        JOIN roles rol ON rol.id = lider.rol_id AND rol.empresa_id = lider.empresa_id
-        JOIN usuarios colaborador ON colaborador.superior_id = lider.id
-    JOIN roles colaborador_rol ON colaborador_rol.id = colaborador.rol_id AND colaborador_rol.empresa_id = colaborador.empresa_id
-        WHERE lider.id = ${usuarioId} AND lider.is_active AND colaborador.is_active
-          AND colaborador.empresa_id = lider.empresa_id AND colaborador_rol.equipo_campo_id = ${equipoCampoId}
-          AND regexp_replace(lower(rol.descripcion), '[^a-z]', '', 'g')
-            IN ('teamleader', 'teamleaderimpulsador')
-          AND (colaborador.id = a.usuario_id OR EXISTS (
+      ) OR ${
+        heredados.length
+          ? Prisma.sql`(a.usuario_id = ANY(${heredados}::int[]) OR EXISTS (
             SELECT 1 FROM campo_backups b WHERE b.asignacion_id = a.id
-              AND b.activo AND b.usuario_id = colaborador.id
+              AND b.activo AND b.usuario_id = ANY(${heredados}::int[])
               AND b.fecha_desde <= ${fechaFin}::date AND b.fecha_hasta >= ${fecha}::date
-          ))
-      )
+          ))`
+          : Prisma.sql`FALSE`
+      }
     ) AND (
       NOT EXISTS (SELECT 1 FROM campo_horarios h WHERE h.empresa_id = l.empresa_id AND h."CardCode" = l."CardCode" AND h.activo AND h.equipo_campo_id = ${equipoCampoId}
         AND (h.asignacion_id = a.id OR h.asignacion_id IS NULL))

@@ -104,10 +104,15 @@ interface DatosHoy {
   actualizado: string;
 }
 
-export function HoyEnCampo() {
+/**
+ * "equipo": el líder con su equipo (Inicio y Gestión de campo).
+ * "jefatura": el jefe con todo su organigrama (Jefatura · Avance).
+ */
+export function HoyEnCampo({ vista = "equipo" }: { vista?: "equipo" | "jefatura" }) {
   const { usuario, modulos } = usePanel();
   const tienePagina = (modulo: string, pagina: string) =>
     modulos.some((m) => m.ruta === modulo && m.paginas.some((p) => p.ruta === pagina));
+  const api = vista === "jefatura" ? "/campo/jefatura" : "/campo/supervision";
   const verNovedades = tienePagina("gestion-campo", "novedades");
   const hoy = fechaEnZonaIso(new Date());
   const [periodo, setPeriodo] = useState<PeriodoFiltro>(() => periodoInicioHoy(hoy));
@@ -118,7 +123,7 @@ export function HoyEnCampo() {
   const [revision, setRevision] = useState(0);
   const [terminada, setTerminada] = useState("");
   const claveCarga = `${revision}|${consulta}`;
-  const claveCache = `hoy|${usuario.id}|${consulta}`;
+  const claveCache = `hoy|${vista}|${usuario.id}|${consulta}`;
   // Lo último que se vio de este período en esta pestaña aparece enseguida.
   const [datos, setDatos] = useState<DatosHoy | null>(
     () => leerCacheSesion<DatosHoy>(claveCache)?.valor ?? null,
@@ -129,7 +134,7 @@ export function HoyEnCampo() {
     // No mezclar los números de otro período mientras llegan los nuevos.
     setDatos(
       leerCacheSesion<DatosHoy>(
-        `hoy|${usuario.id}|${consultaPeriodoInicio(nuevo, hoy)}`,
+        `hoy|${vista}|${usuario.id}|${consultaPeriodoInicio(nuevo, hoy)}`,
       )?.valor ?? null,
     );
   };
@@ -145,7 +150,7 @@ export function HoyEnCampo() {
     const controller = new AbortController();
     const opciones = { signal: controller.signal };
     const pedidoResumen = apiFetch<SupervisionResumenData>(
-      `/campo/supervision/resumen?${consulta}`,
+      `${api}/resumen?${consulta}`,
       opciones,
     );
     const pedidoNovedades = verNovedades
@@ -189,7 +194,7 @@ export function HoyEnCampo() {
         if (!controller.signal.aborted) setTerminada(claveCarga);
       });
     return () => controller.abort();
-  }, [revision, verNovedades, claveCache, consulta, claveCarga]);
+  }, [revision, verNovedades, claveCache, consulta, claveCarga, api]);
 
   // Se actualiza solo cada 5 minutos mientras la pestaña está visible.
   useEffect(() => {
@@ -227,7 +232,7 @@ export function HoyEnCampo() {
         fechaTexto={textoRangoFechas(rango.desde, rango.hasta)}
         resumen={
           resumen
-            ? `${resumen.presentismo.totalEquipo} personas en tu equipo · ${resumen.rutas.total} visitas`
+            ? `${resumen.presentismo.totalEquipo} personas en tu ${vista === "jefatura" ? "organigrama" : "equipo"} · ${resumen.rutas.total} visitas`
             : "Cargando los datos de tu equipo…"
         }
       >
@@ -355,6 +360,8 @@ export function HoyEnCampo() {
               />
             ) : hoja.tipo === "persona" ? (
               <HojaColaborador
+                api={api}
+                verPresentismo={tienePagina("gestion-campo", "visitas")}
                 id={hoja.id}
                 item={personaHoja}
                 consulta={consulta}
@@ -939,12 +946,17 @@ function DetalleIndicador({
 }
 
 function HojaColaborador({
+  api,
+  verPresentismo,
   id,
   item,
   consulta,
   cuando,
   unDia,
 }: {
+  /** Base de la API según la vista: supervisión o jefatura. */
+  api: string;
+  verPresentismo: boolean;
   id: number;
   item: ColaboradorResumen | null;
   /** Período de un solo día: muestra horas; si no, cantidad de visitas y faltas. */
@@ -959,7 +971,7 @@ function HojaColaborador({
   useEffect(() => {
     const controller = new AbortController();
     apiFetch<ColaboradorDetalleData>(
-      `/campo/supervision/colaboradores/${id}?${consulta}`,
+      `${api}/colaboradores/${id}?${consulta}`,
       { signal: controller.signal },
     )
       .then((d) => {
@@ -970,7 +982,7 @@ function HojaColaborador({
           setError(e instanceof Error ? e.message : "No se pudo cargar el detalle");
       });
     return () => controller.abort();
-  }, [id, consulta]);
+  }, [api, id, consulta]);
 
   const telefono = detalle?.colaborador.telefono ?? item?.telefono ?? "";
 
@@ -1001,14 +1013,16 @@ function HojaColaborador({
               <IconoTelefono className="h-5 w-5" />
             </a>
           ) : null}
-          <Link
-            href="/panel/gestion-campo/visitas"
-            aria-label="Ver en Presentismo"
-            title="Ver en Presentismo"
-            className={`grid h-11 w-11 place-items-center rounded-full border border-line bg-surface-raised text-foreground transition-colors hover:border-brand-500 hover:bg-surface-soft ${enfoque}`}
-          >
-            <IconoEquipo className="h-5 w-5" />
-          </Link>
+          {verPresentismo ? (
+            <Link
+              href="/panel/gestion-campo/visitas"
+              aria-label="Ver en Presentismo"
+              title="Ver en Presentismo"
+              className={`grid h-11 w-11 place-items-center rounded-full border border-line bg-surface-raised text-foreground transition-colors hover:border-brand-500 hover:bg-surface-soft ${enfoque}`}
+            >
+              <IconoEquipo className="h-5 w-5" />
+            </Link>
+          ) : null}
         </div>
       </div>
 

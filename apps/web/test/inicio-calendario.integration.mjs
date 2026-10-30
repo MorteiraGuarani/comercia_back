@@ -209,7 +209,7 @@ const { MiDiaCampo } = cargar("components/campo/mi-dia-campo.tsx", {
   ...comun, react: estadoMiDia.react, "@/utils/tareas-campo": {}, "@/lib/disponibilidad-tareas": {}, "./jornadas-propias": { JornadasPropias: stub },
 });
 // Presentismo de "Tu día" abre las jornadas en un modal, no navega.
-assert.equal(typeof nodos(MiDiaCampo()).find((n) => n.props?.nombre === "Presentismo").props.onClick, "function");
+assert.equal(typeof nodos(MiDiaCampo({})).find((n) => n.props?.nombre === "Presentismo").props.onClick, "function");
 estadoMiDia.iniciar();
 // Las visitas del período se agrupan por día, del más reciente al más viejo, con su duración.
 const visita = (id, fecha, entrada, salida) => ({ id, fecha, entrada: `${fecha}T${entrada}:00Z`, salida: salida && `${fecha}T${salida}:00Z`, estado: salida ? "CERRADA" : "EN_CURSO", estadoPresentismo: "PRESENTE" });
@@ -219,12 +219,12 @@ const dias = calculos.jornadasPorDia([
 ]);
 assert.deepEqual(dias.map((d) => d.fecha), ["2026-10-27", "2026-10-26"]);
 assert.deepEqual(dias[0].visitas.map((v) => [v.local, v.minutos]), [["Local B", 16], ["Local A", null]]);
-const tarjetasPropias = nodos(MiDiaCampo()).filter((n) => n.type === ui.TarjetaIndicador);
+const tarjetasPropias = nodos(MiDiaCampo({})).filter((n) => n.type === ui.TarjetaIndicador);
 assert.deepEqual(tarjetasPropias.map((n) => n.props.nombre), ["Presentismo", "Itinerario", "Tareas", "Novedades"]);
 assert.equal(tarjetasPropias[2].props.disabled, true);
 panel.tareasDisponibles["mi-jornada"] = true;
 estadoMiDia.iniciar();
-assert.equal(nodos(MiDiaCampo()).find((n) => n.props?.nombre === "Tareas").props.disabled, false, "Tener tareas habilita el KPI aunque no haya una visita abierta");
+assert.equal(nodos(MiDiaCampo({})).find((n) => n.props?.nombre === "Tareas").props.disabled, false, "Tener tareas habilita el KPI aunque no haya una visita abierta");
 panel.tareasDisponibles["mi-jornada"] = false;
 
 const estadoGeneral = estadoReact({ 0: resumen, 1: 2, 2: 0, 11: `0|fecha=${hoy}` });

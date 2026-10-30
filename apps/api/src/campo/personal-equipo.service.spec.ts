@@ -132,9 +132,16 @@ describe('Personal de los ABM por equipo operativo', () => {
   });
 
   it('no permite asignar a alguien sin permiso para ejecutar su jornada', async () => {
-    const { plan, prisma, plataforma } = preparar();
+    const { plan, prisma, plataforma, gestor } = preparar();
     plataforma.exigirAccesoAlgunaPagina.mockRejectedValue(
       new ForbiddenException(),
+    );
+    // Tampoco tiene el Itinerario de supervisor en Gestión de campo.
+    plataforma.exigirAccesoPagina.mockImplementation(
+      (_id: number, _modulo: string, pagina: string) =>
+        pagina === 'itinerario'
+          ? Promise.reject(new ForbiddenException())
+          : Promise.resolve(gestor),
     );
     await expect(
       plan.asignar(

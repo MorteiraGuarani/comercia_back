@@ -620,6 +620,34 @@ export class CampoController {
     return this.supervisionService.marcacionesColaborador(r.usuarioId, id, q);
   }
 
+  // ========== JEFATURA: AVANCE DE TODO EL ORGANIGRAMA ==========
+
+  @Get('jefatura/resumen')
+  @ApiOperation({
+    summary:
+      'Requiere la página Avance del módulo Jefatura. Los mismos indicadores de supervisión, sumando a toda la cadena del jefe en el organigrama (cualquier rol con equipo operativo) y al personal de los equipos que supervisa.',
+  })
+  resumenJefatura(
+    @Req() r: RequestConUsuario,
+    @Query() q: ConsultaSupervisionDto,
+  ) {
+    return this.supervisionService.resumen(r.usuarioId, q, 'jefatura');
+  }
+
+  @Get('jefatura/colaboradores/:id')
+  detalleColaboradorJefatura(
+    @Req() r: RequestConUsuario,
+    @Param('id', ParseIntPipe) id: number,
+    @Query() q: ConsultaSupervisionDto,
+  ) {
+    return this.supervisionService.detalleColaborador(
+      r.usuarioId,
+      id,
+      q,
+      'jefatura',
+    );
+  }
+
   @Get('organigrama')
   @Header('Cache-Control', 'private, no-store')
   organigrama(@Req() r: RequestConUsuario, @Query() q: ConsultaOrganigramaDto) {

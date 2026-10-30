@@ -268,10 +268,10 @@ export function SupervisionPanel({
   };
 
   const navItems = [
-    { key: "resumen" as TabType, label: "Equipo", icon: UsersIcon },
+    { key: "resumen" as TabType, label: "Presentismo", icon: UsersIcon },
     {
       key: "rutas" as TabType,
-      label: "Locales",
+      label: "Visitas",
       icon: NavigationIcon,
     },
     {

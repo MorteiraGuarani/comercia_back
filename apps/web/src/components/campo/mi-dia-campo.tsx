@@ -66,15 +66,22 @@ interface DatosMiDia {
   actualizado: string;
 }
 
-export function MiDiaCampo() {
+/**
+ * Con `itinerario` (la página del supervisor en Gestión de campo) se muestra
+ * debajo de los indicadores de su equipo: sin saludo y sin novedades propias.
+ */
+export function MiDiaCampo({ itinerario }: { itinerario?: string }) {
   const { usuario, modulos, tareasDisponibles } = usePanel();
   const pagina = (ruta: string) =>
+    !itinerario &&
     modulos.some((m) => m.ruta === "mi-jornada" && m.paginas.some((p) => p.ruta === ruta));
-  const rutaRuta = pagina("locales")
-    ? "/panel/mi-jornada/locales"
-    : pagina("agenda")
-      ? "/panel/mi-jornada/agenda"
-      : null;
+  const rutaRuta =
+    itinerario ??
+    (pagina("locales")
+      ? "/panel/mi-jornada/locales"
+      : pagina("agenda")
+        ? "/panel/mi-jornada/agenda"
+        : null);
   // Mis tareas ya no existe: las tareas se hacen en el modal del local, en Itinerario.
   const rutaTareas = rutaRuta;
   const rutaNovedades = pagina("novedades") ? "/panel/mi-jornada/novedades" : null;
@@ -181,13 +188,25 @@ export function MiDiaCampo() {
 
   return (
     <section aria-label="Tu día" className="min-w-0 space-y-4 sm:space-y-5">
-      <SaludoRuta
-        nombre={nombre}
-        fechaTexto={textoRangoFechas(rango.desde, rango.hasta)}
-        resumen={datos ? `${r.total} ${r.total === 1 ? "local" : "locales"} en tu ruta` : "Cargando tu día…"}
-      >
-        <SelectorPeriodoInicio valor={periodo} onCambiar={cambiarPeriodo} />
-      </SaludoRuta>
+      {itinerario ? (
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 border-t border-line pt-4">
+          <div className="min-w-0">
+            <h2 className="text-base font-bold text-foreground sm:text-lg">Tu itinerario</h2>
+            <p className="text-xs text-muted">
+              {datos ? `${r.total} ${r.total === 1 ? "local" : "locales"} en tu ruta` : "Cargando tu itinerario…"}
+            </p>
+          </div>
+          <SelectorPeriodoInicio valor={periodo} onCambiar={cambiarPeriodo} />
+        </div>
+      ) : (
+        <SaludoRuta
+          nombre={nombre}
+          fechaTexto={textoRangoFechas(rango.desde, rango.hasta)}
+          resumen={datos ? `${r.total} ${r.total === 1 ? "local" : "locales"} en tu ruta` : "Cargando tu día…"}
+        >
+          <SelectorPeriodoInicio valor={periodo} onCambiar={cambiarPeriodo} />
+        </SaludoRuta>
+      )}
 
       {error ? (
         <p role="alert" className="rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-100">

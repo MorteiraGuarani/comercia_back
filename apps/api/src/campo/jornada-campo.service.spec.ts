@@ -172,6 +172,8 @@ describe('marcaciones directas de Comercia', () => {
           { id: 6, localId: 4, usuarioId: 77, backups: [] },
         ]),
       },
+      // Sin nadie a cargo: la asignación del usuario 77 no es de su ruta.
+      usuario: { findMany: jest.fn().mockResolvedValue([]) },
       tareaCampo: { findMany: findManyTareas },
     });
     const respuesta = await servicio.tareasDelDia(1, {
@@ -183,6 +185,40 @@ describe('marcaciones directas de Comercia', () => {
     expect(respuesta.items[1].items.map((t) => t.id)).toEqual([1, 3]);
     expect(respuesta.items[0].items[0]).not.toHaveProperty('locales');
     expect(findManyTareas).toHaveBeenCalledTimes(1);
+  });
+
+  it('un supervisor ve las tareas de los locales que hereda de su cadena', async () => {
+    const { servicio, prisma } = contexto();
+    const findManyUsuarios = jest
+      .fn()
+      .mockResolvedValueOnce([{ id: 30 }]) // su TeamLeader
+      .mockResolvedValueOnce([{ id: 77 }]) // el impulsador del TeamLeader
+      .mockResolvedValue([]);
+    Object.assign(prisma, {
+      asignacionCampo: {
+        findMany: jest.fn().mockResolvedValue([
+          { id: 2, localId: 3, usuarioId: 1, backups: [] },
+          { id: 6, localId: 4, usuarioId: 77, backups: [] },
+          { id: 8, localId: 5, usuarioId: 99, backups: [] },
+        ]),
+      },
+      usuario: { findMany: findManyUsuarios },
+      tareaCampo: { findMany: jest.fn().mockResolvedValue([]) },
+    });
+    const respuesta = await servicio.tareasDelDia(1, {
+      fecha: '2026-10-10',
+      asignaciones: [2, 6, 8],
+    });
+    expect(respuesta.items.map((i) => i.asignacionId)).toEqual([2, 6]);
+    // La cadena se arma solo con gente activa de su mismo equipo.
+    const where: unknown = expect.objectContaining({
+      isActive: true,
+      superiorId: { in: [1] },
+      rol: { equipoCampoId: 1 },
+    });
+    expect(findManyUsuarios).toHaveBeenCalledWith(
+      expect.objectContaining({ where }),
+    );
   });
 
   it('no completa una tarea sobre una jornada anterior sin salida', async () => {

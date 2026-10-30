@@ -30,6 +30,9 @@ const TareasImpulsadorPanel = dynamic(() =>
     (m) => m.TareasImpulsadorPanel,
   ),
 );
+const HoyEnCampo = dynamic(() =>
+  import("@/components/campo/hoy-en-campo").then((m) => m.HoyEnCampo),
+);
 const NovedadesPanel = dynamic(() =>
   import("@/components/campo/novedades-panel").then((m) => m.NovedadesPanel),
 );
@@ -94,7 +97,28 @@ export default function PaginaModulo({
     if (pagina === "locales") return <LocalesPanel />;
     if (pagina === "tareas") return <TareasPanel />;
     if (pagina === "ubicaciones") return <UbicacionesPanel />;
+    // El supervisor recorre los locales que hereda de su cadena, igual que el
+    // repositor en Mi jornada; marca con el GPS del navegador, como el TeamLeader.
+    if (pagina === "itinerario")
+      return usuario.rol?.equipoCampo?.activo ? (
+        <JornadaPanel />
+      ) : (
+        <div className="m-4 min-w-0 rounded-xl border border-line bg-surface-raised p-6 text-center sm:m-6">
+          <p className="text-sm text-muted">
+            El itinerario es para roles de un equipo operativo. Pedí a un
+            administrador que asigne un equipo a tu rol en Roles.
+          </p>
+        </div>
+      );
   }
+
+  // MÓDULO: JEFATURA (avance de todo el organigrama del jefe)
+  if (modulo === "jefatura" && pagina === "avance")
+    return (
+      <div className="mx-auto w-full min-w-0 max-w-6xl p-4 text-foreground sm:p-6 lg:p-8">
+        <HoyEnCampo vista="jefatura" />
+      </div>
+    );
 
   // MÓDULO: MI JORNADA (IMPULSADOR / REPOSITOR DE CAMPO)
   if (modulo === "mi-jornada") {

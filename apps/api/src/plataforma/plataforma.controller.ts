@@ -13,6 +13,7 @@ import {
 import { ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import type { RequestConUsuario } from '../auth/interfaces/request-con-usuario.interface';
+import { AdminTiGuard } from '../auth/admin-ti.guard';
 import { SuperadminGuard } from '../auth/superadmin.guard';
 import { ModulosService } from './modulos.service';
 import { EjecutablesService } from './ejecutables.service';
@@ -40,7 +41,8 @@ export class MiPlataformaController {
   }
 }
 
-// ABM de la plataforma: SOLO superadmin (JwtAuthGuard + SuperadminGuard en todo)
+// ABM de la plataforma: SOLO superadmin (JwtAuthGuard + SuperadminGuard en todo).
+// Acceso por empresa está en AdminAccesosController, abierto también a Admin TI.
 @ApiTags('admin-plataforma')
 @Controller('admin/plataforma')
 @UseGuards(JwtAuthGuard, SuperadminGuard)
@@ -48,15 +50,9 @@ export class AdminPlataformaController {
   constructor(
     private readonly modulos: ModulosService,
     private readonly ejecutables: EjecutablesService,
-    private readonly asignaciones: AsignacionesService,
   ) {}
 
   // --- Módulos (con páginas y ejecutables anidados) ---
-  @Get('modulos')
-  listarModulos() {
-    return this.modulos.listar();
-  }
-
   @Post('modulos')
   crearModulo(@Body() dto: CrearModuloDto) {
     return this.modulos.crearModulo(dto);
@@ -134,6 +130,23 @@ export class AdminPlataformaController {
   @Delete('ejecutables/:id')
   eliminarEjecutable(@Param('id', ParseIntPipe) id: number) {
     return this.ejecutables.eliminar(id);
+  }
+}
+
+// Acceso por empresa (qué módulos y páginas ve cada empresa y rol): superadmin
+// y Admin TI. El catálogo de módulos se lee acá; crearlo sigue siendo superadmin.
+@ApiTags('admin-plataforma')
+@Controller('admin/plataforma')
+@UseGuards(JwtAuthGuard, AdminTiGuard)
+export class AdminAccesosController {
+  constructor(
+    private readonly modulos: ModulosService,
+    private readonly asignaciones: AsignacionesService,
+  ) {}
+
+  @Get('modulos')
+  listarModulos() {
+    return this.modulos.listar();
   }
 
   // --- Asignaciones empresa ↔ módulos/páginas ---

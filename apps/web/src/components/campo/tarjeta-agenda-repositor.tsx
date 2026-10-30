@@ -284,11 +284,11 @@ export function TarjetaAgendaRepositor({
                 <span className="text-muted">Sin dirección cargada</span>
               )}
             </p>
-            {a.esBackup ? (
+            {a.esBackup || a.heredada ? (
               <p className="flex min-w-0 items-start gap-1.5 text-xs text-foreground">
                 <IconoContacto className="mt-px h-3.5 w-3.5 shrink-0 text-muted" />
                 <span className="min-w-0 break-words">
-                  Reemplazo de {a.titular}
+                  {a.heredada ? "Local de" : "Reemplazo de"} {a.titular}
                 </span>
               </p>
             ) : null}

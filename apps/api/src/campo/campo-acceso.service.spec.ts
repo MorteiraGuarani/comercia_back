@@ -117,6 +117,44 @@ describe('Alcance de campo', () => {
     );
   });
 
+  describe('jornada propia', () => {
+    function conPlataforma(itinerario: unknown) {
+      const plataforma = {
+        exigirAccesoAlgunaPagina: jest
+          .fn()
+          .mockRejectedValue(new ForbiddenException()),
+        exigirAccesoPagina: jest.fn(
+          (_id: number, modulo: string, pagina: string) =>
+            modulo === 'gestion-campo' && pagina === 'itinerario' && itinerario
+              ? Promise.resolve(itinerario)
+              : Promise.reject(new ForbiddenException()),
+        ),
+      };
+      const prisma = {
+        usuario: { findFirst: jest.fn().mockResolvedValue(null) },
+      };
+      return new CampoAccesoService(
+        prisma as unknown as PrismaService,
+        plataforma as unknown as AccesoPlataformaService,
+      );
+    }
+
+    it('el supervisor con Itinerario recorre su ruta desde Gestión de campo', async () => {
+      await expect(
+        conPlataforma({ ...lider, rolDescripcion: 'Supervisor' }).ejecutar(20),
+      ).resolves.toMatchObject({ id: 20, equipoCampo });
+    });
+
+    it('sin Itinerario ni Mi jornada no tiene jornada propia', async () => {
+      await expect(conPlataforma(null).ejecutar(20)).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+      await expect(
+        conPlataforma({ ...lider, equipoCampo: null }).ejecutar(20),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+  });
+
   describe('jefaturas que supervisan varios equipos', () => {
     const repositores = { ...equipoCampo, id: 2, tipo: 'REPOSITOR' };
     function conJefe(fila: unknown) {

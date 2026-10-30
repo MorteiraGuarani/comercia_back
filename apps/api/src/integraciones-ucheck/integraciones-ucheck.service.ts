@@ -13,6 +13,7 @@ import {
 import { Prisma } from '../../generated/prisma/client';
 import { CampoAccesoService } from '../campo/campo-acceso.service';
 import { JornadaCampoService } from '../campo/jornada-campo.service';
+import { obtenerItinerarioHeredado } from '../campo/utils/autorizacion';
 import { PrismaService } from '../prisma/prisma.service';
 import { AgendaUcheckDto } from './dto/agenda-ucheck.dto';
 import { MarcacionUcheckDto } from './dto/marcacion-ucheck.dto';
@@ -240,8 +241,12 @@ export class IntegracionesUcheckService {
       dto.ucheckUsuarioId,
     );
     const fecha = fechaSql(dto.fecha);
-    const rol = usuario.rol?.descripcion.toLowerCase().replace(/[^a-z]/g, '');
-    const esTeamleader = rol === 'teamleader' || rol === 'teamleaderimpulsador';
+    // Un líder marca también en los locales de su cadena (como en su agenda).
+    const heredados = await obtenerItinerarioHeredado(this.prisma, {
+      id: usuario.id,
+      empresaId: usuario.empresaId,
+      equipoCampo: usuario.rol?.equipoCampo,
+    });
 
     return this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(${dto.ucheckJornadaId})`;
@@ -284,18 +289,10 @@ export class IntegracionesUcheckService {
                     },
                   },
                 },
-                ...(esTeamleader
+                ...(heredados.length
                   ? [
                       {
-                        usuario: {
-                          superiorId: usuario.id,
-                          isActive: true,
-                          rol: {
-                            equipoCampoId: exigirEquipoCampo(
-                              usuario.rol?.equipoCampo,
-                            ).id,
-                          },
-                        },
+                        usuarioId: { in: heredados },
                         backups: {
                           none: {
                             activo: true,
@@ -310,15 +307,7 @@ export class IntegracionesUcheckService {
                             activo: true,
                             fechaDesde: { lte: fecha },
                             fechaHasta: { gte: fecha },
-                            usuario: {
-                              superiorId: usuario.id,
-                              isActive: true,
-                              rol: {
-                                equipoCampoId: exigirEquipoCampo(
-                                  usuario.rol?.equipoCampo,
-                                ).id,
-                              },
-                            },
+                            usuarioId: { in: heredados },
                           },
                         },
                       },
@@ -437,7 +426,9 @@ export class IntegracionesUcheckService {
                 horarioId: dto.horarioId ?? null,
                 fecha,
                 entrada: new Date(dto.registradaEn),
-                esBackup: asignacion.usuarioId !== usuario.id && !esTeamleader,
+                esBackup:
+                  asignacion.usuarioId !== usuario.id &&
+                  !heredados.includes(asignacion.usuarioId),
                 origen: 'UCHECK',
                 ucheckJornadaId: dto.ucheckJornadaId,
                 entradaLat: dto.latitud,

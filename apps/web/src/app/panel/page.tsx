@@ -40,11 +40,21 @@ export default function PanelInicioPage() {
       (m) => m.ruta === "gestion-campo" && m.paginas.some((p) => p.ruta === "visitas"),
     );
   const esPersonalCampo = equipoActivo && !tieneGestionCampo && tieneMiJornada;
+  // El supervisor con Itinerario también recorre locales: su avance propio va
+  // después del de su equipo, que es lo primero que tiene que mirar.
+  const conItinerario =
+    equipoActivo &&
+    modulos.some(
+      (m) => m.ruta === "gestion-campo" && m.paginas.some((p) => p.ruta === "itinerario"),
+    );
 
   if (esLiderCampo || esPersonalCampo)
     return (
-      <div className="mx-auto w-full min-w-0 max-w-6xl p-4 text-foreground sm:p-6 lg:p-8">
+      <div className="mx-auto w-full min-w-0 max-w-6xl space-y-6 p-4 text-foreground sm:p-6 lg:p-8">
         {esLiderCampo ? <HoyEnCampo /> : <MiDiaCampo />}
+        {esLiderCampo && conItinerario ? (
+          <MiDiaCampo itinerario="/panel/gestion-campo/itinerario" />
+        ) : null}
       </div>
     );
 
@@ -522,6 +532,10 @@ function descripcionPagina(modulo: string, pagina: string) {
     "gestion-campo/locales":
       "Información, itinerarios y asignaciones de los locales.",
     "gestion-campo/tareas": "Protocolos y tareas asignadas al equipo.",
+    "gestion-campo/itinerario":
+      "Tu ruta: los locales de tu equipo, sus horarios y tus tareas.",
+    "jefatura/avance":
+      "Avance de visitas, presentismo y tareas de todo tu organigrama.",
     "mi-jornada/locales":
       "Tu ruta de hoy: locales, horarios, mapas y novedades.",
     "mi-jornada/tareas": "Actividades por local y registro de fotos.",

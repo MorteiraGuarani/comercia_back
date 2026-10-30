@@ -124,11 +124,27 @@ export class CampoAccesoService {
       return usuario;
     } catch (error) {
       if (!(error instanceof ForbiddenException)) throw error;
+      // Supervisores con Itinerario: recorren desde Gestión de campo la ruta
+      // que heredan de su cadena, con su propio equipo.
+      const lider = await this.plataforma
+        .exigirAccesoPagina(usuarioId, 'gestion-campo', 'itinerario')
+        .catch((e: unknown) => {
+          if (e instanceof ForbiddenException) return null;
+          throw e;
+        });
+      if (lider?.equipoCampo?.activo) {
+        exigirEquipoCampo(lider.equipoCampo);
+        return lider;
+      }
       const usuario = await this.gestionar(usuarioId, 'locales');
       const rol = usuario.rolDescripcion?.toLowerCase().replace(/[^a-z]/g, '');
       if (rol !== 'teamleader' && rol !== 'teamleaderimpulsador') throw error;
       return usuario;
     }
+  }
+  /** Jefe: avance de todo su organigrama (módulo Jefatura, página Avance). */
+  jefatura(usuarioId: number) {
+    return this.plataforma.exigirAccesoPagina(usuarioId, 'jefatura', 'avance');
   }
   async local(empresaId: number, id: string) {
     const local = await this.prisma.socioNegocio.findFirst({

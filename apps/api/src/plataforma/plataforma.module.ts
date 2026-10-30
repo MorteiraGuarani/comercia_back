@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import {
+  AdminAccesosController,
   AdminPlataformaController,
   MiPlataformaController,
 } from './plataforma.controller';
@@ -13,7 +14,11 @@ import { AccesoPlataformaService } from './acceso-plataforma.service';
 
 @Module({
   imports: [PrismaModule, AuthModule],
-  controllers: [MiPlataformaController, AdminPlataformaController],
+  controllers: [
+    MiPlataformaController,
+    AdminPlataformaController,
+    AdminAccesosController,
+  ],
   providers: [
     ModulosService,
     EjecutablesService,

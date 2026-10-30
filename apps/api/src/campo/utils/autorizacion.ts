@@ -9,6 +9,7 @@ import {
 } from './equipo-campo';
 import {
   alcanceDeGestor,
+  alcanceGestor,
   filtroPersonalGestor,
   SELECT_ALCANCE_GESTOR,
 } from './equipos-gestion';
@@ -133,6 +134,23 @@ export async function obtenerColaboradoresGestionados(
 }
 
 /**
+ * Personas cuyos locales hereda el itinerario de un líder (TeamLeader o
+ * supervisor): su cadena de subordinados activos dentro del mismo equipo.
+ * La asignación sigue siendo de cada uno; el líder visita con su propia visita.
+ */
+export function obtenerItinerarioHeredado(
+  db: ConsultaUsuarios,
+  lider: { id: number; empresaId: number; equipoCampo?: EquipoCampoDto | null },
+): Promise<number[]> {
+  return subordinadosEnCadena(db, lider.id, {
+    empresaId: lider.empresaId,
+    isActive: true,
+    esSuperadmin: false,
+    rol: { equipoCampoId: exigirEquipoCampo(lider.equipoCampo).id },
+  });
+}
+
+/**
  * Subordinados activos, directos e indirectos, sin exigir equipo operativo:
  * los avisos los puede enviar cualquier líder a toda su cadena.
  */
@@ -146,6 +164,32 @@ export function obtenerSubordinadosActivos(
     isActive: true,
     esSuperadmin: false,
   });
+}
+
+/**
+ * Personal de un jefe: toda su cadena en el organigrama, de cualquier rol (un
+ * rol nuevo por debajo entra solo), más el personal de los equipos que
+ * supervisa aunque todavía no dependa de él. No lo incluye a él.
+ */
+export async function obtenerPersonalJefatura(
+  db: ConsultaUsuarios,
+  jefe: { id: number; empresaId: number },
+): Promise<number[]> {
+  const [cadena, alcance] = await Promise.all([
+    obtenerSubordinadosActivos(db, jefe.id, jefe.empresaId),
+    alcanceGestor(db, jefe.id),
+  ]);
+  const equipos = alcance
+    ? await db.usuario.findMany({
+        where: {
+          ...filtroPersonalGestor(jefe.empresaId, { ...alcance, activo: null }),
+          id: { not: jefe.id },
+        },
+        select: { id: true },
+        take: 10000,
+      })
+    : [];
+  return [...new Set([...cadena, ...equipos.map((u) => u.id)])];
 }
 
 /**

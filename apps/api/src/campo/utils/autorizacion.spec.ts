@@ -2,7 +2,9 @@ import type { PrismaService } from '../../prisma/prisma.service';
 import {
   esLiderDe,
   obtenerEquipoCompleto,
+  obtenerItinerarioHeredado,
   obtenerLiderDirecto,
+  obtenerPersonalJefatura,
 } from './autorizacion';
 
 describe('jerarquía de campo', () => {
@@ -112,6 +114,28 @@ describe('jerarquía de campo', () => {
     expect(await esLiderDe(prisma, 1, 5)).toBe(false);
     expect(await esLiderDe(prisma, 1, 6)).toBe(false);
     expect(await esLiderDe(prisma, 1, 7)).toBe(false);
+  });
+
+  it('el itinerario del líder hereda su cadena dentro del mismo equipo', async () => {
+    const equipoCampo = {
+      id: 1,
+      nombre: 'Impulsadores',
+      tipo: 'IMPULSADOR' as const,
+      activo: true,
+    };
+    expect(
+      await obtenerItinerarioHeredado(prisma, {
+        id: 1,
+        empresaId: 1,
+        equipoCampo,
+      }),
+    ).toEqual([2, 3]);
+  });
+
+  it('el jefe ve todo su organigrama, de cualquier rol y de su empresa', async () => {
+    expect(
+      await obtenerPersonalJefatura(prisma, { id: 1, empresaId: 1 }),
+    ).toEqual([2, 3, 7]);
   });
 
   it('dirige notificaciones al superior asignado', async () => {

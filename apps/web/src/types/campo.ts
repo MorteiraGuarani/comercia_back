@@ -122,6 +122,8 @@ export interface AgendaCampo {
   estadoPresentismo: import("./estado-jornada").EstadoPresentismo;
   id: number;
   esBackup: boolean;
+  /** Local de un colaborador de la cadena del líder (TeamLeader o supervisor). */
+  heredada?: boolean;
   titular: string;
   local: LocalCampo & { horarios: HorarioCampo[] };
   visitas: {

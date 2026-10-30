@@ -40,7 +40,11 @@ import {
   ZONA_CAMPO,
 } from './utils/calendario';
 import { condicionAgenda } from './utils/agenda-sql';
-import { obtenerColaboradoresGestionados } from './utils/autorizacion';
+import {
+  obtenerColaboradoresGestionados,
+  obtenerItinerarioHeredado,
+} from './utils/autorizacion';
+import type { UsuarioConAcceso } from '../plataforma/interfaces/usuario-con-acceso.interface';
 import { comprobarMarcaEnLocal } from './utils/marcacion';
 import {
   conEstadoVisita,
@@ -60,77 +64,35 @@ export class JornadaCampoService {
     private readonly acceso: CampoAccesoService,
   ) {}
 
-  private async asignacionEfectiva(
-    tx: Prisma.TransactionClient,
-    empresaId: number,
-    usuarioId: number,
-    id: number,
-    fecha: Date,
-    esTeamleader: boolean,
-    equipoCampo?:
-      | import('../roles/interfaces/equipo-campo.interface').EquipoCampoDto
-      | null,
-  ) {
-    const a = await tx.asignacionCampo.findFirst({
-      where: {
-        id,
-        usuario: { rol: rolDelEquipoCampo(equipoCampo) },
-        activo: true,
-        fechaDesde: { lte: fecha },
-        OR: [{ fechaHasta: null }, { fechaHasta: { gte: fecha } }],
-        empresaId,
-      },
-      select: {
-        id: true,
-        localId: true,
-        local: { select: LOCAL_OCRD_SELECT },
-        usuarioId: true,
-        usuario: {
-          select: {
-            superiorId: true,
-            isActive: true,
-            rol: { select: { equipoCampoId: true } },
-          },
-        },
-        backups: {
-          where: {
-            activo: true,
-            fechaDesde: { lte: fecha },
-            fechaHasta: { gte: fecha },
-          },
-          take: 1,
-          select: {
-            usuarioId: true,
-            usuario: {
-              select: {
-                superiorId: true,
-                isActive: true,
-                rol: { select: { equipoCampoId: true } },
-              },
-            },
-          },
-        },
-      },
-    });
-    const responsable = a?.backups[0] ? a.backups[0].usuario : a?.usuario;
-    if (
-      !a ||
-      ((a.backups[0]?.usuarioId ?? a.usuarioId) !== usuarioId &&
-        !(
-          esTeamleader &&
-          responsable?.isActive &&
-          responsable.superiorId === usuarioId &&
-          responsable.rol?.equipoCampoId === exigirEquipoCampo(equipoCampo).id
-        ))
-    )
-      throw new NotFoundException('Asignación no disponible para esta fecha');
-    return a;
+  // Un líder (TeamLeader o supervisor) también recorre los locales de su
+  // cadena dentro del equipo; el personal operativo no tiene a nadie a cargo.
+  private heredados(u: UsuarioConAcceso) {
+    return obtenerItinerarioHeredado(this.prisma, u);
   }
+
+  /**
+   * Asignaciones de su ruta: propias, como backup o heredadas de la cadena del
+   * líder. La cadena solo se consulta si hay alguna que no sea propia.
+   */
+  private async deSuRuta<
+    T extends { usuarioId: number; backups: { usuarioId: number }[] },
+  >(u: UsuarioConAcceso, asignaciones: T[]) {
+    const propia = (a: T) =>
+      a.usuarioId === u.id || a.backups.some((b) => b.usuarioId === u.id);
+    if (asignaciones.every(propia)) return asignaciones;
+    const heredados = await this.heredados(u);
+    return asignaciones.filter(
+      (a) =>
+        propia(a) ||
+        [a.usuarioId, ...a.backups.map((b) => b.usuarioId)].some((id) =>
+          heredados.includes(id),
+        ),
+    );
+  }
+
   async agenda(usuarioId: number, query: ConsultaCampoDto) {
     const u = await this.acceso.ejecutar(usuarioId);
-    const esTeamleader = ['teamleader', 'teamleaderimpulsador'].includes(
-      u.rolDescripcion?.toLowerCase().replace(/[^a-z]/g, '') ?? '',
-    );
+    const heredados = await this.heredados(u);
     const { desde, hasta } = rangoConsulta(query);
     const fechaDesde = fechaCampo(desde);
     const fechaHasta = fechaCampo(hasta);
@@ -141,6 +103,7 @@ export class JornadaCampoService {
       desde,
       hasta,
       exigirEquipoCampo(u.equipoCampo).id,
+      heredados,
     );
     const preferencia = await this.prisma.usuario.findFirst({
       where: { id: u.id, empresaId: u.empresaId },
@@ -234,8 +197,9 @@ export class JornadaCampoService {
             {
               id: a.id,
               esPrincipal: a.local.CardCode === preferencia?.localPrincipalId,
-              esBackup: a.usuarioId !== u.id && !esTeamleader,
-              heredada: a.usuarioId !== u.id && esTeamleader,
+              esBackup:
+                a.usuarioId !== u.id && !heredados.includes(a.usuarioId),
+              heredada: heredados.includes(a.usuarioId),
               titular: `${a.usuario.nombre} ${a.usuario.apellido}`,
               local: {
                 ...aLocalCampo(
@@ -372,10 +336,7 @@ export class JornadaCampoService {
         },
       },
     });
-    if (
-      !a ||
-      (a.usuarioId !== u.id && !a.backups.some((b) => b.usuarioId === u.id))
-    )
+    if (!a || !(await this.deSuRuta(u, [a])).length)
       throw new NotFoundException('Asignación no disponible para esta fecha');
     const { skip, take, page, limit } = rangoPaginacion(query);
     // El repositor puede consultar las tareas del local antes de marcar
@@ -484,10 +445,7 @@ export class JornadaCampoService {
       },
       take: query.asignaciones.length,
     });
-    const asignaciones = encontradas.filter(
-      (a) =>
-        a.usuarioId === u.id || a.backups.some((b) => b.usuarioId === u.id),
-    );
+    const asignaciones = await this.deSuRuta(u, encontradas);
     if (asignaciones.length === 0) return { items: [] };
     const localIds = [...new Set(asignaciones.map((a) => a.localId))];
     const asignacionIds = asignaciones.map((a) => a.id);

@@ -19,7 +19,11 @@ import {
   ZONA_CAMPO,
 } from '../utils/calendario';
 import { nombreLocal } from '../utils/local-ocrd';
-import { obtenerEquipoCompleto } from '../utils/autorizacion';
+import {
+  obtenerEquipoCompleto,
+  obtenerPersonalJefatura,
+} from '../utils/autorizacion';
+import type { VistaSupervision } from '../interfaces/vista-supervision.interface';
 import {
   destinatarioCampo,
   exigirEquipoCampo,
@@ -51,16 +55,9 @@ export class SupervisionService {
     usuarioId: number,
     colaboradorId: number,
     query: ConsultaSupervisionDto,
+    vista: VistaSupervision = 'equipo',
   ) {
-    const u = await this.acceso.gestionar(usuarioId, 'visitas');
-    const equipoIds = await this.idsEquipo(u);
-    if (
-      !equipoIds.includes(colaboradorId) &&
-      (colaboradorId !== u.id ||
-        u.gestor ||
-        exigirEquipoCampo(u.equipoCampo).tipo === 'REPOSITOR')
-    )
-      throw new ForbiddenException('No tienes acceso a este colaborador');
+    const u = await this.colaboradorVisible(usuarioId, colaboradorId, vista);
     const { desde, hasta } = rangoConsulta(query);
     const { skip, take, page, limit } = rangoPaginacion(query);
     const where = {
@@ -92,6 +89,39 @@ export class SupervisionService {
     );
   }
 
+  /**
+   * A quién ve quien consulta. El líder: su cadena del mismo equipo, y él
+   * mismo si es impulsador sin colaboradores. El jefe: todo su organigrama.
+   */
+  private async alcance(usuarioId: number, vista: VistaSupervision) {
+    if (vista === 'jefatura') {
+      const u = await this.acceso.jefatura(usuarioId);
+      return {
+        u,
+        ids: await obtenerPersonalJefatura(this.prisma, u),
+        propio: false,
+      };
+    }
+    const u = await this.acceso.gestionar(usuarioId, 'visitas');
+    return {
+      u,
+      ids: await this.idsEquipo(u),
+      propio:
+        !u.gestor && exigirEquipoCampo(u.equipoCampo).tipo !== 'REPOSITOR',
+    };
+  }
+
+  private async colaboradorVisible(
+    usuarioId: number,
+    colaboradorId: number,
+    vista: VistaSupervision,
+  ) {
+    const { u, ids, propio } = await this.alcance(usuarioId, vista);
+    if (!ids.includes(colaboradorId) && !(propio && colaboradorId === u.id))
+      throw new ForbiddenException('No tienes acceso a este colaborador');
+    return u;
+  }
+
   private formatoHora(date: Date | string | null): string | null {
     if (!date) return null;
     const d = new Date(date);
@@ -109,8 +139,9 @@ export class SupervisionService {
   async resumen(
     usuarioId: number,
     query: ConsultaSupervisionDto,
+    vista: VistaSupervision = 'equipo',
   ): Promise<SupervisionResumenDto> {
-    const u = await this.acceso.gestionar(usuarioId, 'visitas');
+    const { u, ids, propio } = await this.alcance(usuarioId, vista);
     const ahora = new Date();
     const esRango = Boolean(query.fechaInicio && query.fechaFin);
     const fechaTexto = esRango
@@ -122,24 +153,22 @@ export class SupervisionService {
     const fechaDesde = fechaCampo(fechaDesdeStr);
     const fechaHasta = fechaCampo(fechaHastaStr);
 
-    // Obtener los subordinados del usuario
-    const equipoIds = await this.idsEquipo(u);
-    const subordinadosIds = equipoIds.filter((id) => id !== u.id);
-
-    // Si el usuario no tiene subordinados pero es team leader/admin de empresa,
-    // buscamos usuarios de la misma empresa con rol inferior o subordinados
-    const idsConsultar =
-      subordinadosIds.length > 0
-        ? subordinadosIds
-        : u.gestor || exigirEquipoCampo(u.equipoCampo).tipo === 'REPOSITOR'
-          ? []
-          : [u.id];
+    // Sin colaboradores, el impulsador se ve a sí mismo.
+    const idsConsultar = ids.length ? ids : propio ? [u.id] : [];
 
     const usuarios = await this.prisma.usuario.findMany({
       where: {
         id: { in: idsConsultar },
         empresaId: u.empresaId,
         isActive: true,
+        // En el organigrama del jefe hay roles sin trabajo de campo (back
+        // office, otras jefaturas): solo suma quien tiene equipo operativo.
+        rol: {
+          equipoCampo: {
+            activo: true,
+            tipo: { in: ['IMPULSADOR', 'REPOSITOR'] },
+          },
+        },
       },
       select: {
         id: true,
@@ -601,22 +630,13 @@ export class SupervisionService {
     usuarioId: number,
     colaboradorId: number,
     query: ConsultaSupervisionDto,
+    vista: VistaSupervision = 'equipo',
   ) {
-    const u = await this.acceso.gestionar(usuarioId, 'visitas');
+    const u = await this.colaboradorVisible(usuarioId, colaboradorId, vista);
     const { desde, hasta } = rangoConsulta(query);
     const fechaDesde = fechaCampo(desde);
     const fechaHasta = fechaCampo(hasta);
     const ahora = new Date();
-
-    const equipoIds = await this.idsEquipo(u);
-    if (
-      !equipoIds.includes(colaboradorId) &&
-      (colaboradorId !== u.id ||
-        u.gestor ||
-        exigirEquipoCampo(u.equipoCampo).tipo === 'REPOSITOR')
-    ) {
-      throw new ForbiddenException('No tienes acceso a este colaborador');
-    }
 
     const user = await this.prisma.usuario.findFirst({
       where: { id: colaboradorId, empresaId: u.empresaId },
