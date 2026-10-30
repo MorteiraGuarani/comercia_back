@@ -35,8 +35,8 @@ las rutas individuales requieren el código correspondiente.
 
 En el catálogo, bajo `/api/v1/admin/catalogo/empresas/{empresaId}`, las rutas
 individuales de grupos de artículos y fabricantes usan `/tbl_oitb/{Number}`
-y `/tbl_omrc/{FirmCode}`. Ambos códigos son enteros int4. Un fabricante sin
-`FirmCode` permanece visible en la lista, pero no tiene ruta individual por código.
+y `/tbl_omrc/{Code}`. Ambos códigos son enteros int4. Un fabricante sin
+`Code` permanece visible en la lista, pero no tiene ruta individual por código.
 
 `GET /tbl_oscn/{CardCode}` devuelve las filas del socio, paginadas. Para editar o
 eliminar, si existe una sola fila basta el `CardCode`; si hay varias se devuelve
@@ -149,3 +149,5 @@ de datos en la migración, conflictos, empresa, NULL, bulk, Swagger y HTTP.
 `tbl_octg` contiene `GroupNumber` (int4), `PaymentTermsGroupName` (varchar 250) y `PriceListNo` (int4), todos opcionales. La clave de la ruta es `GroupNumber`; `tbl_ocrd.GroupNum` se relaciona con ese campo dentro de la empresa. La recreación de la tabla elimina sus registros anteriores.
 
 `tbl_ocrg` contiene `Code` (int4), `Name` y `Type` (varchar 200), todos opcionales. La clave de la ruta es `Code`; `tbl_ocrd.GroupCode` se relaciona con ese campo dentro de la empresa. La recreación elimina los registros anteriores.
+
+`tbl_omrc` contiene `Code` (int4) y `ManufacturerName` (varchar 250), ambos opcionales. La clave de la ruta es `Code`. La recreación elimina los registros anteriores.

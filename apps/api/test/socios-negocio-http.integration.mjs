@@ -170,7 +170,7 @@ try {
         : t.nombre === 'tbl_oitb'
           ? '{Number}'
           : t.nombre === 'tbl_omrc'
-            ? '{FirmCode}'
+            ? '{Code}'
             : t.nombre === 'tbl_ocrg'
               ? '{Code}'
               : t.nombre === 'tbl_octg'
@@ -322,7 +322,7 @@ try {
     ['tbl_ocrg', 'Code'],
     ['tbl_octg', 'GroupNumber'],
     ['tbl_oitb', 'Number'],
-    ['tbl_omrc', 'FirmCode'],
+    ['tbl_omrc', 'Code'],
   ]) {
     const grupo = ['tbl_oitb', 'tbl_omrc'].includes(tabla)
       ? 'catalogo'
@@ -351,7 +351,7 @@ try {
               ? { PaymentTermsGroupName: 'Nuevo' }
               : tabla === 'tbl_oitb'
                 ? { GroupName: 'Nuevo' }
-                : { FirmName: 'Nuevo' },
+                : { ManufacturerName: 'Nuevo' },
         );
       await req.expect(200);
       assert.equal(calls.at(-1).method, servicio);
@@ -407,18 +407,16 @@ try {
   await request(http).post(ocrg).send({ Type: 'x'.repeat(201) }).expect(400);
   await request(http).post(ocrg).send({ GroupCode: 1 }).expect(400);
   const fabricantes = '/api/v1/admin/catalogo/empresas/1/tbl_omrc';
-  await request(http)
-    .post(fabricantes)
-    .send({ FirmCode: null, FirmName: null })
-    .expect(201);
-  await request(http)
-    .post(fabricantes)
-    .send({ FirmCode: 2147483648 })
-    .expect(400);
-  await request(http)
-    .post(fabricantes)
-    .send({ FirmName: 'x'.repeat(201) })
-    .expect(400);
+  const fabricanteSchema = doc.components.schemas.FabricanteArticuloDto;
+  assert.deepEqual(Object.keys(fabricanteSchema.properties).sort(), ['Code', 'ManufacturerName']);
+  assert.equal(fabricanteSchema.properties.ManufacturerName.maxLength, 250);
+  assert.ok(doc.paths['/api/v1/admin/catalogo/empresas/{empresaId}/tbl_omrc/{Code}']);
+  assert.ok(!doc.paths['/api/v1/admin/catalogo/empresas/{empresaId}/tbl_omrc/{FirmCode}']);
+  await request(http).post(fabricantes).send({ Code: null, ManufacturerName: null }).expect(201);
+  await request(http).post(fabricantes).send({ Code: 2147483647, ManufacturerName: 'x'.repeat(250) }).expect(201);
+  await request(http).post(fabricantes).send({ Code: 2147483648 }).expect(400);
+  await request(http).post(fabricantes).send({ ManufacturerName: 'x'.repeat(251) }).expect(400);
+  await request(http).post(fabricantes).send({ FirmCode: 1 }).expect(400);
   const grupos = '/api/v1/admin/catalogo/empresas/1/tbl_oitb';
   const esquemaGrupos = doc.components.schemas.GrupoArticuloDto;
   assert.deepEqual(Object.keys(esquemaGrupos.properties).sort(), ['GroupName', 'Number']);

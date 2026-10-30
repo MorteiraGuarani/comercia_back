@@ -77,7 +77,7 @@ export function crearControladorSocios(
       tbl_ocrd: { campo: 'CardCode', dto: SocioParams },
       tbl_crd1: { campo: 'CardCode', dto: DireccionParams },
       tbl_oscn: { campo: 'CardCode', dto: DireccionParams },
-      tbl_omrc: { campo: 'FirmCode', dto: FabricanteParams },
+      tbl_omrc: { campo: 'Code', dto: FabricanteParams },
       tbl_oitb: { campo: 'Number', dto: GrupoArticuloParams },
       tbl_jcanales: { campo: 'Code', dto: CodigoCatalogoParams },
       tbl_jsubcanales: { campo: 'Code', dto: CodigoCatalogoParams },
@@ -96,7 +96,6 @@ export function crearControladorSocios(
     'ListNum',
     'SlpCode',
     'GroupNumber',
-    'FirmCode',
     'Number',
   ].includes(identidad);
   const esTexto = identidad === 'CardCode' || identidad === 'AgentCode';
@@ -192,15 +191,13 @@ export function crearControladorSocios(
           ? p.ListNum
           : 'GroupNumber' in p
             ? p.GroupNumber
-            : 'FirmCode' in p
-              ? p.FirmCode
-              : 'Number' in p
-                ? p.Number
-                : 'SlpCode' in p
-                  ? p.SlpCode
-                  : 'AgentCode' in p
-                    ? p.AgentCode
-                    : p.id;
+            : 'Number' in p
+              ? p.Number
+              : 'SlpCode' in p
+                ? p.SlpCode
+                : 'AgentCode' in p
+                  ? p.AgentCode
+                  : p.id;
   const documentarCodigo = () =>
     ApiParam({
       name: identidad,

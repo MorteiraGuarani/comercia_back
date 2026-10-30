@@ -28,24 +28,24 @@ empresa indicada en la ruta debe existir y separa sus datos de otras empresas.
 
 | Tabla | Ruta base | Clave de duplicado dentro de la empresa |
 | --- | --- | --- |
-| `tbl_omrc` | `/api/v1/admin/catalogo/empresas/:empresaId/tbl_omrc` | `FirmCode` |
+| `tbl_omrc` | `/api/v1/admin/catalogo/empresas/:empresaId/tbl_omrc` | `Code` |
 | `tbl_oscn` | `/api/v1/admin/catalogo/empresas/:empresaId/tbl_oscn` | `ItemCode` + `CardCode` + `Substitute` |
 | `tbl_oitb` | `/api/v1/admin/catalogo/empresas/:empresaId/tbl_oitb` | `Number` |
 | `tbl_jtiposubcanales` | `/api/v1/admin/socios-negocio/empresas/:empresaId/tbl_jtiposubcanales` | `Code` |
 
 Cada ruta admite `GET` paginado y `POST` individual o con un arreglo de hasta
 50.000 filas. Las rutas individuales de `tbl_oitb` usan `Number`, las de
-`tbl_omrc` usan `FirmCode` y las de `tbl_jtiposubcanales` usan su `id` técnico;
+`tbl_omrc` usan `Code` y las de `tbl_jtiposubcanales` usan su `id` técnico;
 `tbl_oscn` usa `CardCode` y un selector cuando hay más de una fila. Todas
 filtran por la empresa de la ruta.
 En un lote se conserva la primera clave, se omiten las ya existentes y las
-filas inválidas se informan sin interrumpir las demás. `FirmCode` admite `null`;
+filas inválidas se informan sin interrumpir las demás. `Code` admite `null`;
 una clave nula también se deduplica dentro de la empresa. Los códigos de
 `tbl_oscn` son referencias lógicas y pueden cargarse antes que otros catálogos.
 
 Ejemplos individuales de cuerpos de `POST`:
 
-- `tbl_omrc`: `{"FirmCode":1,"FirmName":"Fabricante"}`
+- `tbl_omrc`: `{"Code":1,"ManufacturerName":"Fabricante"}`
 - `tbl_oscn`: `{"ItemCode":"A0001","CardCode":"C0001","Substitute":"ALT0001","Descriptio":"Código alternativo"}`
 - `tbl_oitb`: `{"Number":100,"GroupName":"Alimentos"}`
 - `tbl_jtiposubcanales`: `{"Code":"001","U_Descripcion":"Tipo de subcanal"}`

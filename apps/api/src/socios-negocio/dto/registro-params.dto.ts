@@ -115,7 +115,7 @@ export class FabricanteParams extends EmpresaSociosParams {
     maximum: 2147483647,
     example: 1,
     description:
-      'FirmCode original del fabricante en la empresa, nunca id técnico.',
+      'Code original del fabricante en la empresa, nunca id técnico.',
   })
   @Transform(({ obj, key }: { obj: Record<string, unknown>; key: string }) =>
     typeof obj[key] === 'string' && /^-?\d+$/.test(obj[key])
@@ -125,7 +125,7 @@ export class FabricanteParams extends EmpresaSociosParams {
   @IsInt()
   @Min(-2147483648)
   @Max(2147483647)
-  FirmCode!: number;
+  Code!: number;
 }
 
 export class GrupoArticuloParams extends EmpresaSociosParams {

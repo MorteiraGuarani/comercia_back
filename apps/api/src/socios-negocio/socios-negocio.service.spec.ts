@@ -138,6 +138,13 @@ describe('Socios de negocio públicos y separados por empresa', () => {
   });
   it.each([
     {
+      tabla: TABLAS_SOCIOS.tbl_omrc,
+      modelo: 'fabricanteArticulo',
+      clave: 'Code',
+      valor: 202,
+      campo: 'ManufacturerName',
+    },
+    {
       tabla: TABLAS_SOCIOS.tbl_ocrg,
       modelo: 'socioNegocioGrupo',
       clave: 'Code',
@@ -307,7 +314,7 @@ describe('Socios de negocio públicos y separados por empresa', () => {
                 : tabla.nombre === 'tbl_oitb'
                   ? { Number: 7 }
                   : tabla.nombre === 'tbl_omrc'
-                    ? { FirmCode: 7 }
+                    ? { Code: 7 }
                     : tabla.nombre === 'tbl_oslp'
                       ? { SlpCode: 7 }
                       : tabla.nombre === 'tbl_opln'

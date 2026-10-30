@@ -75,9 +75,9 @@ model FabricanteArticulo {
   id BigInt @id @default(autoincrement())
   empresaId Int @map("empresa_id")
   empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
-  FirmCode Int?
-  FirmName String? @db.VarChar(200)
-  @@unique([empresaId, FirmCode], map: "uq_tbl_omrc_empresa_clave")
+  Code Int?
+  ManufacturerName String? @db.VarChar(250)
+  @@unique([empresaId, Code], map: "uq_tbl_omrc_empresa_clave")
   @@map("tbl_omrc")
 }
 

@@ -15,16 +15,16 @@ export class FabricanteArticuloDto {
     descripcion: 'Código int4 del fabricante; admite null.',
     ejemplo: 1,
   })
-  FirmCode?: number | null;
+  Code?: number | null;
   @CampoTabla({
     tipo: 'texto',
-    longitud: 200,
+    longitud: 250,
     requerido: false,
     nullable: true,
     descripcion: 'Nombre del fabricante.',
     ejemplo: 'Fabricante de ejemplo',
   })
-  FirmName?: string | null;
+  ManufacturerName?: string | null;
 }
 
 export class CodigoArticuloSocioDto {
