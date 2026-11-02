@@ -6,7 +6,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 
 interface PedidoUcheck {
-  method?: 'GET' | 'POST';
+  method?: 'GET' | 'POST' | 'PUT';
   query?: Record<string, string | undefined>;
   body?: unknown;
   /** Tiempo máximo de espera en milisegundos. */

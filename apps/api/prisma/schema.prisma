@@ -555,6 +555,7 @@ model Usuario {
   lecturasAvisos          AvisoLecturaCampo[]
   adjuntosCampo           AdjuntoCampo[]
   identidadUcheck         IdentidadUcheck?
+  ucheckPendiente         UcheckUsuarioPendiente?
   permitirVinculoAutomatico Boolean @default(true) @map("permitir_vinculo_automatico")
   seguimientoCampo SeguimientoCampo?
   operacionesCampo OperacionCampo[]
@@ -583,6 +584,25 @@ model IdentidadUcheck {
   updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
 
   @@map("identidades_ucheck")
+}
+
+/// Usuarios cuyo alta, edición o baja falta llevar a Ucheck. Se manda siempre
+/// el estado actual completo (reintentar no duplica) y la fila se borra cuando
+/// Ucheck lo toma.
+model UcheckUsuarioPendiente {
+  usuarioId        Int      @id @map("usuario_id")
+  usuario          Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  /// Sube con cada cambio: lo editado durante un envío no se da por mandado.
+  version          Int      @default(1)
+  /// Cuenta de Ucheck vinculada antes de cambiar el correo: se le actualiza el
+  /// correo en vez de crear otra, y al confirmarse se vuelve a vincular.
+  ucheckUsuarioId  Int?     @map("ucheck_usuario_id")
+  intentos         Int      @default(0)
+  siguienteIntento DateTime @default(now()) @map("siguiente_intento")
+  ultimoError      String?  @map("ultimo_error") @db.VarChar(500)
+
+  @@index([siguienteIntento])
+  @@map("ucheck_usuarios_pendientes")
 }
 
 model SeguimientoCampo {

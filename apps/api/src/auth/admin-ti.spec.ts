@@ -56,6 +56,7 @@ describe('AdminTI: alcance y límites', () => {
       db,
       {} as AuthService,
       new AccesoPlataformaService(db),
+      { marcar: jest.fn() } as never,
     );
     prisma.empresa.findMany.mockResolvedValue([
       { id: 2, nombre: 'A' },

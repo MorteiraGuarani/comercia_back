@@ -17,6 +17,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { UsuariosController } from './usuarios.controller';
 import { AdminUsuariosController } from './admin-usuarios.controller';
 import { UsuariosService } from './usuarios.service';
+import { UcheckUsuariosService } from './ucheck-usuarios.service';
 import type { Prisma } from '../../generated/prisma/client';
 
 describe('HTTP: selector de superiores', () => {
@@ -48,6 +49,7 @@ describe('HTTP: selector de superiores', () => {
         JwtAuthGuard,
         SuperadminGuard,
         { provide: AuthService, useValue: {} },
+        { provide: UcheckUsuariosService, useValue: { marcar: jest.fn() } },
         { provide: PrismaService, useValue: prisma },
         {
           // Sin la página Administración · Usuarios: el colaborador sigue sin permiso.

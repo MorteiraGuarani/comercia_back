@@ -55,7 +55,7 @@ function crear() {
       exigirAccesoPagina: jest
         .fn()
         .mockRejectedValue(new ForbiddenException('No tenés acceso a esta sección')),
-    } as never),
+    } as never, { marcar: jest.fn() } as never),
   };
 }
 const query = Object.assign(new ListarSuperioresDto(), {

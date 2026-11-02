@@ -16,7 +16,7 @@ La agenda del TeamLeader se calcula cada día desde las asignaciones vigentes de
 
 UCHECK ofrece el programa `COMERCIA_TEAMLEADER` como **Comercia TeamLeader**. La empresa debe tener ese programa y cada TeamLeader debe recibirlo en la administración de UCHECK. El módulo usa la misma integración servidor a servidor y las mismas tablas de caché/visitas de Comercia que el programa de impulsadores; no hay un segundo catálogo de locales. La APK muestra al impulsador titular de cada parada. Al quitar o cambiar una asignación en COMERCIA, la siguiente sincronización de agenda refleja el cambio.
 
-Para dar de alta a otro TeamLeader: crear o actualizar su usuario en COMERCIA con rol `TeamLeader`, elegir su Supervisor como superior, asignar los impulsadores con ese TeamLeader como superior, y otorgarle `COMERCIA_TEAMLEADER` en UCHECK. El correo de ambas plataformas debe coincidir. El programa se registra por migración en UCHECK y se asigna a las empresas que ya tenían `COMERCIA`.
+Para dar de alta a otro TeamLeader: crear o actualizar su usuario en COMERCIA con rol `TeamLeader`, elegir su Supervisor como superior, asignar los impulsadores con ese TeamLeader como superior, y el ABM le otorga `COMERCIA_TEAMLEADER` en UCHECK solo (ver [usuarios](marcaciones-ubicaciones-ucheck.md#usuarios-el-abm-de-comercia-manda-en-ucheck)). El correo de ambas plataformas debe coincidir. El programa se registra por migración en UCHECK y se asigna a las empresas que ya tenían `COMERCIA`.
 
 ## Despliegue
 

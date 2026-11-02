@@ -29,6 +29,7 @@ describe('Mis datos (perfil propio)', () => {
       prisma as unknown as PrismaService,
       {} as AuthService,
       {} as never,
+      { marcar: jest.fn() } as never,
     );
     return { prisma, service };
   }

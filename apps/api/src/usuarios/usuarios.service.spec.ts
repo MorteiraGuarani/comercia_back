@@ -38,10 +38,12 @@ describe('UsuariosService - permiso de superadmin', () => {
     identidadUcheck: { deleteMany: jest.fn() },
   };
   const auth = { crearUsuario: jest.fn() };
+  const ucheckUsuarios = { marcar: jest.fn() };
   const service = new UsuariosService(
     prisma as unknown as PrismaService,
     auth as unknown as AuthService,
     sinPaginaUsuarios(),
+    ucheckUsuarios as never,
   );
   const erp = {
     ERP_CanalVenta: 'MAYORISTA',
@@ -219,6 +221,7 @@ describe('UsuariosService - permiso de superadmin', () => {
         superiorId: null,
         esSuperadmin: false,
         correo: 'ana@example.com',
+        identidadUcheck: { ucheckUsuarioId: 42 },
       });
     prisma.rol.findUnique.mockResolvedValue({ id: 6, empresaId: 20 });
     prisma.usuario.findFirst.mockResolvedValue(null);
@@ -254,6 +257,8 @@ describe('UsuariosService - permiso de superadmin', () => {
     expect(prisma.identidadUcheck.deleteMany).toHaveBeenCalledWith({
       where: { usuarioId: 2 },
     });
+    // Ucheck cambia el correo de esa misma cuenta y recién ahí se re-vincula.
+    expect(ucheckUsuarios.marcar).toHaveBeenLastCalledWith(2, 42);
   });
 
   it('guarda y devuelve las seis referencias ERP del ABM', async () => {
@@ -283,6 +288,7 @@ describe('UsuariosService - permiso de superadmin', () => {
       nombre: 'Ana',
     });
     expect(prisma.identidadUcheck.deleteMany).not.toHaveBeenCalled();
+    expect(ucheckUsuarios.marcar).toHaveBeenLastCalledWith(2, undefined);
   });
 
   it('devuelve conflicto si el correo ya pertenece a otra cuenta', async () => {
@@ -401,6 +407,7 @@ describe('UsuariosService - alta en lote', () => {
       prisma as unknown as PrismaService,
       auth as unknown as AuthService,
       sinPaginaUsuarios(),
+      { marcar: jest.fn() } as never,
     );
 
     const r = await service.crearLote(1, [
@@ -467,6 +474,7 @@ describe('UsuariosService - página Administración · Usuarios', () => {
     prisma as unknown as PrismaService,
     { crearUsuario: jest.fn() } as unknown as AuthService,
     plataforma as unknown as AccesoPlataformaService,
+    { marcar: jest.fn() } as never,
   );
 
   it('administra solo su empresa y sin ver superadmins ni Admin TI', async () => {

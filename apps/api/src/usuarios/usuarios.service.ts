@@ -57,6 +57,7 @@ import {
 import { CARPETA_FOTOS_PERFIL } from './utils/multer-foto-perfil';
 import type { ActualizarPerfilDto } from './dto/perfil.dto';
 import { filtroLocales, nombreLocal } from '../campo/utils/local-ocrd';
+import { UcheckUsuariosService } from './ucheck-usuarios.service';
 
 const SELECT_USUARIO_ADMIN = {
   id: true,
@@ -148,6 +149,7 @@ export class UsuariosService {
     private readonly prisma: PrismaService,
     private readonly auth: AuthService,
     private readonly plataforma: AccesoPlataformaService,
+    private readonly ucheckUsuarios: UcheckUsuariosService,
   ) {}
 
   private async contexto(usuarioId: number): Promise<ContextoAdmin> {
@@ -607,6 +609,7 @@ export class UsuariosService {
       },
       passwordHash ? await passwordHash : undefined,
     );
+    await this.ucheckUsuarios.marcar(creado.id);
     const usuario = await this.prisma.usuario.findUnique({
       where: { id: creado.id },
       select: SELECT_USUARIO_ADMIN,
@@ -648,6 +651,7 @@ export class UsuariosService {
         superiorId: true,
         esSuperadmin: true,
         correo: true,
+        identidadUcheck: { select: { ucheckUsuarioId: true } },
       },
     });
     if (
@@ -732,13 +736,19 @@ export class UsuariosService {
       });
       // El SSO de Ucheck entra por el vínculo guardado, no por el correo: si la
       // cuenta cambia de correo, el vínculo viejo llevaría a la persona anterior.
-      if (
-        dto.correo &&
-        dto.correo.toLowerCase() !== objetivo.correo.toLowerCase()
-      )
+      // Se vuelve a vincular recién cuando Ucheck tomó el correo nuevo en esa
+      // misma cuenta (ver UcheckUsuariosService).
+      const cambiaCorreo =
+        !!dto.correo &&
+        dto.correo.toLowerCase() !== objetivo.correo.toLowerCase();
+      if (cambiaCorreo)
         await this.prisma.identidadUcheck.deleteMany({
           where: { usuarioId: id },
         });
+      await this.ucheckUsuarios.marcar(
+        id,
+        cambiaCorreo ? objetivo.identidadUcheck?.ucheckUsuarioId : undefined,
+      );
       return aUsuarioDto(usuario);
     } catch (error: unknown) {
       relanzarDuplicado(
@@ -811,6 +821,7 @@ export class UsuariosService {
     } catch (error: unknown) {
       relanzarDuplicado(error, 'Ya existe un usuario con ese correo o RUC');
     }
+    await this.ucheckUsuarios.marcar(usuarioId);
   }
 
   /** Guarda la foto de perfil propia y borra la anterior del disco. */
@@ -909,6 +920,7 @@ export class UsuariosService {
       data: { isActive: false },
       select: { id: true },
     });
+    await this.ucheckUsuarios.marcar(id);
     return { ok: true };
   }
 }

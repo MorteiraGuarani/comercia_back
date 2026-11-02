@@ -171,7 +171,28 @@ guarda y COMERCIA trae la copia.
 
 - Cada persona que marca desde COMERCIA necesita una cuenta en UCHECK (vinculada
   o con el mismo correo) con un programa de COMERCIA habilitado. Sin ella no
-  puede marcar.
+  puede marcar. El ABM de usuarios la mantiene solo (ver abajo).
+
+## Usuarios: el ABM de COMERCIA manda en UCHECK
+
+Crear, editar (datos, correo, rol, activo) o dar de baja un usuario en COMERCIA
+se refleja en su cuenta de UCHECK (`PUT /comercia-integracion/usuarios`):
+
+- **Quién:** se crea en UCHECK quien tiene un rol con equipo operativo activo;
+  el resto solo se actualiza o desactiva si ya estaba vinculado. No se tocan
+  superadmins, cuentas `@sin-correo.invalid` ni las desvinculadas a mano.
+- **Empresa:** la de UCHECK con el mismo nombre que en COMERCIA (sin distinguir
+  mayúsculas ni acentos). Si no existe, el usuario queda pendiente.
+- **Programas:** equipo `REPOSITOR` → `COMERCIA_REPOSITOR`; supervisor o
+  TeamLeader → `COMERCIA_TEAMLEADER`; el resto del equipo → `COMERCIA`; todos con
+  `SEGUIMIENTO`. Solo se agregan o quitan esos cuatro, y solo los que la empresa
+  tiene habilitados; `UWEB` y los demás quedan como están.
+- **Baja:** lógica (`isActive=false`); marcaciones e historial se conservan.
+- **Si UCHECK no responde:** el cambio queda en `ucheck_usuarios_pendientes` y
+  `UcheckUsuariosService` lo reintenta cada minuto con espera creciente (hasta
+  1 h), sin perderlo. Siempre manda el estado actual completo: repetir no duplica.
+- **Cambio de correo:** el vínculo se borra al instante (el SSO no lleva a la
+  persona anterior) y vuelve cuando UCHECK cambió el correo de esa misma cuenta.
 - Desplegar **primero UCHECK y después COMERCIA**. Al revés, COMERCIA llamaría
   endpoints que todavía no existen y las marcas desde la web fallarían. En ese
   orden no se pierde nada: lo marcado mientras tanto queda en UCHECK hasta que
