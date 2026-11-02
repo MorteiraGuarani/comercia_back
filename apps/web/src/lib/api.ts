@@ -8,6 +8,8 @@ export class ApiError extends Error {
   constructor(
     public readonly status: number,
     message: string,
+    /** Motivo para decidir qué hacer (ej. TELEFONO_SIN_UBICACION). */
+    public readonly codigo?: string,
   ) {
     super(message);
   }
@@ -70,6 +72,9 @@ async function pedir<T>(path: string, init?: RequestInit): Promise<T> {
     throw new ApiError(
       res.status,
       extraerMensaje(data) ?? `Error ${res.status}`,
+      data && typeof data === "object" && "codigo" in data && typeof data.codigo === "string"
+        ? data.codigo
+        : undefined,
     );
   }
   return data as T;

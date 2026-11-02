@@ -33,10 +33,18 @@ import {
   conUbicacion,
 } from "@/utils/ruta-recomendada";
 import { mensajeError } from "@/utils/error";
-import type { MarcacionPendiente } from "@/types/seguimiento";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { ApiError, apiFetch } from "@/lib/api";
+import { obtenerPosicionPrecisa } from "@/lib/gps-preciso";
+import {
+  EVENTO_MARCAS_SIN_CONEXION,
+  esSinConexion,
+  guardarMarcaSinConexion,
+  leerMarcasSinConexion,
+} from "@/lib/marcas-sin-conexion";
+import { visitaSinConexion } from "@/utils/visita-sin-conexion";
+import { enviarMarcasYAvisar } from "./sincronizador-marcas";
 import { mostrarToast } from "@/components/toast/toast-controller";
 import { notificarJornadaMarcada } from "@/lib/eventos-plataforma";
 import { usePanel } from "@/components/panel/contexto";
@@ -49,14 +57,18 @@ import {
 } from "@/utils/fechas";
 import { SelectorFechaFiltro } from "./ui/selector-fecha-filtro";
 import { PantallaCarga } from "@/components/pantalla-carga";
-import { btnFinalizar, btnPrimary, errorBox } from "@/components/ui";
+import { btnFinalizar, btnGhost, btnPrimary, errorBox } from "@/components/ui";
 
 // Acciones secundarias de la tabla: compactas, con ícono y en una fila.
 const btnAccion =
   "inline-flex min-h-11 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border border-control-line bg-surface-raised px-3 text-xs font-semibold text-foreground transition hover:border-brand-500 hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-control-line disabled:hover:bg-surface-raised";
 import { TablaCampo } from "./tabla-campo";
-import type { AgendaCampo, LocalCampo, VisitaCampo } from "@/types/campo";
-import { ModalMarca } from "./modal-marca";
+import type {
+  AgendaCampo,
+  LocalCampo,
+  MarcaSinConexion,
+  VisitaCampo,
+} from "@/types/campo";
 import { TareasDeLocal } from "./tareas-de-local";
 import { InventarioLocalModal } from "./inventario-local-modal";
 
@@ -109,6 +121,32 @@ function AgendaDelDia({
   const [expandida, setExpandida] = useState<number | null | undefined>();
   const [visitaAbierta, setAbierta] = useState<VisitaCampo | null>(null);
   const abierta = visitaAbierta?.fecha.slice(0, 10) === hoyStr ? visitaAbierta : null;
+  // Marcas guardadas en este navegador sin conexión con Ucheck (se mandan solas).
+  const [versionCola, setVersionCola] = useState(0);
+  useEffect(() => {
+    const leer = () => setVersionCola((n) => n + 1);
+    void Promise.resolve().then(leer);
+    window.addEventListener(EVENTO_MARCAS_SIN_CONEXION, leer);
+    return () => window.removeEventListener(EVENTO_MARCAS_SIN_CONEXION, leer);
+  }, []);
+  const cola = useMemo(
+    () => (versionCola ? leerMarcasSinConexion(usuario.id) : []),
+    [usuario.id, versionCola],
+  );
+  const colaHoy = cola.filter((m) => m.fecha === hoyStr);
+  const salidaEnCola = (v: { asignacionId: number; horarioId: number | null }) =>
+    colaHoy.some(
+      (m) => m.tipo === "SALIDA" && m.asignacionId === v.asignacionId && m.horarioId === v.horarioId,
+    );
+  const entradaEnCola = colaHoy.find((m) => m.tipo === "ENTRADA" && !salidaEnCola(m));
+  // La visita en curso que se ve: la de Comercia, salvo que su salida esté
+  // guardada en este equipo, o la entrada guardada sin conexión.
+  const abiertaVista =
+    abierta && !salidaEnCola(abierta)
+      ? abierta
+      : entradaEnCola
+        ? visitaSinConexion(entradaEnCola, usuario)
+        : null;
   const [revision, setRevision] = useState(0);
   const [error, setError] = useState("");
   const [mapa, setMapa] = useState<LocalCampo | null>(null);
@@ -124,13 +162,6 @@ function AgendaDelDia({
   const [revisionTareas, setRevisionTareas] = useState(0);
   const [busqueda, setBusqueda] = useState("");
   const [filtro, setFiltro] = useState<FiltroRuta>("todos");
-  const [marca, setMarca] = useState<{
-    asignacionId: number;
-    horarioId?: number;
-    visitaId?: number;
-    nombre: string;
-    radioMetros: number;
-  } | null>(null);
   // Ruta recomendada (solo sugerencia): orden de los pendientes y punto de partida.
   const [ruta, setRuta] = useState<{
     origen: CoordenadaCampo;
@@ -159,35 +190,101 @@ function AgendaDelDia({
     lista.refrescar();
     setRevision((n) => n + 1);
   }
+  // Cuando se mandan marcas guardadas, la ruta trae las visitas de Comercia.
+  const [enviandoCola, setEnviandoCola] = useState(false);
+  const largoCola = useRef(0);
+  useEffect(() => {
+    if (cola.length < largoCola.current) actualizar();
+    largoCola.current = cola.length;
+  });
 
-  // Iniciar y Finalizar Visita no abren formulario: registran la marca con el
-  // teléfono en Ucheck y el resultado siempre llega en un toast. Sin Ucheck
-  // (marca con el GPS del navegador) sigue el modal.
-  const [marcando, setMarcando] = useState<{ nombre: string; entrada: boolean } | null>(null);
-  async function marcarVisita(m: NonNullable<typeof marca>) {
-    if (!esRepositor) {
-      setMarca(m);
-      return;
-    }
+  // Iniciar y Finalizar Visita no abren formulario y el resultado llega en un
+  // toast. Primero Ucheck toma la ubicación del teléfono en ese momento; si el
+  // teléfono no responde, va el GPS del navegador; y sin conexión con Ucheck la
+  // marca queda guardada en este navegador y se manda sola al volver.
+  const [marcando, setMarcando] = useState<{
+    nombre: string;
+    entrada: boolean;
+    paso: string;
+  } | null>(null);
+  async function marcarVisita(m: {
+    asignacionId: number;
+    horarioId: number | null;
+    fecha: string;
+    visitaId?: number;
+    local: MarcaSinConexion["local"];
+  }) {
     if (marcando) return;
     const entrada = !m.visitaId;
     const accion = entrada ? "iniciar" : "finalizar";
-    setMarcando({ nombre: m.nombre, entrada });
-    try {
-      const r = await apiFetch<{ estado?: "CONFIRMADA" | "PENDIENTE"; mensaje?: string }>(
+    const titulo = entrada ? "Visita iniciada" : "Visita finalizada";
+    const paso = (texto: string) =>
+      setMarcando({ nombre: m.local.nombre, entrada, paso: texto });
+    const marcar = (ubicacion?: MarcaSinConexion["ubicacion"]) =>
+      apiFetch<{ estado?: "CONFIRMADA" | "PENDIENTE"; mensaje?: string }>(
         entrada
           ? "/campo/jornada/repositor/entrada"
           : `/campo/jornada/repositor/visitas/${m.visitaId}/salida`,
         {
           method: "POST",
-          body: JSON.stringify(
-            entrada
-              ? { nota: "", asignacionId: m.asignacionId, horarioId: m.horarioId }
-              : { nota: "" },
-          ),
+          body: JSON.stringify({
+            nota: "",
+            ...(entrada
+              ? { asignacionId: m.asignacionId, horarioId: m.horarioId ?? undefined }
+              : {}),
+            ...(ubicacion ? { ubicacion } : {}),
+          }),
         },
       );
-      const titulo = entrada ? "Visita iniciada" : "Visita finalizada";
+    const gpsNavegador = async () => {
+      paso("Tomando la ubicación de este equipo");
+      const p = await obtenerPosicionPrecisa({ objetivoMetros: 15, maxMs: 10_000 });
+      return {
+        latitud: p.coords.latitude,
+        longitud: p.coords.longitude,
+        precisionMetros: p.coords.accuracy,
+        capturadaEn: new Date(p.timestamp).toISOString(),
+      };
+    };
+    const guardarEnEsteEquipo = async (ubicacion?: MarcaSinConexion["ubicacion"]) => {
+      const gps = ubicacion ?? (await gpsNavegador());
+      guardarMarcaSinConexion(usuario.id, {
+        id: crypto.randomUUID(),
+        tipo: entrada ? "ENTRADA" : "SALIDA",
+        asignacionId: m.asignacionId,
+        horarioId: m.horarioId,
+        fecha: m.fecha,
+        tomadaEn: new Date().toISOString(),
+        ubicacion: gps,
+        nota: "",
+        local: m.local,
+      });
+      mostrarToast(
+        "alerta",
+        `Sin conexión con Ucheck: la ${entrada ? "entrada" : "salida"} de ${m.local.nombre} quedó guardada en este equipo y se envía sola cuando vuelva la conexión. No borres los datos del navegador hasta que se envíe.`,
+        titulo,
+      );
+    };
+    try {
+      // La entrada todavía está en este equipo: la salida va detrás de ella.
+      if (m.visitaId !== undefined && m.visitaId < 0) return await guardarEnEsteEquipo();
+      paso("Pidiendo la ubicación al teléfono en Ucheck");
+      let r: Awaited<ReturnType<typeof marcar>>;
+      try {
+        r = await marcar();
+      } catch (e) {
+        if (esSinConexion(e)) return await guardarEnEsteEquipo();
+        if (!(e instanceof ApiError && e.codigo === "TELEFONO_SIN_UBICACION")) throw e;
+        // El teléfono no mandó su ubicación a tiempo: va la del navegador.
+        const ubicacion = await gpsNavegador();
+        paso("Registrando la visita en Ucheck");
+        try {
+          r = await marcar(ubicacion);
+        } catch (e2) {
+          if (esSinConexion(e2)) return await guardarEnEsteEquipo(ubicacion);
+          throw e2;
+        }
+      }
       if (r.estado === "PENDIENTE")
         mostrarToast(
           "alerta",
@@ -198,7 +295,7 @@ function AgendaDelDia({
       else
         mostrarToast(
           "exito",
-          `${entrada ? "Iniciaste" : "Finalizaste"} la visita a ${m.nombre}.`,
+          `${entrada ? "Iniciaste" : "Finalizaste"} la visita a ${m.local.nombre}.`,
           titulo,
         );
       actualizar();
@@ -218,10 +315,16 @@ function AgendaDelDia({
   const finalizarVisita = (v: VisitaCampo) =>
     marcarVisita({
       asignacionId: v.asignacionId,
+      horarioId: v.horarioId,
+      fecha: v.fecha.slice(0, 10),
       visitaId: v.id,
-      nombre: v.local.nombre,
-      radioMetros: v.local.radioMetros,
+      local: v.local,
     });
+  const localDe = (a: AgendaCampo) => ({
+    id: a.local.id,
+    nombre: a.local.nombre,
+    radioMetros: a.local.radioMetros,
+  });
 
   const hoy = new URLSearchParams(qsFecha).get("fecha") === hoyStr;
 
@@ -285,7 +388,7 @@ function AgendaDelDia({
       const gps = await posicionGps();
       // Sin GPS se parte del local de la visita en curso o del primer pendiente.
       const localActual = lista.items.find(
-        (a) => a.id === abierta?.asignacionId,
+        (a) => a.id === abiertaVista?.asignacionId,
       )?.local;
       const inicio =
         gps ??
@@ -361,8 +464,8 @@ function AgendaDelDia({
   // Se abre sola la tarjeta en curso hasta que el usuario elige otra.
   const idExpandida =
     expandida === undefined
-      ? (abierta && itemsOrdenados.some((a) => a.id === abierta.asignacionId)
-          ? abierta.asignacionId
+      ? (abiertaVista && itemsOrdenados.some((a) => a.id === abiertaVista.asignacionId)
+          ? abiertaVista.asignacionId
           : (itemsOrdenados.find((a) => a.estado === "en_curso")?.id ?? null))
       : expandida;
 
@@ -414,6 +517,39 @@ function AgendaDelDia({
           onFiltro={setFiltro}
         />
       </div>
+
+      {cola.length ? (
+        <div
+          role="status"
+          className="mb-3 flex min-w-0 flex-wrap items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100"
+        >
+          <p className="min-w-0 flex-1">
+            {cola.length === 1 ? "1 marca guardada" : `${cola.length} marcas guardadas`} en
+            este equipo sin conexión con Ucheck. Se envían solas cuando vuelve la conexión.
+          </p>
+          <button
+            type="button"
+            className={btnGhost}
+            disabled={enviandoCola}
+            onClick={() => {
+              setEnviandoCola(true);
+              void enviarMarcasYAvisar(usuario.id)
+                .then(({ enviadas, rechazadas }) => {
+                  if (!enviadas.length && !rechazadas.length)
+                    mostrarToast(
+                      "alerta",
+                      "Todavía no hay conexión con Ucheck. Se vuelve a intentar sola cada minuto.",
+                      "Marcas sin enviar",
+                    );
+                })
+                .catch(() => undefined)
+                .finally(() => setEnviandoCola(false));
+            }}
+          >
+            Enviar ahora
+          </button>
+        </div>
+      ) : null}
 
       {/* Buscador de locales de la agenda */}
       <div className={`mb-2 flex min-w-0 w-full items-center gap-2 sm:mb-3 ${esRepositor ? "" : "flex-wrap sm:justify-between"}`}>
@@ -614,8 +750,8 @@ function AgendaDelDia({
             titulo: "Visita",
             valor: (a) => {
               const enCurso =
-                abierta?.asignacionId === a.id
-                  ? abierta.entrada
+                abiertaVista?.asignacionId === a.id
+                  ? abiertaVista.entrada
                   : a.visitas.find((v) => v.estado === "EN_CURSO")?.entrada;
               const ultima = a.visitas.at(-1);
               const parada = numeroParada.get(a.id);
@@ -691,14 +827,14 @@ function AgendaDelDia({
             hoy={hoy}
             qsFecha={qsFecha}
             revisionTareas={revisionTareas}
-            visitaAbierta={abierta}
+            visitaAbierta={abiertaVista}
             onInventario={conInventario ? () => setInventarioDe(a.local.id) : undefined}
             onEntrada={(horarioId) =>
               void marcarVisita({
                 asignacionId: a.id,
-                horarioId,
-                nombre: a.local.nombre,
-                radioMetros: a.local.radioMetros,
+                horarioId: horarioId ?? null,
+                fecha: hoyStr,
+                local: localDe(a),
               })
             }
             onSalida={(v) => void finalizarVisita(v)}
@@ -708,10 +844,10 @@ function AgendaDelDia({
           />
         )}
         acciones={(a) => {
-          const aqui = abierta?.asignacionId === a.id;
+          const aqui = abiertaVista?.asignacionId === a.id;
           // Un solo "Marcar entrada": el del próximo horario sin visita.
           const proximo =
-            hoy && !abierta
+            hoy && !abiertaVista
               ? (a.local.horarios.length ? a.local.horarios : [null]).find(
                   (h) =>
                     !a.visitas.some((v) => v.horarioId === (h?.id ?? null)),
@@ -723,7 +859,7 @@ function AgendaDelDia({
                 <button
                   className={btnFinalizar}
                   disabled={!!marcando}
-                  onClick={() => void finalizarVisita(abierta)}
+                  onClick={() => void finalizarVisita(abiertaVista)}
                 >
                   Finalizar Visita
                 </button>
@@ -734,9 +870,9 @@ function AgendaDelDia({
                   onClick={() =>
                     void marcarVisita({
                       asignacionId: a.id,
-                      horarioId: proximo?.id,
-                      nombre: a.local.nombre,
-                      radioMetros: a.local.radioMetros,
+                      horarioId: proximo?.id ?? null,
+                      fecha: hoyStr,
+                      local: localDe(a),
                     })
                   }
                 >
@@ -790,10 +926,11 @@ function AgendaDelDia({
         mensaje="Calculando mejor ruta"
         detalle="Usamos tu GPS, los horarios y la distancia entre locales."
       />
+      <PantallaCarga visible={enviandoCola} mensaje="Enviando marcas guardadas a Ucheck" />
       <PantallaCarga
         visible={!!marcando}
         mensaje={marcando?.entrada ? "Iniciando visita" : "Finalizando visita"}
-        detalle={`Registrando la ${marcando?.entrada ? "entrada" : "salida"} de ${marcando?.nombre ?? ""} en Ucheck.`}
+        detalle={`${marcando?.paso ?? ""} · ${marcando?.nombre ?? ""}`}
       />
       {mapa ? <MapaLocal local={mapa} cerrar={() => setMapa(null)} /> : null}
       {novedadDe ? (
@@ -823,57 +960,6 @@ function AgendaDelDia({
             // Sin el ?tareas= el modal no se vuelve a abrir solo.
             if (pedidoTareas) window.history.replaceState(null, "", window.location.pathname);
             setRevisionTareas((n) => n + 1);
-          }}
-        />
-      ) : null}
-      {marca ? (
-        <ModalMarca
-          nombre={marca.nombre}
-          radioMetros={marca.radioMetros}
-          salida={!!marca.visitaId}
-          usarTelefonoUcheck={esRepositor}
-          alConfirmarPendiente={() => {
-            actualizar();
-            setMarca(null);
-          }}
-          cerrar={() => setMarca(null)}
-          guardar={async (datos) => {
-            const resultado = await apiFetch<{
-              estado?: "CONFIRMADA" | "PENDIENTE";
-              mensaje?: string;
-              operacionId?: string;
-            }>(
-              marca.visitaId
-                ? esRepositor
-                  ? `/campo/jornada/repositor/visitas/${marca.visitaId}/salida`
-                  : `/campo/jornada/visitas/${marca.visitaId}/salida`
-                : esRepositor
-                  ? "/campo/jornada/repositor/entrada"
-                  : "/campo/jornada/entrada",
-              {
-                method: "POST",
-                body: JSON.stringify({
-                  ...datos,
-                  ...(!marca.visitaId
-                    ? {
-                        asignacionId: marca.asignacionId,
-                        horarioId: marca.horarioId,
-                      }
-                    : {}),
-                }),
-              },
-            );
-            if (resultado.estado === "PENDIENTE" && resultado.operacionId)
-              return {
-                estado: "PENDIENTE",
-                operacionId: resultado.operacionId,
-                mensaje:
-                  resultado.mensaje ??
-                  "Marcación guardada en Ucheck, pendiente de sincronización.",
-              } satisfies MarcacionPendiente;
-            actualizar();
-            setMarca(null);
-            if (!marca.visitaId) notificarJornadaMarcada();
           }}
         />
       ) : null}

@@ -98,7 +98,8 @@ export default function PaginaModulo({
     if (pagina === "tareas") return <TareasPanel />;
     if (pagina === "ubicaciones") return <UbicacionesPanel />;
     // El supervisor recorre los locales que hereda de su cadena, igual que el
-    // repositor en Mi jornada; marca con el GPS del navegador, como el TeamLeader.
+    // repositor en Mi jornada, y marca como él: con la ubicación del teléfono
+    // en Ucheck.
     if (pagina === "itinerario")
       return usuario.rol?.equipoCampo?.activo ? (
         <JornadaPanel />
@@ -113,6 +114,8 @@ export default function PaginaModulo({
   }
 
   // MÓDULO: JEFATURA (avance de todo el organigrama del jefe)
+  if (modulo === "jefatura" && pagina === "desempeno")
+    return <SupervisionPanel vista="jefatura" />;
   if (modulo === "jefatura" && pagina === "avance")
     return (
       <div className="mx-auto w-full min-w-0 max-w-6xl p-4 text-foreground sm:p-6 lg:p-8">

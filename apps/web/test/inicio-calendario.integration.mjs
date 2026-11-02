@@ -231,7 +231,7 @@ const estadoGeneral = estadoReact({ 0: resumen, 1: 2, 2: 0, 11: `0|fecha=${hoy}`
 const { InicioResumen } = cargar("app/panel/page.tsx", {
   ...comun, react: estadoGeneral.react,
   "@/components/panel/enlace-panel": { EnlacePanel },
-  "@/components/campo/hoy-en-campo": {}, "@/components/campo/mi-dia-campo": {},
+  "@/components/campo/hoy-en-campo": {}, "@/components/campo/inicio-jefatura": {}, "@/components/campo/mi-dia-campo": {},
   "@/components/campo/ui/iconos-campo": {}, "@/components/campo/ui/periodo-inicio": {}, "@/components/campo/ui/ayuda-app": { AyudaApp: () => null },
   "@/utils/nombres-menu": cargar("utils/nombres-menu.ts"), "@/lib/disponibilidad-tareas": {},
 }, "module.exports.InicioResumen = InicioResumen;");

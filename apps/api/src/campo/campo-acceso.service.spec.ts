@@ -68,6 +68,26 @@ describe('Alcance de campo', () => {
     );
     expect(plataforma.exigirAccesoAlgunaPagina).not.toHaveBeenCalled();
   });
+  it('explica qué le falta al colaborador cuando su rol no tiene Mi jornada', async () => {
+    const { prisma, plataforma, service } = preparar();
+    prisma.usuario.findFirst.mockResolvedValueOnce({
+      id: 30,
+      nombre: 'Maria',
+      apellido: 'Gonzalez',
+      rol: { descripcion: 'Repositor_Tradicional' },
+    } as never);
+    plataforma.exigirAccesoAlgunaPagina.mockRejectedValueOnce(
+      new ForbiddenException('No tenés acceso a esta sección'),
+    );
+    jest
+      .spyOn(service, 'gestionar')
+      .mockRejectedValueOnce(new ForbiddenException('No tenés acceso a esta sección'));
+    (plataforma as unknown as { exigirAccesoPagina: jest.Mock }).exigirAccesoPagina =
+      jest.fn().mockRejectedValue(new ForbiddenException('No tenés acceso a esta sección'));
+    await expect(service.subordinado(lider, 30)).rejects.toThrow(
+      'Maria Gonzalez no puede recibir locales: su rol «Repositor_Tradicional» no tiene acceso a Mi jornada.',
+    );
+  });
   it('permite al supervisor asignar a los impulsadores de sus TeamLeaders', async () => {
     const { plataforma, service } = preparar();
     await expect(service.subordinado(lider, 30)).resolves.toEqual({ id: 30 });

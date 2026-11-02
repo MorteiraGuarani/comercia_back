@@ -6,6 +6,7 @@ import {
   IsBoolean,
   IsDateString,
   IsEnum,
+  IsIn,
   IsInt,
   IsNumber,
   IsOptional,
@@ -17,6 +18,7 @@ import {
   Min,
   MinLength,
   ValidateIf,
+  ValidateNested,
 } from 'class-validator';
 import {
   DestinatarioTareaCampo,
@@ -166,7 +168,34 @@ export class EntradaCampoDto extends MarcaCampoDto {
   @IsOptional() @IsInt() @Min(1) @Max(MAX_INT4) horarioId?: number;
 }
 
+/** GPS del navegador: respaldo cuando el teléfono no mandó su ubicación. */
+export class UbicacionNavegadorDto {
+  @IsNumber() @Min(-90) @Max(90) latitud!: number;
+  @IsNumber() @Min(-180) @Max(180) longitud!: number;
+  @IsNumber() @Min(0) @Max(5000) precisionMetros!: number;
+  @IsDateString() capturadaEn!: string;
+}
+
 export class MarcaRepositorCampoDto {
+  @IsString() @MaxLength(250) nota = '';
+  /** Sin ella, Ucheck espera la lectura del teléfono en ese momento. */
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => UbicacionNavegadorDto)
+  ubicacion?: UbicacionNavegadorDto;
+}
+
+/** Marca que la web guardó en el navegador porque no había conexión con Ucheck. */
+export class MarcaSinConexionCampoDto {
+  @IsIn(['ENTRADA', 'SALIDA']) tipo!: 'ENTRADA' | 'SALIDA';
+  @IsInt() @Min(1) @Max(MAX_INT4) asignacionId!: number;
+  @IsOptional() @IsInt() @Min(1) @Max(MAX_INT4) horarioId?: number;
+  @Matches(/^\d{4}-\d{2}-\d{2}$/) fecha!: string;
+  /** Hora real en que se tocó Iniciar o Finalizar. */
+  @IsDateString() tomadaEn!: string;
+  @ValidateNested()
+  @Type(() => UbicacionNavegadorDto)
+  ubicacion!: UbicacionNavegadorDto;
   @IsString() @MaxLength(250) nota = '';
 }
 

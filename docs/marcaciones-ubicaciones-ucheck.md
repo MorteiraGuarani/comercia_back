@@ -10,9 +10,18 @@ Aplica a todos los roles de campo: impulsadores, TeamLeaders y repositores.
 
 ## Flujo de una marcación desde la web de COMERCIA
 
-1. La persona toca **Marcar entrada** o **Marcar salida** en *Mi jornada → Mi
-   Ruta*. El modal toma la ubicación del navegador (los repositores usan la
-   última ubicación que mandó la app de UCHECK).
+1. La persona toca **Iniciar Visita** o **Finalizar Visita** en *Mi jornada* o
+   en *Gestión de campo → Itinerario*. Repositores, supervisores y TeamLeaders
+   marcan directo, sin modal, y el resultado llega en un toast. Habilita
+   cualquier programa de COMERCIA en UCHECK, no el nombre del rol.
+   - **Primero, el teléfono.** UCHECK espera hasta 20 s la primera lectura GPS
+     que la app mande *después* del toque (con el seguimiento activo llega cada
+     ~10 s). Nunca usa una anterior. La ubicación de una PC sale de Wi-Fi o IP,
+     con ±100 m o más, y no alcanza la precisión.
+   - **Si el teléfono no responde** (`codigo` TELEFONO_SIN_UBICACION), la web
+     toma el GPS del navegador y marca con él, también a través de UCHECK.
+   - **Sin conexión con UCHECK** (sin internet, o COMERCIA no llega a UCHECK:
+     `codigo` UCHECK_SIN_CONEXION), ver *Marcas guardadas sin conexión*.
 2. COMERCIA le manda la marca a UCHECK (`POST /comercia-integracion/marcar`).
 3. UCHECK la valida en ese momento: asignación vigente en la agenda de
    COMERCIA, franja horaria, GPS dentro del radio del local, ubicación reciente
@@ -34,13 +43,24 @@ Reintentar una marca no la duplica: cada marca lleva un identificador fijo
 Va de **UCHECK a COMERCIA**: es la marcación que UCHECK ya guardó, llegando como
 copia a `campo_visitas`. No significa que la marca no haya llegado a UCHECK.
 
-### Si UCHECK no responde
+### Marcas guardadas sin conexión
 
-La marca **no se guarda en ningún lado**: la persona ve «No se pudo conectar con
-Ucheck… reintentá» y tiene que volver a marcar. COMERCIA no la guarda para
-mandarla más tarde. Una cola así tendría que tratar la marca como «tomada sin
-conexión» (con la hora y el GPS del momento real), porque UCHECK rechaza
-ubicaciones de más de 2 minutos.
+Si no hay conexión con UCHECK, la web guarda la marca **en el navegador**
+(`localStorage`, por cuenta) con su hora real y el GPS del navegador. La ruta
+la muestra como visita en curso y deja finalizarla también sin conexión; un
+aviso cuenta cuántas quedan y tiene **Enviar ahora**.
+
+- Se mandan solas en orden (`SincronizadorMarcas`): al abrir el panel, al volver
+  la señal o la pestaña, y cada minuto, con
+  `POST /campo/jornada/marcas-sin-conexion`.
+- COMERCIA las reenvía a UCHECK con `registradaEn` (la hora real). UCHECK las
+  valida con esa hora, como las marcas offline de su app, las guarda y COMERCIA
+  trae la copia: recién ahí aparecen en Presentismo.
+- Reenviarlas no las duplica: UCHECK identifica cada marca por su operación.
+- Un corte deja el resto para el próximo intento. Un rechazo (fuera de radio,
+  horario, tareas del repositor sin terminar) se descarta y se avisa con un toast.
+- Viven solo en ese navegador: si se borran sus datos (o se cierra una ventana
+  privada) antes de enviarlas, se pierden.
 
 ### Sincronización de copias
 
@@ -110,9 +130,11 @@ guarda y COMERCIA trae la copia.
 
 **Web de COMERCIA**
 
-- `components/campo/jornada-panel.tsx`: Mi Ruta, desde donde se marca.
-- `components/campo/modal-marca.tsx`: toma la ubicación, manda la marca y, si
-  queda pendiente, consulta hasta que se confirma.
+- `components/campo/jornada-panel.tsx`: Mi Ruta e Itinerario, desde donde se
+  marca. `marcarVisita` pide la ubicación del teléfono, usa la del navegador de
+  respaldo o guarda la marca sin conexión, y avisa con un toast.
+- `lib/marcas-sin-conexion.ts` y `components/campo/sincronizador-marcas.tsx`:
+  las marcas guardadas en el navegador y su envío.
 - `components/campo/emisor-ubicacion.tsx`: manda los pings durante la jornada.
 
 **API de COMERCIA**

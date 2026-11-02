@@ -19,6 +19,7 @@ import { BotonInstalarPwa } from "@/components/instalacion-pwa";
 import { BadgeNotificaciones } from "@/components/campo/badge-notificaciones";
 import { SincronizadorInventario } from "@/components/campo/sincronizador-inventario";
 import { SincronizadorTareas } from "@/components/campo/sincronizador-tareas";
+import { SincronizadorMarcas } from "@/components/campo/sincronizador-marcas";
 import { EmisorUbicacion } from "@/components/campo/emisor-ubicacion";
 import { SelectorEquipoGestion } from "@/components/campo/selector-equipo-gestion";
 import { PerfilModal } from "@/components/perfil/perfil-modal";
@@ -204,9 +205,12 @@ export default function PanelLayout({
         ),
     ),
   ];
-  // Desempeño (gestion-campo/visitas) va segundo, después de Inicio (supervisores y team leaders).
+  // Desempeño (gestion-campo/visitas o, del jefe, jefatura/desempeno) va
+  // segundo, después de Inicio.
   const presentismo = enlaces.findIndex(
-    (e) => e.href === "/panel/gestion-campo/visitas",
+    (e) =>
+      e.href === "/panel/jefatura/desempeno" ||
+      e.href === "/panel/gestion-campo/visitas",
   );
   if (presentismo > 1) enlaces.splice(1, 0, ...enlaces.splice(presentismo, 1));
   const tieneInventario = modulos.some(
@@ -454,7 +458,10 @@ export default function PanelLayout({
             <SincronizadorInventario usuarioId={usuario.id} />
           ) : null}
           {usuario.rol?.equipoCampo && !usuario.esSuperadmin ? (
-            <SincronizadorTareas usuarioId={usuario.id} />
+            <>
+              <SincronizadorTareas usuarioId={usuario.id} />
+              <SincronizadorMarcas usuarioId={usuario.id} />
+            </>
           ) : null}
           {tieneAccesoUbicaciones &&
           usuario.rol?.equipoCampo?.activo &&

@@ -24,6 +24,8 @@ export class ConsultaSupervisionDto extends PaginacionDto {
 
 export interface ColaboradorResumenItem {
   id: number;
+  /** A cargo de quién está: arma la cascada del organigrama en Jefatura. */
+  superiorId: number | null;
   nombre: string;
   iniciales: string;
   zona: string;

@@ -178,7 +178,8 @@ export function TarjetaAgendaRepositor({
   const tareas = useResumenTareasLocal(
     a.id,
     qsFecha,
-    visitaAqui?.id ?? null,
+    // id -1: entrada guardada sin conexión, todavía sin visita en Comercia.
+    visitaAqui && visitaAqui.id > 0 ? visitaAqui.id : null,
     !soloConsulta && (!!visitaAqui || abierta),
     revisionTareas ?? 0,
   );

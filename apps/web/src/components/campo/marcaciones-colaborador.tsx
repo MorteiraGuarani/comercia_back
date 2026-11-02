@@ -15,12 +15,12 @@ import { PantallaCarga } from '../pantalla-carga';
 import { PRESENTISMO } from '@/utils/estado-jornada';
 import { StatusStamp } from './ui/status-stamp';
 
-export default function MarcacionesColaborador({ colaboradorId, periodo }: { colaboradorId: number; periodo: PeriodoFiltro }) {
+export default function MarcacionesColaborador({ colaboradorId, periodo, base = '/campo/supervision' }: { colaboradorId: number; periodo: PeriodoFiltro; /** Supervisión o jefatura. */ base?: string }) {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(7);
   const [revision, setRevision] = useState(0);
   const fechas = queryFechasCampo(periodo);
-  const ruta = `/campo/supervision/colaboradores/${colaboradorId}/marcaciones?${fechas ? `${fechas}&` : ''}page=${page}&limit=${limit}`;
+  const ruta = `${base}/colaboradores/${colaboradorId}/marcaciones?${fechas ? `${fechas}&` : ''}page=${page}&limit=${limit}`;
   const clave = `${ruta}:${revision}`;
   const [consulta, setConsulta] = useState<{clave: string; datos: RespuestaPaginada<DetalleMarcacion> | null; error: string | null}>({clave: '', datos: null, error: null});
   const [detalle, setDetalle] = useState<DetalleMarcacion | null>(null);

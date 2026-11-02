@@ -6,6 +6,7 @@ import { mensajeError } from "@/utils/error";
 import { TOKENS } from "./tokens";
 import { TopBar } from "./ui/top-bar";
 import { PantallaCarga } from "@/components/pantalla-carga";
+import { mostrarToast } from "@/components/toast/toast-controller";
 import { crearAvisoCampo } from "@/lib/api-adjuntos-campo";
 import { SelectorFotosCampo } from "./selector-fotos-campo";
 import { SelectorPaginado } from "@/components/selector-paginado";
@@ -142,8 +143,9 @@ export function AvisosPanel({
   const handleEnviar = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formMensaje.trim()) return;
+    // Toasts: el banner queda arriba de la página y no se ve desde el botón.
     if (formTipo === "SELECCION" && formDestinatarios.length === 0) {
-      setError("Selecciona uno o varios colaboradores.");
+      mostrarToast("alerta", "Selecciona uno o varios colaboradores.");
       return;
     }
     if (
@@ -152,7 +154,10 @@ export function AvisosPanel({
         !formHora ||
         (formFrecuencia === "SEMANAL" && !formDiasSemana.length))
     ) {
-      setError("Indica fecha, hora y los días de envío cuando corresponda.");
+      mostrarToast(
+        "alerta",
+        "Indica fecha, hora y los días de envío cuando corresponda.",
+      );
       return;
     }
 
@@ -196,7 +201,8 @@ export function AvisosPanel({
       setFormMensaje("");
       setFormFotos([]);
       setFormDestinatarios([]);
-      setExito(
+      mostrarToast(
+        "exito",
         formModo === "PROGRAMAR"
           ? "Aviso programado correctamente."
           : "Aviso enviado correctamente.",
@@ -206,7 +212,7 @@ export function AvisosPanel({
       setProgramadosPage(1);
       setTab(formModo === "PROGRAMAR" ? "programados" : "enviados");
     } catch (err) {
-      setError(mensajeError(err, "Error al enviar aviso."));
+      mostrarToast("error", mensajeError(err, "Error al enviar aviso."));
     } finally {
       setEnviando(false);
     }
@@ -594,10 +600,18 @@ export function AvisosPanel({
                 />
               </div>
 
+              <SelectorFotosCampo
+                archivos={formFotos}
+                onChange={setFormFotos}
+                disabled={enviando}
+              />
+
               <fieldset className="min-w-0 space-y-3 rounded-xl border border-line bg-surface-soft p-3 sm:p-4">
                 <legend className="px-1 text-xs font-bold uppercase tracking-wider text-muted">
                   Momento del envío
                 </legend>
+                {/* Opciones, no acciones: con el estilo del alcance para que
+                    no se confundan con el botón que envía. */}
                 <div className="grid grid-cols-2 gap-2">
                   {(["AHORA", "PROGRAMAR"] as const).map((modo) => (
                     <button
@@ -605,9 +619,18 @@ export function AvisosPanel({
                       type="button"
                       onClick={() => setFormModo(modo)}
                       aria-pressed={formModo === modo}
-                      className={`min-h-11 rounded-lg border px-2 text-sm font-semibold focus-visible:ring-2 focus-visible:ring-brand-600 ${formModo === modo ? "border-brand-700 bg-brand-700 text-white dark:border-brand-200 dark:bg-brand-200 dark:text-brand-950" : "border-line bg-surface-raised text-foreground hover:bg-surface-soft"}`}
+                      className={`flex min-h-11 min-w-0 items-center gap-2 rounded-lg border px-3 text-left text-sm font-semibold text-foreground focus-visible:ring-2 focus-visible:ring-brand-600 ${formModo === modo ? "border-brand-700 bg-brand-50 shadow-sm ring-1 ring-brand-700 dark:border-brand-200 dark:bg-brand-950" : "border-line bg-surface-raised hover:bg-surface-soft"}`}
                     >
-                      {modo === "AHORA" ? "Enviar ahora" : "Programar"}
+                      <span
+                        className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border"
+                        style={{ borderColor: formModo === modo ? TOKENS.ink : TOKENS.sub }}
+                        aria-hidden="true"
+                      >
+                        {formModo === modo && (
+                          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: TOKENS.ink }} />
+                        )}
+                      </span>
+                      {modo === "AHORA" ? "Ahora" : "Programado"}
                     </button>
                   ))}
                 </div>
@@ -741,13 +764,7 @@ export function AvisosPanel({
                 )}
               </fieldset>
 
-              <SelectorFotosCampo
-                archivos={formFotos}
-                onChange={setFormFotos}
-                disabled={enviando}
-              />
-
-              {/* Botón de envío */}
+              {/* Botón de envío: justo debajo del momento elegido */}
               <div className="grid min-w-0 grid-cols-2 gap-2 pt-2 sm:flex sm:justify-end">
                 <button
                   type="button"
@@ -767,8 +784,8 @@ export function AvisosPanel({
                   {enviando
                     ? "Guardando…"
                     : formModo === "PROGRAMAR"
-                      ? "Programar"
-                      : "Enviar"}
+                      ? "Programar aviso"
+                      : "Enviar aviso"}
                 </button>
               </div>
             </form>

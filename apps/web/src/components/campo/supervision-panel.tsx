@@ -4,7 +4,7 @@ import type { PeriodoFiltro } from "@/types/periodo-filtro";
 import Link from "next/link";
 import { PRESENTISMO, RUTA } from "@/utils/estado-jornada";
 
-import React, { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { apiFetch } from "@/lib/api";
 import { guardarCacheSesion, leerCacheSesion } from "@/lib/cache-sesion";
 import { usePanel } from "@/components/panel/contexto";
@@ -28,6 +28,8 @@ import {
 } from "./presentismo-equipo";
 import styles from "./presentismo.module.css";
 import MarcacionesColaborador from "./marcaciones-colaborador";
+import { GruposCascada, MigasCascada } from "./cascada-jefatura";
+import { arbolDesempeno, resumenRama, type NodoDesempeno } from "@/utils/desempeno-jefatura";
 import { SelectorFechaFiltro } from "./ui/selector-fecha-filtro";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { obtenerUrlFoto } from "@/lib/api-tareas";
@@ -112,6 +114,8 @@ type TabType = "resumen" | "rutas" | "tareas";
 
 interface SupervisionPanelProps {
   initialTab?: TabType;
+  /** "jefatura": el jefe recorre su organigrama en cascada (Jefatura · Desempeño). */
+  vista?: "equipo" | "jefatura";
 }
 
 function FotoEvidencia({
@@ -158,7 +162,9 @@ function FotoEvidencia({
 
 export function SupervisionPanel({
   initialTab = "resumen",
+  vista = "equipo",
 }: SupervisionPanelProps) {
+  const api = vista === "jefatura" ? "/campo/jefatura" : "/campo/supervision";
   const [tab, setTab] = useState<TabType>(initialTab);
   const [filtroEquipo, setFiltroEquipo] = useState("todos");
   const [actualizado, setActualizado] = useState<string | null>(null);
@@ -189,6 +195,34 @@ export function SupervisionPanel({
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Jefatura: rama del organigrama que se está mirando (ids desde arriba).
+  const [camino, setCamino] = useState<number[]>([]);
+  const arbol = useMemo(
+    () => (vista === "jefatura" && resumen ? arbolDesempeno(resumen.colaboradores) : []),
+    [resumen, vista],
+  );
+  // Si con otro período alguien ya no está, queda el último nivel que existe.
+  const ramas: NodoDesempeno[] = [];
+  for (const id of camino) {
+    const nodo = (ramas.at(-1)?.hijos ?? arbol).find((n) => n.persona.id === id);
+    if (!nodo) break;
+    ramas.push(nodo);
+  }
+  const nodoActual = ramas.at(-1);
+  const resumenVisible =
+    resumen && nodoActual ? resumenRama(resumen.fecha, nodoActual) : resumen;
+  // Quien tiene gente a cargo va en una tarjeta de su rama; el resto, en la
+  // lista de personas (con la persona del nivel, que también tiene su ruta).
+  const nivel = nodoActual ? nodoActual.hijos : arbol;
+  const grupos = nivel.filter((n) => n.hijos.length);
+  const sueltos =
+    vista === "jefatura"
+      ? [
+          ...(nodoActual ? [nodoActual.persona] : []),
+          ...nivel.filter((n) => !n.hijos.length).map((n) => n.persona),
+        ]
+      : (resumen?.colaboradores ?? []);
+
   // Colaborador seleccionado para inspección detallada
   const [colaboradorId, setColaboradorId] = useState<number | null>(null);
   const [detalleColab, setDetalleColab] =
@@ -200,7 +234,7 @@ export function SupervisionPanel({
   // Cargar resumen de supervisión según el período seleccionado
   const cargarResumen = useCallback(async () => {
     const peticion = ++peticionResumen.current;
-    const claveCache = `presentismo|${usuario.id}|${fechasPeriodo}`;
+    const claveCache = `presentismo|${vista}|${usuario.id}|${fechasPeriodo}`;
     const guardado = leerCacheSesion<SupervisionResumenData>(claveCache);
     if (guardado) {
       // Los últimos datos de este período se ven ya; los nuevos llegan después.
@@ -219,7 +253,7 @@ export function SupervisionPanel({
       setError(null);
       const query = fechasPeriodo;
       const data = await apiFetch<SupervisionResumenData>(
-        `/campo/supervision/resumen${query ? `?${query}` : ""}`,
+        `${api}/resumen${query ? `?${query}` : ""}`,
       );
       if (peticion !== peticionResumen.current) return;
       setResumen(data);
@@ -238,7 +272,7 @@ export function SupervisionPanel({
     } finally {
       if (peticion === peticionResumen.current) setCargando(false);
     }
-  }, [fechasPeriodo, usuario.id]);
+  }, [api, fechasPeriodo, usuario.id, vista]);
 
   useEffect(() => {
     void Promise.resolve().then(cargarResumen);
@@ -256,7 +290,7 @@ export function SupervisionPanel({
     try {
       const queryFecha = fechasPeriodo || `fecha=${hoyStr}`;
       const data = await apiFetch<ColaboradorDetalleData>(
-        `/campo/supervision/colaboradores/${id}?${queryFecha}`,
+        `${api}/colaboradores/${id}?${queryFecha}`,
       );
       if (peticion === peticionDetalle.current) setDetalleColab(data);
     } catch (e) {
@@ -378,6 +412,7 @@ export function SupervisionPanel({
               {subTabColab === "marcaciones" ? (
                 <MarcacionesColaborador
                   key={`${colaboradorId}:${fechasPeriodo}`}
+                  base={api}
                   colaboradorId={colaboradorId}
                   periodo={periodoVigente}
                 />
@@ -605,6 +640,40 @@ export function SupervisionPanel({
     );
   }
 
+  const listaEquipo = (
+    metric: "presentismo" | "ruta" | "tareas",
+    sub: "ruta" | "tareas",
+  ) => (
+    <>
+      {vista === "jefatura" ? (
+        <>
+          <MigasCascada
+            camino={ramas}
+            onIr={(n) => setCamino(ramas.slice(0, n).map((r) => r.persona.id))}
+          />
+          <GruposCascada
+            nodos={grupos}
+            metric={metric}
+            onAbrir={(n) => {
+              setCamino([...ramas.map((r) => r.persona.id), n.persona.id]);
+              setFiltroEquipo("todos");
+            }}
+          />
+        </>
+      ) : null}
+      {sueltos.length ? (
+        <EquipoPresentismo
+          key={`${resumen?.fecha}:${nodoActual?.persona.id ?? 0}`}
+          colaboradores={sueltos}
+          metric={metric}
+          filtro={filtroEquipo}
+          onFiltro={setFiltroEquipo}
+          onOpen={(id) => void abrirColaborador(id, sub)}
+        />
+      ) : null}
+    </>
+  );
+
   // Actualizar va en la primera card de cada pestaña: arriba ya no entra junto a los chips de fecha.
   const botonActualizar = (
     <button
@@ -626,7 +695,8 @@ export function SupervisionPanel({
         <div>
           <h1>Desempeño</h1>
           <p>
-            Equipo comercial · {resumen?.fecha ?? periodo.etiqueta}
+            {vista === "jefatura" ? "Tu organigrama" : "Equipo comercial"} ·{" "}
+            {resumen?.fecha ?? periodo.etiqueta}
             {actualizado ? ` · Actualizado ${actualizado}` : ""}
           </p>
         </div>
@@ -638,6 +708,7 @@ export function SupervisionPanel({
               setFiltroEquipo("todos");
             }}
           />
+          {vista === "equipo" ? (
           <Link
             href="/panel/organigrama"
             className={styles.organigrama}
@@ -662,6 +733,7 @@ export function SupervisionPanel({
             </svg>
             <span className="sr-only">Organigrama</span>
           </Link>
+          ) : null}
         </div>
       </header>
 
@@ -701,10 +773,10 @@ export function SupervisionPanel({
         ) : (
           <div className="flex flex-1 flex-col">
             {/* ==================== EQUIPO ==================== */}
-            {tab === "resumen" && resumen && (
+            {tab === "resumen" && resumenVisible && (
               <div className={styles.body}>
                 <ResumenPresentismo
-                  resumen={resumen}
+                  resumen={resumenVisible}
                   accion={botonActualizar}
                   onFiltrar={(valor) => {
                     setFiltroEquipo(valor);
@@ -716,46 +788,40 @@ export function SupervisionPanel({
                 />
                 <div
                   ref={equipoRef}
-                  className={`${styles.teamColumn} min-w-0 scroll-mt-24`}
+                  className={`${styles.teamColumn} min-w-0 scroll-mt-24 space-y-3`}
                 >
-                  <EquipoPresentismo
-                    key={resumen.fecha}
-                    colaboradores={resumen.colaboradores}
-                    filtro={filtroEquipo}
-                    onFiltro={setFiltroEquipo}
-                    onOpen={(id) => void abrirColaborador(id, "ruta")}
-                  />
+                  {listaEquipo("presentismo", "ruta")}
                 </div>
-                <AvancePresentismo resumen={resumen} />
+                <AvancePresentismo resumen={resumenVisible} />
               </div>
             )}
 
             {/* ==================== LOCALES ==================== */}
-            {tab === "rutas" && resumen && (
+            {tab === "rutas" && resumenVisible && (
               <div className="mx-auto w-full max-w-7xl flex-1 space-y-4 px-4 py-4 sm:px-6 sm:py-6 lg:px-8">
                 <ResumenAvance
                   accion={botonActualizar}
                   titulo="Visitas a locales del equipo"
-                  porcentaje={resumen.rutas.pct}
-                  total={resumen.rutas.total}
+                  porcentaje={resumenVisible.rutas.pct}
+                  total={resumenVisible.rutas.total}
                   segmentos={[
                     {
-                      valor: resumen.rutas.completadas,
+                      valor: resumenVisible.rutas.completadas,
                       clase: "bg-emerald-600 dark:bg-emerald-500",
                       etiqueta: "visitados",
                     },
                     {
-                      valor: resumen.rutas.enCurso,
+                      valor: resumenVisible.rutas.enCurso,
                       clase: RAYADO_EN_CURSO,
                       etiqueta: "en curso",
                     },
                     {
-                      valor: resumen.rutas.incompletas,
+                      valor: resumenVisible.rutas.incompletas,
                       clase: "bg-orange-500 dark:bg-orange-400",
                       etiqueta: "sin salida",
                     },
                     {
-                      valor: resumen.rutas.ausentes,
+                      valor: resumenVisible.rutas.ausentes,
                       clase: "bg-red-600 dark:bg-red-500",
                       etiqueta: "sin visitar",
                     },
@@ -763,44 +829,37 @@ export function SupervisionPanel({
                   conteos={[
                     {
                       etiqueta: "Visitados",
-                      valor: resumen.rutas.completadas,
+                      valor: resumenVisible.rutas.completadas,
                       clase: "text-emerald-700 dark:text-emerald-300",
                     },
                     {
                       etiqueta: "En curso",
-                      valor: resumen.rutas.enCurso,
+                      valor: resumenVisible.rutas.enCurso,
                       clase: "text-sky-700 dark:text-sky-300",
                     },
-                    { etiqueta: "Pendientes", valor: resumen.rutas.pendientes },
+                    { etiqueta: "Pendientes", valor: resumenVisible.rutas.pendientes },
                     {
                       etiqueta: "Sin visitar",
-                      valor: resumen.rutas.ausentes + resumen.rutas.incompletas,
+                      valor: resumenVisible.rutas.ausentes + resumenVisible.rutas.incompletas,
                       clase: "text-red-700 dark:text-red-300",
                     },
                   ]}
                 />
-                <EquipoPresentismo
-                  key={resumen.fecha}
-                  colaboradores={resumen.colaboradores}
-                  metric="ruta"
-                  filtro={filtroEquipo}
-                  onFiltro={setFiltroEquipo}
-                  onOpen={(id) => void abrirColaborador(id, "ruta")}
-                />
+                {listaEquipo("ruta", "ruta")}
               </div>
             )}
 
             {/* ==================== TAREAS ==================== */}
-            {tab === "tareas" && resumen && (
+            {tab === "tareas" && resumenVisible && (
               <div className="mx-auto w-full max-w-7xl flex-1 space-y-4 px-4 py-4 sm:px-6 sm:py-6 lg:px-8">
                 <ResumenAvance
                   accion={botonActualizar}
                   titulo="Tareas del equipo"
-                  porcentaje={resumen.tareas.pct}
-                  total={resumen.tareas.total}
+                  porcentaje={resumenVisible.tareas.pct}
+                  total={resumenVisible.tareas.total}
                   segmentos={[
                     {
-                      valor: resumen.tareas.completadas,
+                      valor: resumenVisible.tareas.completadas,
                       clase: "bg-brand-600 dark:bg-brand-500",
                       etiqueta: "hechas",
                     },
@@ -808,36 +867,29 @@ export function SupervisionPanel({
                   conteos={[
                     {
                       etiqueta: "Hechas",
-                      valor: resumen.tareas.completadas,
+                      valor: resumenVisible.tareas.completadas,
                       clase: "text-brand-700 dark:text-brand-200",
                     },
                     {
                       etiqueta: "Pendientes",
                       valor: Math.max(
                         0,
-                        resumen.tareas.total - resumen.tareas.completadas,
+                        resumenVisible.tareas.total - resumenVisible.tareas.completadas,
                       ),
                     },
                     {
                       etiqueta: "Obligatorias",
-                      valor: resumen.tareas.obligatoriasPendientes,
+                      valor: resumenVisible.tareas.obligatoriasPendientes,
                       clase: "text-red-700 dark:text-red-300",
                     },
                   ]}
                   aviso={
-                    resumen.tareas.obligatoriasPendientes > 0
-                      ? `${resumen.tareas.obligatoriasPendientes} tareas obligatorias pendientes en el equipo`
+                    resumenVisible.tareas.obligatoriasPendientes > 0
+                      ? `${resumenVisible.tareas.obligatoriasPendientes} tareas obligatorias pendientes en el equipo`
                       : undefined
                   }
                 />
-                <EquipoPresentismo
-                  key={resumen.fecha}
-                  colaboradores={resumen.colaboradores}
-                  metric="tareas"
-                  filtro={filtroEquipo}
-                  onFiltro={setFiltroEquipo}
-                  onOpen={(id) => void abrirColaborador(id, "tareas")}
-                />
+                {listaEquipo("tareas", "tareas")}
               </div>
             )}
           </div>

@@ -142,9 +142,12 @@ export class CampoAccesoService {
       return usuario;
     }
   }
-  /** Jefe: avance de todo su organigrama (módulo Jefatura, página Avance). */
+  /** Jefe: avance de todo su organigrama (módulo Jefatura: Avance o Desempeño). */
   jefatura(usuarioId: number) {
-    return this.plataforma.exigirAccesoPagina(usuarioId, 'jefatura', 'avance');
+    return this.plataforma.exigirAccesoAlgunaPagina(usuarioId, 'jefatura', [
+      'desempeno',
+      'avance',
+    ]);
   }
   async local(empresaId: number, id: string) {
     const local = await this.prisma.socioNegocio.findFirst({
@@ -161,11 +164,28 @@ export class CampoAccesoService {
     const personal = filtroPersonalEquipoOperativo(gestor);
     const colaborador = await this.prisma.usuario.findFirst({
       where: { AND: [personal, { id: usuarioId }] },
-      select: { id: true },
+      select: {
+        id: true,
+        nombre: true,
+        apellido: true,
+        rol: { select: { descripcion: true } },
+      },
     });
     if (!colaborador)
       throw new NotFoundException('Usuario no disponible en tu equipo');
-    await this.ejecutar(usuarioId);
+    try {
+      await this.ejecutar(usuarioId);
+    } catch (error) {
+      if (!(error instanceof ForbiddenException)) throw error;
+      // El gestor ya ve a su equipo: nombrar al colaborador y su rol no expone nada nuevo.
+      const quien = `${colaborador.nombre} ${colaborador.apellido}`.trim();
+      const rol = colaborador.rol?.descripcion ?? 'sin rol';
+      throw new ForbiddenException(
+        error.message === SIN_EQUIPO_OPERATIVO
+          ? `${quien} no puede recibir locales: su rol «${rol}» no tiene un equipo operativo activo. Configuralo en Roles.`
+          : `${quien} no puede recibir locales: su rol «${rol}» no tiene acceso a Mi jornada. Marcalo en Mi jornada › «Roles que ven el módulo».`,
+      );
+    }
     return { id: usuarioId };
   }
 }

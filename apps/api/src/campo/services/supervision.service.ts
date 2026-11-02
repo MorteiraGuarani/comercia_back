@@ -547,6 +547,7 @@ export class SupervisionService {
 
       colaboradores.push({
         id: user.id,
+        superiorId: user.superiorId,
         nombre: `${user.nombre} ${user.apellido}`,
         iniciales,
         zona: user.rol?.descripcion ?? 'Comercial',

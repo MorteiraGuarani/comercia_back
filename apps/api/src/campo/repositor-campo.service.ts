@@ -17,6 +17,8 @@ import { exigirEquipoCampo, EQUIPO_CAMPO_SELECT } from './utils/equipo-campo';
 import type {
   EntradaRepositorCampoDto,
   MarcaRepositorCampoDto,
+  MarcaSinConexionCampoDto,
+  UbicacionNavegadorDto,
 } from './dto/campo.dto';
 import type { MarcacionRepositorUcheck } from './interfaces/marcacion-repositor.interface';
 import { UcheckSincronizacionService } from '../ucheck/ucheck-sincronizacion.service';
@@ -29,7 +31,7 @@ type UbicacionMarca = {
   capturadaEn: string;
 };
 
-const ubicacionDe = (dto: MarcaCampoDto): UbicacionMarca => ({
+const ubicacionDe = (dto: UbicacionNavegadorDto): UbicacionMarca => ({
   latitud: dto.latitud,
   longitud: dto.longitud,
   precisionMetros: dto.precisionMetros,
@@ -142,8 +144,10 @@ export class RepositorCampoService {
     fecha: string;
     tipo: 'ENTRADA' | 'SALIDA';
     nota?: string;
-    /** Impulsadores y TeamLeaders: ubicación del navegador. Sin ella, la de la app. */
+    /** Ubicación del navegador. Sin ella, Ucheck espera la de su app. */
     ubicacion?: UbicacionMarca;
+    /** Hora real de una marca que la web guardó sin conexión. */
+    registradaEn?: string;
   }): Promise<MarcacionRepositorUcheck> {
     const usuario = await this.prisma.usuario.findUnique({
       where: { id: datos.usuarioId },
@@ -160,11 +164,7 @@ export class RepositorCampoService {
         },
       },
     });
-    if (
-      !usuario?.isActive ||
-      !usuario.rol?.equipoCampo?.activo ||
-      (!datos.ubicacion && usuario.rol.equipoCampo.tipo !== 'REPOSITOR')
-    )
+    if (!usuario?.isActive || !usuario.rol?.equipoCampo?.activo)
       throw new ForbiddenException('Marcación no disponible');
     if (!usuario.permitirVinculoAutomatico && !usuario.identidadUcheck)
       throw new ForbiddenException(
@@ -173,16 +173,18 @@ export class RepositorCampoService {
     const base = this.config.get<string>('integrations.ucheckApiUrl');
     const secreto = this.config.get<string>('integrations.ucheckSecret');
     if (!base || !secreto)
-      throw new ServiceUnavailableException(
-        'Ucheck no está configurado para registrar marcaciones',
-      );
+      throw new ServiceUnavailableException({
+        message: 'Ucheck no está configurado para registrar marcaciones',
+        codigo: 'UCHECK_SIN_CONEXION',
+      });
     let respuesta: Response;
     try {
       respuesta = await fetch(
         `${base.replace(/\/$/, '')}/comercia-integracion/marcar`,
         {
           method: 'POST',
-          signal: AbortSignal.timeout(15_000),
+          // Sin ubicación, Ucheck espera hasta 20 s la lectura del teléfono.
+          signal: AbortSignal.timeout(datos.ubicacion ? 15_000 : 35_000),
           headers: {
             Authorization: `Bearer ${secreto}`,
             'Content-Type': 'application/json',
@@ -195,28 +197,41 @@ export class RepositorCampoService {
             fecha: datos.fecha,
             tipo: datos.tipo,
             ubicacion: datos.ubicacion,
+            registradaEn: datos.registradaEn,
           }),
         },
       );
     } catch {
-      throw new ServiceUnavailableException(
-        'No se pudo conectar con Ucheck para confirmar la operación. Consultá la visita y reintentá; los reintentos no duplican la marcación',
-      );
+      // UCHECK_SIN_CONEXION: la web guarda la marca en el navegador.
+      throw new ServiceUnavailableException({
+        message:
+          'No se pudo conectar con Ucheck para confirmar la operación. Consultá la visita y reintentá; los reintentos no duplican la marcación',
+        codigo: 'UCHECK_SIN_CONEXION',
+      });
     }
     if (!respuesta.ok) {
       const cuerpo = (await respuesta.json().catch(() => null)) as {
         message?: string | string[];
+        codigo?: string;
       } | null;
       const mensaje = Array.isArray(cuerpo?.message)
         ? cuerpo.message.join('. ')
         : cuerpo?.message;
       if (respuesta.status >= 400 && respuesta.status < 500)
-        throw new BadRequestException(
-          typeof mensaje === 'string' ? mensaje : 'Ucheck rechazó la marcación',
-        );
-      throw new ServiceUnavailableException(
-        'Ucheck no pudo confirmar el resultado de la operación. Revisá la visita antes de reintentar',
-      );
+        throw new BadRequestException({
+          message:
+            typeof mensaje === 'string'
+              ? mensaje
+              : 'Ucheck rechazó la marcación',
+          // TELEFONO_SIN_UBICACION: la web reintenta con el GPS del navegador.
+          codigo: cuerpo?.codigo,
+        });
+      // Reintentar no duplica: Ucheck identifica cada marca por su operación.
+      throw new ServiceUnavailableException({
+        message:
+          'Ucheck no pudo confirmar el resultado de la operación. Revisá la visita antes de reintentar',
+        codigo: 'UCHECK_SIN_CONEXION',
+      });
     }
     const cuerpo = (await respuesta.json()) as MarcacionRepositorUcheck;
     if (
@@ -378,6 +393,7 @@ export class RepositorCampoService {
       fecha: hoy,
       tipo: 'ENTRADA',
       nota: dto.nota,
+      ubicacion: dto.ubicacion && ubicacionDe(dto.ubicacion),
     });
     return this.trasEntrada(usuarioId, resultado, dto.nota);
   }
@@ -406,11 +422,15 @@ export class RepositorCampoService {
   }
 
   /**
-   * Impulsadores y TeamLeaders desde la web: la marca se guarda en Ucheck con
-   * la ubicación del navegador. Ucheck valida asignación, franja, GPS y
+   * Roles que no son repositores (impulsadores, TeamLeaders, supervisores): la
+   * marca se guarda en Ucheck con la ubicación del navegador o, sin ella, con
+   * la del teléfono en Ucheck. Ucheck valida asignación, franja, GPS y
    * tolerancias con la agenda de Comercia.
    */
-  async entradaWeb(usuarioId: number, dto: EntradaCampoDto) {
+  async entradaWeb(
+    usuarioId: number,
+    dto: EntradaCampoDto | EntradaRepositorCampoDto,
+  ) {
     await this.acceso.ejecutar(usuarioId);
     const resultado = await this.enviar({
       usuarioId,
@@ -419,7 +439,10 @@ export class RepositorCampoService {
       fecha: relojCampo().fecha,
       tipo: 'ENTRADA',
       nota: dto.nota,
-      ubicacion: ubicacionDe(dto),
+      ubicacion:
+        'latitud' in dto
+          ? ubicacionDe(dto)
+          : dto.ubicacion && ubicacionDe(dto.ubicacion),
     });
     return this.trasEntrada(usuarioId, resultado, dto.nota);
   }
@@ -428,7 +451,11 @@ export class RepositorCampoService {
    * Salida desde la web. Devuelve null si la visita se abrió antes de pasar
    * por Ucheck: esa se cierra como antes, en Comercia.
    */
-  async salidaWeb(usuarioId: number, visitaId: number, dto: MarcaCampoDto) {
+  async salidaWeb(
+    usuarioId: number,
+    visitaId: number,
+    dto: MarcaCampoDto | MarcaRepositorCampoDto,
+  ) {
     const u = await this.acceso.ejecutar(usuarioId);
     const visita = await this.prisma.visitaCampo.findFirst({
       where: {
@@ -455,7 +482,10 @@ export class RepositorCampoService {
       fecha: visita.fecha.toISOString().slice(0, 10),
       tipo: 'SALIDA',
       nota: dto.nota,
-      ubicacion: ubicacionDe(dto),
+      ubicacion:
+        'latitud' in dto
+          ? ubicacionDe(dto)
+          : dto.ubicacion && ubicacionDe(dto.ubicacion),
     });
     if (resultado.estado === 'PENDIENTE') return resultado;
     if (dto.nota)
@@ -495,6 +525,31 @@ export class RepositorCampoService {
     });
     if (!visita?.ucheckJornadaId)
       throw new NotFoundException('Visita abierta no disponible');
+    await this.exigirTareasCompletas(u, visita);
+    const resultado = await this.enviar({
+      usuarioId,
+      asignacionId: visita.asignacionId,
+      horarioId: visita.horarioId,
+      fecha: visita.fecha.toISOString().slice(0, 10),
+      tipo: 'SALIDA',
+      nota: dto.nota,
+      ubicacion: dto.ubicacion && ubicacionDe(dto.ubicacion),
+    });
+    if (resultado.estado === 'PENDIENTE') return resultado;
+    if (dto.nota)
+      await this.prisma.visitaCampo.update({
+        where: { id: visita.id },
+        data: { notaSalida: dto.nota },
+        select: { id: true },
+      });
+    return { ok: true };
+  }
+
+  /** El repositor termina las tareas aplicables antes de cerrar la visita. */
+  private async exigirTareasCompletas(
+    u: Awaited<ReturnType<CampoAccesoService['ejecutar']>>,
+    visita: { id: number; localId: string; fecha: Date },
+  ) {
     const pendientes = await this.prisma.tareaCampo.count({
       where: {
         empresaId: u.empresaId,
@@ -536,21 +591,47 @@ export class RepositorCampoService {
           ? 'Completá la tarea pendiente antes de finalizar la visita'
           : `Completá las ${pendientes} tareas pendientes antes de finalizar la visita`,
       );
+  }
+
+  /**
+   * Marca que la web guardó en el navegador porque no había conexión con
+   * Ucheck: va con su hora y su GPS reales, y Ucheck la valida con esa hora.
+   * Reenviarla no la duplica (Ucheck identifica cada marca por su operación).
+   */
+  async marcaSinConexion(usuarioId: number, dto: MarcaSinConexionCampoDto) {
+    const u = await this.acceso.ejecutar(usuarioId);
+    const edad = Date.now() - new Date(dto.tomadaEn).getTime();
+    if (!(edad > -120_000 && edad < 7 * 86_400_000))
+      throw new BadRequestException(
+        'La hora de la marca guardada sin conexión no es válida',
+      );
+    // Las tareas del repositor no se saltean marcando sin conexión.
+    if (
+      dto.tipo === 'SALIDA' &&
+      exigirEquipoCampo(u.equipoCampo).tipo === 'REPOSITOR'
+    ) {
+      const visita = await this.prisma.visitaCampo.findFirst({
+        where: {
+          usuarioId,
+          asignacionId: dto.asignacionId,
+          horarioId: dto.horarioId ?? null,
+          fecha: fechaCampo(dto.fecha),
+          empresaId: u.empresaId,
+        },
+        select: { id: true, localId: true, fecha: true },
+      });
+      if (visita) await this.exigirTareasCompletas(u, visita);
+    }
     const resultado = await this.enviar({
       usuarioId,
-      asignacionId: visita.asignacionId,
-      horarioId: visita.horarioId,
-      fecha: visita.fecha.toISOString().slice(0, 10),
-      tipo: 'SALIDA',
+      asignacionId: dto.asignacionId,
+      horarioId: dto.horarioId,
+      fecha: dto.fecha,
+      tipo: dto.tipo,
       nota: dto.nota,
+      ubicacion: ubicacionDe(dto.ubicacion),
+      registradaEn: new Date(dto.tomadaEn).toISOString(),
     });
-    if (resultado.estado === 'PENDIENTE') return resultado;
-    if (dto.nota)
-      await this.prisma.visitaCampo.update({
-        where: { id: visita.id },
-        data: { notaSalida: dto.nota },
-        select: { id: true },
-      });
-    return { ok: true };
+    return { estado: resultado.estado ?? 'CONFIRMADA' };
   }
 }

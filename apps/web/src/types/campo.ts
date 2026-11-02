@@ -119,6 +119,25 @@ export interface VisitaCampo {
   asignacion: { usuario: PersonaCampo };
   _count: { cumplimientos: number };
 }
+/** Entrada o salida guardada en el navegador porque no llegó a Ucheck. */
+export interface MarcaSinConexion {
+  id: string;
+  tipo: "ENTRADA" | "SALIDA";
+  asignacionId: number;
+  horarioId: number | null;
+  fecha: string;
+  /** Hora real de la marca (cuando se tomó el GPS del navegador). */
+  tomadaEn: string;
+  ubicacion: {
+    latitud: number;
+    longitud: number;
+    precisionMetros: number;
+    capturadaEn: string;
+  };
+  nota: string;
+  /** Para mostrarla en la ruta y avisar qué pasó al enviarla. */
+  local: { id: string; nombre: string; radioMetros: number };
+}
 export interface AgendaCampo {
   estado: import("./estado-jornada").EstadoRuta;
   estadoPresentismo: import("./estado-jornada").EstadoPresentismo;
@@ -183,13 +202,6 @@ export interface FormTareaCampo {
   categoria?: string;
   esObligatoria?: boolean;
   estado?: "ABIERTA" | "CERRADA" | "CANCELADA";
-}
-export interface MarcaCampo {
-  latitud: number;
-  longitud: number;
-  precisionMetros: number;
-  capturadaEn: string;
-  nota: string;
 }
 
 // ========== COMENTARIOS ==========
@@ -428,6 +440,8 @@ export interface FormAvisoCampo {
 
 export interface ColaboradorResumen {
   id: number;
+  /** A cargo de quién está (cascada del organigrama en Jefatura). */
+  superiorId: number | null;
   nombre: string;
   iniciales: string;
   zona: string;

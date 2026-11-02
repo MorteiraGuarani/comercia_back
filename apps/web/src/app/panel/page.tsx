@@ -5,6 +5,7 @@ import { EnlacePanel } from "@/components/panel/enlace-panel";
 import { useEffect, useState } from "react";
 import { usePanel } from "@/components/panel/contexto";
 import { HoyEnCampo } from "@/components/campo/hoy-en-campo";
+import { InicioJefatura } from "@/components/campo/inicio-jefatura";
 import { MiDiaCampo } from "@/components/campo/mi-dia-campo";
 import {
   IconoFlechaDer,
@@ -46,6 +47,21 @@ export default function PanelInicioPage() {
     equipoActivo &&
     modulos.some(
       (m) => m.ruta === "gestion-campo" && m.paginas.some((p) => p.ruta === "itinerario"),
+    );
+
+  // El jefe (módulo Jefatura) ve su organigrama consolidado o por supervisor.
+  const esJefatura =
+    !usuario.esSuperadmin &&
+    modulos.some(
+      (m) =>
+        m.ruta === "jefatura" &&
+        m.paginas.some((p) => p.ruta === "desempeno" || p.ruta === "avance"),
+    );
+  if (esJefatura)
+    return (
+      <div className="mx-auto w-full min-w-0 max-w-6xl p-4 text-foreground sm:p-6 lg:p-8">
+        <InicioJefatura />
+      </div>
     );
 
   if (esLiderCampo || esPersonalCampo)

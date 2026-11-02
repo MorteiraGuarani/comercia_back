@@ -39,12 +39,6 @@ export interface RespuestaSeguimiento extends RespuestaPaginada<ColaboradorSegui
   };
 }
 
-export interface MarcacionPendiente {
-  estado: "PENDIENTE";
-  operacionId: string;
-  mensaje: string;
-}
-
 export interface EstadoTelefonoRepositor {
   estado:
     | "LISTO"

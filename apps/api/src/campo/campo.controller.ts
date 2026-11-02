@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -56,6 +57,7 @@ import {
   HorarioCampoDto,
   MarcaCampoDto,
   MarcaRepositorCampoDto,
+  MarcaSinConexionCampoDto,
   TareaCampoDto,
 } from './dto/campo.dto';
 import { CrearComentarioTareaDto } from './dto/comentario-tarea.dto';
@@ -415,11 +417,15 @@ export class CampoController {
       ? this.repositor.entrada(r.usuarioId, d)
       : this.repositor.entradaWeb(r.usuarioId, d);
   }
-  @Post('jornada/repositor/entrada') entradaRepositor(
+  // Marca con el teléfono en Ucheck: repositores y, en Itinerario, supervisores
+  // y TeamLeaders.
+  @Post('jornada/repositor/entrada') async entradaRepositor(
     @Req() r: RequestConUsuario,
     @Body() d: EntradaRepositorCampoDto,
   ) {
-    return this.repositor.entrada(r.usuarioId, d);
+    return (await this.repositor.esRepositor(r.usuarioId))
+      ? this.repositor.entrada(r.usuarioId, d)
+      : this.repositor.entradaWeb(r.usuarioId, d);
   }
   @Post('jornada/visitas/:id/salida') async salida(
     @Req() r: RequestConUsuario,
@@ -434,12 +440,30 @@ export class CampoController {
       this.jornada.salida(r.usuarioId, id, d)
     );
   }
-  @Post('jornada/repositor/visitas/:id/salida') salidaRepositor(
+  @Post('jornada/marcas-sin-conexion')
+  @ApiOperation({
+    summary:
+      'Entrada o salida que la web guardó en el navegador porque no había conexión con Ucheck. Va a Ucheck con su hora (`tomadaEn`) y su GPS reales; Ucheck la valida con esa hora. Reenviarla no la duplica. 503 con `codigo` UCHECK_SIN_CONEXION: la web la conserva y reintenta.',
+  })
+  marcaSinConexion(
+    @Req() r: RequestConUsuario,
+    @Body() d: MarcaSinConexionCampoDto,
+  ) {
+    return this.repositor.marcaSinConexion(r.usuarioId, d);
+  }
+  @Post('jornada/repositor/visitas/:id/salida') async salidaRepositor(
     @Req() r: RequestConUsuario,
     @Param('id', ParseIntPipe) id: number,
     @Body() d: MarcaRepositorCampoDto,
   ) {
-    return this.repositor.salida(r.usuarioId, id, d);
+    if (await this.repositor.esRepositor(r.usuarioId))
+      return this.repositor.salida(r.usuarioId, id, d);
+    const resultado = await this.repositor.salidaWeb(r.usuarioId, id, d);
+    if (!resultado)
+      throw new BadRequestException(
+        'Esta visita se abrió fuera de Ucheck: finalizala con la ubicación del navegador',
+      );
+    return resultado;
   }
   @Post('jornada/visitas/:visitaId/tareas/:tareaId') completar(
     @Req() r: RequestConUsuario,
@@ -641,7 +665,7 @@ export class CampoController {
   @Get('jefatura/resumen')
   @ApiOperation({
     summary:
-      'Requiere la página Avance del módulo Jefatura. Los mismos indicadores de supervisión, sumando a toda la cadena del jefe en el organigrama (cualquier rol con equipo operativo) y al personal de los equipos que supervisa.',
+      'Requiere la página Avance o Desempeño del módulo Jefatura. Los mismos indicadores de supervisión, sumando a toda la cadena del jefe en el organigrama (cualquier rol con equipo operativo) y al personal de los equipos que supervisa.',
   })
   resumenJefatura(
     @Req() r: RequestConUsuario,
@@ -657,6 +681,21 @@ export class CampoController {
     @Query() q: ConsultaSupervisionDto,
   ) {
     return this.supervisionService.detalleColaborador(
+      r.usuarioId,
+      id,
+      q,
+      'jefatura',
+    );
+  }
+
+  @Get('jefatura/colaboradores/:id/marcaciones')
+  @Header('Cache-Control', 'private, no-store')
+  marcacionesColaboradorJefatura(
+    @Req() r: RequestConUsuario,
+    @Param('id', ParseIntPipe) id: number,
+    @Query() q: ConsultaSupervisionDto,
+  ) {
+    return this.supervisionService.marcacionesColaborador(
       r.usuarioId,
       id,
       q,
