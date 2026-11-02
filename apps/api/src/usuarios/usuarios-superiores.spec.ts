@@ -50,7 +50,12 @@ function crear() {
   return {
     prisma,
     auth,
-    servicio: new UsuariosService(prisma as never, auth as never),
+    servicio: new UsuariosService(prisma as never, auth as never, {
+      // Sin la página Administración · Usuarios.
+      exigirAccesoPagina: jest
+        .fn()
+        .mockRejectedValue(new ForbiddenException('No tenés acceso a esta sección')),
+    } as never),
   };
 }
 const query = Object.assign(new ListarSuperioresDto(), {

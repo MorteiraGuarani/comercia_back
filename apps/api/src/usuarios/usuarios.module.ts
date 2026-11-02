@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
+import { PlataformaModule } from '../plataforma/plataforma.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { AdminUsuariosController } from './admin-usuarios.controller';
 import { UsuariosController } from './usuarios.controller';
@@ -9,7 +10,7 @@ import { VinculosUcheckController } from './vinculos-ucheck.controller';
 import { VinculosUcheckService } from './vinculos-ucheck.service';
 
 @Module({
-  imports: [PrismaModule, AuthModule],
+  imports: [PrismaModule, AuthModule, PlataformaModule],
   controllers: [
     UsuariosController,
     PerfilController,

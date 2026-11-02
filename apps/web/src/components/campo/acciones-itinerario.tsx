@@ -1,6 +1,6 @@
 import { IconoCalendario, IconoEquipo } from "./ui/iconos-campo";
 
-function IconoInfo({ className }: { className: string }) {
+export function IconoInfo({ className }: { className: string }) {
   return (
     <svg
       aria-hidden="true"
@@ -19,8 +19,8 @@ function IconoInfo({ className }: { className: string }) {
 
 /**
  * Info, Horarios (agenda) y Equipo (asignación) de un local. En la tabla van
- * como íconos; en la tarjeta del celular, en una fila de 44 px con texto y
- * Horarios primero, porque es la acción principal.
+ * como íconos; en la tarjeta del celular, Horarios y Equipo con texto a mitad
+ * de ancho cada uno, e Info como ícono junto al nombre (lo pone la tarjeta).
  */
 export function AccionesItinerario({
   nombre,
@@ -86,13 +86,13 @@ export function AccionesItinerario({
     <div
       className={
         tarjeta
-          ? "grid grid-cols-[minmax(0,1fr)_auto_auto] gap-2"
+          ? "grid grid-cols-2 gap-2"
           : "flex items-center gap-1.5"
       }
       aria-label={`Acciones de ${nombre}`}
     >
       {/* El orden del DOM sigue al visual para que el teclado recorra lo mismo que se ve. */}
-      {tarjeta ? [horarios, info, equipo] : [info, horarios, equipo]}
+      {tarjeta ? [horarios, equipo] : [info, horarios, equipo]}
     </div>
   );
 }

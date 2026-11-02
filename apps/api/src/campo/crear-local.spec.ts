@@ -134,6 +134,7 @@ describe('Alta de clientes desde PDV y rutas', () => {
         select: {
           CardCode: true,
           CardName: true,
+          AliasName: true,
           LicTradNum: true,
           Phone1: true,
           U_Latitud: true,
@@ -160,6 +161,7 @@ describe('Alta de clientes desde PDV y rutas', () => {
       longitud: null,
       radioMetros: 200,
       zonaHoraria: 'America/Asuncion',
+      alias: '',
       ruc: '',
       telefono: '',
       address: '',

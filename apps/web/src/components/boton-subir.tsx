@@ -3,9 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 
 const UMBRAL = 160;
+// Al final de la lista suele estar el paginado, justo debajo del botón: ahí se oculta.
+const FINAL = 140;
 
 function desplazamientoDe(objetivo: EventTarget | null): {
   y: number;
+  resto: number;
   nodo: HTMLElement | Window | null;
 } {
   if (
@@ -13,15 +16,23 @@ function desplazamientoDe(objetivo: EventTarget | null): {
     objetivo === document.documentElement ||
     objetivo === document.body
   ) {
+    const raiz = document.documentElement;
+    const y = window.scrollY || raiz.scrollTop;
     return {
-      y: window.scrollY || document.documentElement.scrollTop,
+      y,
+      resto: raiz.scrollHeight - window.innerHeight - y,
       nodo: window,
     };
   }
   if (objetivo instanceof HTMLElement) {
-    return { y: objetivo.scrollTop, nodo: objetivo };
+    const y = objetivo.scrollTop;
+    return {
+      y,
+      resto: objetivo.scrollHeight - objetivo.clientHeight - y,
+      nodo: objetivo,
+    };
   }
-  return { y: 0, nodo: null };
+  return { y: 0, resto: 0, nodo: null };
 }
 
 export function BotonSubir() {
@@ -31,9 +42,9 @@ export function BotonSubir() {
 
   useEffect(() => {
     function onScroll(evento: Event) {
-      const { y, nodo } = desplazamientoDe(evento.target);
+      const { y, resto, nodo } = desplazamientoDe(evento.target);
       if (!nodo) return;
-      const mostrar = y > UMBRAL;
+      const mostrar = y > UMBRAL && resto > FINAL;
       if (mostrar) destino.current = nodo;
       if (mostrar === visibleRef.current) return;
       visibleRef.current = mostrar;

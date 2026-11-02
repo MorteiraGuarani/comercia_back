@@ -72,6 +72,7 @@ describe('Alcance de Itinerario del supervisor impulsador', () => {
         empresaId: 10,
         OR: [
           { CardName: { contains: 'central', mode: 'insensitive' } },
+          { AliasName: { contains: 'central', mode: 'insensitive' } },
           { CardCode: { contains: 'central', mode: 'insensitive' } },
         ],
         asignaciones: { some: asignacion },
@@ -253,6 +254,7 @@ describe('Alcance de Itinerario del supervisor impulsador', () => {
       empresaId: 25,
       OR: [
         { CardName: { contains: 'norte', mode: 'insensitive' } },
+        { AliasName: { contains: 'norte', mode: 'insensitive' } },
         { CardCode: { contains: 'norte', mode: 'insensitive' } },
       ],
     };

@@ -32,6 +32,7 @@ import {
 } from '../common/utils/permisos-usuario';
 import { filtrosBusquedaUsuario } from '../common/utils/busqueda-usuario';
 import type { Prisma } from '../../generated/prisma/client';
+import { AccesoPlataformaService } from '../plataforma/acceso-plataforma.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   ActualizarUsuarioDto,
@@ -146,6 +147,7 @@ export class UsuariosService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auth: AuthService,
+    private readonly plataforma: AccesoPlataformaService,
   ) {}
 
   private async contexto(usuarioId: number): Promise<ContextoAdmin> {
@@ -160,16 +162,25 @@ export class UsuariosService {
       },
     });
     if (!actual || !actual.isActive) throw new UnauthorizedException();
-    if (!actual.esSuperadmin && !actual.rol?.esAdminTi) {
-      const permitido = puedeAdministrarUsuarios(
+    if (
+      !actual.esSuperadmin &&
+      !actual.rol?.esAdminTi &&
+      !puedeAdministrarUsuarios(
         actual.esSuperadmin,
         actual.rol?.descripcion ?? null,
-      );
-      if (!permitido) {
-        throw new ForbiddenException(
-          'No tenés permiso para administrar usuarios',
-        );
-      }
+      )
+    ) {
+      // Otros roles (back office…) con la página Administración · Usuarios:
+      // solo su empresa, como el gerente.
+      await this.plataforma
+        .exigirAccesoPagina(usuarioId, 'administracion', 'usuarios')
+        .catch((error: unknown) => {
+          if (error instanceof ForbiddenException)
+            throw new ForbiddenException(
+              'No tenés permiso para administrar usuarios',
+            );
+          throw error;
+        });
     }
     return {
       id: actual.id,
@@ -195,7 +206,10 @@ export class UsuariosService {
     const empresaId = this.empresaObjetivo(actual, query.empresaId);
     const where: Prisma.UsuarioWhereInput = {
       empresaId,
-      ...(actual.accesoGlobal ? {} : { esSuperadmin: false }),
+      // Superadmins y Admin TI (acceso a todas las empresas) solo los ve quien es global.
+      ...(actual.accesoGlobal
+        ? {}
+        : { esSuperadmin: false, NOT: { rol: { esAdminTi: true } } }),
       AND: filtrosBusquedaUsuario(query.buscar, true),
     };
     const { skip, take, page, limit } = rangoPaginacion(query);
@@ -226,7 +240,11 @@ export class UsuariosService {
   async listarRoles(usuarioId: number, query: ListarUsuariosDto) {
     const actual = await this.contexto(usuarioId);
     const empresaId = this.empresaObjetivo(actual, query.empresaId);
-    const where = { empresaId };
+    // El rol Admin TI ve todas las empresas: solo lo asigna quien ya es global.
+    const where = {
+      empresaId,
+      ...(actual.accesoGlobal ? {} : { esAdminTi: false }),
+    };
     const { skip, take, page, limit } = rangoPaginacion(query);
     const [total, items] = await Promise.all([
       this.prisma.rol.count({ where }),
@@ -439,6 +457,7 @@ export class UsuariosService {
   }
 
   private async validarAsignaciones(
+    actual: ContextoAdmin,
     empresaId: number,
     rolId: number | null,
     superiorId?: number | null,
@@ -455,7 +474,7 @@ export class UsuariosService {
     const [rol, superior] = await Promise.all([
       this.prisma.rol.findUnique({
         where: { id: rolId },
-        select: { id: true, empresaId: true, rolId: true },
+        select: { id: true, empresaId: true, rolId: true, esAdminTi: true },
       }),
       superiorId
         ? this.prisma.usuario.findUnique({
@@ -476,6 +495,12 @@ export class UsuariosService {
         'El rol no está disponible para esta empresa',
       );
     }
+    // Admin TI administra todas las empresas: asignarlo, o editar a quien lo
+    // tiene, queda para Admin TI y superadmin.
+    if (rol.esAdminTi && !actual.accesoGlobal)
+      throw new ForbiddenException(
+        'Solo Admin TI o un superadministrador administran el rol Admin TI',
+      );
     if (
       superiorId &&
       (!superior ||
@@ -556,6 +581,7 @@ export class UsuariosService {
       );
     }
     await this.validarAsignaciones(
+      actual,
       empresaId,
       dto.rolId ?? null,
       dto.superiorId,
@@ -644,6 +670,7 @@ export class UsuariosService {
     }
     const rolId = dto.rolId ?? objetivo.rolId;
     await this.validarAsignaciones(
+      actual,
       objetivo.empresaId,
       rolId,
       dto.superiorId === undefined ? objetivo.superiorId : dto.superiorId,
@@ -862,12 +889,18 @@ export class UsuariosService {
   ): Promise<{ ok: true }> {
     const objetivo = await this.prisma.usuario.findUnique({
       where: { id },
-      select: { id: true, empresaId: true, esSuperadmin: true },
+      select: {
+        id: true,
+        empresaId: true,
+        esSuperadmin: true,
+        rol: { select: { esAdminTi: true } },
+      },
     });
     if (
       !objetivo ||
       objetivo.esSuperadmin ||
-      (!actual.accesoGlobal && objetivo.empresaId !== actual.empresaId)
+      (!actual.accesoGlobal &&
+        (objetivo.empresaId !== actual.empresaId || objetivo.rol?.esAdminTi))
     ) {
       throw new NotFoundException('El usuario no existe');
     }

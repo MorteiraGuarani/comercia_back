@@ -3,7 +3,7 @@
 import type { LocalCampo } from "@/types/campo";
 import { FotoLocal } from "./ui/foto-local";
 import { IconoAlerta, IconoPin } from "./ui/iconos-campo";
-import { AccionesItinerario } from "./acciones-itinerario";
+import { AccionesItinerario, IconoInfo } from "./acciones-itinerario";
 
 // Fila de punto de venta en el celular (Itinerario de supervisores y back
 // office): identidad, dirección, quién lo atiende y las acciones en una fila.
@@ -46,6 +46,15 @@ export function TarjetaPdv({
           </h3>
           <p className="truncate font-mono text-xs text-muted">{local.id}</p>
         </div>
+        <button
+          type="button"
+          onClick={onInformacion}
+          aria-label={`Información de ${local.nombre}`}
+          title="Información"
+          className="-mr-1 -mt-1 grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-lg text-foreground transition-colors hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+        >
+          <IconoInfo className="h-5 w-5" />
+        </button>
       </div>
 
       {!sinDetalle && (

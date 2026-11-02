@@ -30,17 +30,21 @@ import { KpisRuta } from "./ui/kpis-ruta";
 import { TarjetaAgendaRepositor } from "./tarjeta-agenda-repositor";
 import { TablaCampo } from "./tabla-campo";
 import {
+  IconoCaja,
   IconoCalendario,
   IconoCruz,
   IconoMapa,
   IconoMensaje,
   IconoRefrescar,
   IconoRuta,
+  IconoTareas,
 } from "./ui/iconos-campo";
 import { SelectorFechaFiltro } from "./ui/selector-fecha-filtro";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import type { AgendaCampo, LocalCampo, VisitaCampo } from "@/types/campo";
 import { ModalNovedadLocal } from "./modal-novedad-local";
+import { InventarioLocalModal } from "./inventario-local-modal";
+import { TareasDeLocal } from "./tareas-de-local";
 
 // Leaflet solo se descarga al abrir un mapa.
 const MapaLocal = dynamic(
@@ -82,9 +86,16 @@ function RutaImpulsadorDelPeriodo({
   periodo: PeriodoFiltro;
   onPeriodo: (periodo: PeriodoFiltro) => void;
 }) {
-  const { usuario } = usePanel();
+  const { usuario, modulos } = usePanel();
   const hoyStr = useFechaCampo();
   const lista = useJornadaCompleta<AgendaCampo>(qsFecha);
+  // Igual que el repositor: tareas e inventario se abren desde el local.
+  const conInventario = modulos.some(
+    (m) => m.ruta === "mi-jornada" && m.paginas.some((p) => p.ruta === "inventario"),
+  );
+  const [inventarioDe, setInventarioDe] = useState<string | null>(null);
+  const [tareasDe, setTareasDe] = useState<AgendaCampo | null>(null);
+  const [revisionTareas, setRevisionTareas] = useState(0);
   const [visitaAbierta, setAbierta] = useState<VisitaCampo | null>(null);
   const abierta =
     visitaAbierta?.fecha.slice(0, 10) === hoyStr ? visitaAbierta : null;
@@ -598,8 +609,11 @@ function RutaImpulsadorDelPeriodo({
             alternar={() => setExpandida(idExpandida === a.id ? null : a.id)}
             qsFecha={qsFecha}
             visitaAbierta={abierta}
+            revisionTareas={revisionTareas}
             onMapa={() => setMapa(a.local)}
             onNovedad={() => setNovedadLocal(a.local)}
+            onTareas={() => setTareasDe(a)}
+            onInventario={conInventario ? () => setInventarioDe(a.local.id) : undefined}
           />
         )}
         acciones={(a) => (
@@ -612,6 +626,36 @@ function RutaImpulsadorDelPeriodo({
             >
               <IconoMapa className="h-4 w-4" /> Mapa
             </button>
+            <button
+              type="button"
+              onClick={() => setTareasDe(a)}
+              disabled={abierta?.asignacionId !== a.id}
+              title={
+                abierta?.asignacionId === a.id
+                  ? undefined
+                  : "Iniciá la visita para ver las tareas"
+              }
+              className={btnAccion}
+              aria-label={`Tareas de ${a.local.nombre}`}
+            >
+              <IconoTareas className="h-4 w-4" /> Tareas
+            </button>
+            {conInventario ? (
+              <button
+                type="button"
+                onClick={() => setInventarioDe(a.local.id)}
+                disabled={!a.visitas.some((v) => v.estado === "EN_CURSO")}
+                title={
+                  a.visitas.some((v) => v.estado === "EN_CURSO")
+                    ? undefined
+                    : "Iniciá la visita para usar el inventario"
+                }
+                className={btnAccion}
+                aria-label={`Inventario de ${a.local.nombre}`}
+              >
+                <IconoCaja className="h-4 w-4" /> Inventario
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={() => setNovedadLocal(a.local)}
@@ -650,6 +694,25 @@ function RutaImpulsadorDelPeriodo({
             abierta?.local.id === novedadLocal.id ? abierta.id : undefined
           }
           cerrar={() => setNovedadLocal(null)}
+        />
+      ) : null}
+      {inventarioDe ? (
+        <InventarioLocalModal
+          key={inventarioDe}
+          localId={inventarioDe}
+          textoCerrar="Volver a la visita"
+          onCerrar={() => setInventarioDe(null)}
+        />
+      ) : null}
+      {tareasDe ? (
+        <TareasDeLocal
+          agenda={tareasDe}
+          qsFecha={qsFecha}
+          abierta={abierta}
+          cerrar={() => {
+            setTareasDe(null);
+            setRevisionTareas((n) => n + 1);
+          }}
         />
       ) : null}
     </>

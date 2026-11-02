@@ -84,6 +84,19 @@ assert.ok(botones(tarjeta).some((b) => texto(b).includes("Tareas") && !b.props.d
 tarjeta = TarjetaAgendaRepositor({ ...base, visitaAbierta: visita, soloConsulta: true });
 assert.equal(consultarTareas, false);
 assert.equal(boton(tarjeta, "Finalizar Visita"), undefined, "Una visita abierta no habilita marcaciones en la variante impulsador");
+// El impulsador marca en UCheck, pero con la visita en curso hace tareas e inventario como el repositor.
+let tareasImpulsador = 0;
+const impulsador = { ...base, soloConsulta: true, onTareas: () => { tareasImpulsador++; }, onInventario: () => { inventarios++; } };
+tarjeta = TarjetaAgendaRepositor(impulsador);
+assert.equal(boton(tarjeta, "Inventario").props.disabled, true, "Sin visita en curso, el inventario espera");
+assert.ok(botones(tarjeta).some((b) => texto(b).includes("Tareas") && b.props.disabled));
+tarjeta = TarjetaAgendaRepositor({ ...impulsador, agenda: enCurso, visitaAbierta: visita });
+assert.equal(consultarTareas, true, "Con la visita abierta consulta el avance de tareas");
+boton(tarjeta, "Inventario").props.onClick();
+assert.equal(inventarios, 2);
+botones(tarjeta).find((b) => texto(b).includes("Tareas")).props.onClick();
+assert.equal(tareasImpulsador, 1);
+assert.equal(boton(tarjeta, "Iniciar Visita"), undefined, "Sigue sin marcar entrada desde Comercia");
 
 let indice = 0;
 const valores = [];
@@ -104,7 +117,9 @@ const mapas = [];
 const { RutaImpulsadorDelPeriodo, RutaImpulsadorPanel } = cargar("components/campo/ruta-impulsador-panel.tsx", {
   react, "next/dynamic": { default: () => stub }, "@/lib/api": {},
   "@/hooks/use-jornada-completa": { useJornadaCompleta: () => ({ items, total: items.length, cargando: false, error: null, refrescar: () => { recargas++; } }) },
-  "@/hooks/use-fecha-campo": { useFechaCampo: () => hoy }, "@/components/panel/contexto": { usePanel: () => ({ usuario: { nombre: "Ana Campo" } }) },
+  "@/hooks/use-fecha-campo": { useFechaCampo: () => hoy },
+  "@/components/panel/contexto": { usePanel: () => ({ usuario: { nombre: "Ana Campo" }, modulos: [{ ruta: "mi-jornada", paginas: [{ ruta: "locales" }, { ruta: "inventario" }] }] }) },
+  "./inventario-local-modal": { InventarioLocalModal: stub }, "./tareas-de-local": { TareasDeLocal: stub },
   "@/utils/fechas": fechas, "@/utils/distancia": distancia, "@/utils/ruta-recomendada": ruta,
   "@/utils/error": { mensajeError: (error) => error.message }, "@/utils/estado-jornada": estados,
   "./ui/estado-ruta-simple": { EstadoRutaSimple }, "./ui/saludo-ruta": { SaludoRuta }, "./ui/kpis-ruta": { KpisRuta },
@@ -137,6 +152,8 @@ nodos(pantalla).find((n) => n.type === "input").props.onChange({ target: { value
 pantalla = render();
 assert.equal(tabla(pantalla).props.lista.items[0].id, 8, "Busca en toda la ruta, también fuera de la página visible");
 assert.equal(tabla(pantalla).props.tarjetaMovil(items[0]).props.soloConsulta, true);
+assert.equal(typeof tabla(pantalla).props.tarjetaMovil(items[0]).props.onInventario, "function", "Con la página Inventario, el impulsador la abre desde el local");
+assert.equal(typeof tabla(pantalla).props.tarjetaMovil(items[0]).props.onTareas, "function");
 boton(pantalla, "Calcular ruta").props.onClick();
 await new Promise((resolve) => setImmediate(resolve));
 pantalla = render();

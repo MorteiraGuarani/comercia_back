@@ -1,6 +1,10 @@
 jest.mock('../prisma/prisma.service', () => ({ PrismaService: class {} }));
 jest.mock('../auth/auth.service', () => ({ AuthService: class {} }));
-import { type INestApplication, ValidationPipe } from '@nestjs/common';
+import {
+  ForbiddenException,
+  type INestApplication,
+  ValidationPipe,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import type { Server } from 'node:http';
@@ -8,6 +12,7 @@ import request from 'supertest';
 import { AuthService } from '../auth/auth.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { SuperadminGuard } from '../auth/superadmin.guard';
+import { AccesoPlataformaService } from '../plataforma/acceso-plataforma.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsuariosController } from './usuarios.controller';
 import { AdminUsuariosController } from './admin-usuarios.controller';
@@ -44,6 +49,15 @@ describe('HTTP: selector de superiores', () => {
         SuperadminGuard,
         { provide: AuthService, useValue: {} },
         { provide: PrismaService, useValue: prisma },
+        {
+          // Sin la página Administración · Usuarios: el colaborador sigue sin permiso.
+          provide: AccesoPlataformaService,
+          useValue: {
+            exigirAccesoPagina: jest
+              .fn()
+              .mockRejectedValue(new ForbiddenException('No tenés acceso a esta sección')),
+          },
+        },
         {
           provide: JwtService,
           useValue: { verify: jest.fn().mockReturnValue({ sub: 1 }) },

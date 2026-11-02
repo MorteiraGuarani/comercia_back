@@ -51,6 +51,18 @@ export interface ColaboradorResumenItem {
   novedadesCount: number;
 }
 
+/**
+ * Mando intermedio del organigrama sin trabajo de campo (jefe, gerente, back
+ * office): solo arma la cascada, no suma a los indicadores.
+ */
+export interface PersonaEstructuraItem {
+  id: number;
+  superiorId: number | null;
+  nombre: string;
+  iniciales: string;
+  zona: string;
+}
+
 export interface SupervisionResumenDto {
   fecha: string;
   liderazgo: {
@@ -89,4 +101,6 @@ export interface SupervisionResumenDto {
     pct: number;
   };
   colaboradores: ColaboradorResumenItem[];
+  /** Solo en Jefatura: los mandos intermedios de la cadena. */
+  estructura?: PersonaEstructuraItem[];
 }

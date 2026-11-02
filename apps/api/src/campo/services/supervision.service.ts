@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import type { Prisma } from '../../../generated/prisma/client';
 import { CampoAccesoService } from '../campo-acceso.service';
 import {
   ColaboradorResumenItem,
@@ -23,6 +24,7 @@ import {
   obtenerEquipoCompleto,
   obtenerPersonalJefatura,
 } from '../utils/autorizacion';
+import { alcanceGestor } from '../utils/equipos-gestion';
 import type { VistaSupervision } from '../interfaces/vista-supervision.interface';
 import {
   destinatarioCampo,
@@ -96,11 +98,12 @@ export class SupervisionService {
   private async alcance(usuarioId: number, vista: VistaSupervision) {
     if (vista === 'jefatura') {
       const u = await this.acceso.jefatura(usuarioId);
-      return {
-        u,
-        ids: await obtenerPersonalJefatura(this.prisma, u),
-        propio: false,
-      };
+      const [ids, gestion] = await Promise.all([
+        obtenerPersonalJefatura(this.prisma, u),
+        alcanceGestor(this.prisma, u.id),
+      ]);
+      // El equipo elegido arriba ("Equipo") filtra el personal de campo.
+      return { u, ids, propio: false, equipoId: gestion?.activo?.id ?? null };
     }
     const u = await this.acceso.gestionar(usuarioId, 'visitas');
     return {
@@ -108,6 +111,7 @@ export class SupervisionService {
       ids: await this.idsEquipo(u),
       propio:
         !u.gestor && exigirEquipoCampo(u.equipoCampo).tipo !== 'REPOSITOR',
+      equipoId: null,
     };
   }
 
@@ -141,7 +145,7 @@ export class SupervisionService {
     query: ConsultaSupervisionDto,
     vista: VistaSupervision = 'equipo',
   ): Promise<SupervisionResumenDto> {
-    const { u, ids, propio } = await this.alcance(usuarioId, vista);
+    const { u, ids, propio, equipoId } = await this.alcance(usuarioId, vista);
     const ahora = new Date();
     const esRango = Boolean(query.fechaInicio && query.fechaFin);
     const fechaTexto = esRango
@@ -155,19 +159,24 @@ export class SupervisionService {
 
     // Sin colaboradores, el impulsador se ve a sí mismo.
     const idsConsultar = ids.length ? ids : propio ? [u.id] : [];
+    // En el organigrama del jefe hay roles sin trabajo de campo (back
+    // office, otras jefaturas): solo suma quien tiene equipo operativo.
+    const deCampo: Prisma.RolWhereInput = {
+      equipoCampo: {
+        activo: true,
+        tipo: { in: ['IMPULSADOR', 'REPOSITOR'] },
+      },
+    };
 
-    const usuarios = await this.prisma.usuario.findMany({
+    const [usuarios, mandos] = await Promise.all([
+      this.prisma.usuario.findMany({
       where: {
         id: { in: idsConsultar },
         empresaId: u.empresaId,
         isActive: true,
-        // En el organigrama del jefe hay roles sin trabajo de campo (back
-        // office, otras jefaturas): solo suma quien tiene equipo operativo.
         rol: {
-          equipoCampo: {
-            activo: true,
-            tipo: { in: ['IMPULSADOR', 'REPOSITOR'] },
-          },
+          ...deCampo,
+          ...(equipoId ? { equipoCampoId: equipoId } : {}),
         },
       },
       select: {
@@ -184,7 +193,28 @@ export class SupervisionService {
         },
       },
       orderBy: [{ nombre: 'asc' }, { id: 'asc' }],
-    });
+      }),
+      // Jefatura: los mandos intermedios (gerente › jefe › …) arman la cascada.
+      vista === 'jefatura'
+        ? this.prisma.usuario.findMany({
+            where: {
+              id: { in: idsConsultar },
+              empresaId: u.empresaId,
+              isActive: true,
+              NOT: { rol: deCampo },
+            },
+            select: {
+              id: true,
+              nombre: true,
+              apellido: true,
+              superiorId: true,
+              rol: { select: { descripcion: true } },
+            },
+            orderBy: [{ nombre: 'asc' }, { id: 'asc' }],
+            take: 2000,
+          })
+        : Promise.resolve([]),
+    ]);
 
     const colaboradores: ColaboradorResumenItem[] = [];
 
@@ -621,6 +651,18 @@ export class SupervisionService {
         pct: totalTareasPct,
       },
       colaboradores,
+      ...(vista === 'jefatura'
+        ? {
+            estructura: mandos.map((m) => ({
+              id: m.id,
+              superiorId: m.superiorId,
+              nombre: `${m.nombre} ${m.apellido}`,
+              iniciales:
+                `${m.nombre[0] ?? ''}${m.apellido[0] ?? ''}`.toUpperCase(),
+              zona: m.rol?.descripcion ?? 'Sin rol',
+            })),
+          }
+        : {}),
     };
   }
 

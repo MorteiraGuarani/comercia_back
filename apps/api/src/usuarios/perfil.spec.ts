@@ -28,6 +28,7 @@ describe('Mis datos (perfil propio)', () => {
     const service = new UsuariosService(
       prisma as unknown as PrismaService,
       {} as AuthService,
+      {} as never,
     );
     return { prisma, service };
   }

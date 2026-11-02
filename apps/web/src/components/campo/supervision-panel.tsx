@@ -28,8 +28,13 @@ import {
 } from "./presentismo-equipo";
 import styles from "./presentismo.module.css";
 import MarcacionesColaborador from "./marcaciones-colaborador";
-import { GruposCascada, MigasCascada } from "./cascada-jefatura";
-import { arbolDesempeno, resumenRama, type NodoDesempeno } from "@/utils/desempeno-jefatura";
+import { FiltrosJefatura, GruposCascada, MigasCascada } from "./cascada-jefatura";
+import {
+  arbolDesempeno,
+  caminoHasta,
+  resumenRama,
+  type NodoDesempeno,
+} from "@/utils/desempeno-jefatura";
 import { SelectorFechaFiltro } from "./ui/selector-fecha-filtro";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { obtenerUrlFoto } from "@/lib/api-tareas";
@@ -198,7 +203,10 @@ export function SupervisionPanel({
   // Jefatura: rama del organigrama que se está mirando (ids desde arriba).
   const [camino, setCamino] = useState<number[]>([]);
   const arbol = useMemo(
-    () => (vista === "jefatura" && resumen ? arbolDesempeno(resumen.colaboradores) : []),
+    () =>
+      vista === "jefatura" && resumen
+        ? arbolDesempeno(resumen.colaboradores, resumen.estructura)
+        : [],
     [resumen, vista],
   );
   // Si con otro período alguien ya no está, queda el último nivel que existe.
@@ -218,7 +226,8 @@ export function SupervisionPanel({
   const sueltos =
     vista === "jefatura"
       ? [
-          ...(nodoActual ? [nodoActual.persona] : []),
+          // Un mando (jefe, gerente) no tiene ruta propia: no va en la lista.
+          ...(nodoActual && !nodoActual.estructural ? [nodoActual.persona] : []),
           ...nivel.filter((n) => !n.hijos.length).map((n) => n.persona),
         ]
       : (resumen?.colaboradores ?? []);
@@ -736,6 +745,19 @@ export function SupervisionPanel({
           ) : null}
         </div>
       </header>
+
+      {vista === "jefatura" ? (
+        <div className="bg-surface-raised px-4 pb-3 sm:px-6">
+          <FiltrosJefatura
+            arbol={arbol}
+            valor={nodoActual?.persona.id ?? 0}
+            onCambiar={(id) => {
+              setCamino(id ? caminoHasta(arbol, id) : []);
+              setFiltroEquipo("todos");
+            }}
+          />
+        </div>
+      ) : null}
 
       {/* Pestañas arriba en todos los tamaños: la barra inferior propia quedaba
           tapada por la navegación de la app en el celular. */}

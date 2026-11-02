@@ -142,12 +142,25 @@ export class CampoAccesoService {
       return usuario;
     }
   }
-  /** Jefe: avance de todo su organigrama (módulo Jefatura: Avance o Desempeño). */
+  /**
+   * Administración · Organigrama (back office…): el organigrama de toda su
+   * empresa; null si el rol no tiene la página.
+   */
+  organigramaEmpresa(usuarioId: number) {
+    return this.plataforma
+      .exigirAccesoPagina(usuarioId, 'administracion', 'organigrama')
+      .catch((error: unknown) => {
+        if (error instanceof ForbiddenException) return null;
+        throw error;
+      });
+  }
+  /** Jefe o gerente: todo su organigrama (módulo Jefatura, página Desempeño). */
   jefatura(usuarioId: number) {
-    return this.plataforma.exigirAccesoAlgunaPagina(usuarioId, 'jefatura', [
+    return this.plataforma.exigirAccesoPagina(
+      usuarioId,
+      'jefatura',
       'desempeno',
-      'avance',
-    ]);
+    );
   }
   async local(empresaId: number, id: string) {
     const local = await this.prisma.socioNegocio.findFirst({

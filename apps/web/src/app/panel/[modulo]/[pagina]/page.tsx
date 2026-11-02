@@ -30,9 +30,6 @@ const TareasImpulsadorPanel = dynamic(() =>
     (m) => m.TareasImpulsadorPanel,
   ),
 );
-const HoyEnCampo = dynamic(() =>
-  import("@/components/campo/hoy-en-campo").then((m) => m.HoyEnCampo),
-);
 const NovedadesPanel = dynamic(() =>
   import("@/components/campo/novedades-panel").then((m) => m.NovedadesPanel),
 );
@@ -44,6 +41,18 @@ const InventarioPanel = dynamic(
   () =>
     import("@/components/campo/inventario-panel").then(
       (m) => m.InventarioPanel,
+    ),
+  { ssr: false },
+);
+
+const UsuariosPanel = dynamic(() =>
+  import("@/components/usuarios/usuarios-panel").then((m) => m.UsuariosPanel),
+);
+// Solo en el navegador: arranca con el zoom según el ancho de la pantalla.
+const OrganigramaPanel = dynamic(
+  () =>
+    import("@/components/organigrama/organigrama-panel").then(
+      (m) => m.OrganigramaPanel,
     ),
   { ssr: false },
 );
@@ -113,15 +122,19 @@ export default function PaginaModulo({
       );
   }
 
-  // MÓDULO: JEFATURA (avance de todo el organigrama del jefe)
+  // MÓDULO: JEFATURA (desempeño de todo el organigrama del jefe o gerente)
   if (modulo === "jefatura" && pagina === "desempeno")
     return <SupervisionPanel vista="jefatura" />;
-  if (modulo === "jefatura" && pagina === "avance")
+
+  // MÓDULO: ADMINISTRACIÓN (back office…): usuarios y organigrama de su empresa.
+  if (modulo === "administracion" && pagina === "usuarios")
     return (
-      <div className="mx-auto w-full min-w-0 max-w-6xl p-4 text-foreground sm:p-6 lg:p-8">
-        <HoyEnCampo vista="jefatura" />
+      <div className="w-full min-w-0 p-4 sm:p-6 lg:p-8">
+        <UsuariosPanel soloSuperadmin={false} />
       </div>
     );
+  if (modulo === "administracion" && pagina === "organigrama")
+    return <OrganigramaPanel />;
 
   // MÓDULO: MI JORNADA (IMPULSADOR / REPOSITOR DE CAMPO)
   if (modulo === "mi-jornada") {

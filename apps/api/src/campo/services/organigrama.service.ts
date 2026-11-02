@@ -58,8 +58,16 @@ export class OrganigramaService {
     let empresaId: number;
     let raizId: number | null = null;
     let ids: number[] | null = null;
+    const empresaCompleta = superadmin
+      ? null
+      : await this.acceso.organigramaEmpresa(usuarioId);
     if (superadmin) empresaId = q.empresaId ?? yo.empresaId;
-    else {
+    else if (empresaCompleta) {
+      // Administración · Organigrama: toda su empresa, nunca otra.
+      if (q.empresaId !== undefined && q.empresaId !== empresaCompleta.empresaId)
+        throw new ForbiddenException('Sin acceso a esa empresa');
+      empresaId = empresaCompleta.empresaId;
+    } else {
       const lider = await this.acceso.gestionar(usuarioId, 'visitas');
       if (q.empresaId !== undefined && q.empresaId !== lider.empresaId)
         throw new ForbiddenException('Sin acceso a esa empresa');

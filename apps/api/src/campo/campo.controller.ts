@@ -660,12 +660,12 @@ export class CampoController {
     return this.supervisionService.marcacionesColaborador(r.usuarioId, id, q);
   }
 
-  // ========== JEFATURA: AVANCE DE TODO EL ORGANIGRAMA ==========
+  // ========== JEFATURA: DESEMPEÑO DE TODO EL ORGANIGRAMA ==========
 
   @Get('jefatura/resumen')
   @ApiOperation({
     summary:
-      'Requiere la página Avance o Desempeño del módulo Jefatura. Los mismos indicadores de supervisión, sumando a toda la cadena del jefe en el organigrama (cualquier rol con equipo operativo) y al personal de los equipos que supervisa.',
+      'Requiere la página Desempeño del módulo Jefatura. Los mismos indicadores de supervisión, sumando a toda la cadena del jefe o gerente en el organigrama (cualquier rol con equipo operativo) y al personal de los equipos que supervisa; con un equipo elegido, solo ese. `estructura` trae los mandos intermedios sin equipo operativo (jefes, gerentes) para armar la cascada; no suman a los indicadores.',
   })
   resumenJefatura(
     @Req() r: RequestConUsuario,

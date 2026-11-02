@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { usePanel } from "@/components/panel/contexto";
 import { HoyEnCampo } from "@/components/campo/hoy-en-campo";
 import { InicioJefatura } from "@/components/campo/inicio-jefatura";
+import { esInicioJefatura } from "@/utils/inicio-jefatura";
 import { MiDiaCampo } from "@/components/campo/mi-dia-campo";
 import {
   IconoFlechaDer,
@@ -50,14 +51,7 @@ export default function PanelInicioPage() {
     );
 
   // El jefe (módulo Jefatura) ve su organigrama consolidado o por supervisor.
-  const esJefatura =
-    !usuario.esSuperadmin &&
-    modulos.some(
-      (m) =>
-        m.ruta === "jefatura" &&
-        m.paginas.some((p) => p.ruta === "desempeno" || p.ruta === "avance"),
-    );
-  if (esJefatura)
+  if (esInicioJefatura(usuario.esSuperadmin === true, modulos))
     return (
       <div className="mx-auto w-full min-w-0 max-w-6xl p-4 text-foreground sm:p-6 lg:p-8">
         <InicioJefatura />
@@ -550,8 +544,8 @@ function descripcionPagina(modulo: string, pagina: string) {
     "gestion-campo/tareas": "Protocolos y tareas asignadas al equipo.",
     "gestion-campo/itinerario":
       "Tu ruta: los locales de tu equipo, sus horarios y tus tareas.",
-    "jefatura/avance":
-      "Avance de visitas, presentismo y tareas de todo tu organigrama.",
+    "jefatura/desempeno":
+      "Visitas, presentismo y tareas de todo tu organigrama, por equipo y responsable.",
     "mi-jornada/locales":
       "Tu ruta de hoy: locales, horarios, mapas y novedades.",
     "mi-jornada/tareas": "Actividades por local y registro de fotos.",

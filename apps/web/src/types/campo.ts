@@ -507,6 +507,17 @@ export interface SupervisionResumenData {
     pct: number;
   };
   colaboradores: ColaboradorResumenItem[];
+  /** Solo en Jefatura: mandos intermedios sin equipo de campo (gerente › jefe › …). */
+  estructura?: PersonaEstructura[];
+}
+
+/** Arma la cascada del organigrama; no suma a los indicadores. */
+export interface PersonaEstructura {
+  id: number;
+  superiorId: number | null;
+  nombre: string;
+  iniciales: string;
+  zona: string;
 }
 
 export interface ParadaRutaColaborador {

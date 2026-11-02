@@ -86,7 +86,13 @@ describe('Personal de los ABM por equipo operativo', () => {
             { id: 22 },
           ],
         },
-        select: { id: true },
+        // Nombre y rol solo arman el mensaje si al colaborador le falta Mi jornada.
+        select: {
+          id: true,
+          nombre: true,
+          apellido: true,
+          rol: { select: { descripcion: true } },
+        },
       });
       expect(plataforma.exigirAccesoAlgunaPagina).toHaveBeenCalledWith(
         22,

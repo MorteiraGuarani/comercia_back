@@ -1,13 +1,59 @@
 "use client";
 
+import { usePanel } from "@/components/panel/contexto";
+import { inputBase, labelBase } from "@/components/ui";
 import type { NodoDesempeno } from "@/utils/desempeno-jefatura";
-import { personasRama } from "@/utils/desempeno-jefatura";
+import { aCargo, personasRama, responsablesCascada } from "@/utils/desempeno-jefatura";
 import { pct } from "@/utils/hoy-en-campo";
+import { SelectorEquipoGestion } from "./selector-equipo-gestion";
 import { BarraSegmentos, RAYADO_EN_CURSO } from "./ui/barra-segmentos";
 import { ORDEN_PRESENTISMO, PRESENTISMO_UI, enfoqueTablero } from "./ui/tablero-campo";
 
-// Desempeño de Jefatura: el organigrama del jefe se recorre en cascada
-// (supervisores → TeamLeaders → impulsadores y repositores).
+// Desempeño de Jefatura: el organigrama del jefe o gerente se recorre en
+// cascada (jefes → supervisores → TeamLeaders → impulsadores y repositores).
+
+/**
+ * Los dos filtros de Jefatura (Inicio y Desempeño): con qué equipo trabaja y
+ * qué responsable mira, de cualquier nivel de la cascada.
+ */
+export function FiltrosJefatura({
+  arbol,
+  valor,
+  onCambiar,
+}: {
+  arbol: NodoDesempeno[];
+  /** Persona elegida; 0 = todo el organigrama. */
+  valor: number;
+  onCambiar: (id: number) => void;
+}) {
+  const { usuario } = usePanel();
+  // Misma condición que la franja superior del panel, que en Jefatura no se muestra.
+  const conEquipos = !!usuario.rol?.gestionaEquipos && !usuario.esSuperadmin;
+  const responsables = responsablesCascada(arbol);
+  return (
+    <div className={`grid min-w-0 max-w-2xl gap-3 ${conEquipos ? "grid-cols-2" : ""}`}>
+      {conEquipos ? (
+        <SelectorEquipoGestion equipo={usuario.rol?.equipoGestion ?? null} enLinea />
+      ) : null}
+      <label className={`${labelBase} min-w-0`}>
+        Responsable
+        <select
+          value={responsables.some((r) => r.nodo.persona.id === valor) ? valor : 0}
+          onChange={(e) => onCambiar(Number(e.target.value))}
+          className={`${inputBase} min-w-0 cursor-pointer truncate font-semibold`}
+        >
+          <option value={0}>Todos · Consolidado</option>
+          {responsables.map(({ nodo, nivel }) => (
+            <option key={nodo.persona.id} value={nodo.persona.id}>
+              {"— ".repeat(nivel)}
+              {nodo.persona.nombre} · {aCargo(nodo)} a cargo
+            </option>
+          ))}
+        </select>
+      </label>
+    </div>
+  );
+}
 
 /** Dónde está parado el jefe: toda la organización › supervisor › TeamLeader. */
 export function MigasCascada({
@@ -153,7 +199,7 @@ export function GruposCascada({
                   <span className="min-w-0 flex-1">
                     <strong className="block truncate text-sm text-foreground">{nodo.persona.nombre}</strong>
                     <span className="block truncate text-xs text-muted">
-                      {nodo.persona.zona} · {rama.length - 1} a cargo
+                      {nodo.persona.zona} · {aCargo(nodo)} a cargo
                     </span>
                   </span>
                   <span className="ft-display shrink-0 text-2xl font-bold tabular-nums text-foreground">

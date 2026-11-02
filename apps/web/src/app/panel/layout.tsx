@@ -22,6 +22,7 @@ import { SincronizadorTareas } from "@/components/campo/sincronizador-tareas";
 import { SincronizadorMarcas } from "@/components/campo/sincronizador-marcas";
 import { EmisorUbicacion } from "@/components/campo/emisor-ubicacion";
 import { SelectorEquipoGestion } from "@/components/campo/selector-equipo-gestion";
+import { esInicioJefatura } from "@/utils/inicio-jefatura";
 import { PerfilModal } from "@/components/perfil/perfil-modal";
 import { urlFotoPerfil } from "@/lib/api-perfil";
 import { PantallaCarga } from "@/components/pantalla-carga";
@@ -411,7 +412,11 @@ export default function PanelLayout({
               </div>
             </div>
           </header>
-          {usuario.rol?.gestionaEquipos && !usuario.esSuperadmin ? (
+          {/* En Jefatura (su Inicio y Desempeño) va junto al filtro de responsable. */}
+          {usuario.rol?.gestionaEquipos &&
+          !usuario.esSuperadmin &&
+          !pathname.startsWith("/panel/jefatura/") &&
+          !(pathname === "/panel" && esInicioJefatura(false, modulos)) ? (
             <SelectorEquipoGestion equipo={usuario.rol.equipoGestion ?? null} />
           ) : null}
 

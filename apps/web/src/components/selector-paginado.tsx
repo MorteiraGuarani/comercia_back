@@ -26,6 +26,7 @@ export function SelectorPaginado<TId extends number | string = number>({
   placeholder = "Seleccioná o escribí para buscar",
   compacto = false,
   limite = 7,
+  opcionVacia,
 }: {
   url: string;
   etiqueta: string;
@@ -43,6 +44,8 @@ export function SelectorPaginado<TId extends number | string = number>({
   compacto?: boolean;
   /** Opciones por página al abrir (7 por defecto). */
   limite?: number;
+  /** Solo con buscable: primera opción sin ID (p. ej. «Todos»). Escribir no la elige. */
+  opcionVacia?: { texto: string; onElegir: () => void };
 }) {
   const [datos, setDatos] = useState<RespuestaPaginada<
     OpcionSelector<TId>
@@ -110,6 +113,9 @@ export function SelectorPaginado<TId extends number | string = number>({
   }, [url, page, limit, intento, buscar, buscable]);
 
   const opciones = (datos?.items ?? []).filter((item) => item.id !== excluirId);
+  // null = la opción vacía; va primero mientras no se busca.
+  const lista: (OpcionSelector<TId> | null)[] =
+    opcionVacia && !buscar.trim() ? [null, ...opciones] : opciones;
   const fueraDePagina =
     value !== "" && !opciones.some((item) => item.id === value);
   const seleccion =
@@ -132,10 +138,12 @@ export function SelectorPaginado<TId extends number | string = number>({
     setActiva(-1);
     setAbierto(true);
   }
-  function elegir(item: OpcionSelector<TId>) {
+  function elegir(item: OpcionSelector<TId> | null) {
     setElegida(item);
-    onChange(item.id);
-    onSeleccionar?.(item);
+    if (item) {
+      onChange(item.id);
+      onSeleccionar?.(item);
+    } else opcionVacia?.onElegir();
     setEditando(false);
     setAbierto(false);
     setActiva(-1);
@@ -187,17 +195,17 @@ export function SelectorPaginado<TId extends number | string = number>({
               if (e.key === "ArrowDown" || e.key === "ArrowUp") {
                 e.preventDefault();
                 abrir();
-                if (!cargando && !error && opciones.length)
+                if (!cargando && !error && lista.length)
                   setActiva((n) =>
                     e.key === "ArrowDown"
-                      ? Math.min(n + 1, opciones.length - 1)
+                      ? Math.min(n + 1, lista.length - 1)
                       : Math.max(n - 1, 0),
                   );
               }
               if (e.key === "Enter") {
                 e.preventDefault();
-                if (abierto && !cargando && !error && opciones[activa])
-                  elegir(opciones[activa]);
+                if (abierto && !cargando && !error && activa >= 0 && activa < lista.length)
+                  elegir(lista[activa]);
                 else abrir();
               }
             }}
@@ -278,19 +286,22 @@ export function SelectorPaginado<TId extends number | string = number>({
                 className="max-h-80 overflow-y-auto"
               >
                 {!cargando && !error
-                  ? opciones.map((item, index) => (
-                      <li
-                        key={item.id}
-                        id={`${listaId}-${index}`}
-                        role="option"
-                        aria-selected={item.id === value}
-                        className={`flex min-h-11 cursor-pointer items-center rounded-lg px-3 py-2 text-sm hover:bg-surface-soft ${activa === index || item.id === value ? "bg-surface-soft" : ""}`}
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => elegir(item)}
-                      >
-                        {item.nombre ?? item.descripcion}
-                      </li>
-                    ))
+                  ? lista.map((item, index) => {
+                      const id = item ? item.id : "";
+                      return (
+                        <li
+                          key={String(id)}
+                          id={`${listaId}-${index}`}
+                          role="option"
+                          aria-selected={id === value}
+                          className={`flex min-h-11 cursor-pointer items-center rounded-lg px-3 py-2 text-sm hover:bg-surface-soft ${activa === index || id === value ? "bg-surface-soft" : ""}`}
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => elegir(item)}
+                        >
+                          {item ? (item.nombre ?? item.descripcion) : opcionVacia?.texto}
+                        </li>
+                      );
+                    })
                   : null}
               </ul>
             </>

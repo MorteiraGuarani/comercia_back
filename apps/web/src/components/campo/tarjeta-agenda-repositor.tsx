@@ -54,14 +54,18 @@ interface AccionesRepositorProps {
 }
 
 interface ConsultaImpulsadorProps {
-  /** El impulsador consulta visitas de UCheck y reporta novedades desde esta vista. */
+  /**
+   * El impulsador marca en UCheck: acá consulta sus visitas y, con la visita
+   * en curso, hace tareas, inventario y novedades del local.
+   */
   soloConsulta: true;
   hoy?: never;
-  revisionTareas?: never;
-  onInventario?: never;
+  revisionTareas?: number;
+  /** Sin la página de inventario no se muestra. */
+  onInventario?: () => void;
   onEntrada?: never;
   onSalida?: never;
-  onTareas?: never;
+  onTareas?: () => void;
 }
 
 type TarjetaAgendaRepositorProps = TarjetaAgendaBaseProps &
@@ -180,7 +184,7 @@ export function TarjetaAgendaRepositor({
     qsFecha,
     // id -1: entrada guardada sin conexión, todavía sin visita en Comercia.
     visitaAqui && visitaAqui.id > 0 ? visitaAqui.id : null,
-    !soloConsulta && (!!visitaAqui || abierta),
+    !!onTareas && (!!visitaAqui || abierta),
     revisionTareas ?? 0,
   );
   const entradaEnCurso =
@@ -313,7 +317,7 @@ export function TarjetaAgendaRepositor({
 
           <div className="grid auto-cols-fr grid-flow-col gap-1.5">
             {/* Tareas e inventario se usan dentro del local: con la entrada marcada. */}
-            {!soloConsulta ? (
+            {onTareas ? (
               <button
                 type="button"
                 onClick={onTareas}
@@ -347,13 +351,13 @@ export function TarjetaAgendaRepositor({
                 </span>
               </button>
             ) : null}
-            {!soloConsulta && onInventario ? (
+            {onInventario ? (
               <button
                 type="button"
                 onClick={onInventario}
-                disabled={!visitaAqui}
+                disabled={!enVisita}
                 title={
-                  visitaAqui
+                  enVisita
                     ? undefined
                     : "Iniciá la visita para usar el inventario"
                 }

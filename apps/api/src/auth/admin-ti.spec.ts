@@ -52,7 +52,11 @@ describe('AdminTI: alcance y límites', () => {
   });
 
   it('permite listar usuarios y empresas globalmente, sin otorgar superadmin', async () => {
-    const service = new UsuariosService(db, {} as AuthService);
+    const service = new UsuariosService(
+      db,
+      {} as AuthService,
+      new AccesoPlataformaService(db),
+    );
     prisma.empresa.findMany.mockResolvedValue([
       { id: 2, nombre: 'A' },
       { id: 9, nombre: 'B' },

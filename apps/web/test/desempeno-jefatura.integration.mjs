@@ -13,7 +13,8 @@ vm.runInThisContext(`(function(module, exports, require) {${codigo}\n})`)(modulo
   assert.equal(nombre, "@/utils/hoy-en-campo");
   return { pct: (parte, total) => (total ? Math.round((parte / total) * 100) : 0) };
 });
-const { arbolDesempeno, personasRama, resumenRama } = modulo.exports;
+const { arbolDesempeno, personasRama, resumenRama, responsablesCascada, caminoHasta, aCargo } =
+  modulo.exports;
 
 const persona = (id, superiorId, zona, extra = {}) => ({
   id, superiorId, zona, nombre: `P${id}`, iniciales: `P${id}`, telefono: "—",
@@ -54,4 +55,23 @@ assert.deepEqual(
 assert.equal(r.tareas.total, 5);
 assert.equal(r.liderazgo.totalTeamLeaders, 1, "el TeamLeader a cargo de la supervisora");
 assert.equal(r.colaboradores.length, 5);
-console.log("Jefatura: cascada del organigrama y totales por rama OK.");
+
+// Gerente: Jefe 1 (mando sin campo) bajo la gerencia, con la supervisora 2 a cargo;
+// el back office 9 no tiene a nadie de campo debajo y no aparece.
+const mando = (id, superiorId, zona) => ({ id, superiorId, zona, nombre: `M${id}`, iniciales: `M${id}` });
+const gerencia = arbolDesempeno(lista, [mando(1, 100, "Jefe Canal Moderno"), mando(9, 100, "BackOffice")]);
+assert.deepEqual(gerencia.map((n) => n.persona.id), [7, 8, 1], "arriba: el jefe y los del ciclo");
+const jefe = gerencia[2];
+assert.equal(jefe.estructural, true);
+assert.deepEqual(jefe.hijos.map((n) => n.persona.id), [2]);
+assert.deepEqual(personasRama(jefe).map((c) => c.id), [2, 3, 4, 5, 6], "el jefe no suma como persona de campo");
+assert.equal(aCargo(jefe), 5);
+assert.equal(resumenRama("2026-10-30", jefe).presentismo.totalEquipo, 5);
+assert.deepEqual(
+  responsablesCascada(gerencia).map(({ nodo, nivel }) => [nodo.persona.id, nivel]),
+  [[1, 0], [2, 1], [3, 2]],
+  "el filtro Responsable lista a quienes tienen gente a cargo, de todos los niveles",
+);
+assert.deepEqual(caminoHasta(gerencia, 3), [1, 2, 3]);
+assert.deepEqual(caminoHasta(gerencia, 999), []);
+console.log("Jefatura: cascada del organigrama (también gerente › jefe › supervisor) y totales por rama OK.");

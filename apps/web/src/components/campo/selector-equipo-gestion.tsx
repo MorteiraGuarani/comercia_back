@@ -15,8 +15,11 @@ import type { EquipoCampo } from "@/types/rol";
  */
 export function SelectorEquipoGestion({
   equipo,
+  enLinea = false,
 }: {
   equipo: EquipoCampo | null;
+  /** Dentro de una barra de filtros (Inicio de jefatura) en vez de la franja superior. */
+  enLinea?: boolean;
 }) {
   const [guardando, setGuardando] = useState(false);
 
@@ -42,26 +45,34 @@ export function SelectorEquipoGestion({
     }
   }
 
+  const selector = (
+    <SelectorPaginado<number>
+      url="/campo/equipos-gestion"
+      etiqueta="Equipo"
+      value={equipo?.id ?? ""}
+      seleccionActual={equipo?.nombre}
+      placeholder="Todos"
+      buscable
+      compacto={!enLinea}
+      // Escribir para buscar emite "" sin elegir: solo cuentan las opciones tocadas.
+      onChange={() => undefined}
+      onSeleccionar={(opcion) => void elegir(opcion.id)}
+      opcionVacia={{ texto: "Todos", onElegir: () => void elegir("") }}
+    />
+  );
+  if (enLinea)
+    return (
+      <div className="min-w-0">
+        <PantallaCarga visible={guardando} mensaje="Cambiando de equipo" />
+        {selector}
+      </div>
+    );
   return (
     <div className="border-b border-line bg-surface-soft px-3 py-2 sm:px-5 lg:px-6">
       <PantallaCarga visible={guardando} mensaje="Cambiando de equipo" />
       <div className="flex min-w-0 flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
-        <p className="shrink-0 text-xs font-semibold text-muted">
-          Equipo con el que trabajás
-        </p>
-        <div className="min-w-0 sm:w-72">
-          <SelectorPaginado<number>
-            url="/campo/equipos-gestion"
-            etiqueta="Equipo con el que trabajás"
-            value={equipo?.id ?? ""}
-            seleccionActual={equipo?.nombre}
-            vacio="Todos mis equipos"
-            placeholder="Todos mis equipos"
-            buscable
-            compacto
-            onChange={(id) => void elegir(id)}
-          />
-        </div>
+        <p className="shrink-0 text-xs font-semibold text-muted">Equipo</p>
+        <div className="min-w-0 sm:w-72">{selector}</div>
       </div>
     </div>
   );

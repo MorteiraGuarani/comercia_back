@@ -9,6 +9,7 @@ import type { PeriodoFiltro } from "@/types/periodo-filtro";
 import {
   arbolDesempeno,
   personasRama,
+  responsablesCascada,
   resumenRama,
 } from "@/utils/desempeno-jefatura";
 import { mensajeError } from "@/utils/error";
@@ -19,7 +20,7 @@ import {
   cuandoPeriodoInicio,
   periodoInicioHoy,
 } from "@/utils/periodo-inicio";
-import { GruposCascada } from "./cascada-jefatura";
+import { FiltrosJefatura, GruposCascada } from "./cascada-jefatura";
 import { BarraSegmentos, RAYADO_EN_CURSO } from "./ui/barra-segmentos";
 import { SelectorPeriodoInicio } from "./ui/periodo-inicio";
 import {
@@ -53,12 +54,12 @@ export function InicioJefatura() {
   const claveCarga = `${revision}|${consulta}`;
   const cargando = terminada.clave !== claveCarga;
   const error = terminada.clave === claveCarga ? terminada.error : "";
-  // 0: todos los equipos juntos; si no, el supervisor elegido.
-  const [supervisorId, setSupervisorId] = useState(0);
-  // Las tarjetas llevan al detalle: Desempeño o, sin él, Avance.
+  // 0: todo el organigrama junto; si no, el responsable elegido (cualquier nivel).
+  const [responsableId, setResponsableId] = useState(0);
+  // Las tarjetas llevan al detalle: Jefatura · Desempeño.
   const paginaDetalle = modulos
     .find((m) => m.ruta === "jefatura")
-    ?.paginas.find((p) => p.ruta === "desempeno" || p.ruta === "avance");
+    ?.paginas.find((p) => p.ruta === "desempeno");
 
   useEffect(() => {
     const control = new AbortController();
@@ -83,16 +84,16 @@ export function InicioJefatura() {
 
   const resumen = datos?.resumen ?? null;
   const arbol = useMemo(
-    () => (resumen ? arbolDesempeno(resumen.colaboradores) : []),
+    () => (resumen ? arbolDesempeno(resumen.colaboradores, resumen.estructura) : []),
     [resumen],
   );
-  // Cada supervisor (quien depende del jefe y tiene gente a cargo) es un equipo.
-  const supervisores = arbol.filter((n) => n.hijos.length);
-  const elegido = supervisores.find((n) => n.persona.id === supervisorId);
+  const elegido = responsablesCascada(arbol).find(
+    (r) => r.nodo.persona.id === responsableId,
+  )?.nodo;
   const vista = resumen && elegido ? resumenRama(resumen.fecha, elegido) : resumen;
-  // Equipos del nivel elegido: los supervisores, o los TeamLeaders del supervisor.
-  const lideres = elegido?.hijos.filter((n) => n.hijos.length) ?? [];
-  const equipos = elegido ? (lideres.length ? lideres : [elegido]) : supervisores;
+  // Equipos del nivel elegido: quienes tienen gente a cargo justo debajo.
+  const subgrupos = (elegido ? elegido.hijos : arbol).filter((n) => n.hijos.length);
+  const equipos = elegido && !subgrupos.length ? [elegido] : subgrupos;
   const activos = equipos.filter((n) =>
     personasRama(n).some((c) => c.inicioJornada !== null),
   ).length;
@@ -182,7 +183,7 @@ export function InicioJefatura() {
       <header className="min-w-0 space-y-4">
         <div className="min-w-0">
           <p className="truncate text-xs font-bold uppercase tracking-[0.14em] text-brand-700 dark:text-brand-200">
-            Panel gerencial · {usuario.rol?.descripcion ?? "Jefatura"}
+            {usuario.rol?.descripcion ?? "Jefatura"}
           </p>
           <h1 className="ft-display mt-2 text-3xl font-bold text-foreground sm:text-4xl">
             Inicio
@@ -191,23 +192,11 @@ export function InicioJefatura() {
             Visión consolidada de tus supervisores y equipos
           </p>
         </div>
-        <label className="block min-w-0 max-w-xl">
-          <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-muted">
-            Equipo / Supervisor
-          </span>
-          <select
-            value={elegido ? supervisorId : 0}
-            onChange={(e) => setSupervisorId(Number(e.target.value))}
-            className={`min-h-12 w-full cursor-pointer rounded-xl border border-line bg-surface-raised px-4 text-base font-semibold text-foreground hover:border-brand-500 ${enfoqueTablero}`}
-          >
-            <option value={0}>Todos los equipos · Consolidado</option>
-            {supervisores.map((n) => (
-              <option key={n.persona.id} value={n.persona.id}>
-                {n.persona.nombre} · {personasRama(n).length - 1} a cargo
-              </option>
-            ))}
-          </select>
-        </label>
+        <FiltrosJefatura
+          arbol={arbol}
+          valor={elegido ? responsableId : 0}
+          onCambiar={setResponsableId}
+        />
         <SelectorPeriodoInicio
           valor={periodo}
           onCambiar={(nuevo) => {
@@ -281,13 +270,11 @@ export function InicioJefatura() {
         )}
       </div>
 
-      {!elegido ? (
-        <GruposCascada
-          nodos={supervisores}
-          metric="ruta"
-          onAbrir={(n) => setSupervisorId(n.persona.id)}
-        />
-      ) : null}
+      <GruposCascada
+        nodos={subgrupos}
+        metric="ruta"
+        onAbrir={(n) => setResponsableId(n.persona.id)}
+      />
     </section>
   );
 }

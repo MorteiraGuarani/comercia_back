@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { AuthService } from '../auth/auth.service';
+import type { AccesoPlataformaService } from '../plataforma/acceso-plataforma.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import { UsuariosService } from './usuarios.service';
 import { calcularDvRucPy } from '../common/utils/ruc';
@@ -14,6 +15,15 @@ jest.mock('../prisma/prisma.service', () => ({
 jest.mock('../auth/auth.service', () => ({
   AuthService: class AuthService {},
 }));
+
+// Sin la página Administración · Usuarios: solo pasan superadmin, Admin TI y gerente.
+function sinPaginaUsuarios() {
+  return {
+    exigirAccesoPagina: jest
+      .fn()
+      .mockRejectedValue(new ForbiddenException('No tenés acceso a esta sección')),
+  } as unknown as AccesoPlataformaService;
+}
 
 describe('UsuariosService - permiso de superadmin', () => {
   const prisma = {
@@ -31,6 +41,7 @@ describe('UsuariosService - permiso de superadmin', () => {
   const service = new UsuariosService(
     prisma as unknown as PrismaService,
     auth as unknown as AuthService,
+    sinPaginaUsuarios(),
   );
   const erp = {
     ERP_CanalVenta: 'MAYORISTA',
@@ -181,8 +192,13 @@ describe('UsuariosService - permiso de superadmin', () => {
     prisma.rol.count.mockResolvedValue(0);
     prisma.rol.findMany.mockResolvedValue([]);
     await service.listarRoles(1, { page: 2, limit: 7 });
+    // Sin acceso global no se ofrece el rol Admin TI (ve todas las empresas).
     expect(prisma.rol.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { empresaId: 20 }, skip: 7, take: 7 }),
+      expect.objectContaining({
+        where: { empresaId: 20, esAdminTi: false },
+        skip: 7,
+        take: 7,
+      }),
     );
     await expect(
       service.listarRoles(1, { empresaId: 30 }),
@@ -384,6 +400,7 @@ describe('UsuariosService - alta en lote', () => {
     const service = new UsuariosService(
       prisma as unknown as PrismaService,
       auth as unknown as AuthService,
+      sinPaginaUsuarios(),
     );
 
     const r = await service.crearLote(1, [
@@ -426,5 +443,51 @@ describe('UsuariosService - alta en lote', () => {
     // La contraseña por defecto se hashea una sola vez por lote.
     expect(hash).toMatch(/^scrypt\$/);
     expect(hash2).toBe(hash);
+  });
+});
+
+describe('UsuariosService - página Administración · Usuarios', () => {
+  const backOffice = {
+    id: 5,
+    empresaId: 20,
+    esSuperadmin: false,
+    isActive: true,
+    rol: { descripcion: 'BackOffice_Impulsadores', esAdminTi: false },
+  };
+  const prisma = {
+    usuario: {
+      findUnique: jest.fn().mockResolvedValue(backOffice),
+      count: jest.fn().mockResolvedValue(0),
+      findMany: jest.fn().mockResolvedValue([]),
+    },
+    rol: { findUnique: jest.fn() },
+  };
+  const plataforma = { exigirAccesoPagina: jest.fn().mockResolvedValue({ id: 5, empresaId: 20 }) };
+  const service = new UsuariosService(
+    prisma as unknown as PrismaService,
+    { crearUsuario: jest.fn() } as unknown as AuthService,
+    plataforma as unknown as AccesoPlataformaService,
+  );
+
+  it('administra solo su empresa y sin ver superadmins ni Admin TI', async () => {
+    await service.listar(5, {});
+    expect(plataforma.exigirAccesoPagina).toHaveBeenCalledWith(5, 'administracion', 'usuarios');
+    expect(prisma.usuario.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          empresaId: 20,
+          esSuperadmin: false,
+          NOT: { rol: { esAdminTi: true } },
+        }) as unknown,
+      }),
+    );
+    await expect(service.listar(5, { empresaId: 30 })).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('no asigna el rol Admin TI', async () => {
+    prisma.rol.findUnique.mockResolvedValue({ id: 15, empresaId: 20, rolId: null, esAdminTi: true });
+    await expect(service.crear(5, { rolId: 15 })).rejects.toThrow(
+      'Solo Admin TI o un superadministrador administran el rol Admin TI',
+    );
   });
 });

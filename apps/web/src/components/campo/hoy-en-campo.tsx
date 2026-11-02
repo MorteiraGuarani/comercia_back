@@ -104,15 +104,13 @@ interface DatosHoy {
   actualizado: string;
 }
 
-/**
- * "equipo": el líder con su equipo (Inicio y Gestión de campo).
- * "jefatura": el jefe con todo su organigrama (Jefatura · Avance).
- */
-export function HoyEnCampo({ vista = "equipo" }: { vista?: "equipo" | "jefatura" }) {
+/** El líder con su equipo (Inicio y Gestión de campo). */
+export function HoyEnCampo() {
   const { usuario, modulos } = usePanel();
   const tienePagina = (modulo: string, pagina: string) =>
     modulos.some((m) => m.ruta === modulo && m.paginas.some((p) => p.ruta === pagina));
-  const api = vista === "jefatura" ? "/campo/jefatura" : "/campo/supervision";
+  const api = "/campo/supervision";
+  const vista = "equipo";
   const verNovedades = tienePagina("gestion-campo", "novedades");
   const hoy = fechaEnZonaIso(new Date());
   const [periodo, setPeriodo] = useState<PeriodoFiltro>(() => periodoInicioHoy(hoy));
@@ -232,7 +230,7 @@ export function HoyEnCampo({ vista = "equipo" }: { vista?: "equipo" | "jefatura"
         fechaTexto={textoRangoFechas(rango.desde, rango.hasta)}
         resumen={
           resumen
-            ? `${resumen.presentismo.totalEquipo} personas en tu ${vista === "jefatura" ? "organigrama" : "equipo"} · ${resumen.rutas.total} visitas`
+            ? `${resumen.presentismo.totalEquipo} personas en tu equipo ·${resumen.rutas.total} visitas`
             : "Cargando los datos de tu equipo…"
         }
       >

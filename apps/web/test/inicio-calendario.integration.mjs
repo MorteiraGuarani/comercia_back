@@ -232,6 +232,7 @@ const { InicioResumen } = cargar("app/panel/page.tsx", {
   ...comun, react: estadoGeneral.react,
   "@/components/panel/enlace-panel": { EnlacePanel },
   "@/components/campo/hoy-en-campo": {}, "@/components/campo/inicio-jefatura": {}, "@/components/campo/mi-dia-campo": {},
+  "@/utils/inicio-jefatura": cargar("utils/inicio-jefatura.ts"),
   "@/components/campo/ui/iconos-campo": {}, "@/components/campo/ui/periodo-inicio": {}, "@/components/campo/ui/ayuda-app": { AyudaApp: () => null },
   "@/utils/nombres-menu": cargar("utils/nombres-menu.ts"), "@/lib/disponibilidad-tareas": {},
 }, "module.exports.InicioResumen = InicioResumen;");
