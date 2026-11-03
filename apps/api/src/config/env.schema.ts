@@ -53,6 +53,8 @@ const rawEnvSchema = z
     UCHECK_INTEGRATION_SECRET: z.string().min(32).optional(),
     UCHECK_API_URL: z.string().url().optional(),
     UCHECK_SSO_SECRET: z.string().min(32).optional(),
+    // Gateway UniversalBack (SAP HANA / Service Layer) de la red interna.
+    SAP_API_URL: z.string().url().optional(),
   })
   .superRefine((env, context) => {
     const tieneSecretoSso = Boolean(

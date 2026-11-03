@@ -30,5 +30,6 @@ export default () => ({
     ucheckApiUrl: process.env.UCHECK_API_URL,
     ucheckSsoSecret:
       process.env.UCHECK_SSO_SECRET ?? process.env.UCHECK_INTEGRATION_SECRET,
+    sapApiUrl: process.env.SAP_API_URL,
   },
 });

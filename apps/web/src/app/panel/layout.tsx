@@ -174,6 +174,8 @@ export default function PanelLayout({
       { href: "/panel/organigrama", nombre: "Organigrama", icono: "inicio", disabled: false },
       { href: "/panel/admin", nombre: "Administración", icono: "inicio", disabled: false },
       { href: "/panel/ubicaciones", nombre: "Ubicaciones", icono: "inicio", disabled: false },
+      // shortcut: Pedidos fijo para Admin TI mientras se arma; quitar al pasarlo a Acceso por empresa.
+      { href: "/panel/pedidos", nombre: "Pedidos", icono: "pedidos", disabled: false },
     ] : []),
     ...modulos.flatMap((m) =>
       m.paginas

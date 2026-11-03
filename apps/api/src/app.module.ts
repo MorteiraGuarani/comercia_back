@@ -25,6 +25,7 @@ import { IntegracionesUcheckModule } from './integraciones-ucheck/integraciones-
 import { InventarioModule } from './inventario/inventario.module';
 import { UbicacionesModule } from './ubicaciones/ubicaciones.module';
 import { SociosNegocioModule } from './socios-negocio/socios-negocio.module';
+import { PedidosModule } from './pedidos/pedidos.module';
 
 const usaBaseProduccion = process.env.COMERCIA_DATABASE_TARGET === 'production';
 
@@ -71,6 +72,7 @@ if (process.env.NODE_ENV !== 'production' && !usaBaseProduccion) {
     RolesModule,
     ProductosModule,
     SociosNegocioModule,
+    PedidosModule,
     CampoModule,
     InventarioModule,
     UbicacionesModule,

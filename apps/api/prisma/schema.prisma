@@ -38,6 +38,8 @@ model Empresa {
   gruposArticulo GrupoArticulo[]
   tiposSubcanal TipoSubcanal[]
   configuracionesTolerancia ConfiguracionTolerancia[]
+  pedidos Pedido[]
+  categoriasCampo CategoriaCampo[]
   // Días antes del vencimiento en que se avisa por inventario de campo.
   diasAvisoVencimiento Int @default(5) @map("dias_aviso_vencimiento")
   id                  Int                       @id @default(autoincrement())
@@ -556,6 +558,7 @@ model Usuario {
   adjuntosCampo           AdjuntoCampo[]
   identidadUcheck         IdentidadUcheck?
   ucheckPendiente         UcheckUsuarioPendiente?
+  pedidos                 Pedido[]
   /// Copia de sus programas de Ucheck (códigos): el ABM los elige y Ucheck confirma.
   programasUcheck         String[]                  @default([]) @map("programas_ucheck")
   permitirVinculoAutomatico Boolean @default(true) @map("permitir_vinculo_automatico")
@@ -1190,4 +1193,69 @@ model CargaInventarioCampo {
   @@index([empresaId, localId, fecha])
   @@index([avisadoEn, vencimiento])
   @@map("campo_inventario_cargas")
+}
+
+// Pedidos de preventa cargados en Comercia. Por ahora quedan en CARGADO:
+// el envío a SAP (MIGRADO) y su seguimiento llegan después.
+enum EstadoPedido {
+  CARGADO
+  MIGRADO
+  FACTURADO
+  ENTREGADO
+}
+
+model Pedido {
+  id             Int           @id @default(autoincrement())
+  empresaId      Int           @map("empresa_id")
+  empresa        Empresa       @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  usuarioId      Int           @map("usuario_id")
+  usuario        Usuario       @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
+  // Cliente de tbl_ocrd, con su nombre al momento del pedido (sin FK: OCRD se sincroniza desde SAP).
+  cardCode       String        @map("CardCode") @db.VarChar(50)
+  clienteNombre  String        @map("cliente_nombre") @db.VarChar(250)
+  listaPrecios   Int?          @map("lista_precios")
+  condicionPago  Int?          @map("condicion_pago")
+  fechaEntrega   DateTime      @map("fecha_entrega") @db.Date
+  observaciones  String        @default("") @db.VarChar(500)
+  estado         EstadoPedido  @default(CARGADO)
+  total          Decimal       @db.Decimal(21, 6)
+  docNumSap      Int?          @map("doc_num_sap")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  lineas         PedidoLinea[]
+
+  @@index([empresaId, usuarioId, createdAt])
+  @@map("pedidos")
+}
+
+model PedidoLinea {
+  id        Int      @id @default(autoincrement())
+  pedidoId  Int      @map("pedido_id")
+  pedido    Pedido   @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  itemCode  String   @map("ItemCode") @db.VarChar(100)
+  nombre    String   @db.VarChar(200)
+  // Línea del asistente (hamburguesas, embutidos, pollo, resto).
+  linea     String   @db.VarChar(20)
+  cantidad  Int
+  // Precio de tbl_itm1 en la lista del cliente; vacío si no tiene precio.
+  precio    Decimal? @db.Decimal(21, 6)
+  total     Decimal? @db.Decimal(21, 6)
+
+  @@unique([pedidoId, itemCode])
+  @@map("pedido_lineas")
+}
+
+// Categorías (líneas) de productos para Pedidos: cada una agrupa artículos de
+// SAP por su grupo (OITB, codesap) y se muestran según "orden".
+model CategoriaCampo {
+  id               Int     @id @default(autoincrement())
+  empresaId        Int     @map("empresa_id")
+  empresa          Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  nombre_categoria String  @db.VarChar(100)
+  codesap          Int?
+  Modo             String? @db.Char(1)
+  orden            Int     @default(0)
+
+  @@index([empresaId, orden])
+  @@map("campo_categoria")
 }

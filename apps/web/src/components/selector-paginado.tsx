@@ -25,6 +25,7 @@ export function SelectorPaginado<TId extends number | string = number>({
   buscable = false,
   placeholder = "Seleccioná o escribí para buscar",
   compacto = false,
+  etiquetaOculta = false,
   limite = 7,
   opcionVacia,
 }: {
@@ -42,6 +43,8 @@ export function SelectorPaginado<TId extends number | string = number>({
   /** Para barras de filtros: etiqueta solo para lectores de pantalla, alto de
    *  44 px y desplegable más ancho alineado a la derecha. Solo con buscable. */
   compacto?: boolean;
+  /** Solo con buscable: etiqueta solo para lectores de pantalla, con el campo y el desplegable normales. */
+  etiquetaOculta?: boolean;
   /** Opciones por página al abrir (7 por defecto). */
   limite?: number;
   /** Solo con buscable: primera opción sin ID (p. ej. «Todos»). Escribir no la elige. */
@@ -163,8 +166,12 @@ export function SelectorPaginado<TId extends number | string = number>({
         mensaje={`Cargando ${etiqueta.toLowerCase()}`}
       />
       {buscable ? (
-        <label className={compacto ? "block min-w-0" : labelBase}>
-          {compacto ? <span className="sr-only">{etiqueta}</span> : etiqueta}
+        <label className={compacto || etiquetaOculta ? "block min-w-0" : labelBase}>
+          {compacto || etiquetaOculta ? (
+            <span className="sr-only">{etiqueta}</span>
+          ) : (
+            etiqueta
+          )}
           <input
             ref={inputRef}
             type="text"

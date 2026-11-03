@@ -66,6 +66,8 @@ services:
       # SSO iniciado desde el APK: URL interna/pública de UCHECK y clave exclusiva.
       UCHECK_API_URL: ${UCHECK_API_URL:?Falta UCHECK_API_URL en .env}
       UCHECK_SSO_SECRET: ${UCHECK_SSO_SECRET:?Falta UCHECK_SSO_SECRET en .env}
+      # UniversalBack: estado de crédito de clientes (SP de SAP HANA) para Pedidos.
+      SAP_API_URL: ${SAP_API_URL:-http://172.19.0.201:2002}
       THROTTLE_TTL: ${THROTTLE_TTL:-60000}
       THROTTLE_LIMIT: ${THROTTLE_LIMIT:-100}
       # Vacío = sin proxies de confianza. Ver ENV.md antes de activarlo.

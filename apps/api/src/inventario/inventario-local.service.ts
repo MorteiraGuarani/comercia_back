@@ -32,15 +32,11 @@ import type {
   GuardarCargasInventarioDto,
 } from './dto/inventario-local.dto';
 import { diasParaVencer } from '../common/utils/vencimiento';
+import { activosAnd } from '../common/utils/productos-activos';
 import { VencimientosService } from './vencimientos.service';
 
 const dia = (fecha: Date) => fecha.toISOString().slice(0, 10);
 
-// Activos en SAP: válidos y no congelados.
-const activosAnd: Prisma.ProductoWhereInput[] = [
-  { OR: [{ validFor: null }, { validFor: { not: 'N' } }] },
-  { OR: [{ frozenFor: null }, { frozenFor: { not: 'Y' } }] },
-];
 const productosActivos = (): Prisma.ProductoWhereInput => ({
   AND: activosAnd,
 });
