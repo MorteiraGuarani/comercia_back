@@ -32,12 +32,17 @@ export function ResumenPresentismo({ resumen, onFiltrar, accion }: {
         {ESTADOS.filter(e => p.estados[e] > 0).map(e => <i key={e} data-tone={e} style={{ flexGrow: p.estados[e] }} />)}
       </div>
       <ul className={styles.counts} aria-label="Personas por estado">
-        {ESTADOS.map(e => <li key={e} data-tone={e} data-vacio={p.estados[e] === 0 || undefined}>
-          <button type="button" onClick={() => onFiltrar(e)} aria-label={`${PRESENTISMO[e].etiqueta}: ${p.estados[e]} de ${p.totalEquipo}. Ver en la lista`}>
-            <b>{p.estados[e]}<small>/{p.totalEquipo}</small></b>
-            <span>{PRESENTISMO[e].etiqueta}<small>{p.totalEquipo ? Math.round((p.estados[e] / p.totalEquipo) * 100) : 0}%</small></span>
-          </button>
-        </li>)}
+        {ESTADOS.map(e => {
+          const pct = p.totalEquipo ? Math.round((p.estados[e] / p.totalEquipo) * 100) : 0;
+          // Presente es el principal: cantidad y porcentaje; los demás, solo el porcentaje.
+          const principal = e === "PRESENTE";
+          return <li key={e} data-tone={e} data-vacio={p.estados[e] === 0 || undefined}>
+            <button type="button" onClick={() => onFiltrar(e)} aria-label={`${PRESENTISMO[e].etiqueta}: ${p.estados[e]} de ${p.totalEquipo}. Ver en la lista`}>
+              <b>{principal ? <>{p.estados[e]}<small>/{p.totalEquipo}</small></> : <>{pct}<small>%</small></>}</b>
+              <span>{PRESENTISMO[e].etiqueta}{principal && <small>{pct}%</small>}</span>
+            </button>
+          </li>;
+        })}
       </ul>
       {sinEntrada > 0 ? <button type="button" className={styles.notice} onClick={() => onFiltrar("sin_iniciar")}>
         <span><b>{sinEntrada} sin entrada registrada</b><small>Revisá a quién contactar</small></span><span aria-hidden="true">→</span>

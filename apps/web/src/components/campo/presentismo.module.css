@@ -65,7 +65,7 @@
 .distribution i { flex-basis: 0; min-width: .375rem; background: var(--swatch, var(--tone)); }
 .counts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-xs); margin: 0; padding: 0; list-style: none; }
 .counts > li { display: grid; min-width: 0; }
-.counts > [data-tone='SIN_REGISTRO'] { grid-column: 1 / -1; }
+.counts > [data-tone='PRESENTE'] { grid-column: 1 / -1; }
 .counts button { display: flex; flex-direction: row-reverse; align-items: center; justify-content: space-between; gap: var(--space-xs); min-width: 0; min-height: 2.75rem; padding: .5rem clamp(.5rem, 3vw, .75rem); border: 1px solid color-mix(in srgb, var(--tone) 30%, var(--border)); border-radius: .625rem; background: color-mix(in srgb, var(--tone) 8%, var(--surface-raised)); color: var(--foreground); text-align: left; cursor: pointer; transition: background-color .15s, border-color .15s; }
 .counts button:hover { border-color: var(--tone); background: color-mix(in srgb, var(--tone) 14%, var(--surface-raised)); }
 .counts b { font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; color: var(--tone); }
@@ -205,7 +205,7 @@
 @container resumen (min-width: 40rem) {
   .summary { padding: var(--space-lg); }
   .counts { grid-template-columns: repeat(5, minmax(0, 1fr)); }
-  .counts > [data-tone='SIN_REGISTRO'] { grid-column: auto; }
+  .counts > [data-tone='PRESENTE'] { grid-column: auto; }
   .counts button { flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: .375rem; padding: .75rem; }
   .counts b { font-size: 1.75rem; }
   .counts span { display: block; font-size: .75rem; white-space: normal; }

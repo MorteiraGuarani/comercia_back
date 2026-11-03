@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import type { RespuestaPaginada } from "@/types/paginacion";
+import { inputBase, labelBase } from "@/components/ui";
 
 interface ProgramaUcheck {
   id: string;
@@ -9,8 +10,8 @@ interface ProgramaUcheck {
 }
 
 /**
- * Programas de Ucheck del usuario: se eligen acá, Comercia guarda la copia y
- * se los asigna también en Ucheck.
+ * Programa de Ucheck del usuario: se elige uno acá, Comercia guarda la copia y
+ * se lo asigna también en Ucheck (reemplaza a los que tenía).
  */
 export function ProgramasUcheck({
   url,
@@ -50,49 +51,43 @@ export function ProgramasUcheck({
     };
   }, [url]);
 
+  const elegido = value[0] ?? "";
   return (
-    <fieldset className="min-w-0 space-y-2">
-      <legend className="text-[13px] font-semibold text-foreground">
-        Programas asignados (Ucheck)
-      </legend>
+    <div className="min-w-0 space-y-2">
       {error ? (
         <p className="text-sm text-muted">
-          {error}. Los programas quedan como están.
+          {error}. El programa queda como está.
         </p>
       ) : !programas ? (
         <p className="text-sm text-muted">Cargando programas…</p>
-      ) : programas.length === 0 ? (
-        <p className="text-sm text-muted">
-          La empresa no tiene programas habilitados en Ucheck.
-        </p>
       ) : (
-        <div className="grid gap-x-4 sm:grid-cols-2">
-          {programas.map((programa) => (
-            <label
-              key={programa.id}
-              className="flex min-h-11 cursor-pointer items-center gap-2 text-sm"
-            >
-              <input
-                type="checkbox"
-                checked={value.includes(programa.id)}
-                disabled={disabled}
-                onChange={(e) =>
-                  onChange(
-                    e.target.checked
-                      ? [...value, programa.id]
-                      : value.filter((codigo) => codigo !== programa.id),
-                  )
-                }
-              />
-              {programa.nombre}
-            </label>
-          ))}
-        </div>
+        <label className={labelBase}>
+          Programa asignado (Ucheck)
+          <select
+            value={elegido}
+            disabled={disabled}
+            onChange={(e) => onChange(e.target.value ? [e.target.value] : [])}
+            className={`${inputBase} cursor-pointer disabled:cursor-not-allowed disabled:opacity-50`}
+          >
+            <option value="">Sin programa</option>
+            {elegido && !programas.some((p) => p.id === elegido) ? (
+              <option value={elegido}>{elegido}</option>
+            ) : null}
+            {programas.map((programa) => (
+              <option key={programa.id} value={programa.id}>
+                {programa.nombre}
+              </option>
+            ))}
+          </select>
+        </label>
       )}
       <p className="text-xs text-muted">
-        Se asignan también en Ucheck. En el alta, sin elegir ninguno se usan
-        los de su rol de campo.
+        {value.length > 1
+          ? `En Ucheck tiene ${value.length} programas; elegir otro deja solo ese. `
+          : ""}
+        Se asigna también en Ucheck. En el alta, sin elegir ninguno se usan los
+        de su rol de campo.
       </p>
-    </fieldset>
+    </div>
   );
 }
