@@ -12,6 +12,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
+  ApiBearerAuth,
   ApiCreatedResponse,
   ApiOkResponse,
   ApiOperation,
@@ -33,6 +34,7 @@ import {
 } from './dto/usuario-respuesta.dto';
 
 @ApiTags('usuarios')
+@ApiBearerAuth()
 @Controller('usuarios')
 @UseGuards(JwtAuthGuard)
 export class UsuariosController {
@@ -52,6 +54,19 @@ export class UsuariosController {
     @Query() query: ListarUsuariosDto,
   ) {
     return this.usuarios.listarRoles(req.usuarioId, query);
+  }
+
+  @Get('programas-ucheck')
+  @ApiOperation({
+    summary: 'Programas de Ucheck que se pueden asignar',
+    description:
+      'Catálogo paginado (page, limit) de la empresa de Ucheck con el mismo nombre que la del usuario o `empresaId`. Los códigos elegidos van en `programasUcheck` al crear o editar; Ucheck los aplica y su copia vuelve al usuario. 503 si Ucheck no responde.',
+  })
+  listarProgramasUcheck(
+    @Req() req: RequestConUsuario,
+    @Query() query: ListarUsuariosDto,
+  ) {
+    return this.usuarios.listarProgramasUcheck(req.usuarioId, query);
   }
 
   @Get('locales')

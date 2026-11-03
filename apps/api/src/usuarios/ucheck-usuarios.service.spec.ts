@@ -25,12 +25,6 @@ describe('programasUcheck', () => {
     ).toEqual(['COMERCIA_TEAMLEADER', 'SEGUIMIENTO']);
     expect(
       programasUcheck({
-        descripcion: 'SUPERVISOR',
-        equipoCampo: equipo('AMBOS'),
-      }),
-    ).toEqual(['COMERCIA_TEAMLEADER', 'SEGUIMIENTO']);
-    expect(
-      programasUcheck({
         descripcion: 'Impulsador',
         equipoCampo: equipo('IMPULSADOR'),
       }),
@@ -41,9 +35,6 @@ describe('programasUcheck', () => {
         equipoCampo: equipo('IMPULSADOR', false),
       }),
     ).toEqual([]);
-    expect(
-      programasUcheck({ descripcion: 'Gerente', equipoCampo: null }),
-    ).toEqual([]);
     expect(programasUcheck(null)).toEqual([]);
   });
 });
@@ -51,6 +42,7 @@ describe('programasUcheck', () => {
 describe('UcheckUsuariosService', () => {
   const USUARIO = {
     correo: 'lucia.gimenez@example.com',
+    nombreLogin: 'lucia.gimenez',
     nombre: 'Lucía',
     apellido: 'Giménez',
     celular: '+595981000111',
@@ -58,15 +50,24 @@ describe('UcheckUsuariosService', () => {
     isActive: true,
     esSuperadmin: false,
     permitirVinculoAutomatico: true,
+    programasUcheck: ['COMERCIA', 'SEGUIMIENTO'],
     empresa: { nombre: 'Frigorifico Guarani' },
-    rol: { descripcion: 'Impulsador', equipoCampo: equipo('IMPULSADOR') },
     identidadUcheck: null as { ucheckUsuarioId: number } | null,
   };
 
   function preparar(usuario: unknown = USUARIO, pendiente = {}) {
+    const tx = {
+      $queryRaw: jest.fn(),
+      usuario: { update: jest.fn<Promise<unknown>, [unknown]>() },
+      ucheckUsuarioPendiente: {
+        count: jest.fn().mockResolvedValue(1),
+        delete: jest.fn(),
+        upsert: jest.fn<Promise<unknown>, [unknown]>(),
+      },
+      identidadUcheck: { upsert: jest.fn<Promise<unknown>, [unknown]>() },
+    };
     const prisma = {
       ucheckUsuarioPendiente: {
-        upsert: jest.fn<Promise<unknown>, [unknown]>(),
         findMany: jest
           .fn()
           .mockResolvedValueOnce([
@@ -74,33 +75,34 @@ describe('UcheckUsuariosService', () => {
               usuarioId: 7,
               version: 3,
               ucheckUsuarioId: null,
+              programas: true,
               intentos: 0,
               ...pendiente,
             },
           ])
           .mockResolvedValue([]),
-        deleteMany: jest.fn(),
         updateMany: jest.fn<Promise<unknown>, [unknown]>(),
       },
       usuario: { findUnique: jest.fn().mockResolvedValue(usuario) },
-      identidadUcheck: { upsert: jest.fn() },
+      $transaction: jest.fn((fn: (t: typeof tx) => unknown) => fn(tx)),
     };
     const ucheck = {
       configurado: () => true,
       pedir: jest.fn<Promise<unknown>, [string, unknown]>().mockResolvedValue({
         ucheckUsuarioId: 42,
         correo: USUARIO.correo,
+        programas: ['COMERCIA', 'UWEB'],
       }),
     };
     const servicio = new UcheckUsuariosService(
       prisma as unknown as PrismaService,
       ucheck as unknown as UcheckClienteService,
     );
-    return { prisma, ucheck, servicio };
+    return { tx, prisma, ucheck, servicio };
   }
 
-  it('manda el estado completo a Ucheck, guarda el vínculo y borra el pendiente de esa versión', async () => {
-    const { prisma, ucheck, servicio } = preparar();
+  it('manda el estado con su usuario único y programas, guarda la copia y el vínculo, y borra el pendiente', async () => {
+    const { tx, ucheck, servicio } = preparar();
     await servicio.sincronizar();
     expect(ucheck.pedir).toHaveBeenCalledWith(
       '/comercia-integracion/usuarios',
@@ -109,6 +111,7 @@ describe('UcheckUsuariosService', () => {
         body: {
           ucheckUsuarioId: undefined,
           correo: USUARIO.correo,
+          nombreUsuario: 'lucia.gimenez',
           nombre: 'Lucía Giménez',
           telefono: '+595981000111',
           legajo: null,
@@ -118,23 +121,45 @@ describe('UcheckUsuariosService', () => {
         },
       },
     );
-    expect(prisma.identidadUcheck.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        create: {
-          usuarioId: 7,
-          ucheckUsuarioId: 42,
-          correoVinculado: USUARIO.correo,
-        },
-      }),
-    );
-    expect(prisma.ucheckUsuarioPendiente.deleteMany).toHaveBeenCalledWith({
-      where: { usuarioId: 7, version: 3 },
+    // La copia es lo que Ucheck confirmó, no lo pedido.
+    expect(tx.usuario.update.mock.calls[0][0]).toMatchObject({
+      where: { id: 7 },
+      data: { programasUcheck: ['COMERCIA', 'UWEB'] },
+    });
+    expect(tx.identidadUcheck.upsert.mock.calls[0][0]).toMatchObject({
+      create: {
+        usuarioId: 7,
+        ucheckUsuarioId: 42,
+        correoVinculado: USUARIO.correo,
+      },
+    });
+    expect(tx.ucheckUsuarioPendiente.delete).toHaveBeenCalledWith({
+      where: { usuarioId: 7 },
     });
   });
 
-  it('da de baja la cuenta vinculada aunque ya no sea de campo, y usa el vínculo anterior al cambio de correo', async () => {
+  it('sin cambio de programas en el ABM no los manda: Ucheck conserva los suyos', async () => {
     const { ucheck, servicio } = preparar(
-      { ...USUARIO, isActive: false, rol: null },
+      { ...USUARIO, identidadUcheck: { ucheckUsuarioId: 42 } },
+      { programas: false },
+    );
+    await servicio.sincronizar();
+    expect(ucheck.pedir.mock.calls[0][1]).toMatchObject({
+      body: { ucheckUsuarioId: 42, programas: undefined },
+    });
+  });
+
+  it('si lo editaron durante el envío no guarda la copia ni borra el pendiente', async () => {
+    const { tx, servicio } = preparar();
+    tx.ucheckUsuarioPendiente.count.mockResolvedValue(0);
+    await servicio.sincronizar();
+    expect(tx.usuario.update).not.toHaveBeenCalled();
+    expect(tx.ucheckUsuarioPendiente.delete).not.toHaveBeenCalled();
+  });
+
+  it('da de baja la cuenta vinculada antes del cambio de correo', async () => {
+    const { ucheck, servicio } = preparar(
+      { ...USUARIO, isActive: false, programasUcheck: [] },
       { ucheckUsuarioId: 42 },
     );
     await servicio.sincronizar();
@@ -143,16 +168,16 @@ describe('UcheckUsuariosService', () => {
     });
   });
 
-  it('no crea en Ucheck a quien no es de campo, ni re-vincula una cuenta desvinculada a mano', async () => {
+  it('no crea en Ucheck a quien no tiene programas, ni re-vincula una cuenta desvinculada a mano', async () => {
     for (const usuario of [
-      { ...USUARIO, rol: null },
+      { ...USUARIO, programasUcheck: [] },
       { ...USUARIO, permitirVinculoAutomatico: false },
       { ...USUARIO, correo: 'sin.correo@sin-correo.invalid' },
     ]) {
-      const { prisma, ucheck, servicio } = preparar(usuario);
+      const { tx, ucheck, servicio } = preparar(usuario);
       await servicio.sincronizar();
       expect(ucheck.pedir).not.toHaveBeenCalled();
-      expect(prisma.ucheckUsuarioPendiente.deleteMany).toHaveBeenCalled();
+      expect(tx.ucheckUsuarioPendiente.delete).toHaveBeenCalled();
     }
   });
 
@@ -161,7 +186,6 @@ describe('UcheckUsuariosService', () => {
     ucheck.pedir.mockRejectedValue(new Error('No se pudo conectar con Ucheck'));
     const antes = Date.now();
     await servicio.sincronizar();
-    expect(prisma.ucheckUsuarioPendiente.deleteMany).not.toHaveBeenCalled();
     const llamada = prisma.ucheckUsuarioPendiente.updateMany.mock
       .calls[0][0] as {
       where: unknown;
@@ -176,20 +200,23 @@ describe('UcheckUsuariosService', () => {
     ).toBeGreaterThanOrEqual(120_000);
   });
 
-  it('anotar un cambio sube la versión y lo deja listo para mandar ya', async () => {
-    const { prisma, servicio } = preparar();
-    await servicio.marcar(7, 42);
-    expect(prisma.ucheckUsuarioPendiente.upsert.mock.calls[0][0]).toMatchObject(
-      {
-        where: { usuarioId: 7 },
-        create: { usuarioId: 7, ucheckUsuarioId: 42 },
-        update: {
-          version: { increment: 1 },
-          ucheckUsuarioId: 42,
-          intentos: 0,
-          ultimoError: null,
-        },
+  it('anotar programas los guarda junto con la versión y la marca de programas', async () => {
+    const { tx, servicio } = preparar();
+    await servicio.marcar(7, { ucheckUsuarioId: 42, programas: ['UWEB'] });
+    expect(tx.usuario.update.mock.calls[0][0]).toMatchObject({
+      where: { id: 7 },
+      data: { programasUcheck: ['UWEB'] },
+    });
+    expect(tx.ucheckUsuarioPendiente.upsert.mock.calls[0][0]).toMatchObject({
+      where: { usuarioId: 7 },
+      create: { usuarioId: 7, ucheckUsuarioId: 42, programas: true },
+      update: {
+        version: { increment: 1 },
+        ucheckUsuarioId: 42,
+        programas: true,
+        intentos: 0,
+        ultimoError: null,
       },
-    );
+    });
   });
 });

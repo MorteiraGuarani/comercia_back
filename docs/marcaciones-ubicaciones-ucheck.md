@@ -175,18 +175,24 @@ guarda y COMERCIA trae la copia.
 
 ## Usuarios: el ABM de COMERCIA manda en UCHECK
 
-Crear, editar (datos, correo, rol, activo) o dar de baja un usuario en COMERCIA
-se refleja en su cuenta de UCHECK (`PUT /comercia-integracion/usuarios`):
+Crear, editar (datos, correo, nombre de usuario, programas, activo) o dar de
+baja un usuario en COMERCIA se refleja en su cuenta de UCHECK
+(`PUT /comercia-integracion/usuarios`). El nombre de usuario de COMERCIA es el
+«Usuario único» de UCHECK.
 
-- **Quién:** se crea en UCHECK quien tiene un rol con equipo operativo activo;
-  el resto solo se actualiza o desactiva si ya estaba vinculado. No se tocan
-  superadmins, cuentas `@sin-correo.invalid` ni las desvinculadas a mano.
+- **Quién:** se crea en UCHECK quien tiene programas elegidos; el resto solo se
+  actualiza o desactiva si ya estaba vinculado. No se tocan superadmins, cuentas
+  `@sin-correo.invalid` ni las desvinculadas a mano.
 - **Empresa:** la de UCHECK con el mismo nombre que en COMERCIA (sin distinguir
   mayúsculas ni acentos). Si no existe, el usuario queda pendiente.
-- **Programas:** equipo `REPOSITOR` → `COMERCIA_REPOSITOR`; supervisor o
-  TeamLeader → `COMERCIA_TEAMLEADER`; el resto del equipo → `COMERCIA`; todos con
-  `SEGUIMIENTO`. Solo se agregan o quitan esos cuatro, y solo los que la empresa
-  tiene habilitados; `UWEB` y los demás quedan como están.
+- **Programas:** se eligen en el ABM («Programas asignados (Ucheck)») entre los
+  que la empresa tiene habilitados en UCHECK (`GET /comercia-integracion/programas`,
+  que COMERCIA expone en `GET /usuarios/programas-ucheck`). COMERCIA guarda la
+  copia en `usuarios.programas_ucheck`: lo que UCHECK confirma después de cada
+  envío. Solo se mandan si cambiaron en el ABM; si no, UCHECK conserva los
+  suyos. En el alta sin elegir ninguno se usan los del rol de campo: equipo
+  `REPOSITOR` → `COMERCIA_REPOSITOR`, supervisor o TeamLeader →
+  `COMERCIA_TEAMLEADER`, el resto del equipo → `COMERCIA`, todos con `SEGUIMIENTO`.
 - **Baja:** lógica (`isActive=false`); marcaciones e historial se conservan.
 - **Si UCHECK no responde:** el cambio queda en `ucheck_usuarios_pendientes` y
   `UcheckUsuariosService` lo reintenta cada minuto con espera creciente (hasta

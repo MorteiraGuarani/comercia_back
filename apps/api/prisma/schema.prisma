@@ -556,6 +556,8 @@ model Usuario {
   adjuntosCampo           AdjuntoCampo[]
   identidadUcheck         IdentidadUcheck?
   ucheckPendiente         UcheckUsuarioPendiente?
+  /// Copia de sus programas de Ucheck (códigos): el ABM los elige y Ucheck confirma.
+  programasUcheck         String[]                  @default([]) @map("programas_ucheck")
   permitirVinculoAutomatico Boolean @default(true) @map("permitir_vinculo_automatico")
   seguimientoCampo SeguimientoCampo?
   operacionesCampo OperacionCampo[]
@@ -597,6 +599,8 @@ model UcheckUsuarioPendiente {
   /// Cuenta de Ucheck vinculada antes de cambiar el correo: se le actualiza el
   /// correo en vez de crear otra, y al confirmarse se vuelve a vincular.
   ucheckUsuarioId  Int?     @map("ucheck_usuario_id")
+  /// El ABM cambió los programas: se mandan; si no, Ucheck conserva los suyos.
+  programas        Boolean  @default(false)
   intentos         Int      @default(0)
   siguienteIntento DateTime @default(now()) @map("siguiente_intento")
   ultimoError      String?  @map("ultimo_error") @db.VarChar(500)

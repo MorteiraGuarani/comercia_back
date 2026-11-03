@@ -1,5 +1,8 @@
 import { Transform, Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  ArrayUnique,
+  IsArray,
   IsBoolean,
   IsDateString,
   IsEmail,
@@ -135,6 +138,14 @@ export class CrearUsuarioDto extends DatosErpUsuarioDto {
   @IsString()
   @MaxLength(64)
   legajo?: string | null;
+
+  /** Códigos de sus programas de Ucheck (GET programas-ucheck). En el alta, sin enviarlo se toman los de su rol de campo. */
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(50)
+  @ArrayUnique()
+  @Matches(/^[A-Z][A-Z0-9_]{0,31}$/, { each: true })
+  programasUcheck?: string[];
 }
 
 export class ActualizarUsuarioDto extends DatosErpUsuarioDto {
@@ -212,6 +223,14 @@ export class ActualizarUsuarioDto extends DatosErpUsuarioDto {
   @MinLength(8)
   @MaxLength(100)
   password?: string;
+
+  /** Códigos de sus programas de Ucheck (GET programas-ucheck). Solo se mandan a Ucheck si cambian. */
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(50)
+  @ArrayUnique()
+  @Matches(/^[A-Z][A-Z0-9_]{0,31}$/, { each: true })
+  programasUcheck?: string[];
 }
 
 /** Fila de la edición en lote: el id indica qué usuario se modifica. */

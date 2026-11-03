@@ -222,6 +222,7 @@ describe('UsuariosService - permiso de superadmin', () => {
         esSuperadmin: false,
         correo: 'ana@example.com',
         identidadUcheck: { ucheckUsuarioId: 42 },
+        programasUcheck: ['SEGUIMIENTO', 'COMERCIA'],
       });
     prisma.rol.findUnique.mockResolvedValue({ id: 6, empresaId: 20 });
     prisma.usuario.findFirst.mockResolvedValue(null);
@@ -258,7 +259,10 @@ describe('UsuariosService - permiso de superadmin', () => {
       where: { usuarioId: 2 },
     });
     // Ucheck cambia el correo de esa misma cuenta y recién ahí se re-vincula.
-    expect(ucheckUsuarios.marcar).toHaveBeenLastCalledWith(2, 42);
+    expect(ucheckUsuarios.marcar).toHaveBeenLastCalledWith(2, {
+      ucheckUsuarioId: 42,
+      programas: undefined,
+    });
   });
 
   it('guarda y devuelve las seis referencias ERP del ABM', async () => {
@@ -288,7 +292,29 @@ describe('UsuariosService - permiso de superadmin', () => {
       nombre: 'Ana',
     });
     expect(prisma.identidadUcheck.deleteMany).not.toHaveBeenCalled();
-    expect(ucheckUsuarios.marcar).toHaveBeenLastCalledWith(2, undefined);
+    expect(ucheckUsuarios.marcar).toHaveBeenLastCalledWith(2, {
+      ucheckUsuarioId: undefined,
+      programas: undefined,
+    });
+  });
+
+  it('manda a Ucheck los programas solo si cambiaron', async () => {
+    prepararCambioCorreo();
+    await service.actualizar(1, 2, {
+      programasUcheck: ['COMERCIA', 'SEGUIMIENTO'],
+    });
+    expect(ucheckUsuarios.marcar).toHaveBeenLastCalledWith(2, {
+      ucheckUsuarioId: undefined,
+      programas: undefined,
+    });
+    prepararCambioCorreo();
+    await expect(
+      service.actualizar(1, 2, { programasUcheck: ['UWEB'] }),
+    ).resolves.toMatchObject({ programasUcheck: ['UWEB'] });
+    expect(ucheckUsuarios.marcar).toHaveBeenLastCalledWith(2, {
+      ucheckUsuarioId: undefined,
+      programas: ['UWEB'],
+    });
   });
 
   it('devuelve conflicto si el correo ya pertenece a otra cuenta', async () => {

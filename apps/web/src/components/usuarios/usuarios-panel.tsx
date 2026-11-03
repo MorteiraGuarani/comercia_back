@@ -18,6 +18,7 @@ import type {
 } from "@/types/usuario";
 import { Modal } from "@/components/modal";
 import { VinculoUcheck } from "./vinculo-ucheck";
+import { ProgramasUcheck } from "./programas-ucheck";
 import { Paginacion } from "@/components/paginacion";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import {
@@ -50,6 +51,7 @@ const FORM_INICIAL: FormUsuario = {
   superiorId: "",
   esSuperadmin: false,
   isActive: true,
+  programasUcheck: [],
 };
 
 
@@ -229,6 +231,7 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
       rolId: usuario.rol?.id ?? "",
       superiorId: usuario.superior?.id ?? "",
       isActive: usuario.isActive,
+      programasUcheck: usuario.programasUcheck,
     });
     setError(null);
     setEditando(usuario);
@@ -261,6 +264,10 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
             rolId: form.rolId,
             superiorId: form.superiorId === "" ? null : form.superiorId,
             esSuperadmin: form.esSuperadmin,
+            // Sin elegir, la API usa los de su rol de campo.
+            ...(form.programasUcheck.length
+              ? { programasUcheck: form.programasUcheck }
+              : {}),
           }),
         });
       } else {
@@ -285,6 +292,8 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
             rolId: form.rolId,
             superiorId: form.superiorId === "" ? null : form.superiorId,
             isActive: form.isActive,
+            // La API los manda a Ucheck solo si cambiaron.
+            programasUcheck: form.programasUcheck,
             ...(form.password ? { password: form.password } : {}),
           }),
         });
@@ -639,6 +648,16 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
                 onClick={() => setForm((actual) => ({ ...actual, superiorId: "" }))}>Quitar superior</button> : null}
             </div>
           ) : <p className="text-sm text-muted">Seleccioná un rol para elegir su superior inmediato.</p>}
+          {editando && empresaId !== "" ? (
+            <ProgramasUcheck
+              url={`${base}/programas-ucheck?empresaId=${empresaId}`}
+              value={form.programasUcheck}
+              disabled={guardando}
+              onChange={(programasUcheck) =>
+                setForm((actual) => ({ ...actual, programasUcheck }))
+              }
+            />
+          ) : null}
           {editando === "nuevo" && meta?.esSuperadmin ? (
             <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-lg border border-line bg-surface-soft px-3 py-2.5 text-sm">
               <input

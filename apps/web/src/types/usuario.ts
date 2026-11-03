@@ -26,6 +26,8 @@ export interface FormUsuario extends FormularioErpUsuario {
   superiorId: number | "";
   esSuperadmin: boolean;
   isActive: boolean;
+  /** Códigos de sus programas de Ucheck. */
+  programasUcheck: string[];
 }
 
 // Usuario de la sesión, tal como lo devuelve la API (/auth/me, /auth/login)
@@ -71,6 +73,8 @@ export interface UsuarioAdmin extends DatosErpUsuario {
   superior: { id: number; nombre: string } | null;
   esSuperadmin: boolean;
   isActive: boolean;
+  /** Copia de sus programas de Ucheck (códigos), como los confirmó Ucheck. */
+  programasUcheck: string[];
   createdAt: string;
 }
 

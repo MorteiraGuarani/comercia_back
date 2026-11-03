@@ -49,6 +49,9 @@ export class UsuarioAdminRespuestaDto implements UsuarioAdminDto {
   superior!: EmpresaUsuarioRespuestaDto | null;
   esSuperadmin!: boolean;
   isActive!: boolean;
+  /** Copia de sus programas de Ucheck (códigos), como los confirmó Ucheck. */
+  @ApiProperty({ type: [String], example: ['COMERCIA', 'SEGUIMIENTO'] })
+  programasUcheck!: string[];
   @ApiProperty({ type: String, format: 'date-time' })
   createdAt!: string;
 }

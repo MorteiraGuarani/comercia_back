@@ -14,6 +14,8 @@ export interface UsuarioAdminDto extends DatosErpUsuario {
   superior: { id: number; nombre: string } | null;
   esSuperadmin: boolean;
   isActive: boolean;
+  /** Copia de sus programas de Ucheck (códigos). */
+  programasUcheck: string[];
   createdAt: string;
 }
 

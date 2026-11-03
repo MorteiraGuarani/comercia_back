@@ -58,6 +58,7 @@ import { CARPETA_FOTOS_PERFIL } from './utils/multer-foto-perfil';
 import type { ActualizarPerfilDto } from './dto/perfil.dto';
 import { filtroLocales, nombreLocal } from '../campo/utils/local-ocrd';
 import { UcheckUsuariosService } from './ucheck-usuarios.service';
+import { programasUcheck } from './utils/programas-ucheck';
 
 const SELECT_USUARIO_ADMIN = {
   id: true,
@@ -76,6 +77,7 @@ const SELECT_USUARIO_ADMIN = {
   ERP_Impulsador: true,
   esSuperadmin: true,
   isActive: true,
+  programasUcheck: true,
   createdAt: true,
   empresa: { select: { id: true, nombre: true } },
   rol: { select: { id: true, descripcion: true } },
@@ -99,6 +101,7 @@ type UsuarioFila = {
   ERP_Impulsador: string | null;
   esSuperadmin: boolean;
   isActive: boolean;
+  programasUcheck: string[];
   createdAt: Date;
   empresa: { id: number; nombre: string };
   rol: { id: number; descripcion: string } | null;
@@ -139,6 +142,7 @@ function aUsuarioDto(usuario: UsuarioFila): UsuarioAdminDto {
       : null,
     esSuperadmin: usuario.esSuperadmin,
     isActive: usuario.isActive,
+    programasUcheck: usuario.programasUcheck,
     createdAt: usuario.createdAt.toISOString(),
   };
 }
@@ -237,6 +241,16 @@ export class UsuariosService {
       take: 200,
     });
     return { empresas, esSuperadmin: actual.esSuperadmin };
+  }
+
+  /** Programas de Ucheck que se pueden asignar en la empresa (para el ABM). */
+  async listarProgramasUcheck(usuarioId: number, query: ListarUsuariosDto) {
+    const actual = await this.contexto(usuarioId);
+    const empresa = await this.prisma.empresa.findUniqueOrThrow({
+      where: { id: this.empresaObjetivo(actual, query.empresaId) },
+      select: { nombre: true },
+    });
+    return this.ucheckUsuarios.programas(empresa.nombre, query);
   }
 
   async listarRoles(usuarioId: number, query: ListarUsuariosDto) {
@@ -609,7 +623,20 @@ export class UsuariosService {
       },
       passwordHash ? await passwordHash : undefined,
     );
-    await this.ucheckUsuarios.marcar(creado.id);
+    // Sin elegirlos en el alta (p. ej. el lote), los de su rol de campo.
+    const rol =
+      dto.programasUcheck || !dto.rolId
+        ? null
+        : await this.prisma.rol.findUnique({
+            where: { id: dto.rolId },
+            select: {
+              descripcion: true,
+              equipoCampo: { select: { tipo: true, activo: true } },
+            },
+          });
+    await this.ucheckUsuarios.marcar(creado.id, {
+      programas: dto.programasUcheck ?? programasUcheck(rol),
+    });
     const usuario = await this.prisma.usuario.findUnique({
       where: { id: creado.id },
       select: SELECT_USUARIO_ADMIN,
@@ -651,6 +678,7 @@ export class UsuariosService {
         superiorId: true,
         esSuperadmin: true,
         correo: true,
+        programasUcheck: true,
         identidadUcheck: { select: { ucheckUsuarioId: true } },
       },
     });
@@ -745,11 +773,23 @@ export class UsuariosService {
         await this.prisma.identidadUcheck.deleteMany({
           where: { usuarioId: id },
         });
-      await this.ucheckUsuarios.marcar(
-        id,
-        cambiaCorreo ? objetivo.identidadUcheck?.ucheckUsuarioId : undefined,
-      );
-      return aUsuarioDto(usuario);
+      // Solo si cambiaron: así guardar otros datos no pisa los de Ucheck.
+      const programas =
+        dto.programasUcheck &&
+        [...dto.programasUcheck].sort().join() !==
+          [...objetivo.programasUcheck].sort().join()
+          ? dto.programasUcheck
+          : undefined;
+      await this.ucheckUsuarios.marcar(id, {
+        ucheckUsuarioId: cambiaCorreo
+          ? objetivo.identidadUcheck?.ucheckUsuarioId
+          : undefined,
+        programas,
+      });
+      return {
+        ...aUsuarioDto(usuario),
+        ...(programas ? { programasUcheck: programas } : {}),
+      };
     } catch (error: unknown) {
       relanzarDuplicado(
         error,
