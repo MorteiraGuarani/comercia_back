@@ -178,32 +178,23 @@ export default function PanelLayout({
     ...modulos.flatMap((m) =>
       m.paginas
         .filter(
-          (p) => !soloEnCampana(m.ruta, p.ruta) && !enPerfil(m.ruta, p.ruta),
+          (p) =>
+            !soloEnCampana(m.ruta, p.ruta) &&
+            !enPerfil(m.ruta, p.ruta) &&
+            // El inventario se carga desde el Itinerario, no desde el menú.
+            !(m.ruta === "mi-jornada" && p.ruta === "inventario"),
         )
-        .map((p) =>
-          // El inventario se carga desde el Itinerario: su lugar en el menú es
-          // para Pedidos, que todavía no está habilitado.
-          m.ruta === "mi-jornada" && p.ruta === "inventario"
-            ? {
-                href: "/panel/pedidos",
-                nombre: "Pedidos",
-                icono: "pedidos",
-                disabled: true,
-                motivo: "Próximamente",
-              }
-            : {
-                href: `/panel/${m.ruta}/${p.ruta}`,
-                nombre: etiquetaPaginaMenu(m.ruta, p.ruta, p.nombre),
-                disabled:
-                  p.ruta === "tareas" && tareasDisponibles[m.ruta] === false,
-                icono: resolverIconoPagina({
-                  moduloRuta: m.ruta,
-                  moduloIcono: m.icono,
-                  paginaRuta: p.ruta,
-                  paginaIcono: p.icono,
-                }),
-              },
-        ),
+        .map((p) => ({
+          href: `/panel/${m.ruta}/${p.ruta}`,
+          nombre: etiquetaPaginaMenu(m.ruta, p.ruta, p.nombre),
+          disabled: p.ruta === "tareas" && tareasDisponibles[m.ruta] === false,
+          icono: resolverIconoPagina({
+            moduloRuta: m.ruta,
+            moduloIcono: m.icono,
+            paginaRuta: p.ruta,
+            paginaIcono: p.icono,
+          }),
+        })),
     ),
   ];
   // Desempeño (gestion-campo/visitas o, del jefe, jefatura/desempeno) va

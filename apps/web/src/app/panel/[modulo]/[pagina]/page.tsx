@@ -44,6 +44,9 @@ const InventarioPanel = dynamic(
     ),
   { ssr: false },
 );
+const PedidosPanel = dynamic(() =>
+  import("@/components/campo/pedidos-panel").then((m) => m.PedidosPanel),
+);
 
 const UsuariosPanel = dynamic(() =>
   import("@/components/usuarios/usuarios-panel").then((m) => m.UsuariosPanel),
@@ -96,6 +99,9 @@ export default function PaginaModulo({
       </div>
     );
   }
+
+  // Pedidos: en cualquier módulo donde se cree la página desde Módulos y páginas.
+  if (pagina === "pedidos") return <PedidosPanel />;
 
   // MÓDULO: GESTIÓN DE CAMPO (SUPERVISOR / TEAM LEADER)
   if (modulo === "gestion-campo") {

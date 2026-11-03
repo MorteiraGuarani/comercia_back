@@ -1,7 +1,7 @@
 import { IconoModulo } from "@/components/panel/iconos";
 
-// Pedidos todavía no está habilitado: el menú lo muestra deshabilitado.
-export default function PedidosPage() {
+// shortcut: solo la página; la carga de pedidos se arma cuando se defina el flujo.
+export function PedidosPanel() {
   return (
     <section className="mx-auto grid min-h-[50dvh] w-full max-w-md place-items-center px-4 py-10 text-center">
       <div className="space-y-3">
