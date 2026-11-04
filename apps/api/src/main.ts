@@ -1,7 +1,9 @@
+import './instrument';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
+import { SentryGlobalFilter } from '@sentry/nestjs/setup';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
@@ -52,8 +54,12 @@ async function bootstrap() {
     }),
   );
 
+  // El de Sentry va primero (atrapa todo y reporta los 500); el de Prisma
+  // sigue resolviendo sus errores como antes.
+  const adaptador = app.get(HttpAdapterHost).httpAdapter;
   app.useGlobalFilters(
-    new ErrorPrismaFilter(app.get(HttpAdapterHost).httpAdapter),
+    new SentryGlobalFilter(adaptador),
+    new ErrorPrismaFilter(adaptador),
   );
 
   configurarSwagger(app);

@@ -74,6 +74,8 @@ services:
       TRUST_PROXY: ${TRUST_PROXY:-}
       HTTP_BODY_LIMIT_MB: ${HTTP_BODY_LIMIT_MB:-50}
       HTTP_BODY_LIMIT_GENERAL_MB: ${HTTP_BODY_LIMIT_GENERAL_MB:-1}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
       # Login automático por número de SIM: inseguro, apagado salvo decisión explícita.
       LOGIN_SIM_HABILITADO: ${LOGIN_SIM_HABILITADO:-false}
       # Días que se guardan las fotos de tareas (0 = no se borran; mínimo 90).

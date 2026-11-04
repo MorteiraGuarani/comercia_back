@@ -170,29 +170,29 @@ export class SupervisionService {
 
     const [usuarios, mandos] = await Promise.all([
       this.prisma.usuario.findMany({
-      where: {
-        id: { in: idsConsultar },
-        empresaId: u.empresaId,
-        isActive: true,
-        rol: {
-          ...deCampo,
-          ...(equipoId ? { equipoCampoId: equipoId } : {}),
-        },
-      },
-      select: {
-        id: true,
-        nombre: true,
-        apellido: true,
-        celular: true,
-        superiorId: true,
-        rol: {
-          select: {
-            descripcion: true,
-            equipoCampo: { select: EQUIPO_CAMPO_SELECT },
+        where: {
+          id: { in: idsConsultar },
+          empresaId: u.empresaId,
+          isActive: true,
+          rol: {
+            ...deCampo,
+            ...(equipoId ? { equipoCampoId: equipoId } : {}),
           },
         },
-      },
-      orderBy: [{ nombre: 'asc' }, { id: 'asc' }],
+        select: {
+          id: true,
+          nombre: true,
+          apellido: true,
+          celular: true,
+          superiorId: true,
+          rol: {
+            select: {
+              descripcion: true,
+              equipoCampo: { select: EQUIPO_CAMPO_SELECT },
+            },
+          },
+        },
+        orderBy: [{ nombre: 'asc' }, { id: 'asc' }],
       }),
       // Jefatura: los mandos intermedios (gerente › jefe › …) arman la cascada.
       vista === 'jefatura'
@@ -213,7 +213,17 @@ export class SupervisionService {
             orderBy: [{ nombre: 'asc' }, { id: 'asc' }],
             take: 2000,
           })
-        : Promise.resolve([]),
+        : Promise.resolve<
+            Prisma.UsuarioGetPayload<{
+              select: {
+                id: true;
+                nombre: true;
+                apellido: true;
+                superiorId: true;
+                rol: { select: { descripcion: true } };
+              };
+            }>[]
+          >([]),
     ]);
 
     const colaboradores: ColaboradorResumenItem[] = [];

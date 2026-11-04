@@ -11,7 +11,8 @@ import { mensajeError } from "@/utils/error";
 /** Días antes del vencimiento en que se avisa por el inventario de los locales. */
 export function ConfigVencimientosModal({ onCerrar }: { onCerrar: () => void }) {
   const op = useOperacionCampo();
-  const [dias, setDias] = useState("");
+  // null = todavía cargando; "" = el usuario borró el número.
+  const [dias, setDias] = useState<string | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -66,8 +67,8 @@ export function ConfigVencimientosModal({ onCerrar }: { onCerrar: () => void }) 
               min={1}
               max={90}
               required
-              disabled={!dias && !error}
-              value={dias}
+              disabled={dias === null && !error}
+              value={dias ?? ""}
               onChange={(e) => setDias(e.target.value)}
               className="min-h-11 w-32 rounded-lg border border-line bg-surface px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:border-line dark:bg-surface dark:text-foreground"
             />

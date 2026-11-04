@@ -34,7 +34,7 @@ describe('GPS de las marcaciones de campo', () => {
   });
 
   it.each([
-    { precisionMetros: 51 },
+    { precisionMetros: 101 },
     { precisionMetros: -1 },
     { capturadaEn: '2026-09-23T14:58:00.000Z' },
     { capturadaEn: '2026-09-23T15:01:00.000Z' },

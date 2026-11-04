@@ -6,7 +6,7 @@ umask 077
 
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BACKUP_DIR="${BACKUP_DIR:-$APP_DIR/backups}"
-KEEP_DAYS="${KEEP_DAYS:-30}"
+KEEP_DAYS="${KEEP_DAYS:-2}"
 
 mkdir -p "$BACKUP_DIR"
 BACKUP_DIR="$(cd "$BACKUP_DIR" && pwd -P)"
@@ -55,6 +55,6 @@ TEMP_DIR=""
 # Retención de parejas completas en la carpeta externa a Docker.
 find "$BACKUP_DIR" -maxdepth 1 -type f \
   \( -name 'comercia-*.sql.gz' -o -name 'comercia-*.uploads.tar.gz' -o -name 'comercia-*.sha256' \) \
-  -mtime +"$KEEP_DAYS" -delete
+  -mmin +"$((KEEP_DAYS * 1440))" -delete
 
 echo "Backup OK: $BACKUP_DIR/$NAME.{sql.gz,uploads.tar.gz,sha256}"

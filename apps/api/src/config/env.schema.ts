@@ -55,6 +55,9 @@ const rawEnvSchema = z
     UCHECK_SSO_SECRET: z.string().min(32).optional(),
     // Gateway UniversalBack (SAP HANA / Service Layer) de la red interna.
     SAP_API_URL: z.string().url().optional(),
+    // Errores a Sentry; sin DSN no se envía nada.
+    SENTRY_DSN: z.union([z.string().url(), z.literal('')]).optional(),
+    SENTRY_ENVIRONMENT: z.string().max(40).optional(),
   })
   .superRefine((env, context) => {
     const tieneSecretoSso = Boolean(
