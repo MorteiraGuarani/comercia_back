@@ -11,6 +11,11 @@ jest.mock('../../generated/prisma/client', () => ({
   Prisma: {
     PrismaClientKnownRequestError: class PrismaClientKnownRequestError {},
   },
+  DestinatarioTareaCampo: {
+    IMPULSADOR: 'IMPULSADOR',
+    REPOSITOR: 'REPOSITOR',
+    AMBOS: 'AMBOS',
+  },
 }));
 
 describe('AuthService', () => {
