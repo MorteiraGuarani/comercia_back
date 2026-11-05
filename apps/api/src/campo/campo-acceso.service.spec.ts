@@ -169,9 +169,19 @@ describe('Alcance de campo', () => {
       await expect(conPlataforma(null).ejecutar(20)).rejects.toBeInstanceOf(
         ForbiddenException,
       );
+      // Con un equipo inactivo tampoco.
+      await expect(
+        conPlataforma({
+          ...lider,
+          equipoCampo: { ...equipoCampo, activo: false },
+        }).ejecutar(20),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('un jefe sin equipo con Itinerario recorre lo que hereda de su cadena', async () => {
       await expect(
         conPlataforma({ ...lider, equipoCampo: null }).ejecutar(20),
-      ).rejects.toBeInstanceOf(ForbiddenException);
+      ).resolves.toMatchObject({ id: 20, equipoCampo: null });
     });
   });
 

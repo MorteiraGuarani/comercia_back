@@ -41,14 +41,17 @@ describe('Evidencias antes de completar una tarea', () => {
           id: 20,
           localId: 30,
           fecha: new Date('2026-09-17'),
-          usuario: {
-            rol: {
-              descripcion: 'Operador nuevo',
-              equipoCampo: {
-                id: 1,
-                nombre: 'Impulsadores',
-                tipo: 'IMPULSADOR',
-                activo: true,
+          // Titular del local: sus tareas son las de la visita.
+          asignacion: {
+            usuario: {
+              rol: {
+                descripcion: 'Operador nuevo',
+                equipoCampo: {
+                  id: 1,
+                  nombre: 'Impulsadores',
+                  tipo: 'IMPULSADOR',
+                  activo: true,
+                },
               },
             },
           },

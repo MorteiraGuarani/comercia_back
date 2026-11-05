@@ -308,6 +308,30 @@ try {
   assert.deepEqual(await agenda(4, equipoA), [4]);
   assert.deepEqual(await agenda(5, equipoB), []);
   assert.deepEqual(await agenda(5, equipoB, '2026-10-06'), [4]);
+  // Jerarquía: un jefe sin equipo hereda a 4 (equipo A) y a 5 (equipo B) y
+  // ve cada asignación con los horarios del equipo de su titular.
+  const agendaJefe = async (hasta) => {
+    const sql = condicionAgenda(10, 99, '2026-10-05', hasta, null, [4, 5]);
+    const result = await db.query(
+      `SELECT DISTINCT a.id FROM campo_asignaciones a
+      JOIN campo_locales l ON l.id=a.local_id
+      WHERE ${sql.text} AND l.eliminado_en IS NULL ORDER BY a.id`,
+      sql.values,
+    );
+    return result.rows.map((x) => x.id);
+  };
+  assert.deepEqual(await agendaJefe('2026-10-05'), [7]);
+  assert.deepEqual(await agendaJefe('2026-10-06'), [7, 8]);
+  // Sin herencia, un usuario sin equipo no ve asignaciones propias ni ajenas.
+  assert.deepEqual(
+    (
+      await db.query(
+        `SELECT a.id FROM campo_asignaciones a JOIN campo_locales l ON l.id=a.local_id WHERE ${condicionAgenda(10, 4, '2026-10-05', '2026-10-06', null).text}`,
+        condicionAgenda(10, 4, '2026-10-05', '2026-10-06', null).values,
+      )
+    ).rows,
+    [],
+  );
   assert.deepEqual(
     (
       await db.query(

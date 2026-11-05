@@ -132,8 +132,9 @@ export class CampoAccesoService {
           if (e instanceof ForbiddenException) return null;
           throw e;
         });
-      if (lider?.equipoCampo?.activo) {
-        exigirEquipoCampo(lider.equipoCampo);
+      // Sin equipo propio (un jefe) recorre solo lo que hereda de su cadena.
+      if (lider && (!lider.equipoCampo || lider.equipoCampo.activo)) {
+        if (lider.equipoCampo) exigirEquipoCampo(lider.equipoCampo);
         return lider;
       }
       const usuario = await this.gestionar(usuarioId, 'locales');

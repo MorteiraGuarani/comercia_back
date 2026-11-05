@@ -11,6 +11,8 @@ export interface ReglaHorario {
 
 export interface FilaAgendaId {
   id: number;
+  /** Equipo del titular: define los horarios de la asignación. */
+  equipo: number | null;
 }
 export interface TotalAgenda {
   total: bigint;

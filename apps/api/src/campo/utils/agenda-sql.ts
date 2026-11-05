@@ -1,12 +1,21 @@
 import { Prisma } from '../../../generated/prisma/client';
 
-function condicionHorario(diaSql: Prisma.Sql, equipoCampoId: number) {
+// Equipo del titular de la asignación: sus horarios son los del local. Un
+// líder que hereda locales de otro equipo los ve con los horarios de ese equipo.
+export function equipoTitular() {
+  return Prisma.sql`(
+    SELECT r.equipo_campo_id FROM usuarios titular JOIN roles r ON r.id = titular.rol_id AND r.empresa_id = titular.empresa_id
+    WHERE titular.id = a.usuario_id
+  )`;
+}
+
+function condicionHorario(diaSql: Prisma.Sql) {
   // Una asignación solo entra en agenda si tiene una franja operativa vigente.
   return Prisma.sql`
     EXISTS (
-      SELECT 1 FROM campo_horarios h WHERE h.empresa_id = l.empresa_id AND h."CardCode" = l."CardCode" AND h.activo AND h.equipo_campo_id = ${equipoCampoId}
+      SELECT 1 FROM campo_horarios h WHERE h.empresa_id = l.empresa_id AND h."CardCode" = l."CardCode" AND h.activo AND h.equipo_campo_id = ${equipoTitular()}
       AND (h.asignacion_id = a.id OR (h.asignacion_id IS NULL AND NOT EXISTS (
-        SELECT 1 FROM campo_horarios propio WHERE propio.asignacion_id = a.id AND propio.activo AND propio.equipo_campo_id = ${equipoCampoId}
+        SELECT 1 FROM campo_horarios propio WHERE propio.asignacion_id = a.id AND propio.activo AND propio.equipo_campo_id = ${equipoTitular()}
       )))
       AND h.fecha_desde <= ${diaSql} AND (h.fecha_hasta IS NULL OR h.fecha_hasta >= ${diaSql})
       AND (
@@ -20,8 +29,7 @@ function condicionHorario(diaSql: Prisma.Sql, equipoCampoId: number) {
     )`;
 }
 
-// Un líder (TeamLeader o supervisor) comparte la ruta de su cadena dentro del
-// equipo (`heredados`). La asignación sigue siendo de cada colaborador; cada
+// Un líder comparte la ruta de toda su cadena del organigrama (`heredados`). La asignación sigue siendo de cada colaborador; cada
 // persona conserva su propia visita. El responsable del día es el backup
 // vigente o, si no hay, el titular.
 function condicionHeredada(heredados: number[], diaSql: Prisma.Sql) {
@@ -42,14 +50,18 @@ export function condicionAgenda(
   usuarioId: number,
   fecha: string,
   fechaFin = fecha,
-  equipoCampoId: number,
+  // Equipo propio; null para un líder sin equipo, que solo ve lo heredado.
+  equipoCampoId: number | null,
   heredados: number[] = [],
 ) {
   const tipoAsignacion = Prisma.sql`EXISTS (
     SELECT 1 FROM usuarios titular JOIN roles r ON r.id = titular.rol_id AND r.empresa_id = titular.empresa_id
+    JOIN campo_equipos_operativos e ON e.id = r.equipo_campo_id
     WHERE titular.id = a.usuario_id AND titular.empresa_id = ${empresaId}
-      AND r.equipo_campo_id = ${equipoCampoId}
+      AND e.activo AND e.tipo <> 'AMBOS'
   )`;
+  // Propias o como backup: solo de su propio equipo, como hasta ahora.
+  const delEquipo = Prisma.sql`${equipoTitular()} = ${equipoCampoId}::int`;
   if (fecha === fechaFin) {
     const dia = Prisma.sql`${fecha}::date`;
     return Prisma.sql`
@@ -57,14 +69,14 @@ export function condicionAgenda(
       AND ${tipoAsignacion}
       AND a.fecha_desde <= ${dia} AND (a.fecha_hasta IS NULL OR a.fecha_hasta >= ${dia})
       AND (
-        (a.usuario_id = ${usuarioId} AND NOT EXISTS (
+        (${delEquipo} AND ((a.usuario_id = ${usuarioId} AND NOT EXISTS (
           SELECT 1 FROM campo_backups b WHERE b.asignacion_id = a.id AND b.activo
           AND ${dia} BETWEEN b.fecha_desde AND b.fecha_hasta
         )) OR EXISTS (
           SELECT 1 FROM campo_backups b WHERE b.asignacion_id = a.id AND b.activo AND b.usuario_id = ${usuarioId}
           AND ${dia} BETWEEN b.fecha_desde AND b.fecha_hasta
-        ) OR ${condicionHeredada(heredados, dia)}
-      ) AND (${condicionHorario(dia, equipoCampoId)})`;
+        ))) OR ${condicionHeredada(heredados, dia)}
+      ) AND (${condicionHorario(dia)})`;
   }
 
   const dia = Prisma.sql`(d.dia::date)`;
@@ -73,13 +85,13 @@ export function condicionAgenda(
     AND ${tipoAsignacion}
     AND a.fecha_desde <= ${fechaFin}::date AND (a.fecha_hasta IS NULL OR a.fecha_hasta >= ${fecha}::date)
     AND (
-      (a.usuario_id = ${usuarioId} AND NOT EXISTS (
+      (${delEquipo} AND ((a.usuario_id = ${usuarioId} AND NOT EXISTS (
         SELECT 1 FROM campo_backups b WHERE b.asignacion_id = a.id AND b.activo
         AND b.fecha_desde <= ${fechaFin}::date AND b.fecha_hasta >= ${fecha}::date
       )) OR EXISTS (
         SELECT 1 FROM campo_backups b WHERE b.asignacion_id = a.id AND b.activo AND b.usuario_id = ${usuarioId}
         AND b.fecha_desde <= ${fechaFin}::date AND b.fecha_hasta >= ${fecha}::date
-      ) OR ${
+      ))) OR ${
         heredados.length
           ? Prisma.sql`(a.usuario_id = ANY(${heredados}::int[]) OR EXISTS (
             SELECT 1 FROM campo_backups b WHERE b.asignacion_id = a.id
@@ -92,9 +104,9 @@ export function condicionAgenda(
       EXISTS (
         SELECT 1 FROM campo_horarios h
         CROSS JOIN generate_series(${fecha}::date, ${fechaFin}::date, interval '1 day') AS d(dia)
-        WHERE h.empresa_id = l.empresa_id AND h."CardCode" = l."CardCode" AND h.activo AND h.equipo_campo_id = ${equipoCampoId}
+        WHERE h.empresa_id = l.empresa_id AND h."CardCode" = l."CardCode" AND h.activo AND h.equipo_campo_id = ${equipoTitular()}
         AND (h.asignacion_id = a.id OR (h.asignacion_id IS NULL AND NOT EXISTS (
-          SELECT 1 FROM campo_horarios propio WHERE propio.asignacion_id = a.id AND propio.activo AND propio.equipo_campo_id = ${equipoCampoId}
+          SELECT 1 FROM campo_horarios propio WHERE propio.asignacion_id = a.id AND propio.activo AND propio.equipo_campo_id = ${equipoTitular()}
         )))
         AND h.fecha_desde <= ${dia} AND (h.fecha_hasta IS NULL OR h.fecha_hasta >= ${dia})
         AND (

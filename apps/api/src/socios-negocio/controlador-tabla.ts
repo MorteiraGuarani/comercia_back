@@ -38,6 +38,9 @@ import {
   VendedorParams,
   SupervisorParams,
   DireccionParams,
+  AlmacenParams,
+  OclpParams,
+  JfdvParams,
   SelectorDireccionDto,
   ConsultaDireccionesDto,
   SelectorArticuloDto,
@@ -72,33 +75,33 @@ export function crearControladorSocios(
   const esDireccion = tabla.nombre === 'tbl_crd1';
   const esCodigoArticulo = tabla.nombre === 'tbl_oscn';
   const esListadoPorCodigo = esDireccion || esCodigoArticulo;
-  const identificadores: Record<string, { campo: string; dto: Type<object> }> =
-    {
-      tbl_ocrd: { campo: 'CardCode', dto: SocioParams },
-      tbl_crd1: { campo: 'CardCode', dto: DireccionParams },
-      tbl_oscn: { campo: 'CardCode', dto: DireccionParams },
-      tbl_omrc: { campo: 'Code', dto: FabricanteParams },
-      tbl_oitb: { campo: 'Number', dto: GrupoArticuloParams },
-      tbl_jcanales: { campo: 'Code', dto: CodigoCatalogoParams },
-      tbl_jsubcanales: { campo: 'Code', dto: CodigoCatalogoParams },
-      tbl_opln: { campo: 'ListNum', dto: ListaPrecioParams },
-      tbl_ocrg: { campo: 'Code', dto: GrupoSocioParams },
-      tbl_octg: { campo: 'GroupNumber', dto: CondicionPagoParams },
-      tbl_oslp: { campo: 'SlpCode', dto: VendedorParams },
-      tbl_oagp: { campo: 'AgentCode', dto: SupervisorParams },
-    };
+  // largo = clave de texto (su máximo); sin largo, clave entera int4.
+  const identificadores: Record<
+    string,
+    { campo: string; dto: Type<object>; largo?: number }
+  > = {
+    tbl_ocrd: { campo: 'CardCode', dto: SocioParams, largo: 50 },
+    tbl_crd1: { campo: 'CardCode', dto: DireccionParams, largo: 200 },
+    tbl_oscn: { campo: 'CardCode', dto: DireccionParams, largo: 200 },
+    tbl_omrc: { campo: 'Code', dto: FabricanteParams },
+    tbl_oitb: { campo: 'Number', dto: GrupoArticuloParams },
+    tbl_jcanales: { campo: 'Code', dto: CodigoCatalogoParams },
+    tbl_jsubcanales: { campo: 'Code', dto: CodigoCatalogoParams },
+    tbl_opln: { campo: 'ListNum', dto: ListaPrecioParams },
+    tbl_ocrg: { campo: 'Code', dto: GrupoSocioParams },
+    tbl_octg: { campo: 'GroupNumber', dto: CondicionPagoParams },
+    tbl_oslp: { campo: 'SalesEmployeeCode', dto: VendedorParams },
+    tbl_oagp: { campo: 'AgentCode', dto: SupervisorParams, largo: 150 },
+    tbl_owhs: { campo: 'WarehouseCode', dto: AlmacenParams, largo: 100 },
+    tbl_oclp: { campo: 'Code', dto: OclpParams },
+    tbl_jfdv: { campo: 'Code', dto: JfdvParams, largo: 20 },
+  };
   const identificador = identificadores[tabla.nombre];
   const identidad = identificador?.campo ?? 'id';
   const ruta = `:${identidad}`;
   const Parametros = identificador?.dto ?? RegistroSociosParams;
-  const esEntero = [
-    'Code',
-    'ListNum',
-    'SlpCode',
-    'GroupNumber',
-    'Number',
-  ].includes(identidad);
-  const esTexto = identidad === 'CardCode' || identidad === 'AgentCode';
+  const esTexto = identificador?.largo !== undefined;
+  const esEntero = identificador !== undefined && !esTexto;
   const consulta = (listado: boolean) =>
     new ValidationPipe({
       expectedType: esDireccion
@@ -181,7 +184,10 @@ export function crearControladorSocios(
       | GrupoArticuloParams
       | VendedorParams
       | SupervisorParams
-      | DireccionParams,
+      | DireccionParams
+      | AlmacenParams
+      | OclpParams
+      | JfdvParams,
   ) =>
     'CardCode' in p
       ? p.CardCode
@@ -193,11 +199,13 @@ export function crearControladorSocios(
             ? p.GroupNumber
             : 'Number' in p
               ? p.Number
-              : 'SlpCode' in p
-                ? p.SlpCode
+              : 'SalesEmployeeCode' in p
+                ? p.SalesEmployeeCode
                 : 'AgentCode' in p
                   ? p.AgentCode
-                  : p.id;
+                  : 'WarehouseCode' in p
+                    ? p.WarehouseCode
+                    : p.id;
   const documentarCodigo = () =>
     ApiParam({
       name: identidad,
@@ -205,8 +213,7 @@ export function crearControladorSocios(
         ? {
             type: 'string',
             minLength: 1,
-            maxLength:
-              esListadoPorCodigo || identidad === 'AgentCode' ? 200 : 50,
+            maxLength: identificador?.largo,
           }
         : esEntero
           ? { type: 'integer', minimum: -2147483648, maximum: 2147483647 }
@@ -214,8 +221,8 @@ export function crearControladorSocios(
       example:
         identidad === 'CardCode'
           ? 'C00001'
-          : identidad === 'AgentCode'
-            ? 'SUP01'
+          : esTexto
+            ? tabla.ejemplo[identidad]
             : esEntero
               ? 1
               : '1',

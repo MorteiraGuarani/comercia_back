@@ -452,7 +452,7 @@ export class SociosNegocioService {
       resolver(TABLAS_SOCIOS.tbl_octg, 'GroupNumber', socio.GroupNum),
       resolver(TABLAS_SOCIOS.tbl_opln, 'ListNum', socio.ListNum),
       resolver(TABLAS_SOCIOS.tbl_oagp, 'AgentCode', socio.AgentCode),
-      resolver(TABLAS_SOCIOS.tbl_oslp, 'SlpCode', socio.SlpCode),
+      resolver(TABLAS_SOCIOS.tbl_oslp, 'SalesEmployeeCode', socio.SlpCode),
       resolver(
         TABLAS_SOCIOS.tbl_jcanales,
         'Code',

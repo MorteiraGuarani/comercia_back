@@ -116,20 +116,10 @@ describe('jerarquía de campo', () => {
     expect(await esLiderDe(prisma, 1, 7)).toBe(false);
   });
 
-  it('el itinerario del líder hereda su cadena dentro del mismo equipo', async () => {
-    const equipoCampo = {
-      id: 1,
-      nombre: 'Impulsadores',
-      tipo: 'IMPULSADOR' as const,
-      activo: true,
-    };
+  it('el itinerario del líder hereda toda su cadena, de cualquier rol o equipo', async () => {
     expect(
-      await obtenerItinerarioHeredado(prisma, {
-        id: 1,
-        empresaId: 1,
-        equipoCampo,
-      }),
-    ).toEqual([2, 3]);
+      await obtenerItinerarioHeredado(prisma, { id: 1, empresaId: 1 }),
+    ).toEqual([2, 3, 7]);
   });
 
   it('el jefe ve todo su organigrama, de cualquier rol y de su empresa', async () => {

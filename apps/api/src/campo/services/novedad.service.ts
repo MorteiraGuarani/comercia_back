@@ -4,12 +4,14 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import type { Prisma } from '../../../generated/prisma/client';
+import {
+  DestinatarioTareaCampo,
+  type Prisma,
+} from '../../../generated/prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
-  destinatarioCampo,
-  exigirEquipoCampo,
   EQUIPO_CAMPO_SELECT,
+  EQUIPO_TITULAR_SELECT,
 } from '../utils/equipo-campo';
 import { NotificacionService } from './notificacion.service';
 import {
@@ -110,16 +112,38 @@ export class NovedadService {
           },
         });
         if (!usuario) throw new NotFoundException('Tarea no disponible');
+        // Tareas de su equipo o del de un titular del local: un líder hereda
+        // locales de otros equipos de su cadena.
+        const titulares = await this.prisma.asignacionCampo.findMany({
+          where: { empresaId, localId: dto.localId, activo: true },
+          select: EQUIPO_TITULAR_SELECT,
+          take: 50,
+        });
+        const equipos = [
+          usuario.rol?.equipoCampo,
+          ...titulares.map((t) => t.usuario.rol?.equipoCampo),
+        ].filter(
+          (e): e is NonNullable<typeof e> =>
+            !!e?.activo && e.tipo !== DestinatarioTareaCampo.AMBOS,
+        );
         const tarea = await this.prisma.tareaCampo.findFirst({
           where: {
             id: dto.tareaId,
             empresaId,
             activo: true,
-            equipoCampoId: exigirEquipoCampo(usuario.rol?.equipoCampo).id,
-            destinatario: destinatarioCampo(usuario.rol?.equipoCampo),
-            OR: [
-              { todosLocales: true },
-              { locales: { some: { localId: dto.localId } } },
+            AND: [
+              {
+                OR: equipos.map((e) => ({
+                  equipoCampoId: e.id,
+                  destinatario: e.tipo,
+                })),
+              },
+              {
+                OR: [
+                  { todosLocales: true },
+                  { locales: { some: { localId: dto.localId } } },
+                ],
+              },
             ],
           },
           select: { id: true, nombre: true },

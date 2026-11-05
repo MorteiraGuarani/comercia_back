@@ -20,7 +20,8 @@ import { MarcacionUcheckDto } from './dto/marcacion-ucheck.dto';
 import { SeguimientoUcheckDto } from './dto/seguimiento-ucheck.dto';
 import {
   destinatarioCampo,
-  rolDelEquipoCampo,
+  EQUIPO_TITULAR_SELECT,
+  ROL_OPERATIVO,
   exigirEquipoCampo,
   EQUIPO_CAMPO_SELECT,
 } from '../campo/utils/equipo-campo';
@@ -242,11 +243,7 @@ export class IntegracionesUcheckService {
     );
     const fecha = fechaSql(dto.fecha);
     // Un líder marca también en los locales de su cadena (como en su agenda).
-    const heredados = await obtenerItinerarioHeredado(this.prisma, {
-      id: usuario.id,
-      empresaId: usuario.empresaId,
-      equipoCampo: usuario.rol?.equipoCampo,
-    });
+    const heredados = await obtenerItinerarioHeredado(this.prisma, usuario);
 
     return this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(${dto.ucheckJornadaId})`;
@@ -271,7 +268,7 @@ export class IntegracionesUcheckService {
         where: {
           id: dto.asignacionId,
           localId: dto.localId,
-          usuario: { rol: rolDelEquipoCampo(usuario.rol?.equipoCampo) },
+          usuario: { rol: ROL_OPERATIVO },
           fechaDesde: { lte: fecha },
           OR: [{ fechaHasta: null }, { fechaHasta: { gte: fecha } }],
           empresaId: usuario.empresaId,
@@ -317,12 +314,19 @@ export class IntegracionesUcheckService {
             },
           ],
         },
-        select: { id: true, localId: true, usuarioId: true },
+        select: {
+          id: true,
+          localId: true,
+          usuarioId: true,
+          ...EQUIPO_TITULAR_SELECT,
+        },
       });
       if (!asignacion)
         throw new NotFoundException(
           'La asignación no corresponde al usuario, local y fecha informados',
         );
+      // Los horarios del local son los del equipo de su titular.
+      const equipo = asignacion.usuario.rol?.equipoCampo;
 
       if (dto.horarioId) {
         const horario = await tx.horarioCampo.findFirst({
@@ -333,8 +337,8 @@ export class IntegracionesUcheckService {
             OR: [{ asignacionId: dto.asignacionId }, { asignacionId: null }],
             ...(dto.tipo === 'ENTRADA'
               ? {
-                  equipoCampoId: exigirEquipoCampo(usuario.rol?.equipoCampo).id,
-                  destinatario: destinatarioCampo(usuario.rol?.equipoCampo),
+                  equipoCampoId: exigirEquipoCampo(equipo).id,
+                  destinatario: destinatarioCampo(equipo),
                 }
               : {}),
           },

@@ -16,8 +16,10 @@ import {
 import { Prisma } from '../../generated/prisma/client';
 import {
   destinatarioCampo,
-  rolDelEquipoCampo,
   exigirEquipoCampo,
+  EQUIPO_CAMPO_SELECT,
+  EQUIPO_TITULAR_SELECT,
+  ROL_OPERATIVO,
 } from './utils/equipo-campo';
 import { datosTareaRegistrada, detalleTarea } from './utils/version-tarea';
 import {
@@ -39,7 +41,7 @@ import {
   relojCampo,
   ZONA_CAMPO,
 } from './utils/calendario';
-import { condicionAgenda } from './utils/agenda-sql';
+import { condicionAgenda, equipoTitular } from './utils/agenda-sql';
 import {
   obtenerColaboradoresGestionados,
   obtenerItinerarioHeredado,
@@ -102,7 +104,7 @@ export class JornadaCampoService {
       u.id,
       desde,
       hasta,
-      exigirEquipoCampo(u.equipoCampo).id,
+      u.equipoCampo?.id ?? null,
       heredados,
     );
     const preferencia = await this.prisma.usuario.findFirst({
@@ -115,14 +117,25 @@ export class JornadaCampoService {
         Prisma.sql`SELECT COUNT(DISTINCT l."CardCode") AS total ${base}`,
       ),
       this.prisma.$queryRaw<FilaAgendaId[]>(
-        Prisma.sql`SELECT elegida.id FROM (
-          SELECT DISTINCT ON (l."CardCode") a.id, l."CardCode" AS local_id,
+        Prisma.sql`SELECT elegida.id, elegida.equipo FROM (
+          SELECT DISTINCT ON (l."CardCode") a.id, ${equipoTitular()} AS equipo, l."CardCode" AS local_id,
             COALESCE(NULLIF(TRIM(l."CardName"), ''), l."CardCode") AS nombre
           ${base}
           ORDER BY l."CardCode", CASE WHEN a.usuario_id = ${u.id} THEN 0 ELSE 1 END, a.id
         ) elegida ORDER BY CASE WHEN elegida.local_id = ${preferencia?.localPrincipalId ?? null} THEN 0 ELSE 1 END, elegida.nombre, elegida.id LIMIT ${take} OFFSET ${skip}`,
       ),
     ]);
+    // Cada asignación usa los horarios del equipo de su titular; un local
+    // puede tener horarios de varios equipos.
+    const equipos = [
+      ...new Set(ids.flatMap((x) => (x.equipo === null ? [] : [x.equipo]))),
+    ];
+    const horariosDeEquipos = {
+      where: { activo: true, equipoCampoId: { in: equipos } },
+      take: 20 * Math.max(equipos.length, 1),
+      orderBy: { entrada: 'asc' as const },
+      select: { ...HORARIO_CAMPO_SELECT, equipoCampoId: true },
+    };
     const filas = await this.prisma.asignacionCampo.findMany({
       where: { id: { in: ids.map((x) => x.id) } },
       take,
@@ -131,30 +144,20 @@ export class JornadaCampoService {
         usuarioId: true,
         fechaDesde: true,
         fechaHasta: true,
-        usuario: { select: { nombre: true, apellido: true } },
-        horarios: {
-          where: {
-            activo: true,
-            equipoCampoId: exigirEquipoCampo(u.equipoCampo).id,
-            destinatario: destinatarioCampo(u.equipoCampo),
+        usuario: {
+          select: {
+            nombre: true,
+            apellido: true,
+            rol: { select: { equipoCampo: { select: EQUIPO_CAMPO_SELECT } } },
           },
-          take: 20,
-          orderBy: { entrada: 'asc' },
-          select: HORARIO_CAMPO_SELECT,
         },
+        horarios: horariosDeEquipos,
         local: {
           select: {
             ...LOCAL_OCRD_SELECT,
             horarios: {
-              where: {
-                activo: true,
-                asignacionId: null,
-                equipoCampoId: exigirEquipoCampo(u.equipoCampo).id,
-                destinatario: destinatarioCampo(u.equipoCampo),
-              },
-              take: 20,
-              orderBy: { entrada: 'asc' },
-              select: HORARIO_CAMPO_SELECT,
+              ...horariosDeEquipos,
+              where: { ...horariosDeEquipos.where, asignacionId: null },
             },
           },
         },
@@ -191,41 +194,55 @@ export class JornadaCampoService {
     );
     const ahora = new Date();
     const items = ids.flatMap(({ id }) => {
-      const a = porId.get(id);
-      return a
-        ? [
-            {
-              id: a.id,
-              esPrincipal: a.local.CardCode === preferencia?.localPrincipalId,
-              esBackup:
-                a.usuarioId !== u.id && !heredados.includes(a.usuarioId),
-              heredada: heredados.includes(a.usuarioId),
-              titular: `${a.usuario.nombre} ${a.usuario.apellido}`,
-              local: {
-                ...aLocalCampo(
-                  a.local,
-                  direcciones.get(a.local.CardCode)?.direccion,
-                ),
-                horarios: (a.horarios.length
-                  ? a.horarios
-                  : a.local.horarios
-                ).filter((h) =>
-                  ocurreHorarioEnRango(h, fechaDesde, fechaHasta),
-                ),
-              },
-              visitas: a.visitas.map((v) => conEstadoVisita(v, ahora)),
-              ...estadoAgenda(
-                a.visitas,
-                a.horarios.length ? a.horarios : a.local.horarios,
-                ZONA_CAMPO,
-                desde,
-                hasta,
-                ahora,
-                a,
-              ),
-            },
-          ]
-        : [];
+      const fila = porId.get(id);
+      if (!fila) return [];
+      const equipo = fila.usuario.rol?.equipoCampo;
+      const delEquipo = <
+        H extends { equipoCampoId: number; destinatario: string },
+      >(
+        horarios: H[],
+      ) =>
+        horarios
+          .flatMap(({ equipoCampoId, ...h }) =>
+            equipoCampoId === equipo?.id && h.destinatario === equipo.tipo
+              ? [h]
+              : [],
+          )
+          .slice(0, 20);
+      const a = {
+        ...fila,
+        horarios: delEquipo(fila.horarios),
+        local: { ...fila.local, horarios: delEquipo(fila.local.horarios) },
+      };
+      return [
+        {
+          id: a.id,
+          esPrincipal: a.local.CardCode === preferencia?.localPrincipalId,
+          esBackup: a.usuarioId !== u.id && !heredados.includes(a.usuarioId),
+          heredada: heredados.includes(a.usuarioId),
+          titular: `${a.usuario.nombre} ${a.usuario.apellido}`,
+          local: {
+            ...aLocalCampo(
+              a.local,
+              direcciones.get(a.local.CardCode)?.direccion,
+            ),
+            horarios: (a.horarios.length
+              ? a.horarios
+              : a.local.horarios
+            ).filter((h) => ocurreHorarioEnRango(h, fechaDesde, fechaHasta)),
+          },
+          visitas: a.visitas.map((v) => conEstadoVisita(v, ahora)),
+          ...estadoAgenda(
+            a.visitas,
+            a.horarios.length ? a.horarios : a.local.horarios,
+            ZONA_CAMPO,
+            desde,
+            hasta,
+            ahora,
+            a,
+          ),
+        },
+      ];
     });
     return respuestaPaginada(items, Number(conteo[0].total), page, limit);
   }
@@ -316,7 +333,7 @@ export class JornadaCampoService {
     const a = await this.prisma.asignacionCampo.findFirst({
       where: {
         id: asignacionId,
-        usuario: { rol: rolDelEquipoCampo(u.equipoCampo) },
+        usuario: { rol: ROL_OPERATIVO },
         activo: true,
         fechaDesde: { lte: fechaHasta },
         OR: [{ fechaHasta: null }, { fechaHasta: { gte: fechaDesde } }],
@@ -326,6 +343,7 @@ export class JornadaCampoService {
         id: true,
         localId: true,
         usuarioId: true,
+        ...EQUIPO_TITULAR_SELECT,
         backups: {
           where: {
             activo: true,
@@ -342,10 +360,11 @@ export class JornadaCampoService {
     // El repositor puede consultar las tareas del local antes de marcar
     // entrada; iniciarlas y completarlas sigue exigiendo su visita abierta
     // (ver iniciarTarea y completar).
+    // Las tareas del local son las del equipo de su titular.
     const where: Prisma.TareaCampoWhereInput = {
       empresaId: u.empresaId,
-      equipoCampoId: exigirEquipoCampo(u.equipoCampo).id,
-      destinatario: destinatarioCampo(u.equipoCampo),
+      equipoCampoId: exigirEquipoCampo(a.usuario.rol?.equipoCampo).id,
+      destinatario: destinatarioCampo(a.usuario.rol?.equipoCampo),
       OR: [
         {
           activo: true,
@@ -424,7 +443,7 @@ export class JornadaCampoService {
     const encontradas = await this.prisma.asignacionCampo.findMany({
       where: {
         id: { in: query.asignaciones },
-        usuario: { rol: rolDelEquipoCampo(u.equipoCampo) },
+        usuario: { rol: ROL_OPERATIVO },
         activo: true,
         fechaDesde: { lte: fechaHasta },
         OR: [{ fechaHasta: null }, { fechaHasta: { gte: fechaDesde } }],
@@ -434,6 +453,7 @@ export class JornadaCampoService {
         id: true,
         localId: true,
         usuarioId: true,
+        ...EQUIPO_TITULAR_SELECT,
         backups: {
           where: {
             activo: true,
@@ -449,11 +469,15 @@ export class JornadaCampoService {
     if (asignaciones.length === 0) return { items: [] };
     const localIds = [...new Set(asignaciones.map((a) => a.localId))];
     const asignacionIds = asignaciones.map((a) => a.id);
+    // Cada local usa las tareas del equipo de su titular.
+    const equipoDe = (a: (typeof asignaciones)[number]) =>
+      exigirEquipoCampo(a.usuario.rol?.equipoCampo);
+    const equipos = asignaciones.map(equipoDe);
     const tareas = await this.prisma.tareaCampo.findMany({
       where: {
         empresaId: u.empresaId,
-        equipoCampoId: exigirEquipoCampo(u.equipoCampo).id,
-        destinatario: destinatarioCampo(u.equipoCampo),
+        equipoCampoId: { in: [...new Set(equipos.map((e) => e.id))] },
+        destinatario: { in: [...new Set(equipos.map((e) => e.tipo))] },
         OR: [
           {
             activo: true,
@@ -487,6 +511,7 @@ export class JornadaCampoService {
       },
       select: {
         ...TAREA_JORNADA_SELECT,
+        equipoCampoId: true,
         activo: true,
         fechaDesde: true,
         fechaHasta: true,
@@ -524,19 +549,22 @@ export class JornadaCampoService {
       items: asignaciones.map((a) => {
         // Mismas reglas que tareas(): vigente para su local, o con una
         // ejecución abierta en esta asignación.
+        const equipo = equipoDe(a);
         const delLocal = tareas.filter(
           (t) =>
-            (t.activo &&
+            t.equipoCampoId === equipo.id &&
+            t.destinatario === equipo.tipo &&
+            ((t.activo &&
               t.fechaDesde <= fechaHasta &&
               (t.fechaHasta === null || t.fechaHasta >= fechaDesde) &&
               (t.todosLocales ||
                 t.locales.some((l) => l.localId === a.localId))) ||
-            t.cumplimientos.some(
-              (c) =>
-                c.completadaAt === null &&
-                c.visita.salida === null &&
-                c.visita.asignacionId === a.id,
-            ),
+              t.cumplimientos.some(
+                (c) =>
+                  c.completadaAt === null &&
+                  c.visita.salida === null &&
+                  c.visita.asignacionId === a.id,
+              )),
         );
         const pagina = delLocal
           .slice(skip, skip + take)
@@ -592,9 +620,16 @@ export class JornadaCampoService {
           usuarioId: u.id,
           empresaId: u.empresaId,
         },
-        select: { id: true, localId: true, fecha: true, salida: true },
+        select: {
+          id: true,
+          localId: true,
+          fecha: true,
+          salida: true,
+          asignacion: { select: EQUIPO_TITULAR_SELECT },
+        },
       });
       if (!v) throw new NotFoundException('Visita abierta no disponible');
+      const equipo = v.asignacion.usuario.rol?.equipoCampo;
       const previo = await tx.cumplimientoCampo.findUnique({
         where: { visitaId_tareaId: { visitaId, tareaId } },
         select: { completadaAt: true, detalleTarea: true, versionTarea: true },
@@ -608,8 +643,8 @@ export class JornadaCampoService {
         where: {
           id: tareaId,
           empresaId: u.empresaId,
-          equipoCampoId: exigirEquipoCampo(u.equipoCampo).id,
-          destinatario: destinatarioCampo(u.equipoCampo),
+          equipoCampoId: exigirEquipoCampo(equipo).id,
+          destinatario: destinatarioCampo(equipo),
           ...(previo
             ? {}
             : {

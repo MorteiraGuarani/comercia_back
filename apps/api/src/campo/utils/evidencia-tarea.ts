@@ -3,7 +3,7 @@ import type { PrismaService } from '../../prisma/prisma.service';
 import {
   destinatarioCampo,
   exigirEquipoCampo,
-  EQUIPO_CAMPO_SELECT,
+  EQUIPO_TITULAR_SELECT,
 } from './equipo-campo';
 import { TAREA_CAMPO_SELECT } from './selectores';
 import type { Prisma } from '../../../generated/prisma/client';
@@ -32,20 +32,13 @@ export async function tareaParaEvidencia(
     select: {
       localId: true,
       fecha: true,
-      usuario: {
-        select: {
-          rol: {
-            select: {
-              descripcion: true,
-              equipoCampo: { select: EQUIPO_CAMPO_SELECT },
-            },
-          },
-        },
-      },
+      // Las tareas son las del equipo del titular del local (heredado o propio).
+      asignacion: { select: EQUIPO_TITULAR_SELECT },
     },
   });
   if (!visita) throw new NotFoundException('Visita abierta no disponible');
-  const destinatario = destinatarioCampo(visita.usuario.rol?.equipoCampo);
+  const equipo = visita.asignacion.usuario.rol?.equipoCampo;
+  const destinatario = destinatarioCampo(equipo);
   const registro = await prisma.cumplimientoCampo.findUnique({
     where: { visitaId_tareaId: { visitaId, tareaId } },
     select: { versionTarea: true, detalleTarea: true },
@@ -55,7 +48,7 @@ export async function tareaParaEvidencia(
       id: tareaId,
       empresaId,
       destinatario,
-      equipoCampoId: exigirEquipoCampo(visita.usuario.rol?.equipoCampo).id,
+      equipoCampoId: exigirEquipoCampo(equipo).id,
       ...(registro
         ? {}
         : {

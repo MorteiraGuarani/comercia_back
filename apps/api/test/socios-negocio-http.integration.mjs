@@ -154,7 +154,7 @@ try {
         ).length,
       0,
     ),
-    67,
+    82,
   );
   for (const t of Object.values(TABLAS_SOCIOS)) {
     const route =
@@ -178,10 +178,14 @@ try {
                 : t.nombre === 'tbl_opln'
                   ? '{ListNum}'
                   : t.nombre === 'tbl_oslp'
-                    ? '{SlpCode}'
+                    ? '{SalesEmployeeCode}'
                     : t.nombre === 'tbl_oagp'
                       ? '{AgentCode}'
-                      : t.identidad
+                      : t.nombre === 'tbl_owhs'
+                        ? '{WarehouseCode}'
+                        : t.nombre === 'tbl_oclp' || t.nombre === 'tbl_jfdv'
+                          ? '{Code}'
+                          : t.identidad
                         ? '{Code}'
                         : '{id}';
     const code =
@@ -294,8 +298,12 @@ try {
             : t.nombre === 'tbl_ocrd'
               ? 'x'.repeat(51)
               : t.nombre === 'tbl_oagp'
-                ? 'x'.repeat(201)
-                : '9223372036854775808'),
+                ? 'x'.repeat(151)
+                : t.nombre === 'tbl_owhs'
+                  ? 'x'.repeat(101)
+                  : t.nombre === 'tbl_jfdv'
+                    ? 'x'.repeat(21)
+                    : '9223372036854775808'),
       )
       .expect(400);
     if (t.nombre === 'tbl_ocrd') {
@@ -540,8 +548,9 @@ try {
     assert.equal(calls.length, before);
   }
   for (const [table, key] of [
-    ['tbl_oslp', 'SlpCode'],
+    ['tbl_oslp', 'SalesEmployeeCode'],
     ['tbl_oagp', 'AgentCode'],
+    ['tbl_jfdv', 'Code'],
   ]) {
     const base = '/api/v1/admin/socios-negocio/empresas/1/' + table;
     const path = '/api/v1/admin/socios-negocio/empresas/{empresaId}/' + table;
@@ -557,7 +566,12 @@ try {
       .get(base + '/' + value)
       .expect(200);
     assert.equal(calls.at(-1).id, expected);
-    const body = table === 'tbl_oslp' ? { SlpName: 'X' } : { AgentName: 'X' };
+    const body =
+      table === 'tbl_oslp'
+        ? { SalesEmployeeName: 'X' }
+        : table === 'tbl_oagp'
+          ? { AgentName: 'X' }
+          : { Name: 'X' };
     await request(http)
       .put(base + '/' + value)
       .send(body)
@@ -570,7 +584,7 @@ try {
     const invalids =
       table === 'tbl_oslp'
         ? ['1e3', '1.5', '2147483648', '-2147483649', 'no-codigo']
-        : ['x'.repeat(201)];
+        : ['x'.repeat(table === 'tbl_oagp' ? 151 : 21)];
     for (const invalid of invalids) {
       for (const method of ['get', 'delete'])
         await request(http)
@@ -718,7 +732,7 @@ try {
     .expect(413);
   assert.ok(calls.every((c) => c.empresa === 1));
   console.log(
-    'OK: 67 operaciones públicas, trece DTOs y ejemplos, filas inválidas salteadas, nombres exactos y bulk >1 MiB con límites acotados',
+    'OK: 82 operaciones públicas, dieciséis DTOs y ejemplos, filas inválidas salteadas, nombres exactos y bulk >1 MiB con límites acotados',
   );
 } finally {
   await app.close();

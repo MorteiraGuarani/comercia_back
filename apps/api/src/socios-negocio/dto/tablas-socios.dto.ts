@@ -193,25 +193,144 @@ export class SocioNegocioSubcanalesDto {
 }
 
 export class SocioNegocioSupervisorDto {
-  @TextoSocio(200, true, undefined)
-  AgentCode?: string | null;
-  @TextoSocio(200, true, undefined)
+  @CampoTabla({
+    tipo: 'texto',
+    longitud: 150,
+    requerido: true,
+    nullable: false,
+    descripcion:
+      'Código del supervisor; tbl_ocrd.AgentCode lo referencia dentro de la empresa.',
+    ejemplo: 'SUP01',
+  })
+  AgentCode!: string;
+  @CampoTabla({
+    tipo: 'texto',
+    longitud: 250,
+    requerido: false,
+    nullable: true,
+    descripcion: 'Nombre del supervisor.',
+    ejemplo: 'Ana Pérez',
+  })
   AgentName?: string | null;
-  @TextoSocio(200, true, undefined)
+  @CampoTabla({
+    tipo: 'texto',
+    longitud: 250,
+    requerido: false,
+    nullable: true,
+    descripcion: 'Observaciones de SAP.',
+    ejemplo: 'Zona centro',
+  })
   Memo?: string | null;
 }
 
+const textoOpcional = (
+  longitud: number,
+  descripcion: string,
+  ejemplo: string,
+) =>
+  CampoTabla({
+    tipo: 'texto',
+    longitud,
+    requerido: false,
+    nullable: true,
+    descripcion,
+    ejemplo,
+  });
+const enteroOpcional = (descripcion: string, ejemplo: number) =>
+  CampoTabla({
+    tipo: 'entero',
+    small: false,
+    requerido: false,
+    nullable: true,
+    descripcion,
+    ejemplo,
+  });
+
 export class SocioNegocioVendedorDto {
-  @EnteroSocio('int4', undefined)
-  SlpCode?: number | null;
-  @TextoSocio(200, true, undefined)
-  SlpName?: string | null;
-  @TextoSocio(200, true, undefined)
-  Memo?: string | null;
-  @BanderaSocio('Y')
-  Active?: string;
-  @TextoSocio(200, true, undefined)
+  @CampoTabla({
+    tipo: 'entero',
+    small: false,
+    requerido: true,
+    nullable: false,
+    descripcion:
+      'Código int4 del vendedor en SAP; tbl_ocrd.SlpCode lo referencia dentro de la empresa.',
+    ejemplo: 1,
+  })
+  SalesEmployeeCode!: number;
+  @textoOpcional(150, 'Nombre del vendedor.', 'Luis Gómez')
+  SalesEmployeeName?: string | null;
+  @textoOpcional(150, 'Observaciones de SAP.', 'Zona centro')
+  Remarks?: string | null;
+  @enteroOpcional('Comisión del vendedor.', 0)
+  CommissionForSalesEmployee?: number | null;
+  @enteroOpcional('Grupo de comisiones.', 0)
+  CommissionGroup?: number | null;
+  @textoOpcional(3, 'Bloqueado en SAP, tal como lo envía SAP.', 'N')
+  Locked?: string | null;
+  @enteroOpcional('Empleado de SAP asociado.', 1)
+  EmployeeID?: number | null;
+  @textoOpcional(3, 'Activo en SAP, tal como lo envía SAP.', 'Y')
+  Active?: string | null;
+  @textoOpcional(100, 'Teléfono del vendedor.', '021000000')
+  Telephone?: string | null;
+  @textoOpcional(100, 'Celular del vendedor.', '+595981000000')
+  Mobile?: string | null;
+  @textoOpcional(100, 'Fax del vendedor.', '021000001')
   Fax?: string | null;
+  @textoOpcional(200, 'Correo del vendedor.', 'vendedor@ejemplo.com.py')
+  Email?: string | null;
+}
+
+export class AlmacenDto {
+  @CampoTabla({
+    tipo: 'texto',
+    longitud: 100,
+    requerido: true,
+    nullable: false,
+    descripcion: 'Código del almacén en SAP.',
+    ejemplo: '01',
+  })
+  WarehouseCode!: string;
+  @textoOpcional(300, 'Nombre del almacén.', 'Depósito central')
+  WarehouseName?: string | null;
+  @enteroOpcional('Ubicación del almacén en SAP.', 1)
+  Location?: number | null;
+  @textoOpcional(100, 'Número de ubicación global (GLN).', '7840000000001')
+  GlobalLocationNumber?: string | null;
+}
+
+export class CatalogoOclpDto {
+  @CampoTabla({
+    tipo: 'entero',
+    small: false,
+    requerido: true,
+    nullable: false,
+    descripcion: 'Código int4 de OCLP en SAP.',
+    ejemplo: 1,
+  })
+  Code!: number;
+  @textoOpcional(100, 'Nombre.', 'Ejemplo')
+  Name?: string | null;
+}
+
+export class CatalogoJfdvDto {
+  @CampoTabla({
+    tipo: 'texto',
+    longitud: 20,
+    requerido: true,
+    nullable: false,
+    descripcion: 'Código de JFDV en SAP, como texto.',
+    ejemplo: '001',
+  })
+  Code!: string;
+  @textoOpcional(150, 'Nombre.', 'Ejemplo')
+  Name?: string | null;
+  @textoOpcional(100, 'Campo de usuario U_ESACALA de SAP.', 'A')
+  U_ESACALA?: string | null;
+  @textoOpcional(100, 'Campo de usuario U_TIPO de SAP.', 'T1')
+  U_TIPO?: string | null;
+  @textoOpcional(100, 'Campo de usuario U_ACTIVO de SAP.', 'Y')
+  U_ACTIVO?: string | null;
 }
 
 export class SocioNegocioGrupoDto {

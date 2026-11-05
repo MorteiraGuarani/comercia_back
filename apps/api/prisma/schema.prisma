@@ -37,6 +37,9 @@ model Empresa {
   codigosArticuloSocio CodigoArticuloSocio[]
   gruposArticulo GrupoArticulo[]
   tiposSubcanal TipoSubcanal[]
+  almacenes Almacen[]
+  catalogoOclpFilas CatalogoOclp[]
+  catalogoJfdvFilas CatalogoJfdv[]
   configuracionesTolerancia ConfiguracionTolerancia[]
   pedidos Pedido[]
   categoriasCampo CategoriaCampo[]
@@ -213,9 +216,9 @@ model SocioNegocioSupervisor {
   id BigInt @id @default(autoincrement())
   empresaId Int @map("empresa_id")
   empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
-  AgentCode String? @db.VarChar(200)
-  AgentName String? @db.VarChar(200)
-  Memo String? @db.VarChar(200)
+  AgentCode String @db.VarChar(150)
+  AgentName String? @db.VarChar(250)
+  Memo String? @db.VarChar(250)
   @@unique([empresaId, AgentCode], map: "uq_tbl_oagp_empresa_clave")
   @@index([empresaId, AgentName], map: "idx_tbl_oagp_agentname")
   @@map("tbl_oagp")
@@ -225,14 +228,56 @@ model SocioNegocioVendedor {
   id BigInt @id @default(autoincrement())
   empresaId Int @map("empresa_id")
   empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
-  SlpCode Int?
-  SlpName String? @db.VarChar(200)
-  Memo String? @db.VarChar(200)
-  Active String @default("Y") @db.VarChar(1)
-  Fax String? @db.VarChar(200)
-  @@unique([empresaId, SlpCode], map: "uq_tbl_oslp_empresa_clave")
-  @@index([empresaId, SlpName], map: "idx_tbl_oslp_slpname")
+  SalesEmployeeCode Int
+  SalesEmployeeName String? @db.VarChar(150)
+  Remarks String? @db.VarChar(150)
+  CommissionForSalesEmployee Int?
+  CommissionGroup Int?
+  Locked String? @db.VarChar(3)
+  EmployeeID Int?
+  Active String? @db.VarChar(3)
+  Telephone String? @db.VarChar(100)
+  Mobile String? @db.VarChar(100)
+  Fax String? @db.VarChar(100)
+  Email String? @db.VarChar(200)
+  @@unique([empresaId, SalesEmployeeCode], map: "uq_tbl_oslp_empresa_clave")
+  @@index([empresaId, SalesEmployeeName], map: "idx_tbl_oslp_salesemployeename")
   @@map("tbl_oslp")
+}
+
+model Almacen {
+  id BigInt @id @default(autoincrement())
+  empresaId Int @map("empresa_id")
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  WarehouseCode String @db.VarChar(100)
+  WarehouseName String? @db.VarChar(300)
+  Location Int?
+  GlobalLocationNumber String? @db.VarChar(100)
+  @@unique([empresaId, WarehouseCode], map: "uq_tbl_owhs_empresa_clave")
+  @@map("tbl_owhs")
+}
+
+model CatalogoOclp {
+  id BigInt @id @default(autoincrement())
+  empresaId Int @map("empresa_id")
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  Code Int
+  Name String? @db.VarChar(100)
+  @@unique([empresaId, Code], map: "uq_tbl_oclp_empresa_clave")
+  @@map("tbl_oclp")
+}
+
+model CatalogoJfdv {
+  id BigInt @id @default(autoincrement())
+  empresaId Int @map("empresa_id")
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  Code String @db.VarChar(20)
+  Name String? @db.VarChar(150)
+  U_ESACALA String? @db.VarChar(100)
+  U_TIPO String? @db.VarChar(100)
+  U_ACTIVO String? @db.VarChar(100)
+  @@unique([empresaId, Code], map: "uq_tbl_jfdv_empresa_clave")
+  @@map("tbl_jfdv")
 }
 
 model SocioNegocioGrupo {

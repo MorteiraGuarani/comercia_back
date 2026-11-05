@@ -13,22 +13,30 @@ describe('Contrato OCRD ampliado', () => {
     expect(await validate(dto)).toHaveLength(0);
   });
 
-  it('OSLP: Active es Y/N y se puede omitir; Memo y Fax son texto', async () => {
+  it('OSLP: SalesEmployeeCode obligatorio; Active y Locked hasta 3 caracteres', async () => {
     const ok = plainToInstance(SocioNegocioVendedorDto, {
-      SlpCode: 1,
-      Memo: 'Zona centro',
-      Fax: '021000000',
+      SalesEmployeeCode: 1,
+      Remarks: 'Zona centro',
+      Active: 'Y',
+      Locked: null,
+      Email: 'vendedor@ejemplo.com.py',
     });
     expect(await validate(ok)).toHaveLength(0);
-    for (const Active of [null, 'X']) {
-      const dto = plainToInstance(SocioNegocioVendedorDto, {
-        SlpCode: 1,
-        Active,
-      });
-      expect((await validate(dto)).some((e) => e.property === 'Active')).toBe(
-        true,
-      );
-    }
+    const sinCodigo = plainToInstance(SocioNegocioVendedorDto, {
+      SalesEmployeeName: 'X',
+    });
+    expect(
+      (await validate(sinCodigo)).some(
+        (e) => e.property === 'SalesEmployeeCode',
+      ),
+    ).toBe(true);
+    const largo = plainToInstance(SocioNegocioVendedorDto, {
+      SalesEmployeeCode: 1,
+      Active: 'tYES',
+    });
+    expect((await validate(largo)).some((e) => e.property === 'Active')).toBe(
+      true,
+    );
   });
 
   it.each(['validFor', 'frozenFor'] as const)(

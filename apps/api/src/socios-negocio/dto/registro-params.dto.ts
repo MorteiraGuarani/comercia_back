@@ -154,7 +154,8 @@ export class VendedorParams extends EmpresaSociosParams {
     minimum: -2147483648,
     maximum: 2147483647,
     example: 1,
-    description: 'SlpCode original del vendedor dentro de la empresa.',
+    description:
+      'SalesEmployeeCode original del vendedor dentro de la empresa.',
   })
   @Transform(({ obj, key }: { obj: Record<string, unknown>; key: string }) =>
     typeof obj[key] === 'string' && /^-?\d+$/.test(obj[key])
@@ -164,20 +165,65 @@ export class VendedorParams extends EmpresaSociosParams {
   @IsInt()
   @Min(-2147483648)
   @Max(2147483647)
-  SlpCode!: number;
+  SalesEmployeeCode!: number;
 }
 
 export class SupervisorParams extends EmpresaSociosParams {
   @ApiProperty({
     type: String,
     minLength: 1,
-    maxLength: 200,
+    maxLength: 150,
     example: 'SUP01',
     description: 'AgentCode exacto del supervisor dentro de la empresa.',
   })
   @IsString()
-  @Length(1, 200)
+  @Length(1, 150)
   AgentCode!: string;
+}
+
+export class AlmacenParams extends EmpresaSociosParams {
+  @ApiProperty({
+    type: String,
+    minLength: 1,
+    maxLength: 100,
+    example: '01',
+    description: 'WarehouseCode exacto del almacén dentro de la empresa.',
+  })
+  @IsString()
+  @Length(1, 100)
+  WarehouseCode!: string;
+}
+
+export class JfdvParams extends EmpresaSociosParams {
+  @ApiProperty({
+    type: String,
+    minLength: 1,
+    maxLength: 20,
+    example: '001',
+    description: 'Code exacto de tbl_jfdv dentro de la empresa.',
+  })
+  @IsString()
+  @Length(1, 20)
+  Code!: string;
+}
+
+export class OclpParams extends EmpresaSociosParams {
+  @ApiProperty({
+    type: 'integer',
+    minimum: -2147483648,
+    maximum: 2147483647,
+    example: 1,
+    description: 'Code original de tbl_oclp dentro de la empresa.',
+  })
+  @Transform(({ obj, key }: { obj: Record<string, unknown>; key: string }) =>
+    typeof obj[key] === 'string' && /^-?\d+$/.test(obj[key])
+      ? Number(obj[key])
+      : Number.NaN,
+  )
+  @IsInt()
+  @Min(-2147483648)
+  @Max(2147483647)
+  Code!: number;
 }
 
 export class SelectorDireccionDto {

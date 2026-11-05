@@ -13,7 +13,13 @@ import { VISITA_CAMPO_SELECT } from './utils/selectores';
 import { conEstadoVisita } from './utils/estado-jornada';
 import { conLocalCampo } from './utils/local-ocrd';
 import { DestinatarioTareaCampo } from '../../generated/prisma/client';
-import { exigirEquipoCampo, EQUIPO_CAMPO_SELECT } from './utils/equipo-campo';
+import {
+  exigirEquipoCampo,
+  EQUIPO_CAMPO_SELECT,
+  EQUIPO_TITULAR_SELECT,
+  ROL_OPERATIVO,
+} from './utils/equipo-campo';
+import { obtenerItinerarioHeredado } from './utils/autorizacion';
 import type {
   EntradaRepositorCampoDto,
   MarcaRepositorCampoDto,
@@ -21,6 +27,7 @@ import type {
   UbicacionNavegadorDto,
 } from './dto/campo.dto';
 import type { MarcacionRepositorUcheck } from './interfaces/marcacion-repositor.interface';
+import type { EquipoCampoDto } from '../roles/interfaces/equipo-campo.interface';
 import { UcheckSincronizacionService } from '../ucheck/ucheck-sincronizacion.service';
 import type { EntradaCampoDto, MarcaCampoDto } from './dto/campo.dto';
 
@@ -49,7 +56,8 @@ export class RepositorCampoService {
 
   async esRepositor(usuarioId: number) {
     const usuario = await this.acceso.ejecutar(usuarioId);
-    return exigirEquipoCampo(usuario.equipoCampo).tipo === 'REPOSITOR';
+    // Un jefe sin equipo marca como los demás líderes: vía Ucheck.
+    return usuario.equipoCampo?.tipo === 'REPOSITOR';
   }
 
   async estadoTelefono(usuarioId: number) {
@@ -164,7 +172,8 @@ export class RepositorCampoService {
         },
       },
     });
-    if (!usuario?.isActive || !usuario.rol?.equipoCampo?.activo)
+    // Un jefe sin equipo marca solo en lo heredado; Ucheck lo valida con su agenda.
+    if (!usuario?.isActive || usuario.rol?.equipoCampo?.activo === false)
       throw new ForbiddenException('Marcación no disponible');
     if (!usuario.permitirVinculoAutomatico && !usuario.identidadUcheck)
       throw new ForbiddenException(
@@ -346,38 +355,39 @@ export class RepositorCampoService {
       throw new ForbiddenException('Marcación no disponible');
     const hoy = relojCampo().fecha;
     const fecha = fechaCampo(hoy);
+    // El supervisor marca también en los locales de su cadena, como en su
+    // Itinerario y en la integración con Ucheck.
+    const heredados = await obtenerItinerarioHeredado(this.prisma, u);
+    const backupHoy = {
+      activo: true,
+      fechaDesde: { lte: fecha },
+      fechaHasta: { gte: fecha },
+    };
     const asignacion = await this.prisma.asignacionCampo.findFirst({
       where: {
         id: dto.asignacionId,
-        usuario: {
-          rol: { equipoCampoId: exigirEquipoCampo(u.equipoCampo).id },
-        },
+        usuario: { rol: ROL_OPERATIVO },
         activo: true,
         fechaDesde: { lte: fecha },
         AND: [
           { OR: [{ fechaHasta: null }, { fechaHasta: { gte: fecha } }] },
           {
             OR: [
-              {
-                usuarioId,
-                backups: {
-                  none: {
-                    activo: true,
-                    fechaDesde: { lte: fecha },
-                    fechaHasta: { gte: fecha },
-                  },
-                },
-              },
-              {
-                backups: {
-                  some: {
-                    usuarioId,
-                    activo: true,
-                    fechaDesde: { lte: fecha },
-                    fechaHasta: { gte: fecha },
-                  },
-                },
-              },
+              { usuarioId, backups: { none: backupHoy } },
+              { backups: { some: { usuarioId, ...backupHoy } } },
+              ...(heredados.length
+                ? [
+                    {
+                      usuarioId: { in: heredados },
+                      backups: { none: backupHoy },
+                    },
+                    {
+                      backups: {
+                        some: { usuarioId: { in: heredados }, ...backupHoy },
+                      },
+                    },
+                  ]
+                : []),
             ],
           },
         ],
@@ -521,6 +531,7 @@ export class RepositorCampoService {
         horarioId: true,
         fecha: true,
         ucheckJornadaId: true,
+        asignacion: { select: EQUIPO_TITULAR_SELECT },
       },
     });
     if (!visita?.ucheckJornadaId)
@@ -545,16 +556,29 @@ export class RepositorCampoService {
     return { ok: true };
   }
 
-  /** El repositor termina las tareas aplicables antes de cerrar la visita. */
+  /**
+   * En un local de repositores se terminan las tareas aplicables antes de
+   * cerrar la visita. Son las del equipo del titular del local, aunque marque
+   * un líder que lo hereda.
+   */
   private async exigirTareasCompletas(
     u: Awaited<ReturnType<CampoAccesoService['ejecutar']>>,
-    visita: { id: number; localId: string; fecha: Date },
+    visita: {
+      id: number;
+      localId: string;
+      fecha: Date;
+      asignacion: {
+        usuario: { rol: { equipoCampo: EquipoCampoDto | null } | null };
+      };
+    },
   ) {
+    const equipo = visita.asignacion.usuario.rol?.equipoCampo;
+    if (equipo?.tipo !== DestinatarioTareaCampo.REPOSITOR) return;
     const pendientes = await this.prisma.tareaCampo.count({
       where: {
         empresaId: u.empresaId,
         destinatario: DestinatarioTareaCampo.REPOSITOR,
-        equipoCampoId: exigirEquipoCampo(u.equipoCampo).id,
+        equipoCampoId: equipo.id,
         OR: [
           {
             activo: true,
@@ -606,10 +630,7 @@ export class RepositorCampoService {
         'La hora de la marca guardada sin conexión no es válida',
       );
     // Las tareas del repositor no se saltean marcando sin conexión.
-    if (
-      dto.tipo === 'SALIDA' &&
-      exigirEquipoCampo(u.equipoCampo).tipo === 'REPOSITOR'
-    ) {
+    if (dto.tipo === 'SALIDA' && u.equipoCampo?.tipo === 'REPOSITOR') {
       const visita = await this.prisma.visitaCampo.findFirst({
         where: {
           usuarioId,
@@ -618,7 +639,12 @@ export class RepositorCampoService {
           fecha: fechaCampo(dto.fecha),
           empresaId: u.empresaId,
         },
-        select: { id: true, localId: true, fecha: true },
+        select: {
+          id: true,
+          localId: true,
+          fecha: true,
+          asignacion: { select: EQUIPO_TITULAR_SELECT },
+        },
       });
       if (visita) await this.exigirTareasCompletas(u, visita);
     }

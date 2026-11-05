@@ -34,3 +34,23 @@ export const EQUIPO_CAMPO_SELECT = {
   tipo: true,
   activo: true,
 } as const;
+
+/** Rol con un equipo operativo activo (titular de una asignación operable). */
+export const ROL_OPERATIVO: Prisma.RolWhereInput = {
+  equipoCampo: {
+    activo: true,
+    tipo: { not: DestinatarioTareaCampo.AMBOS },
+  },
+};
+
+/**
+ * Una asignación se opera con el equipo de su titular: un líder que visita un
+ * local heredado de otro equipo ve sus horarios y hace sus tareas.
+ */
+export const EQUIPO_TITULAR_SELECT = {
+  usuario: {
+    select: {
+      rol: { select: { equipoCampo: { select: EQUIPO_CAMPO_SELECT } } },
+    },
+  },
+} as const;

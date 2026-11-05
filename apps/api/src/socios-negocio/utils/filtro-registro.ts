@@ -24,22 +24,28 @@ export function filtroRegistroSocios(
       throw new BadRequestException('Selector de dirección inválido');
     return { empresaId, CardCode: String(referencia), ...selector };
   }
-  if (tabla.nombre === 'tbl_oagp') {
+  const claveTexto = {
+    tbl_oagp: { campo: 'AgentCode', largo: 150 },
+    tbl_owhs: { campo: 'WarehouseCode', largo: 100 },
+    tbl_jfdv: { campo: 'Code', largo: 20 },
+  }[tabla.nombre];
+  if (claveTexto) {
     if (
       typeof referencia !== 'string' ||
       referencia.length < 1 ||
-      referencia.length > 200
+      referencia.length > claveTexto.largo
     )
       throw new BadRequestException(
-        'AgentCode debe ser texto de 1 a 200 caracteres',
+        `${claveTexto.campo} debe ser texto de 1 a ${claveTexto.largo} caracteres`,
       );
-    return { empresaId, AgentCode: referencia };
+    return { empresaId, [claveTexto.campo]: referencia };
   }
   if (
     tabla.nombre === 'tbl_jcanales' ||
     tabla.nombre === 'tbl_jsubcanales' ||
     tabla.nombre === 'tbl_opln' ||
     tabla.nombre === 'tbl_oslp' ||
+    tabla.nombre === 'tbl_oclp' ||
     tabla.nombre === 'tbl_ocrg' ||
     tabla.nombre === 'tbl_octg' ||
     tabla.nombre === 'tbl_oitb' ||
@@ -53,7 +59,7 @@ export function filtroRegistroSocios(
           : tabla.nombre === 'tbl_opln'
             ? 'ListNum'
             : tabla.nombre === 'tbl_oslp'
-              ? 'SlpCode'
+              ? 'SalesEmployeeCode'
               : 'Code';
     const codigo = Number(referencia);
     if (

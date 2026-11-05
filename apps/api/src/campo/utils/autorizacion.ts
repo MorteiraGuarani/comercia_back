@@ -5,7 +5,7 @@ import type { EquipoCampoDto } from '../../roles/interfaces/equipo-campo.interfa
 import {
   destinatarioCampo,
   exigirEquipoCampo,
-  EQUIPO_CAMPO_SELECT,
+  EQUIPO_TITULAR_SELECT,
 } from './equipo-campo';
 import {
   alcanceDeGestor,
@@ -134,20 +134,17 @@ export async function obtenerColaboradoresGestionados(
 }
 
 /**
- * Personas cuyos locales hereda el itinerario de un líder (TeamLeader o
- * supervisor): su cadena de subordinados activos dentro del mismo equipo.
- * La asignación sigue siendo de cada uno; el líder visita con su propia visita.
+ * Personas cuyos locales hereda el itinerario de un líder: toda su cadena de
+ * subordinados activos en el organigrama, de cualquier rol o equipo (el jefe
+ * hereda a sus supervisores y los de ellos). La asignación sigue siendo de
+ * cada uno y se opera con el equipo de su titular; el líder visita con su
+ * propia visita.
  */
 export function obtenerItinerarioHeredado(
   db: ConsultaUsuarios,
-  lider: { id: number; empresaId: number; equipoCampo?: EquipoCampoDto | null },
+  lider: { id: number; empresaId: number },
 ): Promise<number[]> {
-  return subordinadosEnCadena(db, lider.id, {
-    empresaId: lider.empresaId,
-    isActive: true,
-    esSuperadmin: false,
-    rol: { equipoCampoId: exigirEquipoCampo(lider.equipoCampo).id },
-  });
+  return obtenerSubordinadosActivos(db, lider.id, lider.empresaId);
 }
 
 /**
@@ -287,16 +284,8 @@ export async function verificarAccesoCumplimiento(
       where: { id: visitaId },
       select: {
         usuarioId: true,
-        usuario: {
-          select: {
-            rol: {
-              select: {
-                descripcion: true,
-                equipoCampo: { select: EQUIPO_CAMPO_SELECT },
-              },
-            },
-          },
-        },
+        // Tareas del equipo del titular del local, aunque marque un líder.
+        asignacion: { select: EQUIPO_TITULAR_SELECT },
         localId: true,
         fecha: true,
         local: { select: { empresaId: true } },
@@ -313,8 +302,12 @@ export async function verificarAccesoCumplimiento(
       where: {
         id: tareaId,
         empresaId: visita.local.empresaId,
-        destinatario: destinatarioCampo(visita.usuario.rol?.equipoCampo),
-        equipoCampoId: exigirEquipoCampo(visita.usuario.rol?.equipoCampo).id,
+        destinatario: destinatarioCampo(
+          visita.asignacion.usuario.rol?.equipoCampo,
+        ),
+        equipoCampoId: exigirEquipoCampo(
+          visita.asignacion.usuario.rol?.equipoCampo,
+        ).id,
         fechaDesde: { lte: visita.fecha },
         AND: [
           { OR: [{ fechaHasta: null }, { fechaHasta: { gte: visita.fecha } }] },

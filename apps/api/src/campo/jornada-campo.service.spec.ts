@@ -16,6 +16,23 @@ const socio = {
   U_RadioMetros: 100,
 };
 
+const impulsadores = {
+  id: 1,
+  nombre: 'Impulsadores',
+  tipo: 'IMPULSADOR',
+  activo: true,
+};
+const repositores = {
+  id: 2,
+  nombre: 'Repositores',
+  tipo: 'REPOSITOR',
+  activo: true,
+};
+// Titular de la asignación: su equipo define horarios y tareas del local.
+const titular = (equipoCampo: unknown) => ({
+  usuario: { rol: { equipoCampo } },
+});
+
 function contexto() {
   const tx = {
     configuracionTolerancia: { findMany: jest.fn().mockResolvedValue([]) },
@@ -106,9 +123,13 @@ describe('marcaciones directas de Comercia', () => {
     });
     Object.assign(prisma, {
       asignacionCampo: {
-        findFirst: jest
-          .fn()
-          .mockResolvedValue({ id: 2, localId: 3, usuarioId: 1, backups: [] }),
+        findFirst: jest.fn().mockResolvedValue({
+          id: 2,
+          localId: 3,
+          usuarioId: 1,
+          backups: [],
+          ...titular(repositores),
+        }),
       },
       tareaCampo: {
         count: jest.fn().mockResolvedValue(1),
@@ -117,6 +138,7 @@ describe('marcaciones directas de Comercia', () => {
             id: 7,
             nombre: 'Reponer góndola',
             destinatario: 'REPOSITOR',
+            equipoCampoId: 2,
             descripcion: 'Frente completo',
             requiereFotos: false,
             fotosObligatorias: false,
@@ -145,6 +167,7 @@ describe('marcaciones directas de Comercia', () => {
       id,
       nombre: `Tarea ${id}`,
       destinatario: 'IMPULSADOR',
+      equipoCampoId: 1,
       descripcion: '',
       requiereFotos: false,
       fotosObligatorias: false,
@@ -167,9 +190,27 @@ describe('marcaciones directas de Comercia', () => {
     Object.assign(prisma, {
       asignacionCampo: {
         findMany: jest.fn().mockResolvedValue([
-          { id: 2, localId: 3, usuarioId: 1, backups: [] },
-          { id: 5, localId: 9, usuarioId: 1, backups: [] },
-          { id: 6, localId: 4, usuarioId: 77, backups: [] },
+          {
+            id: 2,
+            localId: 3,
+            usuarioId: 1,
+            backups: [],
+            ...titular(impulsadores),
+          },
+          {
+            id: 5,
+            localId: 9,
+            usuarioId: 1,
+            backups: [],
+            ...titular(impulsadores),
+          },
+          {
+            id: 6,
+            localId: 4,
+            usuarioId: 77,
+            backups: [],
+            ...titular(impulsadores),
+          },
         ]),
       },
       // Sin nadie a cargo: la asignación del usuario 77 no es de su ruta.
@@ -187,8 +228,27 @@ describe('marcaciones directas de Comercia', () => {
     expect(findManyTareas).toHaveBeenCalledTimes(1);
   });
 
-  it('un supervisor ve las tareas de los locales que hereda de su cadena', async () => {
+  it('un líder ve las tareas de los locales que hereda de toda su cadena, con el equipo de cada titular', async () => {
     const { servicio, prisma } = contexto();
+    const findManyTareas = jest.fn().mockResolvedValue([
+      {
+        id: 4,
+        nombre: 'Reponer',
+        destinatario: 'REPOSITOR',
+        equipoCampoId: 2,
+        descripcion: '',
+        requiereFotos: false,
+        fotosObligatorias: false,
+        categoria: null,
+        esObligatoria: false,
+        activo: true,
+        fechaDesde: new Date('2026-10-01T00:00:00Z'),
+        fechaHasta: null,
+        todosLocales: true,
+        locales: [],
+        cumplimientos: [],
+      },
+    ]);
     const findManyUsuarios = jest
       .fn()
       .mockResolvedValueOnce([{ id: 30 }]) // su TeamLeader
@@ -197,28 +257,55 @@ describe('marcaciones directas de Comercia', () => {
     Object.assign(prisma, {
       asignacionCampo: {
         findMany: jest.fn().mockResolvedValue([
-          { id: 2, localId: 3, usuarioId: 1, backups: [] },
-          { id: 6, localId: 4, usuarioId: 77, backups: [] },
-          { id: 8, localId: 5, usuarioId: 99, backups: [] },
+          {
+            id: 2,
+            localId: 3,
+            usuarioId: 1,
+            backups: [],
+            ...titular(impulsadores),
+          },
+          // El colaborador 77 es de otro equipo: igual se hereda.
+          {
+            id: 6,
+            localId: 4,
+            usuarioId: 77,
+            backups: [],
+            ...titular(repositores),
+          },
+          {
+            id: 8,
+            localId: 5,
+            usuarioId: 99,
+            backups: [],
+            ...titular(impulsadores),
+          },
         ]),
       },
       usuario: { findMany: findManyUsuarios },
-      tareaCampo: { findMany: jest.fn().mockResolvedValue([]) },
+      tareaCampo: { findMany: findManyTareas },
     });
     const respuesta = await servicio.tareasDelDia(1, {
       fecha: '2026-10-10',
       asignaciones: [2, 6, 8],
     });
     expect(respuesta.items.map((i) => i.asignacionId)).toEqual([2, 6]);
-    // La cadena se arma solo con gente activa de su mismo equipo.
-    const where: unknown = expect.objectContaining({
+    // La cadena es la del organigrama: gente activa de cualquier rol o equipo.
+    const llamada = findManyUsuarios.mock.calls[0] as [
+      { where: Record<string, unknown> },
+    ];
+    expect(llamada[0].where).toMatchObject({
       isActive: true,
       superiorId: { in: [1] },
-      rol: { equipoCampoId: 1 },
     });
-    expect(findManyUsuarios).toHaveBeenCalledWith(
-      expect.objectContaining({ where }),
+    expect(llamada[0].where).not.toHaveProperty('rol');
+    // Cada local usa las tareas del equipo de su titular.
+    expect(findManyTareas).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ equipoCampoId: { in: [1, 2] } }),
+      }),
     );
+    expect(respuesta.items[0].items).toEqual([]);
+    expect(respuesta.items[1].items.map((t) => t.id)).toEqual([4]);
   });
 
   it('no completa una tarea sobre una jornada anterior sin salida', async () => {
@@ -229,6 +316,7 @@ describe('marcaciones directas de Comercia', () => {
         localId: 3,
         fecha: new Date('2026-10-09'),
         salida: null,
+        asignacion: titular(impulsadores),
       }),
     });
     const upsert = jest.fn();

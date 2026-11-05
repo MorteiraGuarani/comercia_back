@@ -112,11 +112,11 @@ export default function PaginaModulo({
     if (pagina === "locales") return <LocalesPanel />;
     if (pagina === "tareas") return <TareasPanel />;
     if (pagina === "ubicaciones") return <UbicacionesPanel />;
-    // El supervisor recorre los locales que hereda de su cadena, igual que el
-    // repositor en Mi jornada, y marca como él: con la ubicación del teléfono
-    // en Ucheck.
+    // El líder recorre los locales que hereda de toda su cadena (un jefe sin
+    // equipo, solo esos), igual que el repositor en Mi jornada, y marca como
+    // él: con la ubicación del teléfono en Ucheck.
     if (pagina === "itinerario")
-      return usuario.rol?.equipoCampo?.activo ? (
+      return !usuario.rol?.equipoCampo || usuario.rol.equipoCampo.activo ? (
         <JornadaPanel />
       ) : (
         <div className="m-4 min-w-0 rounded-xl border border-line bg-surface-raised p-6 text-center sm:m-6">

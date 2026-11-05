@@ -76,7 +76,7 @@ export const CAMPOS_SOCIOS = {
   },
   SlpCode: {
     description:
-      'Código del vendedor; referencia lógica a tbl_oslp.SlpCode de la empresa. En tbl_ocrd se usa -1 si se omite.',
+      'Código del vendedor; referencia lógica a tbl_oslp.SalesEmployeeCode de la empresa. En tbl_ocrd se usa -1 si se omite.',
     example: 1,
   },
   QryLunes: {
@@ -150,20 +150,6 @@ export const CAMPOS_SOCIOS = {
   Name: {
     description: 'Nombre del canal o subcanal de este catálogo.',
     example: 'Mayorista',
-  },
-  AgentName: { description: 'Nombre del supervisor.', example: 'Ana Pérez' },
-  SlpName: { description: 'Nombre del vendedor.', example: 'Luis Gómez' },
-  Memo: {
-    description: 'Observaciones de SAP, conservadas como texto.',
-    example: 'Zona centro',
-  },
-  Active: {
-    description: 'Vendedor activo en SAP (Y/N). Por defecto Y.',
-    example: 'Y',
-  },
-  Fax: {
-    description: 'Fax del vendedor, conservado como texto.',
-    example: '021000000',
   },
   GroupName: {
     description: 'Nombre del grupo de clientes.',

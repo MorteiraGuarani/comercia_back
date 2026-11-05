@@ -13,12 +13,16 @@ export const NOMBRES_TABLAS_SOCIOS = [
   'tbl_oscn',
   'tbl_oitb',
   'tbl_jtiposubcanales',
+  'tbl_owhs',
+  'tbl_oclp',
+  'tbl_jfdv',
 ] as const;
 
 const CATALOGOS_ARTICULOS = new Set<string>([
   'tbl_omrc',
   'tbl_oscn',
   'tbl_oitb',
+  'tbl_owhs',
 ]);
 export const esCatalogoArticulos = (tabla: string) =>
   CATALOGOS_ARTICULOS.has(tabla);

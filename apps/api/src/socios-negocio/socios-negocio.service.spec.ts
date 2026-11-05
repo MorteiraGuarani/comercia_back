@@ -289,11 +289,14 @@ describe('Socios de negocio públicos y separados por empresa', () => {
         tabla.nombre === 'tbl_ocrd' ||
         tabla.nombre === 'tbl_crd1' ||
         tabla.nombre === 'tbl_oscn' ||
-        tabla.nombre === 'tbl_oagp'
+        tabla.nombre === 'tbl_oagp' ||
+        tabla.nombre === 'tbl_owhs' ||
+        tabla.nombre === 'tbl_jfdv'
           ? '000123'
           : tabla.identidad ||
               tabla.nombre === 'tbl_opln' ||
               tabla.nombre === 'tbl_oslp' ||
+              tabla.nombre === 'tbl_oclp' ||
               tabla.nombre === 'tbl_ocrg' ||
               tabla.nombre === 'tbl_octg' ||
               tabla.nombre === 'tbl_oitb' ||
@@ -307,21 +310,27 @@ describe('Socios de negocio públicos y separados por empresa', () => {
           ? { CardCode: valor }
           : tabla.nombre === 'tbl_oagp'
             ? { AgentCode: valor }
-            : tabla.nombre === 'tbl_ocrg'
-              ? { Code: 7 }
-              : tabla.nombre === 'tbl_octg'
-                ? { GroupNumber: 7 }
-                : tabla.nombre === 'tbl_oitb'
-                  ? { Number: 7 }
-                  : tabla.nombre === 'tbl_omrc'
+            : tabla.nombre === 'tbl_owhs'
+              ? { WarehouseCode: valor }
+              : tabla.nombre === 'tbl_jfdv'
+                ? { Code: valor }
+                : tabla.nombre === 'tbl_oclp'
+                  ? { Code: 7 }
+                  : tabla.nombre === 'tbl_ocrg'
                     ? { Code: 7 }
-                    : tabla.nombre === 'tbl_oslp'
-                      ? { SlpCode: 7 }
-                      : tabla.nombre === 'tbl_opln'
-                        ? { ListNum: 7 }
-                        : tabla.identidad
+                    : tabla.nombre === 'tbl_octg'
+                      ? { GroupNumber: 7 }
+                      : tabla.nombre === 'tbl_oitb'
+                        ? { Number: 7 }
+                        : tabla.nombre === 'tbl_omrc'
                           ? { Code: 7 }
-                          : { id: 9007199254740993n };
+                          : tabla.nombre === 'tbl_oslp'
+                            ? { SalesEmployeeCode: 7 }
+                            : tabla.nombre === 'tbl_opln'
+                              ? { ListNum: 7 }
+                              : tabla.identidad
+                                ? { Code: 7 }
+                                : { id: 9007199254740993n };
       await service.obtener(tabla, 20, valor);
       const lectura =
         tabla.nombre === 'tbl_crd1' || tabla.nombre === 'tbl_oscn'
@@ -431,19 +440,21 @@ describe('Socios de negocio públicos y separados por empresa', () => {
   it.each([
     {
       tabla: TABLAS_SOCIOS.tbl_oslp,
-      campo: 'SlpCode',
+      campo: 'SalesEmployeeCode',
+      socio: 'SlpCode',
       codigo: 42,
-      cambio: { SlpName: 'Actualizado' },
+      cambio: { SalesEmployeeName: 'Actualizado' },
     },
     {
       tabla: TABLAS_SOCIOS.tbl_oagp,
       campo: 'AgentCode',
+      socio: 'AgentCode',
       codigo: '00042',
       cambio: { AgentName: 'Actualizado' },
     },
   ])(
     '$tabla.nombre usa $campo y empresa, sin buscar por id',
-    async ({ tabla, campo, codigo, cambio }) => {
+    async ({ tabla, campo, socio, codigo, cambio }) => {
       const { modelos, service } = preparar();
       const repositorio = modelos[tabla.modelo];
       const fila = { id: 7n, empresaId: 20, [campo]: codigo };
@@ -468,7 +479,7 @@ describe('Socios de negocio públicos y separados por empresa', () => {
         select: { id: true },
       });
       expect(modelos.socioNegocio.count).toHaveBeenCalledWith({
-        where: { empresaId: 20, [campo]: codigo },
+        where: { empresaId: 20, [socio]: codigo },
       });
       repositorio.findFirst.mockResolvedValue(null);
       await expect(service.obtener(tabla, 20, '7')).rejects.toBeInstanceOf(
@@ -476,7 +487,7 @@ describe('Socios de negocio públicos y separados por empresa', () => {
       );
       expect(repositorio.findFirst).toHaveBeenLastCalledWith(
         expect.objectContaining({
-          where: { empresaId: 20, [campo]: campo === 'SlpCode' ? 7 : '7' },
+          where: { empresaId: 20, [campo]: campo === 'SalesEmployeeCode' ? 7 : '7' },
         }),
       );
       await expect(service.obtener(tabla, 21, codigo)).rejects.toBeInstanceOf(
@@ -489,16 +500,23 @@ describe('Socios de negocio públicos y separados por empresa', () => {
   );
 
   it.each([
-    { tabla: TABLAS_SOCIOS.tbl_oslp, campo: 'SlpCode', codigo: 42, nuevo: 43 },
+    {
+      tabla: TABLAS_SOCIOS.tbl_oslp,
+      campo: 'SalesEmployeeCode',
+      socio: 'SlpCode',
+      codigo: 42,
+      nuevo: 43,
+    },
     {
       tabla: TABLAS_SOCIOS.tbl_oagp,
       campo: 'AgentCode',
+      socio: 'AgentCode',
       codigo: '00042',
       nuevo: '00043',
     },
   ])(
     '$tabla.nombre protege $campo usado por socios',
-    async ({ tabla, campo, codigo, nuevo }) => {
+    async ({ tabla, campo, socio, codigo, nuevo }) => {
       const { modelos, service } = preparar();
       const repositorio = modelos[tabla.modelo];
       repositorio.findFirst.mockResolvedValue({
@@ -514,7 +532,7 @@ describe('Socios de negocio públicos y separados por empresa', () => {
         ConflictException,
       );
       expect(modelos.socioNegocio.count).toHaveBeenCalledWith({
-        where: { empresaId: 20, [campo]: codigo },
+        where: { empresaId: 20, [socio]: codigo },
       });
       expect(repositorio.update).not.toHaveBeenCalled();
       expect(repositorio.delete).not.toHaveBeenCalled();
@@ -711,7 +729,9 @@ describe('Socios de negocio públicos y separados por empresa', () => {
       expect.objectContaining({ where: { empresaId: 20, Code: 1 } }),
     );
     expect(modelos.socioNegocioVendedor.findFirst).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { empresaId: 20, SlpCode: -1 } }),
+      expect.objectContaining({
+        where: { empresaId: 20, SalesEmployeeCode: -1 },
+      }),
     );
     expect(modelos.socioNegocioSubcanales.findFirst).not.toHaveBeenCalled();
     await service.direcciones(20, 'A', { page: 2, limit: 10 });

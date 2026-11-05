@@ -2,6 +2,7 @@ import type { UcheckSincronizacionService } from '../ucheck/ucheck-sincronizacio
 /* eslint-disable @typescript-eslint/no-unsafe-assignment -- Jest objectContaining returns any. */
 import {
   BadRequestException,
+  NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { RepositorCampoService } from './repositor-campo.service';
@@ -20,6 +21,19 @@ describe('RepositorCampoService', () => {
           horarioId: null,
           fecha: new Date('2026-09-25'),
           ucheckJornadaId: 6,
+          // Titular del local: sus tareas son las que se exigen.
+          asignacion: {
+            usuario: {
+              rol: {
+                equipoCampo: {
+                  id: 2,
+                  nombre: 'Repositores',
+                  tipo: 'REPOSITOR',
+                  activo: true,
+                },
+              },
+            },
+          },
         }),
       },
       tareaCampo: { count: jest.fn().mockResolvedValue(2) },
@@ -60,6 +74,48 @@ describe('RepositorCampoService', () => {
       }),
     );
     expect(prisma.usuario.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('el supervisor de repositores puede iniciar visita en un local heredado de su cadena', async () => {
+    const prisma = {
+      usuario: {
+        // Cadena: antonio (218) → maria (222) → nadie.
+        findMany: jest
+          .fn()
+          .mockResolvedValueOnce([{ id: 222 }])
+          .mockResolvedValueOnce([]),
+      },
+      // Sin asignación: alcanza con ver qué alcance se consultó.
+      asignacionCampo: { findFirst: jest.fn().mockResolvedValue(null) },
+    };
+    const servicio = new RepositorCampoService(
+      prisma as unknown as PrismaService,
+      {
+        ejecutar: jest.fn().mockResolvedValue({
+          id: 218,
+          empresaId: 2,
+          equipoCampo: { id: 5, tipo: 'REPOSITOR', activo: true },
+        }),
+      } as unknown as CampoAccesoService,
+      { get: jest.fn() } as unknown as ConfigService,
+      { ahora: jest.fn() } as unknown as UcheckSincronizacionService,
+    );
+    await expect(
+      servicio.entrada(218, { asignacionId: 7, nota: '' }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    const [[{ where }]] = prisma.asignacionCampo.findFirst.mock.calls as [
+      [{ where: { AND: Array<{ OR: unknown[] }> } }],
+    ];
+    expect(where.AND[1].OR).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ usuarioId: { in: [222] } }),
+        {
+          backups: {
+            some: expect.objectContaining({ usuarioId: { in: [222] } }),
+          },
+        },
+      ]),
+    );
   });
 
   const supervisora = () => {
