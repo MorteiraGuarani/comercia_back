@@ -299,11 +299,12 @@ describe('marcaciones directas de Comercia', () => {
     });
     expect(llamada[0].where).not.toHaveProperty('rol');
     // Cada local usa las tareas del equipo de su titular.
-    expect(findManyTareas).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({ equipoCampoId: { in: [1, 2] } }),
-      }),
-    );
+    const llamadaTareas = findManyTareas.mock.calls[0] as [
+      { where: Record<string, unknown> },
+    ];
+    expect(llamadaTareas[0].where).toMatchObject({
+      equipoCampoId: { in: [1, 2] },
+    });
     expect(respuesta.items[0].items).toEqual([]);
     expect(respuesta.items[1].items.map((t) => t.id)).toEqual([4]);
   });
