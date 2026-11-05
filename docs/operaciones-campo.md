@@ -39,8 +39,10 @@ cuando el responsable deba también modificar clientes.
   visita diaria. Editar una franja crea una versión nueva y conserva la anterior.
 - La asignación tiene vigencia. El backup reemplaza al titular en fechas inclusivas
   desde/hasta; no se admiten backups superpuestos en una asignación.
-- Se guarda quién asistió realmente, el titular y si era un backup. Solo se permite
-  una visita abierta por persona y una marcación por asignación/franja/día.
+- Se guarda quién asistió realmente, el titular y si era un backup. Se permite una
+  marcación por asignación/franja/día. Una persona puede tener varias visitas
+  abiertas en distintos locales: entra a otro sin cerrar el anterior y puede volver
+  a marcar esa salida después; la que no cierra queda incompleta al terminar su franja.
 - La entrada se valida contra la fecha/hora del servidor y las franjas del día.
   La salida sigue disponible aunque termine el horario o se desactive la asignación.
 - GPS se solicita al marcar. Si no está disponible se exige un motivo; las

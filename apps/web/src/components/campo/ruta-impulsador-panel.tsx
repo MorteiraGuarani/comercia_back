@@ -3,7 +3,7 @@ import type { PeriodoFiltro } from "@/types/periodo-filtro";
 import dynamic from "next/dynamic";
 
 import { useEffect, useState, useMemo } from "react";
-import { apiFetch } from "@/lib/api";
+import { visitasAbiertas } from "@/lib/visitas-abiertas";
 import { useJornadaCompleta } from "@/hooks/use-jornada-completa";
 import { useFechaCampo } from "@/hooks/use-fecha-campo";
 import {
@@ -96,9 +96,13 @@ function RutaImpulsadorDelPeriodo({
   const [inventarioDe, setInventarioDe] = useState<string | null>(null);
   const [tareasDe, setTareasDe] = useState<AgendaCampo | null>(null);
   const [revisionTareas, setRevisionTareas] = useState(0);
-  const [visitaAbierta, setAbierta] = useState<VisitaCampo | null>(null);
-  const abierta =
-    visitaAbierta?.fecha.slice(0, 10) === hoyStr ? visitaAbierta : null;
+  // Puede tener varias visitas abiertas: entró a otro local sin cerrar el anterior.
+  const [visitasAbiertasHoy, setAbiertas] = useState<VisitaCampo[]>([]);
+  const abiertas = visitasAbiertasHoy.filter(
+    (v) => v.fecha.slice(0, 10) === hoyStr,
+  );
+  const abiertaDe = (asignacionId: number) =>
+    abiertas.find((v) => v.asignacionId === asignacionId) ?? null;
   const [error, setError] = useState("");
   const [mapa, setMapa] = useState<LocalCampo | null>(null);
   const [busqueda, setBusqueda] = useState("");
@@ -128,9 +132,9 @@ function RutaImpulsadorDelPeriodo({
 
   useEffect(() => {
     let vigente = true;
-    apiFetch<VisitaCampo | null>("/campo/jornada/abierta")
+    visitasAbiertas()
       .then((v) => {
-        if (vigente) setAbierta(v);
+        if (vigente) setAbiertas(v);
       })
       .catch((e: Error) => {
         if (vigente) setError(e.message);
@@ -194,7 +198,7 @@ function RutaImpulsadorDelPeriodo({
   function pendientesParaRuta(items: AgendaCampo[]) {
     return items.flatMap((a) =>
       a.estado === "pendiente" &&
-      abierta?.local.id !== a.local.id &&
+      !abiertas.some((v) => v.local.id === a.local.id) &&
       conUbicacion(a.local)
         ? [{ ...a, local: a.local }]
         : [],
@@ -302,7 +306,7 @@ function RutaImpulsadorDelPeriodo({
   const idExpandida =
     expandida === undefined
       ? (itemsOrdenados.find(
-          (a) => a.id === abierta?.asignacionId || a.estado === "en_curso",
+          (a) => !!abiertaDe(a.id) || a.estado === "en_curso",
         )?.id ?? null)
       : expandida;
   const totalPages = Math.ceil(itemsFiltrados.length / limit);
@@ -357,8 +361,11 @@ function RutaImpulsadorDelPeriodo({
         />
       </div>
 
-      {abierta ? (
-        <div className="mb-2 flex min-w-0 items-center gap-2 rounded-lg border border-sky-500 bg-sky-50/60 px-3 py-1 sm:mb-3 dark:border-sky-700 dark:bg-sky-950/40">
+      {abiertas.map((abierta) => (
+        <div
+          key={abierta.id}
+          className="mb-2 flex min-w-0 items-center gap-2 rounded-lg border border-sky-500 bg-sky-50/60 px-3 py-1 sm:mb-3 dark:border-sky-700 dark:bg-sky-950/40"
+        >
           <span
             aria-hidden="true"
             className="h-2 w-2 shrink-0 rounded-full bg-sky-600 dark:bg-sky-400"
@@ -383,7 +390,7 @@ function RutaImpulsadorDelPeriodo({
             <IconoMensaje className="h-4 w-4" /> Novedad
           </button>
         </div>
-      ) : null}
+      ))}
 
       <div className="mb-2 flex min-w-0 w-full items-center gap-2 sm:mb-3">
         <label className="relative min-w-0 flex-1">
@@ -608,7 +615,7 @@ function RutaImpulsadorDelPeriodo({
             abierta={idExpandida === a.id}
             alternar={() => setExpandida(idExpandida === a.id ? null : a.id)}
             qsFecha={qsFecha}
-            visitaAbierta={abierta}
+            visitaAbierta={abiertaDe(a.id)}
             revisionTareas={revisionTareas}
             onMapa={() => setMapa(a.local)}
             onNovedad={() => setNovedadLocal(a.local)}
@@ -629,11 +636,9 @@ function RutaImpulsadorDelPeriodo({
             <button
               type="button"
               onClick={() => setTareasDe(a)}
-              disabled={abierta?.asignacionId !== a.id}
+              disabled={!abiertaDe(a.id)}
               title={
-                abierta?.asignacionId === a.id
-                  ? undefined
-                  : "Iniciá la visita para ver las tareas"
+                abiertaDe(a.id) ? undefined : "Iniciá la visita para ver las tareas"
               }
               className={btnAccion}
               aria-label={`Tareas de ${a.local.nombre}`}
@@ -690,9 +695,7 @@ function RutaImpulsadorDelPeriodo({
       {novedadLocal ? (
         <ModalNovedadLocal
           local={novedadLocal}
-          visitaId={
-            abierta?.local.id === novedadLocal.id ? abierta.id : undefined
-          }
+          visitaId={abiertas.find((v) => v.local.id === novedadLocal.id)?.id}
           cerrar={() => setNovedadLocal(null)}
         />
       ) : null}
@@ -708,7 +711,7 @@ function RutaImpulsadorDelPeriodo({
         <TareasDeLocal
           agenda={tareasDe}
           qsFecha={qsFecha}
-          abierta={abierta}
+          abierta={abiertaDe(tareasDe.id)}
           cerrar={() => {
             setTareasDe(null);
             setRevisionTareas((n) => n + 1);

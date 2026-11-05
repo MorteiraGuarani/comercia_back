@@ -36,6 +36,9 @@ interface UsuariosPanelProps {
   soloSuperadmin?: boolean;
 }
 
+// Pestañas del alta/edición: datos de Comercia, Ucheck y SAP (la última).
+const PASOS_USUARIO = ["Datos", "Ucheck", "SAP"] as const;
+
 const FORM_INICIAL: FormUsuario = {
   ...formularioErpUsuario(),
   nombre: "",
@@ -53,7 +56,6 @@ const FORM_INICIAL: FormUsuario = {
   isActive: true,
   programasUcheck: [],
 };
-
 
 function ListaUsuariosMovil({
   usuarios,
@@ -82,7 +84,8 @@ function ListaUsuariosMovil({
                 @{usuario.nombreLogin} · {usuario.correo}
               </p>
               <p className="mt-0.5 truncate text-xs text-muted">
-                Legajo {usuario.legajo ?? "—"} · {formatearTelefono(usuario.celular)}
+                Legajo {usuario.legajo ?? "—"} ·{" "}
+                {formatearTelefono(usuario.celular)}
               </p>
             </div>
             <span
@@ -160,6 +163,7 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
   const [form, setForm] = useState<FormUsuario>(FORM_INICIAL);
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
+  const [paso, setPaso] = useState(0);
   const [eliminando, setEliminando] = useState<UsuarioAdmin | null>(null);
   const [desactivando, setDesactivando] = useState(false);
   const [errorEliminar, setErrorEliminar] = useState<string | null>(null);
@@ -212,6 +216,7 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
   function abrirNuevo() {
     setForm({ ...FORM_INICIAL, rolId: "" });
     setError(null);
+    setPaso(0);
     setEditando("nuevo");
   }
 
@@ -234,6 +239,7 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
       programasUcheck: usuario.programasUcheck,
     });
     setError(null);
+    setPaso(0);
     setEditando(usuario);
   }
 
@@ -256,7 +262,9 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
             correo: form.correo.trim().toLowerCase(),
             nombreLogin: form.nombreLogin.trim().toLowerCase(),
             // RUC y celular son opcionales: solo viajan si se cargaron.
-            ...(form.ruc ? { ruc: `${form.ruc}-${calcularDvRucPy(form.ruc)}` } : {}),
+            ...(form.ruc
+              ? { ruc: `${form.ruc}-${calcularDvRucPy(form.ruc)}` }
+              : {}),
             ...(form.celular.trim() ? { celular: form.celular.trim() } : {}),
             celularPais: form.celularPais,
             legajo: form.legajo.trim() || null,
@@ -276,7 +284,8 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
         const cambioRuc = !!form.ruc && form.ruc !== baseRuc(editando.ruc);
         const cambioCelular =
           !!form.celular.trim() &&
-          (form.celularPais !== original.pais || form.celular.trim() !== original.numero);
+          (form.celularPais !== original.pais ||
+            form.celular.trim() !== original.numero);
         await apiFetch(`${base}/${editando.id}`, {
           method: "PATCH",
           body: JSON.stringify({
@@ -285,9 +294,13 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
             apellido: form.apellido.trim(),
             nombreLogin: form.nombreLogin.trim().toLowerCase(),
             legajo: form.legajo.trim() || null,
-            ...(cambioRuc ? { ruc: `${form.ruc}-${calcularDvRucPy(form.ruc)}` } : {}),
+            ...(cambioRuc
+              ? { ruc: `${form.ruc}-${calcularDvRucPy(form.ruc)}` }
+              : {}),
             ...(cambioCelular ? { celular: form.celular.trim() } : {}),
-            ...(cambioRuc || cambioCelular ? { celularPais: form.celularPais } : {}),
+            ...(cambioRuc || cambioCelular
+              ? { celularPais: form.celularPais }
+              : {}),
             correo: form.correo.trim().toLowerCase(),
             rolId: form.rolId,
             superiorId: form.superiorId === "" ? null : form.superiorId,
@@ -427,7 +440,9 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
                 </td>
                 <td className="px-4 py-3">{usuario.legajo ?? "—"}</td>
                 <td className="px-4 py-3">
-                  <p className="whitespace-nowrap">{formatearTelefono(usuario.celular)}</p>
+                  <p className="whitespace-nowrap">
+                    {formatearTelefono(usuario.celular)}
+                  </p>
                   <p className="text-xs text-muted">RUC {usuario.ruc}</p>
                 </td>
                 <td className="px-4 py-3">
@@ -448,7 +463,9 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
                   >
                     {usuario.isActive ? "Activo" : "Inactivo"}
                   </span>
-                  <p className="text-xs text-muted">Alta {formatoFecha(usuario.createdAt)}</p>
+                  <p className="text-xs text-muted">
+                    Alta {formatoFecha(usuario.createdAt)}
+                  </p>
                 </td>
                 <td className="px-4 py-3 text-right">
                   {usuario.esSuperadmin ? (
@@ -505,37 +522,67 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
         abierto={editando !== null}
         onCerrar={() => setEditando(null)}
       >
-        <form onSubmit={guardar} className="flex flex-col gap-4">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Campo
-              label="Nombre"
-              value={form.nombre}
-              onChange={(nombre) => setForm((f) => ({ ...f, nombre }))}
-            />
-            <Campo
-              label="Apellido"
-              value={form.apellido}
-              onChange={(apellido) => setForm((f) => ({ ...f, apellido }))}
-            />
+        <form
+          onSubmit={guardar}
+          // Un obligatorio de otra pestaña no se puede señalar oculto: se abre su pestaña.
+          onInvalidCapture={(e) => {
+            const panel = (e.target as HTMLElement).closest<HTMLElement>(
+              "[data-paso]",
+            );
+            if (panel) setPaso(Number(panel.dataset.paso));
+          }}
+          className="flex flex-col gap-4"
+        >
+          <div
+            role="tablist"
+            aria-label="Secciones del usuario"
+            className="flex min-w-0 gap-2 border-b border-line pb-3"
+          >
+            {PASOS_USUARIO.map((texto, i) => (
+              <button
+                key={texto}
+                type="button"
+                role="tab"
+                id={`usuario-tab-${i}`}
+                aria-selected={paso === i}
+                aria-controls={`usuario-paso-${i}`}
+                onClick={() => setPaso(i)}
+                className={`min-h-11 min-w-0 flex-1 cursor-pointer whitespace-nowrap rounded-lg px-3 text-xs font-bold uppercase tracking-wider transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 sm:flex-none sm:px-4 ${
+                  paso === i
+                    ? "bg-foreground text-background"
+                    : "border border-line bg-surface-raised text-muted hover:bg-surface-soft hover:text-foreground"
+                }`}
+              >
+                {texto}
+              </button>
+            ))}
           </div>
-          <Campo
-            label="Legajo (opcional)"
-            value={form.legajo}
-            required={false}
-            onChange={(legajo) => setForm((f) => ({ ...f, legajo }))}
-          />
-          <Campo
-            label="Correo"
-            type="email"
-            value={form.correo}
-            onChange={(correo) => setForm((f) => ({ ...f, correo }))}
-          />
-          <p className="text-xs text-muted">
-            Si usa Ucheck con Google, el correo debe coincidir en ambos
-            sistemas.
-          </p>
-          {editando !== null && (
-            <>
+
+          <div
+            data-paso={0}
+            id="usuario-paso-0"
+            role="tabpanel"
+            aria-labelledby="usuario-tab-0"
+            hidden={paso !== 0}
+            className="flex min-w-0 flex-col gap-4"
+          >
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Campo
+                label="Nombre"
+                value={form.nombre}
+                onChange={(nombre) => setForm((f) => ({ ...f, nombre }))}
+              />
+              <Campo
+                label="Apellido"
+                value={form.apellido}
+                onChange={(apellido) => setForm((f) => ({ ...f, apellido }))}
+              />
+              <Campo
+                label="Legajo (opcional)"
+                value={form.legajo}
+                required={false}
+                onChange={(legajo) => setForm((f) => ({ ...f, legajo }))}
+              />
               <Campo
                 label="Nombre de usuario"
                 autoComplete="off"
@@ -544,176 +591,226 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
                   setForm((f) => ({ ...f, nombreLogin }))
                 }
               />
-              <div>
-                <div className="grid grid-cols-[minmax(0,1fr)_5rem] gap-3">
-                  <label className={labelBase}>
-                    RUC (opcional, sin dígito verificador)
-                    <input
-                      value={form.ruc}
-                      onChange={(e) => {
-                        const base = e.target.value.trim().split("-")[0];
-                        if (/^\d{0,8}$/.test(base)) {
-                          setForm((f) => ({ ...f, ruc: base }));
-                        }
-                      }}
-                      inputMode="numeric"
-                      pattern="[0-9]{3,8}"
-                      minLength={3}
-                      aria-describedby="ruc-calculado"
-                      className={inputBase}
-                    />
-                  </label>
-                  <label className={labelBase}>
-                    DV
-                    <input
-                      value={
-                        form.ruc.length >= 3 ? calcularDvRucPy(form.ruc) : ""
-                      }
-                      readOnly
-                      aria-label="Dígito verificador calculado"
-                      className={`${inputBase} text-center`}
-                    />
-                  </label>
-                </div>
-                <p
-                  id="ruc-calculado"
-                  className="mt-2 text-xs text-muted"
-                  aria-live="polite"
-                >
-                  {form.ruc.length >= 3
-                    ? `RUC completo: ${form.ruc}-${calcularDvRucPy(form.ruc)}`
-                    : "Ingresá de 3 a 8 números; el dígito verificador se calcula automáticamente."}
-                </p>
-              </div>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <label className={labelBase}>
-                  País del celular
-                  <select
-                    value={form.celularPais}
-                    onChange={(e) =>
-                      setForm((f) => ({
-                        ...f,
-                        celularPais: e.target.value as CountryCode,
-                      }))
-                    }
-                    className={inputBase}
-                  >
-                    <option value="PY">Paraguay (+595)</option>
-                    <option value="AR">Argentina (+54)</option>
-                    <option value="BR">Brasil (+55)</option>
-                    <option value="UY">Uruguay (+598)</option>
-                    <option value="BO">Bolivia (+591)</option>
-                  </select>
-                </label>
-                <Campo
-                  label="Celular (opcional)"
-                  type="tel"
-                  required={false}
-                  value={form.celular}
-                  onChange={(celular) => setForm((f) => ({ ...f, celular }))}
-                />
-              </div>
-            </>
-          )}
-
-          {editando && empresaId !== "" ? (
-            <SelectorPaginado
-              key={`${empresaId}-${editando === "nuevo" ? "nuevo" : editando.id}`}
-              url={`${base}/roles?empresaId=${empresaId}`}
-              etiqueta="Rol"
-              value={form.rolId}
-              required
-              vacio="Seleccioná un rol de la empresa"
-              seleccionActual={
-                editando !== "nuevo" ? editando.rol?.descripcion : undefined
-              }
-              onChange={(rolId) => setForm((actual) => actual.rolId === rolId
-                ? actual : { ...actual, rolId, superiorId: "" })}
-            />
-          ) : null}
-          {editando && empresaId !== "" && form.rolId !== "" ? (
-            <div className="min-w-0 space-y-2">
-              <SelectorPaginado
-                key={`superior-${empresaId}-${form.rolId}-${editando === "nuevo" ? "nuevo" : editando.id}`}
-                url={`${base}/superiores?empresaId=${empresaId}&rolId=${form.rolId}${editando === "nuevo" ? "" : `&excluirUsuarioId=${editando.id}`}`}
-                etiqueta="Superior inmediato"
-                buscable
-                value={form.superiorId}
-                seleccionActual={editando !== "nuevo" && form.rolId === editando.rol?.id
-                  && form.superiorId === editando.superior?.id ? editando.superior.nombre : undefined}
-                onChange={(superiorId) => setForm((actual) => ({ ...actual, superiorId }))}
-              />
-              <p className="text-xs text-muted">Solo personas activas de esta empresa con el rol superior inmediato. Si el rol no tiene superior en el organigrama, dejá este campo vacío.</p>
-              {form.superiorId !== "" ? <button type="button" className={`${btnGhost} min-h-11 whitespace-nowrap`}
-                onClick={() => setForm((actual) => ({ ...actual, superiorId: "" }))}>Quitar superior</button> : null}
             </div>
-          ) : <p className="text-sm text-muted">Seleccioná un rol para elegir su superior inmediato.</p>}
-          {editando && empresaId !== "" ? (
-            <ProgramasUcheck
-              url={`${base}/programas-ucheck?empresaId=${empresaId}`}
-              value={form.programasUcheck}
+            <div>
+              <Campo
+                label="Correo"
+                type="email"
+                value={form.correo}
+                onChange={(correo) => setForm((f) => ({ ...f, correo }))}
+              />
+              <p className="mt-2 text-xs text-muted">
+                Si usa Ucheck con Google, el correo debe coincidir en ambos
+                sistemas.
+              </p>
+            </div>
+            <div>
+              <div className="grid grid-cols-[minmax(0,1fr)_5rem] gap-3">
+                <label className={labelBase}>
+                  RUC (opcional, sin dígito verificador)
+                  <input
+                    value={form.ruc}
+                    onChange={(e) => {
+                      const base = e.target.value.trim().split("-")[0];
+                      if (/^\d{0,8}$/.test(base)) {
+                        setForm((f) => ({ ...f, ruc: base }));
+                      }
+                    }}
+                    inputMode="numeric"
+                    pattern="[0-9]{3,8}"
+                    minLength={3}
+                    aria-describedby="ruc-calculado"
+                    className={inputBase}
+                  />
+                </label>
+                <label className={labelBase}>
+                  DV
+                  <input
+                    value={
+                      form.ruc.length >= 3 ? calcularDvRucPy(form.ruc) : ""
+                    }
+                    readOnly
+                    aria-label="Dígito verificador calculado"
+                    className={`${inputBase} text-center`}
+                  />
+                </label>
+              </div>
+              <p
+                id="ruc-calculado"
+                className="mt-2 text-xs text-muted"
+                aria-live="polite"
+              >
+                {form.ruc.length >= 3
+                  ? `RUC completo: ${form.ruc}-${calcularDvRucPy(form.ruc)}`
+                  : "Ingresá de 3 a 8 números; el dígito verificador se calcula automáticamente."}
+              </p>
+            </div>
+            <div className="grid min-w-0 grid-cols-[7.5rem_minmax(0,1fr)] gap-3">
+              <label className={labelBase}>
+                País
+                <select
+                  value={form.celularPais}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      celularPais: e.target.value as CountryCode,
+                    }))
+                  }
+                  className={inputBase}
+                >
+                  <option value="PY">PY (+595)</option>
+                  <option value="AR">AR (+54)</option>
+                  <option value="BR">BR (+55)</option>
+                  <option value="UY">UY (+598)</option>
+                  <option value="BO">BO (+591)</option>
+                </select>
+              </label>
+              <Campo
+                label="Celular (opcional)"
+                type="tel"
+                required={false}
+                value={form.celular}
+                onChange={(celular) => setForm((f) => ({ ...f, celular }))}
+              />
+            </div>
+            {editando && empresaId !== "" ? (
+              <SelectorPaginado
+                key={`${empresaId}-${editando === "nuevo" ? "nuevo" : editando.id}`}
+                url={`${base}/roles?empresaId=${empresaId}`}
+                etiqueta="Rol"
+                value={form.rolId}
+                required
+                vacio="Seleccioná un rol de la empresa"
+                seleccionActual={
+                  editando !== "nuevo" ? editando.rol?.descripcion : undefined
+                }
+                onChange={(rolId) =>
+                  setForm((actual) =>
+                    actual.rolId === rolId
+                      ? actual
+                      : { ...actual, rolId, superiorId: "" },
+                  )
+                }
+              />
+            ) : null}
+            <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-2">
+              {editando && empresaId !== "" && form.rolId !== "" ? (
+                <div className="min-w-0 space-y-2">
+                  <SelectorPaginado
+                    key={`superior-${empresaId}-${form.rolId}-${editando === "nuevo" ? "nuevo" : editando.id}`}
+                    url={`${base}/superiores?empresaId=${empresaId}&rolId=${form.rolId}${editando === "nuevo" ? "" : `&excluirUsuarioId=${editando.id}`}`}
+                    etiqueta="Superior inmediato"
+                    buscable
+                    limpiable
+                    value={form.superiorId}
+                    seleccionActual={
+                      editando !== "nuevo" &&
+                      form.rolId === editando.rol?.id &&
+                      form.superiorId === editando.superior?.id
+                        ? editando.superior.nombre
+                        : undefined
+                    }
+                    onChange={(superiorId) =>
+                      setForm((actual) => ({ ...actual, superiorId }))
+                    }
+                  />
+                </div>
+              ) : (
+                <p className="text-sm text-muted">
+                  Seleccioná un rol para elegir su superior inmediato.
+                </p>
+              )}
+              <Campo
+                label={
+                  editando === "nuevo"
+                    ? "Contraseña"
+                    : "Nueva contraseña (opcional)"
+                }
+                type="password"
+                // El navegador no debe completar con la contraseña guardada de quien
+                // administra: al guardar se la pondría al usuario editado.
+                autoComplete="new-password"
+                value={form.password}
+                required={editando === "nuevo"}
+                onChange={(password) => setForm((f) => ({ ...f, password }))}
+              />
+            </div>
+            {editando === "nuevo" && meta?.esSuperadmin ? (
+              <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-lg border border-line bg-surface-soft px-3 py-2.5 text-sm">
+                <input
+                  type="checkbox"
+                  checked={form.esSuperadmin}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, esSuperadmin: e.target.checked }))
+                  }
+                  className="mt-0.5 h-4 w-4 accent-brand-700"
+                />
+                <span>
+                  <strong className="block text-foreground">
+                    Otorgar acceso de superadmin
+                  </strong>
+                  <span className="mt-0.5 block text-xs text-muted">
+                    Podrá administrar todas las empresas, usuarios y accesos.
+                  </span>
+                </span>
+              </label>
+            ) : null}
+            {editando !== "nuevo" && (
+              <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={form.isActive}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, isActive: e.target.checked }))
+                  }
+                />
+                Usuario activo
+              </label>
+            )}
+          </div>
+
+          <div
+            data-paso={1}
+            id="usuario-paso-1"
+            role="tabpanel"
+            aria-labelledby="usuario-tab-1"
+            hidden={paso !== 1}
+            className="flex min-w-0 flex-col gap-4"
+          >
+            {editando && empresaId !== "" ? (
+              <ProgramasUcheck
+                url={`${base}/programas-ucheck?empresaId=${empresaId}`}
+                value={form.programasUcheck}
+                disabled={guardando}
+                onChange={(programasUcheck) =>
+                  setForm((actual) => ({ ...actual, programasUcheck }))
+                }
+              />
+            ) : null}
+            {editando && editando !== "nuevo" && meta?.esSuperadmin ? (
+              <VinculoUcheck key={editando.id} usuarioId={editando.id} />
+            ) : null}
+          </div>
+
+          <div
+            data-paso={2}
+            id="usuario-paso-2"
+            role="tabpanel"
+            aria-labelledby="usuario-tab-2"
+            hidden={paso !== 2}
+            className="min-w-0"
+          >
+            <CamposErpUsuario
+              valor={form}
               disabled={guardando}
-              onChange={(programasUcheck) =>
-                setForm((actual) => ({ ...actual, programasUcheck }))
+              onChange={(campo, valor) =>
+                setForm((actual) => ({ ...actual, [campo]: valor }))
               }
             />
-          ) : null}
-          {editando === "nuevo" && meta?.esSuperadmin ? (
-            <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-lg border border-line bg-surface-soft px-3 py-2.5 text-sm">
-              <input
-                type="checkbox"
-                checked={form.esSuperadmin}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, esSuperadmin: e.target.checked }))
-                }
-                className="mt-0.5 h-4 w-4 accent-brand-700"
-              />
-              <span>
-                <strong className="block text-foreground">
-                  Otorgar acceso de superadmin
-                </strong>
-                <span className="mt-0.5 block text-xs text-muted">
-                  Podrá administrar todas las empresas, usuarios y accesos.
-                </span>
-              </span>
-            </label>
-          ) : null}
-          <Campo
-            label={
-              editando === "nuevo"
-                ? "Contraseña"
-                : "Nueva contraseña (opcional)"
-            }
-            type="password"
-            // El navegador no debe completar con la contraseña guardada de quien
-            // administra: al guardar se la pondría al usuario editado.
-            autoComplete="new-password"
-            value={form.password}
-            required={editando === "nuevo"}
-            onChange={(password) => setForm((f) => ({ ...f, password }))}
-          />
-          <CamposErpUsuario
-            valor={form}
-            disabled={guardando}
-            onChange={(campo, valor) => setForm((actual) => ({ ...actual, [campo]: valor }))}
-          />
-          {editando !== "nuevo" && (
-            <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={form.isActive}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, isActive: e.target.checked }))
-                }
-              />
-              Usuario activo
-            </label>
-          )}
-          {editando && editando !== "nuevo" && meta?.esSuperadmin ? (
-            <VinculoUcheck key={editando.id} usuarioId={editando.id} />
-          ) : null}
+          </div>
+
           {error && <p className={errorBox}>{error}</p>}
-          <div className="flex justify-end gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
             <button
               type="button"
               onClick={() => setEditando(null)}
@@ -721,6 +818,24 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
             >
               Cancelar
             </button>
+            {paso > 0 ? (
+              <button
+                type="button"
+                onClick={() => setPaso((p) => p - 1)}
+                className={`${btnGhost} whitespace-nowrap`}
+              >
+                Anterior
+              </button>
+            ) : null}
+            {paso < PASOS_USUARIO.length - 1 ? (
+              <button
+                type="button"
+                onClick={() => setPaso((p) => p + 1)}
+                className={`${btnGhost} whitespace-nowrap`}
+              >
+                Siguiente
+              </button>
+            ) : null}
             <button type="submit" disabled={guardando} className={btnPrimary}>
               {guardando ? "Guardando..." : "Guardar"}
             </button>
@@ -909,7 +1024,8 @@ function AsignacionesUsuario({
   }
 
   return (
-    <Modal textoCerrar="Cerrar"
+    <Modal
+      textoCerrar="Cerrar"
       titulo={`Locales de ${usuario.nombre} ${usuario.apellido}`}
       abierto
       onCerrar={onCerrar}
@@ -1012,7 +1128,9 @@ function AsignacionesUsuario({
                     <td className="px-4 py-3 font-medium">
                       {asignacion.nombreLocal}
                     </td>
-                    <td className="px-4 py-3 font-mono">{asignacion.localId}</td>
+                    <td className="px-4 py-3 font-mono">
+                      {asignacion.localId}
+                    </td>
                     <td className="px-4 py-3 text-muted">
                       {asignacion.fechaDesde.slice(0, 10)} ·{" "}
                       {asignacion.fechaHasta?.slice(0, 10) ?? "Sin fin"}

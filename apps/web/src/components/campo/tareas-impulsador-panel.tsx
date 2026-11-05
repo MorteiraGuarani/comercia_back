@@ -11,6 +11,7 @@ import React, {
   useState,
 } from "react";
 import { apiFetch } from "@/lib/api";
+import { visitasAbiertas } from "@/lib/visitas-abiertas";
 import { enviarAccionTarea } from "@/lib/pendientes-tareas";
 import { usePanel } from "@/components/panel/contexto";
 import { PendientesTareas } from "./pendientes-tareas";
@@ -74,8 +75,15 @@ export function TareasImpulsadorPanel({
   const [revision, setRevision] = useState(0);
   const jornada = useJornadaCompleta<AgendaCampo>(qsFecha, revision);
   const agendas = jornada.items;
-  const [visitaAbierta, setAbierta] = useState<VisitaCampo | null>(null);
-  const abierta = visitaAbierta?.fecha.slice(0, 10) === hoyStr ? visitaAbierta : null;
+  // Puede tener varias visitas abiertas: entró a otro local sin cerrar el
+  // anterior. La vista del repositor trabaja la más reciente.
+  const [visitasAbiertasHoy, setAbiertas] = useState<VisitaCampo[]>([]);
+  const abiertas = visitasAbiertasHoy.filter((v) => v.fecha.slice(0, 10) === hoyStr);
+  const abierta = abiertas[0] ?? null;
+  const abiertaDe = (asignacionId: number) =>
+    abiertas.find((v) => v.asignacionId === asignacionId) ?? null;
+  const abiertaEnLocal = (localId: string) =>
+    abiertas.find((v) => v.local.id === localId) ?? null;
   const [consultaTerminada, setConsultaTerminada] = useState("");
   const [paginasTareas, setPaginasTareas] = useState<Record<number, number>>(
     {},
@@ -128,7 +136,7 @@ export function TareasImpulsadorPanel({
   // la ruta. Se vacía al cambiar la fecha o al recargar.
   const cacheTareas = useRef<{
     base: string;
-    abierta: VisitaCampo | null;
+    abiertas: VisitaCampo[];
     paginas: Map<string, RespuestaPaginada<TareaJornadaCampo>>;
   } | null>(null);
   useEffect(() => {
@@ -139,22 +147,22 @@ export function TareasImpulsadorPanel({
         const base = `${revision}|${qsFecha}|${idsAgenda}`;
         let cache = cacheTareas.current;
         if (cache?.base !== base) {
-          const abiertaNueva = await apiFetch<VisitaCampo | null>(
-            "/campo/jornada/abierta",
-          );
-          cache = { base, abierta: abiertaNueva, paginas: new Map() };
+          const abiertasNuevas = await visitasAbiertas();
+          cache = { base, abiertas: abiertasNuevas, paginas: new Map() };
           cacheTareas.current = cache;
         }
-        const { abierta: dataAbierta, paginas } = cache;
+        const { abiertas: dataAbiertas, paginas } = cache;
         const limiteDefecto = esRepositor ? 50 : 7;
         const pagina = (ag: AgendaCampo) => paginasTareas[ag.id] ?? 1;
         const limite = (ag: AgendaCampo) => limitesTareas[ag.id] ?? limiteDefecto;
         const clave = (ag: AgendaCampo) => `${ag.id}|${pagina(ag)}|${limite(ag)}`;
-        // Con visita abierta el repositor solo trabaja ese local; sin visita
+        // Con visitas abiertas el repositor trabaja esos locales; sin visita
         // puede leer las tareas de todos sus locales del día.
         const visibles = agendas.filter(
           (ag) =>
-            !esRepositor || !dataAbierta || ag.id === dataAbierta.asignacionId,
+            !esRepositor ||
+            !dataAbiertas.length ||
+            dataAbiertas.some((v) => v.asignacionId === ag.id),
         );
         const faltantes = visibles.filter((ag) => !paginas.has(clave(ag)));
         // La primera página de cada local va en un solo pedido; las páginas
@@ -189,7 +197,7 @@ export function TareasImpulsadorPanel({
           paginas.set(`${asignacionId}|1|${limiteDefecto}`, datos);
         for (const [ag, datos] of respuestasSueltas) paginas.set(clave(ag), datos);
         if (!vigente) return;
-        setAbierta(dataAbierta);
+        setAbiertas(dataAbiertas);
         setTareasPorLocal(
           Object.fromEntries(
             visibles.flatMap((ag) => {
@@ -225,13 +233,14 @@ export function TareasImpulsadorPanel({
 
   // Completar tarea
   const iniciarTarea = async (localId: string, tareaId: number) => {
-    if (!abierta || abierta.local.id !== localId || completandoId) return;
+    const visita = abiertaEnLocal(localId);
+    if (!visita || completandoId) return;
     setCompletandoId(tareaId);
     setErrorAccion("");
     try {
       const r = await enviarAccionTarea(
         usuario.id,
-        `/campo/jornada/visitas/${abierta.id}/tareas/${tareaId}/iniciar`,
+        `/campo/jornada/visitas/${visita.id}/tareas/${tareaId}/iniciar`,
         "Inicio de tarea",
       );
       if (r.pendiente)
@@ -249,13 +258,14 @@ export function TareasImpulsadorPanel({
     }
   };
   const completarTarea = async (localId: string, tareaId: number) => {
-    if (!abierta || abierta.local.id !== localId || completandoId) return;
+    const visita = abiertaEnLocal(localId);
+    if (!visita || completandoId) return;
     try {
       setCompletandoId(tareaId);
       setErrorAccion("");
       const resultado = await enviarAccionTarea(
         usuario.id,
-        `/campo/jornada/visitas/${abierta.id}/tareas/${tareaId}`,
+        `/campo/jornada/visitas/${visita.id}/tareas/${tareaId}`,
         "Completar tarea",
       );
       if (resultado.pendiente) {
@@ -291,12 +301,7 @@ export function TareasImpulsadorPanel({
     (cantidad, [asignacionId, datos]) =>
       cantidad +
       datos.items.filter((t) =>
-        tareaCumplidaEnVisita(
-          t,
-          abierta?.asignacionId === Number(asignacionId)
-            ? abierta.id
-            : undefined,
-        ),
+        tareaCumplidaEnVisita(t, abiertaDe(Number(asignacionId))?.id),
       ).length,
     0,
   );
@@ -307,12 +312,7 @@ export function TareasImpulsadorPanel({
       datos.items.filter(
         (t) =>
           t.fotosObligatorias &&
-          !tareaCumplidaEnVisita(
-            t,
-            abierta?.asignacionId === Number(asignacionId)
-              ? abierta.id
-              : undefined,
-          ),
+          !tareaCumplidaEnVisita(t, abiertaDe(Number(asignacionId))?.id),
       ).length,
     0,
   );
@@ -472,7 +472,8 @@ export function TareasImpulsadorPanel({
             const tareas = datosTareas?.items ?? [];
             const totalTareas = datosTareas?.total ?? 0;
             const totalPaginasTareas = datosTareas?.totalPages ?? 1;
-            const estaEnVisita = abierta?.asignacionId === ag.id;
+            const visitaAg = abiertaDe(ag.id);
+            const estaEnVisita = !!visitaAg;
 
             return (
               <div
@@ -516,7 +517,7 @@ export function TareasImpulsadorPanel({
                     {tareas.map((t) => {
                       const cumplida = tareaCumplidaEnVisita(
                         t,
-                        estaEnVisita ? abierta!.id : undefined,
+                        visitaAg?.id,
                       );
 
                       return (
@@ -566,12 +567,12 @@ export function TareasImpulsadorPanel({
                             </button>
 
                             {/* Botón Fotos si la tarea las admite */}
-                            {t.requiereFotos && abierta && estaEnVisita && (
+                            {t.requiereFotos && visitaAg && (
                               <button
                                 type="button"
                                 onClick={() =>
                                   setFotoModal({
-                                    visitaId: abierta.id,
+                                    visitaId: visitaAg.id,
                                     tareaId: t.id,
                                     nombreTarea: t.nombre,
                                     obligatorio: t.fotosObligatorias,
@@ -585,12 +586,12 @@ export function TareasImpulsadorPanel({
                             )}
 
                             {/* Botón Comentarios */}
-                            {abierta && estaEnVisita && (
+                            {visitaAg && (
                               <button
                                 type="button"
                                 onClick={() =>
                                   setComentarioModal({
-                                    visitaId: abierta.id,
+                                    visitaId: visitaAg.id,
                                     tareaId: t.id,
                                     nombreTarea: t.nombre,
                                   })
@@ -730,9 +731,7 @@ export function TareasImpulsadorPanel({
                 .nombre ?? "Local",
           }}
           tarea={{ id: novedadTarea.tareaId, nombre: novedadTarea.nombreTarea }}
-          visitaId={
-            abierta?.local.id === novedadTarea.localId ? abierta.id : undefined
-          }
+          visitaId={abiertaEnLocal(novedadTarea.localId)?.id}
           cerrar={() => setNovedadTarea(null)}
         />
       ) : null}

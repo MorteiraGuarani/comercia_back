@@ -23,10 +23,10 @@ export function CamposErpUsuario({
   return (
     <fieldset
       disabled={disabled}
-      className="min-w-0 space-y-3 border-t border-line pt-3"
+      className="min-w-0 space-y-3"
     >
       <legend className="pr-2 text-sm font-semibold text-foreground">
-        Datos ERP
+        Datos SAP (ERP)
       </legend>
       <p className="text-xs text-muted">
         Códigos y referencias del usuario en el ERP. Todos son opcionales y no
@@ -60,7 +60,7 @@ export function DetalleErpUsuario({ usuario }: { usuario: DatosErpUsuario }) {
   return (
     <details className="mt-2 min-w-0 max-w-sm">
       <summary className="min-h-11 cursor-pointer rounded py-3 text-xs font-semibold text-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">
-        Datos ERP
+        Datos SAP (ERP)
       </summary>
       <dl className="grid min-w-0 grid-cols-1 gap-x-4 gap-y-2 border-t border-line py-2 text-xs sm:grid-cols-2">
         {CAMPOS_ERP.map(({ campo, etiqueta }) => (

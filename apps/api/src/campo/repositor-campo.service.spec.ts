@@ -1,4 +1,5 @@
 import type { UcheckSincronizacionService } from '../ucheck/ucheck-sincronizacion.service';
+import type { UcheckClienteService } from '../ucheck/ucheck-cliente.service';
 /* eslint-disable @typescript-eslint/no-unsafe-assignment -- Jest objectContaining returns any. */
 import {
   BadRequestException,
@@ -57,6 +58,7 @@ describe('RepositorCampoService', () => {
       acceso as unknown as CampoAccesoService,
       config as unknown as ConfigService,
       { ahora: jest.fn() } as unknown as UcheckSincronizacionService,
+      {} as UcheckClienteService,
     );
     await expect(servicio.salida(3, 9, { nota: '' })).rejects.toBeInstanceOf(
       BadRequestException,
@@ -99,6 +101,7 @@ describe('RepositorCampoService', () => {
       } as unknown as CampoAccesoService,
       { get: jest.fn() } as unknown as ConfigService,
       { ahora: jest.fn() } as unknown as UcheckSincronizacionService,
+      {} as UcheckClienteService,
     );
     await expect(
       servicio.entrada(218, { asignacionId: 7, nota: '' }),
@@ -149,6 +152,7 @@ describe('RepositorCampoService', () => {
       {
         ahora: jest.fn().mockResolvedValue(undefined),
       } as unknown as UcheckSincronizacionService,
+      {} as UcheckClienteService,
     );
     return servicio;
   };
@@ -222,5 +226,38 @@ describe('RepositorCampoService', () => {
     } finally {
       fetch.mockRestore();
     }
+  });
+
+  it('reintentar pide a Ucheck reenviar las marcas pendientes y las trae', async () => {
+    const id = 'rep-' + 'a'.repeat(48);
+    const count = jest.fn().mockResolvedValueOnce(0);
+    const prisma = {
+      operacionCampo: {
+        findMany: jest.fn().mockResolvedValue([{ id }]),
+        count,
+      },
+    };
+    const pedir = jest.fn().mockResolvedValue({ reencolados: 1 });
+    const servicio = new RepositorCampoService(
+      prisma as unknown as PrismaService,
+      { ejecutar: jest.fn() } as unknown as CampoAccesoService,
+      { get: jest.fn() } as unknown as ConfigService,
+      { ahora: jest.fn() } as unknown as UcheckSincronizacionService,
+      { pedir } as unknown as UcheckClienteService,
+    );
+    const estado = jest
+      .spyOn(servicio, 'estadoOperacion')
+      .mockResolvedValue({ estado: 'CONFIRMADA', mensaje: '' });
+    await expect(servicio.reintentarPendientes(3)).resolves.toEqual({
+      pendientes: 0,
+    });
+    expect(pedir).toHaveBeenCalledWith(
+      '/comercia-integracion/marcaciones/reintentar',
+      { method: 'POST', body: { ids: [id] } },
+    );
+    expect(estado).toHaveBeenCalledWith(3, id);
+    expect(prisma.operacionCampo.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { usuarioId: 3, estado: 'PENDIENTE' } }),
+    );
   });
 });

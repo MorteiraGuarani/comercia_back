@@ -19,15 +19,24 @@ import { BuscadorLugarMapa } from "./ui/buscador-lugar-mapa";
 export default function SelectorUbicacion({
   latitud,
   longitud,
+  radioMetros,
   onChange,
 }: {
   latitud: number;
   longitud: number;
+  /** Radio de marcación: se dibuja como círculo alrededor del pin. */
+  radioMetros?: number;
   onChange: (latitud: number, longitud: number) => void;
 }) {
   const contenedor = useRef<HTMLDivElement>(null);
   const mapa = useRef<L.Map | null>(null);
   const marcador = useRef<L.Marker | null>(null);
+  const circulo = useRef<L.Circle | null>(null);
+  const radioValido =
+    radioMetros !== undefined && Number.isFinite(radioMetros) && radioMetros > 0
+      ? radioMetros
+      : 0;
+  const radio = useRef(radioValido);
   const capaUsuario = useRef<CapaUsuarioMapa | null>(null);
   const watchGps = useRef<number | null>(null);
   const cambiar = useRef(onChange);
@@ -40,6 +49,11 @@ export default function SelectorUbicacion({
   useEffect(() => {
     cambiar.current = onChange;
   }, [onChange]);
+
+  useEffect(() => {
+    radio.current = radioValido;
+    circulo.current?.setRadius(radioValido);
+  }, [radioValido]);
 
   useEffect(() => {
     if (!contenedor.current) return;
@@ -98,6 +112,16 @@ export default function SelectorUbicacion({
 
     marcador.current = punto;
 
+    // Área donde se puede marcar entrada y salida; no intercepta los clics.
+    circulo.current = L.circle([latIni, lngIni], {
+      radius: radio.current,
+      color: "#8B2635",
+      weight: 2,
+      fillColor: "#8B2635",
+      fillOpacity: 0.12,
+      interactive: false,
+    }).addTo(instancia);
+
     const elegir = (posicion: L.LatLng) => {
       const p = posicion.wrap();
       const nLat = Number(Math.max(-90, Math.min(90, p.lat)).toFixed(6));
@@ -108,8 +132,10 @@ export default function SelectorUbicacion({
     instancia.on("click", (e: L.LeafletMouseEvent) => {
       elegir(e.latlng);
       punto.setLatLng(e.latlng);
+      circulo.current?.setLatLng(e.latlng);
     });
 
+    punto.on("drag", () => circulo.current?.setLatLng(punto.getLatLng()));
     punto.on("dragend", () => {
       elegir(punto.getLatLng());
     });
@@ -126,6 +152,7 @@ export default function SelectorUbicacion({
       instancia.remove();
       mapa.current = null;
       marcador.current = null;
+      circulo.current = null;
     };
   }, [temaOscuro]);
 
@@ -140,6 +167,10 @@ export default function SelectorUbicacion({
       return;
     }
     marcador.current?.setLatLng([latitud, longitud]);
+    circulo.current?.setLatLng([latitud, longitud]);
+    // Coordenadas escritas a mano: si el punto quedó fuera de vista, ir a él.
+    if (mapa.current && !mapa.current.getBounds().contains([latitud, longitud]))
+      mapa.current.panTo([latitud, longitud]);
   }, [latitud, longitud]);
 
   // Escucha el GPS unos segundos y deja el pin en la lectura más precisa:

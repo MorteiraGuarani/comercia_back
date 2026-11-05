@@ -460,20 +460,12 @@ export function SupervisionPanel({
                               .join(" · ")}
                           </p>
                         </div>
-                        <div className="flex shrink-0 flex-col items-end gap-1">
-                          <span
-                            className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${RUTA_PILL[p.estado]}`}
-                          >
-                            {RUTA[p.estado].etiqueta}
-                          </span>
-                          {p.estadoPresentismo !== "SIN_REGISTRO" ? (
-                            <span
-                              className={`rounded-md px-1.5 text-[10px] font-bold ${PRESENTISMO_UI[p.estadoPresentismo].pill}`}
-                            >
-                              {PRESENTISMO[p.estadoPresentismo].etiqueta}
-                            </span>
-                          ) : null}
-                        </div>
+                        {/* La ruta y Presentismo salen del mismo estado: uno solo. */}
+                        <span
+                          className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${RUTA_PILL[p.estado]}`}
+                        >
+                          {RUTA[p.estado].etiqueta}
+                        </span>
                       </li>
                     ))}
                   </ol>

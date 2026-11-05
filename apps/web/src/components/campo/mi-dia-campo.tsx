@@ -4,6 +4,7 @@ import { AyudaApp } from "./ui/ayuda-app";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { apiFetch } from "@/lib/api";
+import { visitasAbiertas } from "@/lib/visitas-abiertas";
 import { usePanel } from "@/components/panel/contexto";
 import { BarraSegmentos, RAYADO_EN_CURSO } from "./ui/barra-segmentos";
 import {
@@ -56,8 +57,10 @@ const ACTUALIZAR_CADA_MS = 5 * 60_000;
 
 interface DatosMiDia {
   agenda: AgendaCampo[];
-  /** Visita abierta, sea de hoy o de una jornada anterior. */
+  /** Visita abierta más reciente, sea de hoy o de una jornada anterior. */
   abierta: VisitaCampo | null;
+  /** Las demás que dejó abiertas en otros locales: cerrarlas o quedan incompletas. */
+  otrasAbiertas: VisitaCampo[];
   tareas: TareaJornadaCampo[] | null;
   hayTareas: boolean | null;
   novedadesAbiertas: number | null;
@@ -113,9 +116,9 @@ export function MiDiaCampo({ itinerario }: { itinerario?: string }) {
     const opciones = { signal: controller.signal };
     const fecha = fechaEnZonaIso(new Date());
     async function cargar() {
-      const [agenda, abierta, novedades, avisos, hayTareas] = await Promise.all([
+      const [agenda, abiertas, novedades, avisos, hayTareas] = await Promise.all([
         apiFetch<RespuestaPaginada<AgendaCampo>>(`/campo/jornada?${consulta}&page=1&limit=50`, opciones),
-        apiFetch<VisitaCampo | null>("/campo/jornada/abierta", opciones),
+        visitasAbiertas(opciones),
         rutaNovedades
           ? apiFetch<NovedadesResponse>("/campo/novedades?estado=ABIERTA&page=1&limit=1", opciones).catch(() => null)
           : Promise.resolve(null),
@@ -126,6 +129,7 @@ export function MiDiaCampo({ itinerario }: { itinerario?: string }) {
           ? hayTareasAsignadas(consulta, controller.signal).catch(() => null)
           : Promise.resolve(null),
       ]);
+      const [abierta = null, ...otrasAbiertas] = abiertas;
       // Las tareas solo se trabajan con la visita abierta de hoy.
       const visitaHoy = abierta && abierta.fecha.slice(0, 10) === fecha ? abierta : null;
       const tareas = visitaHoy
@@ -140,6 +144,7 @@ export function MiDiaCampo({ itinerario }: { itinerario?: string }) {
       setDatos({
         agenda: agenda.items,
         abierta,
+        otrasAbiertas,
         tareas,
         hayTareas,
         novedadesAbiertas: novedades ? novedades.counts.abierta : null,
@@ -376,6 +381,17 @@ export function MiDiaCampo({ itinerario }: { itinerario?: string }) {
                     href={rutaTareas ?? rutaRuta ?? undefined}
                   />
                 ) : null}
+                {(datos?.otrasAbiertas ?? []).map((v) => (
+                  <FilaAtencion
+                    key={`abierta-${v.id}`}
+                    tono="warn"
+                    icono={<IconoSalida />}
+                    titulo={`También sigue abierta la visita en ${v.local.nombre}`}
+                    detalle={`Entrada ${formatoHora(v.entrada)} · si no marcás la salida queda incompleta`}
+                    accion="Ver"
+                    href={rutaRuta ?? undefined}
+                  />
+                ))}
                 {visitaVieja ? (
                   <FilaAtencion
                     tono="bad"

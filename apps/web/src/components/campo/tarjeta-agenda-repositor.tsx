@@ -34,7 +34,8 @@ interface TarjetaAgendaBaseProps {
   abierta: boolean;
   alternar: () => void;
   qsFecha: string;
-  /** Visita abierta del usuario, sea en este local o en otro. */
+  /** Visita abierta del usuario en este local. Una abierta en otro local no
+   *  impide iniciar acá: puede tener varias y volver a cerrarlas después. */
   visitaAbierta: VisitaCampo | null;
   onMapa: () => void;
   onNovedad: () => void;
@@ -209,17 +210,13 @@ export function TarjetaAgendaRepositor({
 
   // Un solo "Marcar entrada": el del próximo horario que todavía no tiene visita.
   const entradasPendientes =
-    !soloConsulta && hoy && !visitaAbierta
+    !soloConsulta && hoy && !visitaAqui
       ? (horarios.length ? horarios : [null])
           .filter(
             (h) => !a.visitas.some((v) => v.horarioId === (h?.id ?? null)),
           )
           .slice(0, 1)
       : [];
-  const otraVisita =
-    !soloConsulta && hoy && !visitaAqui && a.estado === "pendiente"
-      ? visitaAbierta
-      : null;
   const tareasCompletas =
     !!tareas && tareas.total > 0 && tareas.hechas === tareas.total;
 
@@ -467,15 +464,6 @@ export function TarjetaAgendaRepositor({
             </div>
           ) : null}
 
-          {otraVisita ? (
-            <p className="flex items-start gap-1.5 text-[11px] text-muted sm:text-xs">
-              <IconoCandado className="mt-px h-3.5 w-3.5 shrink-0" />
-              <span>
-                Tenés una visita en curso en <b>{otraVisita.local.nombre}</b>.
-                Finalizala para iniciar la visita acá.
-              </span>
-            </p>
-          ) : null}
         </div>
       ) : null}
     </article>

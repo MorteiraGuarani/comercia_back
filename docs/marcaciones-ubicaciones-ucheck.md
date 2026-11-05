@@ -43,6 +43,16 @@ Reintentar una marca no la duplica: cada marca lleva un identificador fijo
 Va de **UCHECK a COMERCIA**: es la marcación que UCHECK ya guardó, llegando como
 copia a `campo_visitas`. No significa que la marca no haya llegado a UCHECK.
 
+Mientras haya alguna, Mi Ruta / Itinerario muestra un aviso con **Reintentar**
+(`GET /campo/jornada/operaciones-pendientes` y `POST .../reintentar`): UCHECK
+vuelve a poner esas marcas en cola sin espera, también las FALLIDO
+(`POST /comercia-integracion/marcaciones/reintentar`), y COMERCIA las trae en el
+momento. La ruta se refresca sola cada 20 s mientras queden pendientes.
+
+Titular y supervisor pueden visitar la misma asignación el mismo día: la visita
+es única por persona + asignación + franja + día (migración
+`20261105130000_visita_por_usuario`).
+
 ### Marcas guardadas sin conexión
 
 Si no hay conexión con UCHECK, la web guarda la marca **en el navegador**

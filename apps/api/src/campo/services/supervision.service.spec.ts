@@ -74,6 +74,125 @@ describe('SupervisionService', () => {
     expect(r.presentismo.totalEquipo).toBe(2);
   });
 
+  describe('un supervisor ve los locales que hereda de su cadena', () => {
+    const equipo = {
+      id: 4,
+      nombre: 'Repositores',
+      tipo: 'REPOSITOR',
+      activo: true,
+    };
+    const persona = (id: number, superiorId: number, rol: string) => ({
+      id,
+      nombre: `P${id}`,
+      apellido: 'X',
+      celular: '',
+      correo: '',
+      superiorId,
+      rol: { descripcion: rol, equipoCampo: equipo },
+    });
+    // Cadena: jefe 1 → supervisor 2 → repositor 3 (titular del local L1).
+    const heredada = {
+      id: 9,
+      localId: 'L1',
+      usuarioId: 3,
+      fechaDesde: new Date('2026-10-01'),
+      fechaHasta: null,
+      backups: [],
+      horarios: [
+        {
+          id: 1,
+          localId: 'L1',
+          asignacionId: 9,
+          destinatario: 'REPOSITOR',
+          frecuencia: 'DIARIA',
+          intervalo: 1,
+          diasSemana: [],
+          diasMes: [],
+          fechaDesde: new Date('2026-10-01'),
+          fechaHasta: null,
+          entrada: '08:00',
+          salida: '12:00',
+          activo: true,
+        },
+      ],
+      local: { CardCode: 'L1', CardName: 'Local 1', horarios: [] },
+      usuario: { rol: { equipoCampo: equipo } },
+    };
+    const contexto = () => {
+      const prisma = {
+        usuario: {
+          findUnique: jest.fn().mockResolvedValue({
+            id: 1,
+            empresaId: 1,
+            isActive: true,
+            rol: { equipoCampoId: 4 },
+          }),
+          findFirst: jest.fn().mockResolvedValue(persona(2, 1, 'Supervisor')),
+          findMany: jest.fn(
+            ({
+              where,
+            }: {
+              where: { superiorId?: { in: number[] }; id?: { in: number[] } };
+            }) =>
+              where.id
+                ? [persona(2, 1, 'Supervisor'), persona(3, 2, 'Repositor')]
+                : where.superiorId?.in.includes(1)
+                  ? [{ id: 2 }]
+                  : where.superiorId?.in.includes(2)
+                    ? [{ id: 3 }]
+                    : [],
+          ),
+        },
+        asignacionCampo: {
+          findMany: jest.fn(
+            // Responde solo a consultas que piden los locales del repositor 3.
+            ({ where }: { where: unknown }) =>
+              JSON.stringify(where).includes('"in":[3]') ? [heredada] : [],
+          ),
+        },
+        visitaCampo: { findMany: jest.fn().mockResolvedValue([]) },
+        novedadCampo: {
+          findMany: jest.fn().mockResolvedValue([]),
+          groupBy: jest.fn().mockResolvedValue([]),
+        },
+        tareaCampo: { findMany: jest.fn().mockResolvedValue([]) },
+      };
+      const service = new SupervisionService(
+        prisma as unknown as PrismaService,
+        {
+          gestionar: jest
+            .fn()
+            .mockResolvedValue({ id: 1, empresaId: 1, equipoCampo: equipo }),
+        } as unknown as CampoAccesoService,
+      );
+      return { prisma, service };
+    };
+
+    it('en su ficha, sin ausencias ni tareas si no los visitó', async () => {
+      const { prisma, service } = contexto();
+      const detalle = await service.detalleColaborador(1, 2, {
+        fecha: '2026-10-09',
+      });
+      expect(detalle.ruta.map((p) => [p.localId, p.ausencias])).toEqual([
+        ['L1', 0],
+      ]);
+      expect(detalle.colaborador.estadoPresentismo).toBe('SIN_REGISTRO');
+      expect(detalle.tareasCategorias).toEqual([]);
+      expect(prisma.tareaCampo.findMany).not.toHaveBeenCalled();
+    });
+
+    it('en Presentismo, además de los propios del repositor', async () => {
+      const { prisma, service } = contexto();
+      // La propia del repositor sale de la consulta de su equipo (ids 2 y 3).
+      prisma.asignacionCampo.findMany.mockImplementation(() => [heredada]);
+      const r = await service.resumen(1, { fecha: '2026-10-09' });
+      const fila = (id: number) => r.colaboradores.find((c) => c.id === id)!;
+      expect(fila(2).ruta).toMatchObject({ total: 1, ausentes: 0 });
+      // El titular sí debe su horario vencido del viernes.
+      expect(fila(3).ruta).toMatchObject({ total: 1, ausentes: 1 });
+    });
+  });
+
   it('entrega las fotos y comentarios de cada cumplimiento al líder sin contar borradores', async () => {
     const prisma = {
       usuario: {

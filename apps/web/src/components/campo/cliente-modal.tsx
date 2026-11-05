@@ -75,6 +75,36 @@ export function ClienteModal({
       ? { latitud: inicial.latitud, longitud: inicial.longitud }
       : null,
   );
+  // Texto de los campos Latitud/Longitud: se puede escribir a mano o pegar
+  // "-25.32, -57.52"; el pin se mueve cuando ambos son válidos.
+  const [coords, setCoords] = useState({
+    latitud: punto ? String(punto.latitud) : "",
+    longitud: punto ? String(punto.longitud) : "",
+  });
+  const moverPunto = (latitud: number, longitud: number) => {
+    setPunto({ latitud, longitud });
+    setCoords({ latitud: String(latitud), longitud: String(longitud) });
+  };
+  const escribirCoord =
+    (campo: "latitud" | "longitud") =>
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const valor = e.target.value;
+      const par = valor.split(/[,;\s]+/).filter(Boolean);
+      const sig =
+        par.length === 2
+          ? { latitud: par[0], longitud: par[1] }
+          : { ...coords, [campo]: valor };
+      setCoords(sig);
+      const lat = Number(sig.latitud);
+      const lng = Number(sig.longitud);
+      if (
+        sig.latitud.trim() &&
+        sig.longitud.trim() &&
+        Math.abs(lat) <= 90 &&
+        Math.abs(lng) <= 180
+      )
+        setPunto({ latitud: lat, longitud: lng });
+    };
   const dvRuc = form.rucBase.length >= 3 ? calcularDvRucPy(form.rucBase) : null;
   const telefono = pistaTelefono(form.Phone1);
   // Lo que se envía en "Siguiente"; se compara para saber si hay cambios.
@@ -399,38 +429,65 @@ export function ClienteModal({
                     />
                   </label>
                 </div>
-                <label className="block min-w-0 space-y-1.5 text-sm font-semibold sm:max-w-xs">
-                  <span>Radio de marcación (metros)</span>
-                  <input
-                    type="number"
-                    name="radioMetros"
-                    required
-                    min={20}
-                    max={1000}
-                    step={1}
-                    inputMode="numeric"
-                    aria-describedby="radio-pista"
-                    value={form.radioMetros}
-                    onChange={cambiar("radioMetros")}
-                    className={campoClase}
-                  />
-                  <span
-                    id="radio-pista"
-                    className="block text-xs font-normal text-muted"
-                  >
-                    Distancia máxima al punto del mapa para iniciar y finalizar
-                    la visita. De 20 a 1000 m.
-                  </span>
-                </label>
+                <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-3">
+                  <label className="block min-w-0 space-y-1.5 text-sm font-semibold">
+                    <span>Radio de marcación (metros)</span>
+                    <input
+                      type="number"
+                      name="radioMetros"
+                      required
+                      min={20}
+                      max={1000}
+                      step={1}
+                      inputMode="numeric"
+                      aria-describedby="radio-pista"
+                      value={form.radioMetros}
+                      onChange={cambiar("radioMetros")}
+                      className={campoClase}
+                    />
+                    <span
+                      id="radio-pista"
+                      className="block text-xs font-normal text-muted"
+                    >
+                      Distancia máxima al punto del mapa para iniciar y
+                      finalizar la visita. De 20 a 1000 m.
+                    </span>
+                  </label>
+                  {(["latitud", "longitud"] as const).map((campo) => (
+                    <label
+                      key={campo}
+                      className="block min-w-0 space-y-1.5 text-sm font-semibold"
+                    >
+                      <span>
+                        {campo === "latitud" ? "Latitud" : "Longitud"}
+                      </span>
+                      <input
+                        type="text"
+                        name={campo}
+                        inputMode="text"
+                        autoComplete="off"
+                        placeholder={
+                          campo === "latitud"
+                            ? "Ej.: -25.296900"
+                            : "Ej.: -57.641500"
+                        }
+                        pattern="\s*-?\d{1,3}(\.\d+)?\s*"
+                        title="Número decimal, con signo menos si corresponde"
+                        value={coords[campo]}
+                        onChange={escribirCoord(campo)}
+                        className={campoClase}
+                      />
+                    </label>
+                  ))}
+                </div>
                 <div className="min-w-0 space-y-1.5">
                   <p className="text-sm font-semibold">Ubicación en el mapa</p>
                   <div className="overflow-hidden rounded-xl border border-line">
                     <SelectorUbicacion
                       latitud={punto?.latitud ?? CENTRO_INICIAL.latitud}
                       longitud={punto?.longitud ?? CENTRO_INICIAL.longitud}
-                      onChange={(latitud, longitud) =>
-                        setPunto({ latitud, longitud })
-                      }
+                      radioMetros={Number(form.radioMetros)}
+                      onChange={moverPunto}
                     />
                   </div>
                 </div>

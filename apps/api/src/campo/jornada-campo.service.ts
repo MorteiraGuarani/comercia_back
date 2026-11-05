@@ -31,7 +31,11 @@ import {
 import { ConsultaTareasDiaDto } from './dto/consulta-tareas-dia.dto';
 import { prepararEvidencia, tareaParaEvidencia } from './utils/evidencia-tarea';
 import { PrismaService } from '../prisma/prisma.service';
-import { rangoPaginacion, respuestaPaginada } from '../common/utils/paginacion';
+import {
+  PaginacionDto,
+  rangoPaginacion,
+  respuestaPaginada,
+} from '../common/utils/paginacion';
 import { CampoAccesoService } from './campo-acceso.service';
 import { ConsultaCampoDto, MarcaCampoDto } from './dto/campo.dto';
 import {
@@ -246,19 +250,36 @@ export class JornadaCampoService {
     });
     return respuestaPaginada(items, Number(conteo[0].total), page, limit);
   }
-  async abierta(usuarioId: number) {
+  /**
+   * Visitas sin salida de hoy: puede haber varias, en distintos locales, si
+   * entró a otro sin cerrar el anterior. La más reciente va primero.
+   */
+  async abiertas(usuarioId: number, query: PaginacionDto) {
     const u = await this.acceso.ejecutar(usuarioId);
     // Una jornada anterior queda incompleta; nunca se inventa una salida.
-    const visita = await this.prisma.visitaCampo.findFirst({
-      where: {
-        usuarioId: u.id,
-        fecha: fechaCampo(relojCampo().fecha),
-        salida: null,
-        empresaId: u.empresaId,
-      },
-      select: VISITA_CAMPO_SELECT,
-    });
-    return visita ? conLocalCampo(conEstadoVisita(visita)) : null;
+    const where = {
+      usuarioId: u.id,
+      fecha: fechaCampo(relojCampo().fecha),
+      salida: null,
+      empresaId: u.empresaId,
+    };
+    const { skip, take, page, limit } = rangoPaginacion(query);
+    const [total, visitas] = await Promise.all([
+      this.prisma.visitaCampo.count({ where }),
+      this.prisma.visitaCampo.findMany({
+        where,
+        select: VISITA_CAMPO_SELECT,
+        orderBy: [{ entrada: 'desc' }, { id: 'desc' }],
+        skip,
+        take,
+      }),
+    ]);
+    return respuestaPaginada(
+      visitas.map((v) => conLocalCampo(conEstadoVisita(v))),
+      total,
+      page,
+      limit,
+    );
   }
   async salida(usuarioId: number, id: number, dto: MarcaCampoDto) {
     const u = await this.acceso.ejecutar(usuarioId);

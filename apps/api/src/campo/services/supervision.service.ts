@@ -22,6 +22,7 @@ import {
 import { nombreLocal } from '../utils/local-ocrd';
 import {
   obtenerEquipoCompleto,
+  obtenerItinerarioHeredado,
   obtenerPersonalJefatura,
 } from '../utils/autorizacion';
 import { alcanceGestor } from '../utils/equipos-gestion';
@@ -30,6 +31,8 @@ import {
   destinatarioCampo,
   exigirEquipoCampo,
   EQUIPO_CAMPO_SELECT,
+  EQUIPO_TITULAR_SELECT,
+  ROL_OPERATIVO,
 } from '../utils/equipo-campo';
 import {
   rangoPaginacion,
@@ -168,7 +171,7 @@ export class SupervisionService {
       },
     };
 
-    const [usuarios, mandos] = await Promise.all([
+    const [usuarios, mandos, organigrama] = await Promise.all([
       this.prisma.usuario.findMany({
         where: {
           id: { in: idsConsultar },
@@ -224,6 +227,17 @@ export class SupervisionService {
               };
             }>[]
           >([]),
+      // Quién depende de quién dentro del alcance: cada líder hereda su cadena.
+      this.prisma.usuario.findMany({
+        where: {
+          id: { in: idsConsultar },
+          empresaId: u.empresaId,
+          isActive: true,
+          esSuperadmin: false,
+        },
+        select: { id: true, superiorId: true },
+        take: 2000,
+      }),
     ]);
 
     const colaboradores: ColaboradorResumenItem[] = [];
@@ -279,15 +293,29 @@ export class SupervisionService {
       fechaDesde: { lte: fechaHasta },
       fechaHasta: { gte: fechaDesde },
     };
-    const [asignacionesPorGrupo, visitasEquipo, novedadesEquipo] =
+    const hijos = new Map<number, number[]>();
+    for (const p of organigrama)
+      if (p.superiorId !== null)
+        hijos.set(p.superiorId, [...(hijos.get(p.superiorId) ?? []), p.id]);
+    const cadenaDe = (id: number) => {
+      const cadena = new Set<number>();
+      for (let nivel = hijos.get(id) ?? []; nivel.length;) {
+        const nuevos = nivel.filter((h) => !cadena.has(h));
+        nuevos.forEach((h) => cadena.add(h));
+        nivel = nuevos.flatMap((h) => hijos.get(h) ?? []);
+      }
+      return cadena;
+    };
+    const cadenas = new Map(idsUsuarios.map((id) => [id, cadenaDe(id)]));
+    const heredables = [
+      ...new Set([...cadenas.values()].flatMap((c) => [...c])),
+    ];
+    const [asignacionesPorGrupo, visitasEquipo, novedadesEquipo, heredadas] =
       await Promise.all([
         Promise.all(
           Array.from(grupos.values()).map((miembros) => {
             const equipo = exigirEquipoCampo(miembros[0].rol?.equipoCampo);
             const ids = miembros.map((m) => m.id);
-            const lideres = miembros
-              .filter(esTeamleaderUsuario)
-              .map((m) => m.id);
             return this.prisma.asignacionCampo.findMany({
               where: {
                 activo: true,
@@ -303,16 +331,6 @@ export class SupervisionService {
                   {
                     OR: [
                       { usuarioId: { in: ids } },
-                      ...(lideres.length
-                        ? [
-                            {
-                              usuario: {
-                                superiorId: { in: lideres },
-                                isActive: true,
-                              },
-                            },
-                          ]
-                        : []),
                       {
                         backups: {
                           some: { usuarioId: { in: ids }, ...vigenteEnPeriodo },
@@ -328,7 +346,6 @@ export class SupervisionService {
                 usuarioId: true,
                 fechaDesde: true,
                 fechaHasta: true,
-                usuario: { select: { superiorId: true, isActive: true } },
                 backups: {
                   where: { usuarioId: { in: ids }, ...vigenteEnPeriodo },
                   select: { usuarioId: true },
@@ -391,6 +408,25 @@ export class SupervisionService {
           },
           _count: { _all: true },
         }),
+        // Locales de la cadena de cada líder (Itinerario): sin horario propio.
+        // Sin cadena, `in: []` no devuelve nada.
+        this.prisma.asignacionCampo.findMany({
+          where: {
+            activo: true,
+            empresaId: u.empresaId,
+            fechaDesde: { lte: fechaHasta },
+            OR: [{ fechaHasta: null }, { fechaHasta: { gte: fechaDesde } }],
+            usuarioId: { in: heredables },
+            usuario: { rol: ROL_OPERATIVO },
+          },
+          select: {
+            id: true,
+            localId: true,
+            usuarioId: true,
+            fechaDesde: true,
+            fechaHasta: true,
+          },
+        }),
       ]);
     const asignacionesEquipo = asignacionesPorGrupo.flat();
     const novedadesPorUsuario = new Map(
@@ -402,17 +438,28 @@ export class SupervisionService {
         const asignaciones = asignacionesEquipo.filter(
           (a) =>
             a.usuarioId === user.id ||
-            (esTeamleader &&
-              a.usuario.isActive &&
-              a.usuario.superiorId === user.id) ||
             a.backups.some((b) => b.usuarioId === user.id),
         );
+        const cadena = cadenas.get(user.id) ?? new Set<number>();
+        const heredadasUsuario = heredadas.filter((a) =>
+          cadena.has(a.usuarioId),
+        );
         const visitasHoy = visitasEquipo.filter((v) => v.usuarioId === user.id);
+        // Las tareas se miden en sus locales propios y en los que visitó.
         const localIds = new Set([
           ...asignaciones.map((a) => a.localId),
           ...visitasHoy.map((v) => v.localId),
         ]);
-        return [user.id, { esTeamleader, asignaciones, visitasHoy, localIds }];
+        return [
+          user.id,
+          {
+            esTeamleader,
+            asignaciones,
+            heredadasUsuario,
+            visitasHoy,
+            localIds,
+          },
+        ];
       }),
     );
     // Tareas aplicables por tipo de equipo; cada colaborador se queda con las
@@ -420,16 +467,15 @@ export class SupervisionService {
     const tareasPorGrupo = new Map(
       await Promise.all(
         Array.from(grupos.entries()).map(async ([equipoId, miembros]) => {
-          const operativos = miembros.filter((m) => !esTeamleaderUsuario(m));
           const equipo = exigirEquipoCampo(miembros[0].rol?.equipoCampo);
           const localesGrupo = Array.from(
             new Set(
-              operativos.flatMap((m) =>
+              miembros.flatMap((m) =>
                 Array.from(datosPorUsuario.get(m.id)?.localIds ?? []),
               ),
             ),
           );
-          if (operativos.length === 0) return [equipoId, null] as const;
+          if (localesGrupo.length === 0) return [equipoId, null] as const;
           const tareas = await this.prisma.tareaCampo.findMany({
             where: {
               empresaId: u.empresaId,
@@ -465,29 +511,45 @@ export class SupervisionService {
     for (const user of usuarios) {
       const datos = datosPorUsuario.get(user.id);
       if (!datos) continue;
-      const { esTeamleader, asignaciones, visitasHoy } = datos;
+      const { esTeamleader, asignaciones, heredadasUsuario, visitasHoy } =
+        datos;
 
-      // Calcular asistencias e In/Out
-      const paradasPorLocal = new Map(
-        asignaciones.map((a) => [
-          a.localId,
-          estadoAgenda(
-            visitasHoy.filter((v) => v.localId === a.localId),
-            esTeamleader && a.usuarioId !== user.id
-              ? []
-              : a.horarios.length
-                ? a.horarios
-                : a.local.horarios,
-            ZONA_CAMPO,
-            fechaDesdeStr,
-            fechaHastaStr,
-            ahora,
-            a,
-          ),
-        ]),
-      );
+      // Calcular asistencias e In/Out. Un local heredado no le exige horario
+      // al líder; si además es suyo, manda su propia asignación.
+      const paradasPorLocal = new Map([
+        ...heredadasUsuario.map(
+          (a) =>
+            [
+              a.localId,
+              estadoAgenda(
+                visitasHoy.filter((v) => v.localId === a.localId),
+                [],
+                ZONA_CAMPO,
+                fechaDesdeStr,
+                fechaHastaStr,
+                ahora,
+                a,
+              ),
+            ] as const,
+        ),
+        ...asignaciones.map(
+          (a) =>
+            [
+              a.localId,
+              estadoAgenda(
+                visitasHoy.filter((v) => v.localId === a.localId),
+                a.horarios.length ? a.horarios : a.local.horarios,
+                ZONA_CAMPO,
+                fechaDesdeStr,
+                fechaHastaStr,
+                ahora,
+                a,
+              ),
+            ] as const,
+        ),
+      ]);
       for (const v of visitasHoy.filter(
-        (v) => !asignaciones.some((a) => a.localId === v.localId),
+        (v) => !paradasPorLocal.has(v.localId),
       )) {
         paradasPorLocal.set(
           v.localId,
@@ -565,11 +627,8 @@ export class SupervisionService {
         completadas: completadasTareas,
         obligPendientes,
       } = avanceTareasPorLocal(
-        paradasPorLocal.keys(),
-        esTeamleader
-          ? []
-          : (tareasPorGrupo.get(exigirEquipoCampo(user.rol?.equipoCampo).id) ??
-              []),
+        datos.localIds,
+        tareasPorGrupo.get(exigirEquipoCampo(user.rol?.equipoCampo).id) ?? [],
         visitasHoy,
       );
       const pctTareas = totalTareas
@@ -711,6 +770,18 @@ export class SupervisionService {
     if (!user) {
       throw new NotFoundException('Colaborador no encontrado');
     }
+    const equipoUsuario = exigirEquipoCampo(user.rol?.equipoCampo);
+    // Un líder recorre también los locales de toda su cadena (Itinerario).
+    const heredados = await obtenerItinerarioHeredado(this.prisma, {
+      id: user.id,
+      empresaId: u.empresaId,
+    });
+    const backupVigente = {
+      usuarioId: user.id,
+      activo: true,
+      fechaDesde: { lte: fechaHasta },
+      fechaHasta: { gte: fechaDesde },
+    };
 
     // Independientes entre sí: van en paralelo.
     const [asignaciones, visitas, novedades] = await Promise.all([
@@ -724,21 +795,22 @@ export class SupervisionService {
             {
               OR: [
                 { usuarioId: user.id },
-                {
-                  backups: {
-                    some: {
-                      usuarioId: user.id,
-                      activo: true,
-                      fechaDesde: { lte: fechaHasta },
-                      fechaHasta: { gte: fechaDesde },
-                    },
-                  },
-                },
+                { backups: { some: backupVigente } },
+                ...(heredados.length
+                  ? [
+                      {
+                        usuarioId: { in: heredados },
+                        usuario: { rol: ROL_OPERATIVO },
+                      },
+                    ]
+                  : []),
               ],
             },
           ],
         },
         include: {
+          ...EQUIPO_TITULAR_SELECT,
+          backups: { where: backupVigente, select: { id: true } },
           horarios: {
             where: {
               activo: true,
@@ -836,9 +908,20 @@ export class SupervisionService {
 
     // Armar la ruta del día ordenada
     const paradasMap = new Map<string, ParadaRuta>();
+    const propia = (a: (typeof asignaciones)[number]) =>
+      a.usuarioId === user.id || a.backups.length > 0;
+    // Un local heredado no le exige horario al líder: no suma ausencias.
+    const horariosDe = (a: (typeof asignaciones)[number] | undefined) =>
+      !a || !propia(a) ? [] : a.horarios.length ? a.horarios : a.local.horarios;
+    // La asignación propia gana sobre la heredada del mismo local.
+    const asignacionPorLocal = new Map(
+      [...asignaciones]
+        .sort((x, y) => Number(propia(x)) - Number(propia(y)))
+        .map((a) => [a.localId, a]),
+    );
 
     // Primero asignaciones
-    for (const a of asignaciones) {
+    for (const a of asignacionPorLocal.values()) {
       const h = (a.horarios.length ? a.horarios : a.local.horarios)[0];
       const ventana = h ? `${h.entrada} – ${h.salida}` : '08:00 – 18:00';
       paradasMap.set(a.localId, {
@@ -847,19 +930,11 @@ export class SupervisionService {
         local: nombreLocal(a.local),
         tipo: 'supermercado', // default semántico
         ventana,
-        ...estadoAgenda(
-          [],
-          a.horarios.length ? a.horarios : a.local.horarios,
-          ZONA_CAMPO,
-          desde,
-          hasta,
-          ahora,
-          a,
-        ),
+        ...estadoAgenda([], horariosDe(a), ZONA_CAMPO, desde, hasta, ahora, a),
         visitas: 0,
         ausencias: ausenciasAgenda(
           [],
-          a.horarios.length ? a.horarios : a.local.horarios,
+          horariosDe(a),
           ZONA_CAMPO,
           desde,
           hasta,
@@ -876,11 +951,9 @@ export class SupervisionService {
       const existing = paradasMap.get(v.localId);
       const h = v.local.horarios[0];
       const ventana = h ? `${h.entrada} – ${h.salida}` : '08:00 – 18:00';
-      const a = asignaciones.find((a) => a.localId === v.localId);
+      const a = asignacionPorLocal.get(v.localId);
       const delLocal = visitas.filter((x) => x.localId === v.localId);
-      const horariosLocal = a?.horarios.length
-        ? a.horarios
-        : (a?.local.horarios ?? []);
+      const horariosLocal = horariosDe(a);
       const estado = estadoAgenda(
         delLocal,
         horariosLocal,
@@ -928,32 +1001,50 @@ export class SupervisionService {
         ? this.formatoHora(visitas[visitas.length - 1].salida)
         : null;
 
-    // Tareas por categoría
-    const localIds = Array.from(paradasMap.keys());
-    const tareas = await this.prisma.tareaCampo.findMany({
-      where: {
-        empresaId: u.empresaId,
-        activo: true,
-        equipoCampoId: exigirEquipoCampo(user.rol?.equipoCampo).id,
-        destinatario: destinatarioCampo(user.rol?.equipoCampo),
-        fechaDesde: { lte: fechaHasta },
-        OR: [{ fechaHasta: null }, { fechaHasta: { gte: fechaDesde } }],
-        AND: [
-          {
-            OR: [
-              { todosLocales: true },
-              { locales: { some: { localId: { in: localIds } } } },
+    // Tareas por categoría: las de sus locales propios y las de los locales
+    // que visitó; en un local heredado, las del equipo de su titular.
+    const localIds = [
+      ...new Set([
+        ...asignaciones.filter(propia).map((a) => a.localId),
+        ...visitas.map((v) => v.localId),
+      ]),
+    ];
+    const equipos = new Map([[equipoUsuario.id, equipoUsuario]]);
+    for (const v of visitas) {
+      const a = asignacionPorLocal.get(v.localId);
+      const equipo = a && !propia(a) ? a.usuario.rol?.equipoCampo : null;
+      if (equipo?.activo) equipos.set(equipo.id, equipo);
+    }
+    const tareas = localIds.length
+      ? await this.prisma.tareaCampo.findMany({
+          where: {
+            empresaId: u.empresaId,
+            activo: true,
+            fechaDesde: { lte: fechaHasta },
+            OR: [{ fechaHasta: null }, { fechaHasta: { gte: fechaDesde } }],
+            AND: [
+              {
+                OR: [...equipos.values()].map((e) => ({
+                  equipoCampoId: e.id,
+                  destinatario: destinatarioCampo(e),
+                })),
+              },
+              {
+                OR: [
+                  { todosLocales: true },
+                  { locales: { some: { localId: { in: localIds } } } },
+                ],
+              },
             ],
           },
-        ],
-      },
-      select: {
-        id: true,
-        nombre: true,
-        categoria: true,
-        esObligatoria: true,
-      },
-    });
+          select: {
+            id: true,
+            nombre: true,
+            categoria: true,
+            esObligatoria: true,
+          },
+        })
+      : [];
 
     const tareasCumplidasSet = new Set(
       visitas.flatMap((v) =>

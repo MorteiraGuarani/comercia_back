@@ -867,7 +867,7 @@ model VisitaCampo {
   novedades            NovedadCampo[]
   eventosUcheck        IntegracionUcheckEvento[]
 
-  @@unique([asignacionId, horarioId, fecha])
+  @@unique([asignacionId, horarioId, fecha, usuarioId])
   @@index([usuarioId, fecha])
   @@index([localId, fecha])
   @@map("campo_visitas")

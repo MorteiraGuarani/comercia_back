@@ -28,6 +28,7 @@ export function SelectorPaginado<TId extends number | string = number>({
   etiquetaOculta = false,
   limite = 7,
   opcionVacia,
+  limpiable = false,
 }: {
   url: string;
   etiqueta: string;
@@ -49,6 +50,8 @@ export function SelectorPaginado<TId extends number | string = number>({
   limite?: number;
   /** Solo con buscable: primera opción sin ID (p. ej. «Todos»). Escribir no la elige. */
   opcionVacia?: { texto: string; onElegir: () => void };
+  /** Solo con buscable: una X dentro del campo deja la selección vacía. */
+  limpiable?: boolean;
 }) {
   const [datos, setDatos] = useState<RespuestaPaginada<
     OpcionSelector<TId>
@@ -166,67 +169,101 @@ export function SelectorPaginado<TId extends number | string = number>({
         mensaje={`Cargando ${etiqueta.toLowerCase()}`}
       />
       {buscable ? (
-        <label className={compacto || etiquetaOculta ? "block min-w-0" : labelBase}>
+        <label
+          className={compacto || etiquetaOculta ? "block min-w-0" : labelBase}
+        >
           {compacto || etiquetaOculta ? (
             <span className="sr-only">{etiqueta}</span>
           ) : (
             etiqueta
           )}
-          <input
-            ref={inputRef}
-            type="text"
-            role="combobox"
-            aria-autocomplete="list"
-            aria-expanded={abierto}
-            aria-controls={listaId}
-            aria-activedescendant={
-              abierto && !cargando && activa >= 0
-                ? `${listaId}-${activa}`
-                : undefined
-            }
-            autoComplete="off"
-            required={required}
-            className={compacto ? INPUT_COMPACTO : inputBase}
-            value={abierto && editando ? buscar : nombreSeleccionado}
-            maxLength={120}
-            placeholder={placeholder}
-            onFocus={abrir}
-            onClick={abrir}
-            onKeyDown={(e) => {
-              if (e.key === "Escape" && abierto) {
-                e.preventDefault();
-                e.stopPropagation();
-                setAbierto(false);
-                setEditando(false);
+          <span className="relative block min-w-0">
+            <input
+              ref={inputRef}
+              type="text"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-expanded={abierto}
+              aria-controls={listaId}
+              aria-activedescendant={
+                abierto && !cargando && activa >= 0
+                  ? `${listaId}-${activa}`
+                  : undefined
               }
-              if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-                e.preventDefault();
-                abrir();
-                if (!cargando && !error && lista.length)
-                  setActiva((n) =>
-                    e.key === "ArrowDown"
-                      ? Math.min(n + 1, lista.length - 1)
-                      : Math.max(n - 1, 0),
-                  );
-              }
-              if (e.key === "Enter") {
-                e.preventDefault();
-                if (abierto && !cargando && !error && activa >= 0 && activa < lista.length)
-                  elegir(lista[activa]);
-                else abrir();
-              }
-            }}
-            onChange={(e) => {
-              setAbierto(true);
-              setEditando(true);
-              setActiva(-1);
-              onChange("");
-              setBuscar(e.target.value);
-              setPage(1);
-              setCargando(true);
-              setError(null);
-            }}
-          />
+              autoComplete="off"
+              required={required}
+              className={`${compacto ? INPUT_COMPACTO : inputBase} ${limpiable && value !== "" ? "pr-11" : ""}`}
+              value={abierto && editando ? buscar : nombreSeleccionado}
+              maxLength={120}
+              placeholder={placeholder}
+              onFocus={abrir}
+              onClick={abrir}
+              onKeyDown={(e) => {
+                if (e.key === "Escape" && abierto) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setAbierto(false);
+                  setEditando(false);
+                }
+                if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                  e.preventDefault();
+                  abrir();
+                  if (!cargando && !error && lista.length)
+                    setActiva((n) =>
+                      e.key === "ArrowDown"
+                        ? Math.min(n + 1, lista.length - 1)
+                        : Math.max(n - 1, 0),
+                    );
+                }
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  if (
+                    abierto &&
+                    !cargando &&
+                    !error &&
+                    activa >= 0 &&
+                    activa < lista.length
+                  )
+                    elegir(lista[activa]);
+                  else abrir();
+                }
+              }}
+              onChange={(e) => {
+                setAbierto(true);
+                setEditando(true);
+                setActiva(-1);
+                onChange("");
+                setBuscar(e.target.value);
+                setPage(1);
+                setCargando(true);
+                setError(null);
+              }}
+            />
+            {limpiable && value !== "" ? (
+              <button
+                type="button"
+                aria-label={`Quitar ${etiqueta.toLowerCase()}`}
+                title={`Quitar ${etiqueta.toLowerCase()}`}
+                onClick={(e) => {
+                  // Sin esto el clic en la etiqueta reenfoca el campo y abre la lista.
+                  e.preventDefault();
+                  setElegida(null);
+                  onChange("");
+                  setAbierto(false);
+                }}
+                className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 cursor-pointer place-items-center rounded-full text-muted hover:bg-surface-soft hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
+              >
+                <svg
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  className="h-4 w-4"
+                  aria-hidden
+                >
+                  <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+                </svg>
+              </button>
+            ) : null}
+          </span>
         </label>
       ) : null}
       {!buscable ? (
@@ -305,7 +342,9 @@ export function SelectorPaginado<TId extends number | string = number>({
                           onMouseDown={(e) => e.preventDefault()}
                           onClick={() => elegir(item)}
                         >
-                          {item ? (item.nombre ?? item.descripcion) : opcionVacia?.texto}
+                          {item
+                            ? (item.nombre ?? item.descripcion)
+                            : opcionVacia?.texto}
                         </li>
                       );
                     })

@@ -13,6 +13,7 @@ import {
   IconoRefrescar,
 } from "@/components/campo/ui/iconos-campo";
 import { apiFetch } from "@/lib/api";
+import { visitasAbiertas } from "@/lib/visitas-abiertas";
 import { hayTareasAsignadas } from "@/lib/disponibilidad-tareas";
 import { fechaEnZonaIso, textoRangoFechas } from "@/utils/fechas";
 import {
@@ -242,9 +243,8 @@ function InicioResumen({
         solicitudes.push(
           (async () => {
             try {
-              const activa = await apiFetch<
-                import("@/types/campo").VisitaCampo | null
-              >("/campo/jornada/abierta", opciones);
+              // La más reciente si dejó varias abiertas en distintos locales.
+              const activa = (await visitasAbiertas(opciones))[0] ?? null;
               if (controller.signal.aborted) return;
               setAbierta(activa);
               if (activa && tareas && activa.fecha.slice(0, 10) === fecha) {

@@ -15,5 +15,9 @@ try {
   await db.exec("UPDATE campo_visitas SET salida = '2026-10-10 15:00' WHERE fecha = '2026-10-10'");
   await db.query('INSERT INTO campo_visitas(usuario_id, fecha) VALUES ($1, $2)', [1, '2026-10-10']);
   assert.equal((await db.query("SELECT salida FROM campo_visitas WHERE fecha = '2026-10-09'")).rows[0].salida, null);
-  console.log('OK: jornada vencida preservada, nueva entrada habilitada y concurrencia protegida por fecha.');
+  // Después: varias visitas abiertas el mismo día, en distintos locales.
+  await db.exec(await readFile(new URL('../prisma/migrations/20261105120000_varias_visitas_abiertas/migration.sql', import.meta.url), 'utf8'));
+  await db.query('INSERT INTO campo_visitas(usuario_id, fecha) VALUES ($1, $2)', [1, '2026-10-10']);
+  assert.equal((await db.query("SELECT COUNT(*)::int AS total FROM campo_visitas WHERE fecha = '2026-10-10' AND salida IS NULL")).rows[0].total, 2);
+  console.log('OK: jornada vencida preservada y varias visitas abiertas el mismo día.');
 } finally { await db.close(); }

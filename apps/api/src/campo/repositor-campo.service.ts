@@ -29,6 +29,13 @@ import type {
 import type { MarcacionRepositorUcheck } from './interfaces/marcacion-repositor.interface';
 import type { EquipoCampoDto } from '../roles/interfaces/equipo-campo.interface';
 import { UcheckSincronizacionService } from '../ucheck/ucheck-sincronizacion.service';
+import { UcheckClienteService } from '../ucheck/ucheck-cliente.service';
+import {
+  PAGINA_TAMANO_MAXIMO,
+  PaginacionDto,
+  rangoPaginacion,
+  respuestaPaginada,
+} from '../common/utils/paginacion';
 import type { EntradaCampoDto, MarcaCampoDto } from './dto/campo.dto';
 
 type UbicacionMarca = {
@@ -52,6 +59,7 @@ export class RepositorCampoService {
     private readonly acceso: CampoAccesoService,
     private readonly config: ConfigService,
     private readonly sincronizacion: UcheckSincronizacionService,
+    private readonly ucheck: UcheckClienteService,
   ) {}
 
   async esRepositor(usuarioId: number) {
@@ -347,6 +355,49 @@ export class RepositorCampoService {
       mensaje:
         'Marcación guardada en Ucheck, pendiente de sincronización. La confirmación se consulta sin crear otra marcación.',
     };
+  }
+
+  /** Marcas que Ucheck ya guardó y cuya copia todavía no llegó a Comercia. */
+  async operacionesPendientes(usuarioId: number, query: PaginacionDto) {
+    await this.acceso.ejecutar(usuarioId);
+    const where = { usuarioId, estado: 'PENDIENTE' };
+    const { skip, take, page, limit } = rangoPaginacion(query);
+    const [total, items] = await Promise.all([
+      this.prisma.operacionCampo.count({ where }),
+      this.prisma.operacionCampo.findMany({
+        where,
+        select: { id: true, tipo: true, creadaEn: true },
+        orderBy: [{ creadaEn: 'asc' }, { id: 'asc' }],
+        skip,
+        take,
+      }),
+    ]);
+    return respuestaPaginada(items, total, page, limit);
+  }
+
+  /**
+   * Botón «Reintentar»: Ucheck vuelve a poner en cola, sin espera, las marcas
+   * pendientes de la persona (también las que agotaron sus 10 intentos) y
+   * Comercia las trae en ese momento. Devuelve cuántas siguen sin llegar.
+   */
+  async reintentarPendientes(usuarioId: number) {
+    await this.acceso.ejecutar(usuarioId);
+    const where = { usuarioId, estado: 'PENDIENTE' };
+    const ops = await this.prisma.operacionCampo.findMany({
+      where,
+      select: { id: true },
+      orderBy: [{ creadaEn: 'asc' }, { id: 'asc' }],
+      take: PAGINA_TAMANO_MAXIMO,
+    });
+    if (ops.length) {
+      await this.ucheck.pedir('/comercia-integracion/marcaciones/reintentar', {
+        method: 'POST',
+        body: { ids: ops.map((o) => o.id) },
+      });
+      // Trae de Ucheck y confirma cada una, como la consulta de una operación.
+      for (const op of ops) await this.estadoOperacion(usuarioId, op.id);
+    }
+    return { pendientes: await this.prisma.operacionCampo.count({ where }) };
   }
 
   async entrada(usuarioId: number, dto: EntradaRepositorCampoDto) {

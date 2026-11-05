@@ -80,6 +80,7 @@ import {
 } from './utils/multer-config';
 import { existsSync } from 'fs';
 import { enviarArchivo } from '../common/utils/enviar-archivo';
+import { PaginacionDto } from '../common/utils/paginacion';
 
 @Controller('campo')
 @UseGuards(JwtAuthGuard)
@@ -366,8 +367,14 @@ export class CampoController {
   agenda(@Req() r: RequestConUsuario, @Query() q: ConsultaCampoDto) {
     return this.jornada.agenda(r.usuarioId, q);
   }
-  @Get('jornada/abierta') abierta(@Req() r: RequestConUsuario) {
-    return this.jornada.abierta(r.usuarioId);
+  @Get('jornada/abiertas')
+  @ApiOperation({
+    summary: 'Visitas abiertas de hoy',
+    description:
+      'Visitas sin salida del día, la más reciente primero. Puede haber varias: se entra a otro local sin cerrar el anterior y cada una se cierra con su propia salida; la que no se cierra queda incompleta.',
+  })
+  abiertas(@Req() r: RequestConUsuario, @Query() q: PaginacionDto) {
+    return this.jornada.abiertas(r.usuarioId, q);
   }
 
   @Get('jornada/repositor/telefono') estadoTelefono(
@@ -381,6 +388,29 @@ export class CampoController {
     @Param('id') id: string,
   ) {
     return this.repositor.estadoOperacion(r.usuarioId, id);
+  }
+
+  @Get('jornada/operaciones-pendientes')
+  @ApiOperation({
+    summary: 'Marcas guardadas en Ucheck que todavía no llegaron a Comercia',
+    description:
+      'Entradas y salidas propias que Ucheck ya guardó y cuya copia Comercia todavía no trajo (pendientes de sincronización), de la más vieja a la más nueva.',
+  })
+  operacionesPendientes(
+    @Req() r: RequestConUsuario,
+    @Query() q: PaginacionDto,
+  ) {
+    return this.repositor.operacionesPendientes(r.usuarioId, q);
+  }
+
+  @Post('jornada/operaciones-pendientes/reintentar')
+  @ApiOperation({
+    summary: 'Reintentar ya la sincronización de mis marcas pendientes',
+    description:
+      'Ucheck vuelve a poner en cola sin espera las marcas pendientes propias (también las que agotaron sus reintentos) y Comercia las trae en el momento. Responde cuántas siguen pendientes. No crea marcas nuevas ni las duplica.',
+  })
+  reintentarPendientes(@Req() r: RequestConUsuario) {
+    return this.repositor.reintentarPendientes(r.usuarioId);
   }
 
   @Post('jornada/visitas/:visitaId/tareas/:tareaId/iniciar') iniciarTarea(
