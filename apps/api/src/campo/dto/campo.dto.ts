@@ -27,6 +27,8 @@ import {
 } from '../../../generated/prisma/client';
 import { PaginacionDto } from '../../common/utils/paginacion';
 import { MAX_INT4 } from '../../common/utils/numeros';
+import type { ResultadoRegistroMarcacion } from '../interfaces/registro-marcacion.interface';
+import { RESULTADOS_REGISTRO_MARCACION } from '../utils/registro-marcacion';
 
 export class ConsultaCampoDto extends PaginacionDto {
   @IsOptional()
@@ -72,6 +74,13 @@ export class ConsultaLocalesEmpresaDto extends ConsultaCampoDto {
   @Min(1)
   @Max(MAX_INT4)
   empresaId!: number;
+}
+
+/** Registro de marcaciones del superadmin: paginado y filtrable por resultado. */
+export class ConsultaRegistroMarcacionesDto extends PaginacionDto {
+  @IsOptional()
+  @IsIn(RESULTADOS_REGISTRO_MARCACION)
+  resultado?: ResultadoRegistroMarcacion;
 }
 
 function fechaHastaCalendario(value: unknown): string | null {

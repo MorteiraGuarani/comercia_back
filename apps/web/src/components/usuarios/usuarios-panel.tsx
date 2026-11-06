@@ -800,13 +800,18 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
             hidden={paso !== 2}
             className="min-w-0"
           >
-            <CamposErpUsuario
-              valor={form}
-              disabled={guardando}
-              onChange={(campo, valor) =>
-                setForm((actual) => ({ ...actual, [campo]: valor }))
-              }
-            />
+            {editando && empresaId !== "" ? (
+              <CamposErpUsuario
+                base={base}
+                empresaId={empresaId}
+                usuario={editando === "nuevo" ? undefined : editando}
+                valor={form}
+                disabled={guardando}
+                onChange={(campo, valor) =>
+                  setForm((actual) => ({ ...actual, [campo]: valor }))
+                }
+              />
+            ) : null}
           </div>
 
           {error && <p className={errorBox}>{error}</p>}

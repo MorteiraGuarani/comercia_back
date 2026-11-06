@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsInt,
   IsOptional,
@@ -9,8 +9,30 @@ import {
   MinLength,
 } from 'class-validator';
 import { MAX_INT4 } from '../../common/utils/numeros';
+import { vacioComo } from '../../common/utils/transforms';
 
-export class CrearEmpresaAdminDto {
+/** Conexión a SAP de la empresa. Vacío borra esquema/usuario; la contraseña vacía se conserva. */
+class DatosSapEmpresaDto {
+  @Transform(vacioComo(null))
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  sapEsquema?: string | null;
+
+  @Transform(vacioComo(null))
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  sapUsuario?: string | null;
+
+  // Sin recortar: los espacios pueden ser parte de la contraseña.
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  sapContrasenia?: string;
+}
+
+export class CrearEmpresaAdminDto extends DatosSapEmpresaDto {
   @IsString()
   @MinLength(2)
   @MaxLength(120)
@@ -37,7 +59,7 @@ export class CrearEmpresaAdminDto {
   diasAvisoVencimiento?: number;
 }
 
-export class ActualizarEmpresaAdminDto {
+export class ActualizarEmpresaAdminDto extends DatosSapEmpresaDto {
   @IsOptional()
   @IsString()
   @MinLength(2)

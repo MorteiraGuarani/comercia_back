@@ -57,7 +57,9 @@ describe('HTTP: selector de superiores', () => {
           useValue: {
             exigirAccesoPagina: jest
               .fn()
-              .mockRejectedValue(new ForbiddenException('No tenés acceso a esta sección')),
+              .mockRejectedValue(
+                new ForbiddenException('No tenés acceso a esta sección'),
+              ),
           },
         },
         {

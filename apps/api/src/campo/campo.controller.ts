@@ -40,6 +40,8 @@ import { OrganigramaService } from './services/organigrama.service';
 import { ConsultaOrganigramaDto } from './dto/organigrama.dto';
 import { SupervisionService } from './services/supervision.service';
 import { AdjuntoCampoService } from './services/adjunto-campo.service';
+import { RegistroMarcacionesService } from './services/registro-marcaciones.service';
+import { RegistroMarcacionInterceptor } from './interceptors/registro-marcacion.interceptor';
 import { CampoAccesoService } from './campo-acceso.service';
 import { ConsultaLocalesCampoDto } from './dto/administracion.dto';
 import { TraspasoAsignacionesDto } from './dto/traspaso.dto';
@@ -52,6 +54,7 @@ import {
   BackupCampoDto,
   ConsultaCampoDto,
   ConsultaLocalesEmpresaDto,
+  ConsultaRegistroMarcacionesDto,
   EntradaCampoDto,
   EntradaRepositorCampoDto,
   HorarioCampoDto,
@@ -99,6 +102,7 @@ export class CampoController {
     private readonly organigramaService: OrganigramaService,
     private readonly adjuntoCampoService: AdjuntoCampoService,
     private readonly acceso: CampoAccesoService,
+    private readonly registroMarcaciones: RegistroMarcacionesService,
   ) {}
 
   @Get('equipos-gestion')
@@ -164,6 +168,17 @@ export class CampoController {
   })
   localesEmpresa(@Query() q: ConsultaLocalesEmpresaDto) {
     return this.catalogo.localesEmpresa(q.empresaId, q);
+  }
+  // Solo superadmin: cada pedido de marca de campo y cómo terminó.
+  @Get('superadmin/registro-marcaciones')
+  @UseGuards(SuperadminGuard)
+  @ApiOperation({
+    summary: 'Registro de marcaciones (superadmin)',
+    description:
+      'Cada pedido de marca de campo (entrada, salida y guardadas sin conexión): ACEPTADA, RECHAZADA con su motivo (de Comercia o de Ucheck) o ERROR. Incluye quién marcó, el pedido completo (con coordenadas) y la respuesta o el error. De la más reciente a la más antigua, paginado y filtrable por resultado.',
+  })
+  registroMarcacionesCampo(@Query() q: ConsultaRegistroMarcacionesDto) {
+    return this.registroMarcaciones.listar(q);
   }
   @Post('locales') crearLocal(
     @Req() r: RequestConUsuario,
@@ -439,17 +454,18 @@ export class CampoController {
   ) {
     return this.jornada.tareas(r.usuarioId, id, q);
   }
-  @Post('jornada/entrada') async entrada(
-    @Req() r: RequestConUsuario,
-    @Body() d: EntradaCampoDto,
-  ) {
+  @UseInterceptors(RegistroMarcacionInterceptor)
+  @Post('jornada/entrada')
+  async entrada(@Req() r: RequestConUsuario, @Body() d: EntradaCampoDto) {
     return (await this.repositor.esRepositor(r.usuarioId))
       ? this.repositor.entrada(r.usuarioId, d)
       : this.repositor.entradaWeb(r.usuarioId, d);
   }
   // Marca con el teléfono en Ucheck: repositores y, en Itinerario, supervisores
   // y TeamLeaders.
-  @Post('jornada/repositor/entrada') async entradaRepositor(
+  @UseInterceptors(RegistroMarcacionInterceptor)
+  @Post('jornada/repositor/entrada')
+  async entradaRepositor(
     @Req() r: RequestConUsuario,
     @Body() d: EntradaRepositorCampoDto,
   ) {
@@ -457,7 +473,9 @@ export class CampoController {
       ? this.repositor.entrada(r.usuarioId, d)
       : this.repositor.entradaWeb(r.usuarioId, d);
   }
-  @Post('jornada/visitas/:id/salida') async salida(
+  @UseInterceptors(RegistroMarcacionInterceptor)
+  @Post('jornada/visitas/:id/salida')
+  async salida(
     @Req() r: RequestConUsuario,
     @Param('id', ParseIntPipe) id: number,
     @Body() d: MarcaCampoDto,
@@ -470,6 +488,7 @@ export class CampoController {
       this.jornada.salida(r.usuarioId, id, d)
     );
   }
+  @UseInterceptors(RegistroMarcacionInterceptor)
   @Post('jornada/marcas-sin-conexion')
   @ApiOperation({
     summary:
@@ -481,7 +500,9 @@ export class CampoController {
   ) {
     return this.repositor.marcaSinConexion(r.usuarioId, d);
   }
-  @Post('jornada/repositor/visitas/:id/salida') async salidaRepositor(
+  @UseInterceptors(RegistroMarcacionInterceptor)
+  @Post('jornada/repositor/visitas/:id/salida')
+  async salidaRepositor(
     @Req() r: RequestConUsuario,
     @Param('id', ParseIntPipe) id: number,
     @Body() d: MarcaRepositorCampoDto,

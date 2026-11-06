@@ -77,3 +77,30 @@ export interface LineaFacturaCliente {
   precioUnitario: string;
   precioTotal: string;
 }
+
+/** Orden de venta para el Service Layer de SAP B1 (POST /Orders). */
+export interface PedidoSap {
+  DocDate: string;
+  DocDueDate: string;
+  CardCode: string;
+  /** Sucursal del usuario (tbl_oclp). */
+  NumAtCard: string;
+  DocCurrency: string;
+  DocRate: number;
+  Comments: string;
+  JournalMemo: string;
+  /** Serie de pedidos de la sucursal. */
+  Series: number | null;
+  /** Usuario de Comercia. */
+  U_beas_pers_id: string;
+  /** Número del pedido en Comercia: 4 números separados por «|». */
+  U_beas_version: string;
+  /** Parámetro de embarque. */
+  U_par: string;
+  DocumentLines: {
+    LineNum: number;
+    ItemCode: string;
+    Quantity: number;
+    WarehouseCode: string;
+  }[];
+}

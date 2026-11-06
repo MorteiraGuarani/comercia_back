@@ -21,7 +21,9 @@ function sinPaginaUsuarios() {
   return {
     exigirAccesoPagina: jest
       .fn()
-      .mockRejectedValue(new ForbiddenException('No tenés acceso a esta sección')),
+      .mockRejectedValue(
+        new ForbiddenException('No tenés acceso a esta sección'),
+      ),
   } as unknown as AccesoPlataformaService;
 }
 
@@ -36,6 +38,18 @@ describe('UsuariosService - permiso de superadmin', () => {
     },
     rol: { findUnique: jest.fn(), findMany: jest.fn(), count: jest.fn() },
     identidadUcheck: { deleteMany: jest.fn() },
+    socioNegocioCanales: {
+      count: jest.fn().mockResolvedValue(1),
+      findMany: jest
+        .fn()
+        .mockResolvedValue([
+          { empresaId: 20, Code: 1, Name: 'CANAL TRADICIONAL' },
+        ]),
+    },
+    catalogoOclp: {
+      count: jest.fn().mockResolvedValue(1),
+      findMany: jest.fn().mockResolvedValue([]),
+    },
   };
   const auth = { crearUsuario: jest.fn() };
   const ucheckUsuarios = { marcar: jest.fn() };
@@ -46,12 +60,12 @@ describe('UsuariosService - permiso de superadmin', () => {
     ucheckUsuarios as never,
   );
   const erp = {
-    ERP_CanalVenta: 'MAYORISTA',
-    ERP_Almacen: 'ALM01',
-    ERP_Supervisor: 'SUP01',
-    ERP_Vendedor: 0,
+    ERP_CanalVenta: '1',
     ERP_Repositor: 'REP01',
-    ERP_Impulsador: 'IMP01',
+    ERP_CodigoAlmacen: 'ALM01',
+    ERP_NombreAlmacen: 'Depósito central',
+    ERP_CodUsuarioSap: 'manager',
+    ERP_Sucursal: 3,
   };
   const dto = {
     ...erp,
@@ -265,24 +279,74 @@ describe('UsuariosService - permiso de superadmin', () => {
     });
   });
 
-  it('guarda y devuelve las seis referencias ERP del ABM', async () => {
+  it('guarda y devuelve las referencias ERP del ABM con el nombre del canal', async () => {
     prepararCambioCorreo();
-    await expect(service.actualizar(1, 2, erp)).resolves.toMatchObject(erp);
+    await expect(service.actualizar(1, 2, erp)).resolves.toMatchObject({
+      ...erp,
+      canalVentaNombre: 'CANAL TRADICIONAL',
+      sucursalNombre: null,
+    });
+    expect(prisma.socioNegocioCanales.count).toHaveBeenCalledWith({
+      where: { empresaId: 20, Code: 1 },
+    });
+    expect(prisma.catalogoOclp.count).toHaveBeenCalledWith({
+      where: { empresaId: 20, Code: 3 },
+    });
     expect(prisma.usuario.update.mock.calls[0][0]).toMatchObject({ data: erp });
     expect(prisma.identidadUcheck.deleteMany).not.toHaveBeenCalled();
   });
 
-  it('permite borrar una referencia ERP, mantiene el vendedor cero y omite las referencias sin editar', async () => {
+  it('permite borrar una referencia ERP y omite las referencias sin editar', async () => {
     prepararCambioCorreo();
-    await service.actualizar(1, 2, { ERP_Almacen: null, ERP_Vendedor: 0 });
+    await service.actualizar(1, 2, {
+      ERP_CodigoAlmacen: null,
+      ERP_CodUsuarioSap: 'manager',
+    });
     expect(prisma.usuario.update.mock.calls[0][0]).toMatchObject({
       data: {
-        ERP_Almacen: null,
-        ERP_Vendedor: 0,
+        ERP_CodigoAlmacen: null,
+        ERP_CodUsuarioSap: 'manager',
         ERP_CanalVenta: undefined,
-        ERP_Supervisor: undefined,
+        ERP_NombreAlmacen: undefined,
       },
     });
+  });
+
+  it('rechaza canal o sucursal que no están en el catálogo de la empresa', async () => {
+    prepararCambioCorreo();
+    await expect(
+      service.actualizar(1, 2, { ERP_CanalVenta: 'MAYORISTA' }),
+    ).rejects.toThrow('Elegí un canal de venta de la lista de la empresa');
+    prepararCambioCorreo();
+    prisma.catalogoOclp.count.mockResolvedValueOnce(0);
+    await expect(service.actualizar(1, 2, { ERP_Sucursal: 9 })).rejects.toThrow(
+      'Elegí una sucursal de la lista de la empresa',
+    );
+    expect(prisma.usuario.update).not.toHaveBeenCalled();
+  });
+
+  it('lista los canales de venta de la empresa como opciones', async () => {
+    prisma.usuario.findUnique.mockResolvedValueOnce({
+      id: 1,
+      empresaId: 20,
+      esSuperadmin: true,
+      isActive: true,
+    });
+    prisma.socioNegocioCanales.count.mockResolvedValueOnce(1);
+    await expect(
+      service.listarCatalogoErp(1, { buscar: 'trad' }, 'canales'),
+    ).resolves.toMatchObject({
+      items: [{ id: 1, nombre: 'CANAL TRADICIONAL' }],
+      total: 1,
+    });
+    expect(prisma.socioNegocioCanales.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          empresaId: 20,
+          Name: { contains: 'trad', mode: 'insensitive' },
+        },
+      }),
+    );
   });
 
   it('conserva el vínculo con Ucheck si el correo no cambia', async () => {
@@ -398,7 +462,7 @@ describe('UsuariosService - alta en lote', () => {
       ruc: null,
       celular: '',
       legajo: null,
-      ERP_Almacen: 'ALM02',
+      ERP_CodigoAlmacen: 'ALM02',
       esSuperadmin: false,
       isActive: true,
       createdAt: new Date('2026-10-23T12:00:00.000Z'),
@@ -437,7 +501,7 @@ describe('UsuariosService - alta en lote', () => {
     );
 
     const r = await service.crearLote(1, [
-      { dto: { correo: 'juan.perez@x.com', ERP_Almacen: 'ALM02' } },
+      { dto: { correo: 'juan.perez@x.com', ERP_CodigoAlmacen: 'ALM02' } },
       { dto: { nombreLogin: 'juan.perez' } },
       { error: 'el correo no tiene un formato válido' },
     ]);
@@ -446,7 +510,7 @@ describe('UsuariosService - alta en lote', () => {
       total: 3,
       exitosos: 1,
       fallidos: 2,
-      resultados: [{ id: 2, ruc: null, ERP_Almacen: 'ALM02' }],
+      resultados: [{ id: 2, ruc: null, ERP_CodigoAlmacen: 'ALM02' }],
       errores: [
         {
           indice: 1,
@@ -465,7 +529,7 @@ describe('UsuariosService - alta en lote', () => {
       nombre: 'juan.perez',
       apellido: '',
       password: '12345678',
-      ERP_Almacen: 'ALM02',
+      ERP_CodigoAlmacen: 'ALM02',
     });
     expect(asignacion).toEqual({
       rolId: null,
@@ -495,7 +559,9 @@ describe('UsuariosService - página Administración · Usuarios', () => {
     },
     rol: { findUnique: jest.fn() },
   };
-  const plataforma = { exigirAccesoPagina: jest.fn().mockResolvedValue({ id: 5, empresaId: 20 }) };
+  const plataforma = {
+    exigirAccesoPagina: jest.fn().mockResolvedValue({ id: 5, empresaId: 20 }),
+  };
   const service = new UsuariosService(
     prisma as unknown as PrismaService,
     { crearUsuario: jest.fn() } as unknown as AuthService,
@@ -505,7 +571,11 @@ describe('UsuariosService - página Administración · Usuarios', () => {
 
   it('administra solo su empresa y sin ver superadmins ni Admin TI', async () => {
     await service.listar(5, {});
-    expect(plataforma.exigirAccesoPagina).toHaveBeenCalledWith(5, 'administracion', 'usuarios');
+    expect(plataforma.exigirAccesoPagina).toHaveBeenCalledWith(
+      5,
+      'administracion',
+      'usuarios',
+    );
     expect(prisma.usuario.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
@@ -515,11 +585,18 @@ describe('UsuariosService - página Administración · Usuarios', () => {
         }) as unknown,
       }),
     );
-    await expect(service.listar(5, { empresaId: 30 })).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(service.listar(5, { empresaId: 30 })).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
   });
 
   it('no asigna el rol Admin TI', async () => {
-    prisma.rol.findUnique.mockResolvedValue({ id: 15, empresaId: 20, rolId: null, esAdminTi: true });
+    prisma.rol.findUnique.mockResolvedValue({
+      id: 15,
+      empresaId: 20,
+      rolId: null,
+      esAdminTi: true,
+    });
     await expect(service.crear(5, { rolId: 15 })).rejects.toThrow(
       'Solo Admin TI o un superadministrador administran el rol Admin TI',
     );

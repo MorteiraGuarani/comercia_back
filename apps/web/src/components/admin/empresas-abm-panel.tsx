@@ -18,17 +18,24 @@ import type { RespuestaPaginada } from "@/types/paginacion";
 
 interface FormEmpresa {
   nombre: string;
-  dbName: string;
-  empresaId: number | "";
+  sapEsquema: string;
+  sapUsuario: string;
+  sapContrasenia: string;
   diasAvisoVencimiento: string;
 }
 
 const FORM_INICIAL: FormEmpresa = {
   nombre: "",
-  dbName: "",
-  empresaId: "",
+  sapEsquema: "",
+  sapUsuario: "",
+  sapContrasenia: "",
   diasAvisoVencimiento: "5",
 };
+
+const CAMPOS_SAP = [
+  ["sapEsquema", "SAP esquema", "Ej.: SBO_EMPRESA"],
+  ["sapUsuario", "SAP usuario", "Ej.: B1USER"],
+] as const;
 
 function ListaEmpresasMovil({
   empresas,
@@ -139,8 +146,9 @@ export function EmpresasAbmPanel() {
         ? FORM_INICIAL
         : {
             nombre: empresa.nombre,
-            dbName: empresa.dbName ?? "",
-            empresaId: empresa.padre?.id ?? "",
+            sapEsquema: empresa.sapEsquema ?? "",
+            sapUsuario: empresa.sapUsuario ?? "",
+            sapContrasenia: "",
             diasAvisoVencimiento: String(empresa.diasAvisoVencimiento),
           },
     );
@@ -162,8 +170,12 @@ export function EmpresasAbmPanel() {
           method: editando === "nueva" ? "POST" : "PATCH",
           body: JSON.stringify({
             nombre: form.nombre.trim(),
-            dbName: form.dbName.trim() || null,
-            empresaId: form.empresaId === "" ? null : form.empresaId,
+            sapEsquema: form.sapEsquema.trim() || null,
+            sapUsuario: form.sapUsuario.trim() || null,
+            // Vacía conserva la contraseña actual.
+            ...(form.sapContrasenia
+              ? { sapContrasenia: form.sapContrasenia }
+              : {}),
             diasAvisoVencimiento: Number(form.diasAvisoVencimiento),
           }),
         },
@@ -200,15 +212,6 @@ export function EmpresasAbmPanel() {
       setBorrando(false);
     }
   }
-
-  const idEditando = typeof editando === "object" ? editando?.id : undefined;
-  const opcionesPadre = empresas.filter((empresa) => empresa.id !== idEditando);
-  const padreActual =
-    typeof editando === "object" &&
-    editando?.padre &&
-    !opcionesPadre.some((empresa) => empresa.id === editando.padre?.id)
-      ? editando.padre
-      : null;
 
   return (
     <div data-inicio-listado className="w-full min-w-0 scroll-mt-20">
@@ -357,20 +360,6 @@ export function EmpresasAbmPanel() {
             />
           </label>
           <label className={labelBase}>
-            Base de datos (opcional)
-            <input
-              value={form.dbName}
-              onChange={(evento) =>
-                setForm((actual) => ({
-                  ...actual,
-                  dbName: evento.target.value,
-                }))
-              }
-              maxLength={120}
-              className={inputBase}
-            />
-          </label>
-          <label className={labelBase}>
             Aviso de vencimiento del inventario (días antes)
             <input
               type="number"
@@ -388,31 +377,46 @@ export function EmpresasAbmPanel() {
               className={inputBase}
             />
           </label>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {CAMPOS_SAP.map(([campo, etiqueta, ejemplo]) => (
+              <label key={campo} className={labelBase}>
+                {etiqueta}
+                <input
+                  value={form[campo]}
+                  onChange={(evento) =>
+                    setForm((actual) => ({
+                      ...actual,
+                      [campo]: evento.target.value,
+                    }))
+                  }
+                  maxLength={100}
+                  autoComplete="off"
+                  placeholder={ejemplo}
+                  className={inputBase}
+                />
+              </label>
+            ))}
+          </div>
           <label className={labelBase}>
-            Empresa matriz
-            <select
-              value={form.empresaId}
+            SAP contraseña
+            <input
+              type="password"
+              autoComplete="new-password"
+              value={form.sapContrasenia}
               onChange={(evento) =>
                 setForm((actual) => ({
                   ...actual,
-                  empresaId:
-                    evento.target.value === ""
-                      ? ""
-                      : Number(evento.target.value),
+                  sapContrasenia: evento.target.value,
                 }))
               }
+              maxLength={100}
+              placeholder={
+                editando !== "nueva" && editando?.tieneSapContrasenia
+                  ? "Dejala vacía para conservar la actual"
+                  : "Opcional"
+              }
               className={inputBase}
-            >
-              <option value="">Sin empresa matriz</option>
-              {padreActual ? (
-                <option value={padreActual.id}>{padreActual.nombre}</option>
-              ) : null}
-              {opcionesPadre.map((empresa) => (
-                <option key={empresa.id} value={empresa.id}>
-                  {empresa.nombre}
-                </option>
-              ))}
-            </select>
+            />
           </label>
           {error ? <p className={errorBox}>{error}</p> : null}
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">

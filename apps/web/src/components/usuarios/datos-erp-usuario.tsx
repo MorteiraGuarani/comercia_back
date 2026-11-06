@@ -1,50 +1,74 @@
-import type { DatosErpUsuario, FormularioErpUsuario } from "@/types/usuario";
-import { ERP_VENDEDOR_MAX, ERP_VENDEDOR_MIN } from "@/utils/usuario";
+import type { FormularioErpUsuario, UsuarioAdmin } from "@/types/usuario";
+import { SelectorPaginado } from "@/components/selector-paginado";
 import { inputBase, labelBase } from "@/components/ui";
 
-const CAMPOS_ERP = [
-  { campo: "ERP_CanalVenta", etiqueta: "Canal de venta", maxLength: 50 },
-  { campo: "ERP_Almacen", etiqueta: "Almacén", maxLength: 8 },
-  { campo: "ERP_Supervisor", etiqueta: "Supervisor ERP", maxLength: 30 },
-  { campo: "ERP_Vendedor", etiqueta: "Vendedor ERP" },
-  { campo: "ERP_Repositor", etiqueta: "Repositor ERP", maxLength: 50 },
-  { campo: "ERP_Impulsador", etiqueta: "Impulsador ERP", maxLength: 50 },
+// Texto libre, hasta 100 caracteres como la columna.
+const TEXTOS_SAP = [
+  ["ERP_CodigoAlmacen", "Código de almacén"],
+  ["ERP_NombreAlmacen", "Nombre de almacén"],
+  ["ERP_CodUsuarioSap", "Código de usuario SAP"],
 ] as const;
 
+/** Pestaña SAP: canal de venta (tbl_jcanales), sucursal (tbl_oclp), almacén y usuario SAP. */
 export function CamposErpUsuario({
+  base,
+  empresaId,
+  usuario,
   valor,
   onChange,
   disabled,
 }: {
+  base: string;
+  empresaId: number;
+  /** El que se edita: da el nombre de lo ya elegido aunque no esté en la página. */
+  usuario?: UsuarioAdmin;
   valor: FormularioErpUsuario;
   onChange: (campo: keyof FormularioErpUsuario, valor: string) => void;
   disabled: boolean;
 }) {
+  const campos = [
+    {
+      campo: "ERP_CanalVenta",
+      etiqueta: "Canal de venta",
+      url: `${base}/canales-venta?empresaId=${empresaId}`,
+      nombre: usuario?.canalVentaNombre,
+    },
+    {
+      campo: "ERP_Sucursal",
+      etiqueta: "Sucursal",
+      url: `${base}/sucursales?empresaId=${empresaId}`,
+      nombre: usuario?.sucursalNombre,
+    },
+  ] as const;
   return (
-    <fieldset
-      disabled={disabled}
-      className="min-w-0 space-y-3"
-    >
+    <fieldset disabled={disabled} className="min-w-0 space-y-3">
       <legend className="pr-2 text-sm font-semibold text-foreground">
         Datos SAP (ERP)
       </legend>
       <p className="text-xs text-muted">
-        Códigos y referencias del usuario en el ERP. Todos son opcionales y no
-        modifican su rol ni su superior inmediato en Comercia.
+        Opcionales: no modifican su rol ni su superior inmediato en Comercia.
       </p>
       <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
-        {CAMPOS_ERP.map((dato) => (
-          <label key={dato.campo} className={`${labelBase} min-w-0`}>
-            {dato.etiqueta}
+        {campos.map((dato) => (
+          <SelectorPaginado
+            key={`${dato.campo}-${empresaId}-${usuario?.id ?? "nuevo"}`}
+            url={dato.url}
+            etiqueta={dato.etiqueta}
+            value={valor[dato.campo] === "" ? "" : Number(valor[dato.campo])}
+            seleccionActual={dato.nombre ?? undefined}
+            onChange={(id) => onChange(dato.campo, String(id))}
+            // Catálogos cortos: select nativo como Rol, el modal no recorta sus opciones.
+            vacio="Sin asignar"
+            limite={50}
+          />
+        ))}
+        {TEXTOS_SAP.map(([campo, etiqueta]) => (
+          <label key={campo} className={labelBase}>
+            {etiqueta}
             <input
-              name={dato.campo}
-              type={dato.campo === "ERP_Vendedor" ? "number" : "text"}
-              value={valor[dato.campo]}
-              onChange={(e) => onChange(dato.campo, e.target.value)}
-              maxLength={"maxLength" in dato ? dato.maxLength : undefined}
-              min={dato.campo === "ERP_Vendedor" ? ERP_VENDEDOR_MIN : undefined}
-              max={dato.campo === "ERP_Vendedor" ? ERP_VENDEDOR_MAX : undefined}
-              step={dato.campo === "ERP_Vendedor" ? 1 : undefined}
+              value={valor[campo]}
+              onChange={(e) => onChange(campo, e.target.value)}
+              maxLength={100}
               autoComplete="off"
               className={inputBase}
             />
@@ -55,19 +79,28 @@ export function CamposErpUsuario({
   );
 }
 
-export function DetalleErpUsuario({ usuario }: { usuario: DatosErpUsuario }) {
-  if (!CAMPOS_ERP.some(({ campo }) => usuario[campo] != null)) return null;
+export function DetalleErpUsuario({ usuario }: { usuario: UsuarioAdmin }) {
+  const datos = [
+    ["Canal de venta", usuario.canalVentaNombre, usuario.ERP_CanalVenta],
+    ["Sucursal", usuario.sucursalNombre, usuario.ERP_Sucursal],
+    ["Almacén", usuario.ERP_NombreAlmacen, usuario.ERP_CodigoAlmacen],
+    ["Usuario SAP", null, usuario.ERP_CodUsuarioSap],
+  ] as const;
+  if (datos.every(([, nombre, code]) => nombre == null && code == null))
+    return null;
   return (
     <details className="mt-2 min-w-0 max-w-sm">
       <summary className="min-h-11 cursor-pointer rounded py-3 text-xs font-semibold text-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">
         Datos SAP (ERP)
       </summary>
       <dl className="grid min-w-0 grid-cols-1 gap-x-4 gap-y-2 border-t border-line py-2 text-xs sm:grid-cols-2">
-        {CAMPOS_ERP.map(({ campo, etiqueta }) => (
-          <div key={campo} className="min-w-0">
+        {datos.map(([etiqueta, nombre, code]) => (
+          <div key={etiqueta} className="min-w-0">
             <dt className="text-muted">{etiqueta}</dt>
             <dd className="break-all font-medium text-foreground">
-              {usuario[campo] ?? "—"}
+              {code == null
+                ? (nombre ?? "—")
+                : `${nombre ?? "Código"} · ${code}`}
             </dd>
           </div>
         ))}

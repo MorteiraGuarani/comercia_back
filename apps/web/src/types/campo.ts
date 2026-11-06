@@ -138,6 +138,33 @@ export interface MarcaSinConexion {
   /** Para mostrarla en la ruta y avisar qué pasó al enviarla. */
   local: { id: string; nombre: string; radioMetros: number };
 }
+/** Superadmin: un pedido de marca de campo, quién lo hizo y cómo terminó. */
+export interface RegistroMarcacionCampo {
+  id: number;
+  creadoEn: string;
+  ruta: string;
+  tipo: string;
+  resultado: "ACEPTADA" | "RECHAZADA" | "ERROR";
+  usuarioId: number | null;
+  usuarioNombre: string | null;
+  usuarioCorreo: string | null;
+  usuarioLogin: string | null;
+  empresaNombre: string | null;
+  estadoHttp: number;
+  codigo: string | null;
+  motivo: string;
+  duracionMs: number;
+  /** Pedido completo: parámetros, consulta y cuerpo (con coordenadas). */
+  solicitud: unknown;
+  /** Respuesta o error devuelto. */
+  respuesta: unknown;
+}
+/** Marca sin conexión que Ucheck o Comercia rechazaron: queda hasta que se lee. */
+export interface MarcaRechazada {
+  marca: MarcaSinConexion;
+  motivo: string;
+  rechazadaEn: string;
+}
 export interface AgendaCampo {
   estado: import("./estado-jornada").EstadoRuta;
   estadoPresentismo: import("./estado-jornada").EstadoPresentismo;

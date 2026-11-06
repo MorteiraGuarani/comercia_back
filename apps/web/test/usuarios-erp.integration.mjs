@@ -17,36 +17,30 @@ vm.runInNewContext(
 );
 const { formularioErpUsuario, datosErpFormulario } = modulo.exports;
 const erp = {
-  ERP_CanalVenta: "MAYORISTA",
-  ERP_Almacen: "ALM01",
-  ERP_Supervisor: "SUP01",
-  ERP_Vendedor: 0,
-  ERP_Repositor: "REP01",
-  ERP_Impulsador: "IMP01",
+  ERP_CanalVenta: "1",
+  ERP_Sucursal: 0,
+  ERP_CodigoAlmacen: "01",
+  ERP_NombreAlmacen: "DEPÓSITO CENTRAL",
+  ERP_CodUsuarioSap: "manager",
 };
 const serializar = (valor) => JSON.parse(JSON.stringify(valor));
 assert.deepEqual(
   serializar(datosErpFormulario(formularioErpUsuario(erp))),
   erp,
 );
-const vacios = datosErpFormulario(formularioErpUsuario());
-assert.deepEqual(
-  serializar(vacios),
-  Object.fromEntries(Object.keys(erp).map((campo) => [campo, null])),
+assert.deepEqual(serializar(datosErpFormulario(formularioErpUsuario())), {
+  ERP_CanalVenta: null,
+  ERP_Sucursal: null,
+  ERP_CodigoAlmacen: null,
+  ERP_NombreAlmacen: null,
+  ERP_CodUsuarioSap: null,
+});
+// Un texto en blanco no guarda espacios: viaja como null.
+assert.equal(
+  datosErpFormulario({ ...formularioErpUsuario(erp), ERP_CodUsuarioSap: "   " })
+    .ERP_CodUsuarioSap,
+  null,
 );
-const editar = {
-  ...formularioErpUsuario(erp),
-  ERP_Almacen: "  ",
-  ERP_Vendedor: "",
-};
-assert.equal(datosErpFormulario(editar).ERP_Almacen, null);
-assert.equal(datosErpFormulario(editar).ERP_Vendedor, null);
-for (const invalido of ["1.5", "2147483648", "-2147483649", "ABC"]) {
-  assert.throws(
-    () => datosErpFormulario({ ...editar, ERP_Vendedor: invalido }),
-    /entero/,
-  );
-}
 console.log(
-  "Usuarios ERP: carga/edición, vendedor cero y borrado de campos verificados.",
+  "Usuarios ERP: canal, sucursal (Code cero incluido), almacén, usuario SAP y borrado verificados.",
 );

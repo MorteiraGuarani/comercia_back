@@ -32,19 +32,18 @@ describe('filtrosBusquedaUsuario', () => {
   });
 
   it('permite buscar referencias ERP solo cuando el ABM lo solicita', () => {
-    expect(filtrosBusquedaUsuario('ALM01', true)[0].OR).toContainEqual({
-      ERP_Almacen: { contains: 'ALM01', mode: 'insensitive' },
-    });
-    expect(filtrosBusquedaUsuario('0', true)[0].OR).toContainEqual({
-      ERP_Vendedor: 0,
-    });
+    for (const campo of [
+      'ERP_CodigoAlmacen',
+      'ERP_NombreAlmacen',
+      'ERP_CodUsuarioSap',
+    ])
+      expect(filtrosBusquedaUsuario('ALM01', true)[0].OR).toContainEqual({
+        [campo]: { contains: 'ALM01', mode: 'insensitive' },
+      });
     expect(
-      filtrosBusquedaUsuario('2147483648', true)[0].OR?.some(
-        (f) => 'ERP_Vendedor' in f,
+      filtrosBusquedaUsuario('ALM01')[0].OR?.some(
+        (f) => 'ERP_CodigoAlmacen' in f,
       ),
-    ).toBe(false);
-    expect(
-      filtrosBusquedaUsuario('ALM01')[0].OR?.some((f) => 'ERP_Almacen' in f),
     ).toBe(false);
   });
 });

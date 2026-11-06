@@ -234,6 +234,13 @@ export class RepositorCampoService {
       const mensaje = Array.isArray(cuerpo?.message)
         ? cuerpo.message.join('. ')
         : cuerpo?.message;
+      // 401/403: credencial o vínculo entre servidores; 408/429: Ucheck no
+      // atendió. No son un "no" a la marca: la web la conserva y reintenta.
+      if ([401, 403, 408, 429].includes(respuesta.status))
+        throw new ServiceUnavailableException({
+          message: `Ucheck respondió ${respuesta.status} a Comercia (${mensaje ?? 'sin detalle'}). La marca no se perdió: se reintenta sola`,
+          codigo: 'UCHECK_SIN_CONEXION',
+        });
       if (respuesta.status >= 400 && respuesta.status < 500)
         throw new BadRequestException({
           message:

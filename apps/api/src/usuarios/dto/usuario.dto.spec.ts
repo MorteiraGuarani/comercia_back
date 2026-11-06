@@ -41,10 +41,10 @@ describe.each([
 
   it.each([
     ['ERP_CanalVenta', 50],
-    ['ERP_Almacen', 8],
-    ['ERP_Supervisor', 30],
     ['ERP_Repositor', 50],
-    ['ERP_Impulsador', 50],
+    ['ERP_CodigoAlmacen', 100],
+    ['ERP_NombreAlmacen', 100],
+    ['ERP_CodUsuarioSap', 100],
   ] as const)(
     'valida el límite de %s, conserva mayúsculas y permite vaciarlo',
     async (campo, maximo) => {
@@ -67,30 +67,32 @@ describe.each([
   );
 
   it.each([0, MIN_INT4, MAX_INT4, null, '', '   '])(
-    'admite ERP_Vendedor %p',
+    'admite ERP_Sucursal %p',
     async (valor) => {
       expect(
-        await validate(plainToInstance(Dto, { ...base, ERP_Vendedor: valor })),
+        await validate(plainToInstance(Dto, { ...base, ERP_Sucursal: valor })),
       ).toEqual([]);
     },
   );
 
   it.each([MIN_INT4 - 1, MAX_INT4 + 1, 1.5, true, 'ABC', '27'])(
-    'rechaza ERP_Vendedor inválido %p',
+    'rechaza ERP_Sucursal inválida %p',
     async (valor) => {
       const errores = await validate(
-        plainToInstance(Dto, { ...base, ERP_Vendedor: valor }),
+        plainToInstance(Dto, { ...base, ERP_Sucursal: valor }),
       );
-      expect(errores.some((e) => e.property === 'ERP_Vendedor')).toBe(true);
+      expect(errores.some((e) => e.property === 'ERP_Sucursal')).toBe(true);
     },
   );
 });
 
 it('no permite editar referencias ERP desde el perfil propio', async () => {
-  const dto = plainToInstance(ActualizarPerfilDto, { ERP_Almacen: 'ALM01' });
+  const dto = plainToInstance(ActualizarPerfilDto, {
+    ERP_CodigoAlmacen: 'ALM01',
+  });
   const errores = await validate(dto, {
     whitelist: true,
     forbidNonWhitelisted: true,
   });
-  expect(errores.some((e) => e.property === 'ERP_Almacen')).toBe(true);
+  expect(errores.some((e) => e.property === 'ERP_CodigoAlmacen')).toBe(true);
 });

@@ -7,28 +7,46 @@ import { PGlite } from '@electric-sql/pglite';
 const db = new PGlite();
 const limites = {
   ERP_CanalVenta: 50,
-  ERP_Almacen: 8,
-  ERP_Supervisor: 30,
   ERP_Repositor: 50,
-  ERP_Impulsador: 50,
+  ERP_CodigoAlmacen: 100,
+  ERP_NombreAlmacen: 100,
+  ERP_CodUsuarioSap: 100,
 };
-const campos = [...Object.keys(limites), 'ERP_Vendedor'];
-try {
-  await db.exec(
-    "CREATE TABLE usuarios (id INTEGER PRIMARY KEY, nombre TEXT NOT NULL); INSERT INTO usuarios VALUES (1, 'Ana');",
-  );
-  await db.exec(
+const quitados = [
+  'ERP_Almacen',
+  'ERP_Supervisor',
+  'ERP_Vendedor',
+  'ERP_Impulsador',
+];
+const migracion = async (nombre) =>
+  db.exec(
     await readFile(
-      new URL(
-        '../prisma/migrations/20261028160000_usuarios_campos_erp/migration.sql',
-        import.meta.url,
-      ),
+      new URL(`../prisma/migrations/${nombre}/migration.sql`, import.meta.url),
       'utf8',
     ),
   );
-  const { rows } = await db.query('SELECT * FROM usuarios WHERE id = 1');
-  assert.equal(rows[0].nombre, 'Ana');
-  for (const campo of campos) assert.equal(rows[0][campo], null, campo);
+try {
+  await db.exec(
+    "CREATE TABLE usuarios (id INTEGER PRIMARY KEY, nombre TEXT NOT NULL); INSERT INTO usuarios VALUES (1, 'Ana'), (2, 'Luis');",
+  );
+  await migracion('20261028160000_usuarios_campos_erp');
+  await db.query(
+    `UPDATE usuarios SET "ERP_Almacen" = 'ALM01', "ERP_Vendedor" = 27, "ERP_Repositor" = 'REP01' WHERE id = 1`,
+  );
+  await migracion('20261106120000_usuario_erp_sucursal');
+  await migracion('20261106160000_usuario_erp_almacen_sap');
+  // La tabla y sus filas siguen; el almacén viejo pasa al código nuevo.
+  const { rows } = await db.query('SELECT * FROM usuarios ORDER BY id');
+  assert.deepEqual(
+    rows.map((r) => r.nombre),
+    ['Ana', 'Luis'],
+  );
+  assert.equal(rows[0].ERP_CodigoAlmacen, 'ALM01');
+  assert.equal(rows[0].ERP_Repositor, 'REP01');
+  assert.equal(rows[1].ERP_CodigoAlmacen, null);
+  for (const campo of ['ERP_NombreAlmacen', 'ERP_CodUsuarioSap'])
+    assert.equal(rows[0][campo], null, campo);
+  for (const campo of quitados) assert.equal(campo in rows[0], false, campo);
   for (const [campo, maximo] of Object.entries(limites)) {
     await db.query(`UPDATE usuarios SET "${campo}" = $1 WHERE id = 1`, [
       'A'.repeat(maximo),
@@ -40,18 +58,6 @@ try {
       /too long/,
     );
   }
-  for (const numero of [-2147483648, 0, 2147483647]) {
-    await db.query('UPDATE usuarios SET "ERP_Vendedor" = $1 WHERE id = 1', [
-      numero,
-    ]);
-  }
-  await assert.rejects(
-    db.query(
-      'UPDATE usuarios SET "ERP_Vendedor" = $1 WHERE id = 1',
-      [2147483648],
-    ),
-    /out of range/,
-  );
 } finally {
   await db.close();
 }
@@ -137,9 +143,9 @@ try {
       assert.equal(esquema.properties[campo].maxLength, maximo);
       assert.equal(esquema.properties[campo].nullable, true);
     }
-    assert.equal(esquema.properties.ERP_Vendedor.type, 'integer');
-    assert.equal(esquema.properties.ERP_Vendedor.minimum, -2147483648);
-    assert.equal(esquema.properties.ERP_Vendedor.maximum, 2147483647);
+    assert.equal(esquema.properties.ERP_Sucursal.type, 'integer');
+    for (const campo of quitados)
+      assert.equal(esquema.properties[campo], undefined, campo);
     assert.equal(esquema.properties.passwordHash, undefined);
   }
   for (const base of ['/api/v1/usuarios', '/api/v1/admin/usuarios']) {
@@ -150,41 +156,43 @@ try {
     );
     const validos = {
       ERP_CanalVenta: ' MAYORISTA ',
-      ERP_Almacen: 'ALM01',
-      ERP_Supervisor: 'SUP01',
-      ERP_Vendedor: 0,
       ERP_Repositor: 'REP01',
-      ERP_Impulsador: 'IMP01',
+      ERP_CodigoAlmacen: ' 01 ',
+      ERP_NombreAlmacen: 'DEPÓSITO CENTRAL',
+      ERP_CodUsuarioSap: 'manager',
     };
     const { body } = await request(http).post(base).send(validos).expect(201);
     assert.equal(body.ERP_CanalVenta, 'MAYORISTA');
-    assert.equal(body.ERP_Vendedor, 0);
+    assert.equal(body.ERP_CodigoAlmacen, '01');
+    assert.equal(body.ERP_NombreAlmacen, 'DEPÓSITO CENTRAL');
     const { body: vaciados } = await request(http)
       .patch(`${base}/7`)
-      .send({ ERP_Almacen: '', ERP_Vendedor: null })
+      .send({ ERP_CodigoAlmacen: '', ERP_CodUsuarioSap: null })
       .expect(200);
-    assert.equal(vaciados.ERP_Almacen, null);
-    assert.equal(vaciados.ERP_Vendedor, null);
+    assert.equal(vaciados.ERP_CodigoAlmacen, null);
+    assert.equal(vaciados.ERP_CodUsuarioSap, null);
+    for (const campo of quitados)
+      await request(http)
+        .patch(`${base}/7`)
+        .send({ [campo]: 'X' })
+        .expect(400);
     for (const [campo, maximo] of Object.entries(limites)) {
       await request(http)
         .patch(`${base}/7`)
         .send({ [campo]: 'A'.repeat(maximo + 1) })
         .expect(400);
     }
-    for (const valor of [1.5, true, 'ABC', 2147483648, -2147483649]) {
-      await request(http)
-        .patch(`${base}/7`)
-        .send({ ERP_Vendedor: valor })
-        .expect(400);
-    }
   }
   await request(http)
     .post('/api/v1/admin/usuarios')
-    .send([{ ERP_Vendedor: 0 }, { ERP_Almacen: 'A'.repeat(9) }])
+    .send([
+      { ERP_CodUsuarioSap: 'manager' },
+      { ERP_NombreAlmacen: 'A'.repeat(101) },
+    ])
     .expect(201);
   const filas = recibidos.at(-1);
-  assert.equal(filas[0].dto.ERP_Vendedor, 0);
-  assert.match(filas[1].error, /ERP_Almacen/);
+  assert.equal(filas[0].dto.ERP_CodUsuarioSap, 'manager');
+  assert.match(filas[1].error, /ERP_NombreAlmacen/);
 } finally {
   await app.close();
 }

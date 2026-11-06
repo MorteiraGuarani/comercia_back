@@ -41,8 +41,10 @@ import type { RespuestaPaginada } from "@/types/paginacion";
 import { obtenerPosicionPrecisa } from "@/lib/gps-preciso";
 import {
   EVENTO_MARCAS_SIN_CONEXION,
+  descartarMarcaRechazada,
   esSinConexion,
   guardarMarcaSinConexion,
+  leerMarcasRechazadas,
   leerMarcasSinConexion,
 } from "@/lib/marcas-sin-conexion";
 import { visitaSinConexion } from "@/utils/visita-sin-conexion";
@@ -53,6 +55,7 @@ import { usePanel } from "@/components/panel/contexto";
 import { useListaCampo } from "@/hooks/use-lista-campo";
 import { useFechaCampo } from "@/hooks/use-fecha-campo";
 import {
+  formatoFechaHora,
   formatoHora,
   queryFechasCampo,
   textoRangoFechas,
@@ -143,6 +146,11 @@ function AgendaDelDia({
   }, []);
   const cola = useMemo(
     () => (versionCola ? leerMarcasSinConexion(usuario.id) : []),
+    [usuario.id, versionCola],
+  );
+  // Rechazadas al enviarlas: el aviso queda hasta que tocan "Entendido".
+  const rechazadas = useMemo(
+    () => (versionCola ? leerMarcasRechazadas(usuario.id) : []),
     [usuario.id, versionCola],
   );
   const colaHoy = cola.filter((m) => m.fecha === hoyStr);
@@ -608,6 +616,41 @@ function AgendaDelDia({
           >
             Enviar ahora
           </button>
+        </div>
+      ) : null}
+
+      {rechazadas.length ? (
+        <div
+          role="alert"
+          className="mb-3 min-w-0 rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-100"
+        >
+          <p className="font-semibold">
+            {rechazadas.length === 1
+              ? "1 marca guardada sin conexión no se registró"
+              : `${rechazadas.length} marcas guardadas sin conexión no se registraron`}
+          </p>
+          <ul className="mt-2 space-y-2">
+            {rechazadas.map(({ marca: m, motivo }) => {
+              const tipo = m.tipo === "ENTRADA" ? "Entrada" : "Salida";
+              return (
+                <li key={m.id} className="flex min-w-0 flex-wrap items-center gap-2">
+                  <p className="min-w-0 flex-1 break-words">
+                    {tipo} de {m.local.nombre} ·{" "}
+                    {m.fecha === hoyStr ? formatoHora(m.tomadaEn) : formatoFechaHora(m.tomadaEn)}:{" "}
+                    {motivo}
+                  </p>
+                  <button
+                    type="button"
+                    className={`${btnGhost} whitespace-nowrap`}
+                    aria-label={`Entendido: ${tipo.toLowerCase()} de ${m.local.nombre}`}
+                    onClick={() => descartarMarcaRechazada(usuario.id, m.id)}
+                  >
+                    Entendido
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
         </div>
       ) : null}
 

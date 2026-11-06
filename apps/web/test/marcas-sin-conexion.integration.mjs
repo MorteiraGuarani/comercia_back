@@ -4,7 +4,8 @@ import vm from "node:vm";
 import ts from "typescript";
 
 // Marcas guardadas en el navegador sin conexión con Ucheck: se guardan una
-// vez, se mandan en orden, un corte deja el resto y un rechazo se descarta.
+// vez, se mandan en orden, un corte deja el resto y un rechazo pasa a
+// rechazadas hasta que quien marcó toca "Entendido".
 class ApiError extends Error {
   constructor(status, message, codigo) {
     super(message);
@@ -36,7 +37,10 @@ vm.runInThisContext(`(function(module, exports, require) {${codigo}\n})`)(modulo
   if (nombre === "@/utils/error") return { mensajeError: (e, f) => e?.message || f };
   throw new Error(`Dependencia sin simular: ${nombre}`);
 });
-const { guardarMarcaSinConexion, leerMarcasSinConexion, enviarMarcasSinConexion, esSinConexion } = modulo.exports;
+const {
+  guardarMarcaSinConexion, leerMarcasSinConexion, enviarMarcasSinConexion, esSinConexion,
+  leerMarcasRechazadas, descartarMarcaRechazada,
+} = modulo.exports;
 
 const marca = (id, tipo, asignacionId) => ({
   id, tipo, asignacionId, horarioId: null, fecha: "2026-10-30", tomadaEn: "2026-10-30T13:00:00.000Z", nota: "",
@@ -70,10 +74,28 @@ respuestas.push(new ApiError(500, "error interno"));
 r = await enviarMarcasSinConexion(7);
 assert.equal(leerMarcasSinConexion(7).length, 2);
 
-// Rechazo de Ucheck (radio): se descarta y avisa; la siguiente sigue.
+// 401/403 de Comercia (sesión vencida): no es un rechazo, se conserva.
+respuestas.push(new ApiError(401, "Sesión vencida"));
+r = await enviarMarcasSinConexion(7);
+assert.deepEqual(leerMarcasSinConexion(7).map((m) => m.id), ["b", "c"]);
+assert.deepEqual(leerMarcasRechazadas(7), []);
+
+// Rechazo de Ucheck (radio): sale de la cola y queda en rechazadas; la siguiente sigue.
 respuestas.push(new ApiError(400, "Estás fuera del radio permitido de 100 m"), {});
 r = await enviarMarcasSinConexion(7);
 assert.deepEqual(r.rechazadas.map((x) => [x.marca.id, x.motivo]), [["b", "Estás fuera del radio permitido de 100 m"]]);
 assert.deepEqual(r.enviadas.map((m) => m.id), ["c"]);
 assert.deepEqual(leerMarcasSinConexion(7), []);
-console.log("Marcas sin conexión: guardado único, orden, cortes y rechazos OK.");
+const [rechazada] = leerMarcasRechazadas(7);
+assert.equal(leerMarcasRechazadas(7).length, 1);
+assert.equal(rechazada.marca.local.nombre, "Local 1");
+assert.equal(rechazada.motivo, "Estás fuera del radio permitido de 100 m");
+assert.ok(!Number.isNaN(Date.parse(rechazada.rechazadaEn)), "guarda cuándo se rechazó");
+assert.deepEqual(leerMarcasRechazadas(8), [], "las rechazadas también son por cuenta");
+
+// "Entendido" la saca; las de otra cuenta no se tocan.
+almacen.set("comercia.marcas-rechazadas.8", JSON.stringify([rechazada]));
+descartarMarcaRechazada(7, "b");
+assert.deepEqual(leerMarcasRechazadas(7), []);
+assert.equal(leerMarcasRechazadas(8).length, 1);
+console.log("Marcas sin conexión: guardado único, orden, cortes, rechazadas y descarte OK.");

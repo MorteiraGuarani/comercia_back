@@ -9,6 +9,9 @@ export interface UsuarioAdminDto extends DatosErpUsuario {
   ruc: string | null;
   celular: string;
   legajo: string | null;
+  /** Name de tbl_jcanales / tbl_oclp para mostrar lo elegido. */
+  canalVentaNombre: string | null;
+  sucursalNombre: string | null;
   empresa: { id: number; nombre: string };
   rol: { id: number; descripcion: string } | null;
   superior: { id: number; nombre: string } | null;

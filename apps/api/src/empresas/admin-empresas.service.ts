@@ -25,6 +25,10 @@ const SELECT_EMPRESA_ADMIN = {
   id: true,
   nombre: true,
   dbName: true,
+  sapEsquema: true,
+  sapUsuario: true,
+  // Solo para saber si está cargada; aEmpresaAdminDto no la devuelve.
+  sapContrasenia: true,
   diasAvisoVencimiento: true,
   padre: { select: { id: true, nombre: true } },
   _count: {
@@ -42,6 +46,9 @@ function aEmpresaAdminDto(empresa: EmpresaAdminFila): EmpresaAdminDto {
     id: empresa.id,
     nombre: empresa.nombre,
     dbName: empresa.dbName,
+    sapEsquema: empresa.sapEsquema,
+    sapUsuario: empresa.sapUsuario,
+    tieneSapContrasenia: !!empresa.sapContrasenia,
     diasAvisoVencimiento: empresa.diasAvisoVencimiento,
     padre: empresa.padre,
     usuariosCount: empresa._count.usuarios,
@@ -114,6 +121,9 @@ export class AdminEmpresasService {
           nombre: dto.nombre.trim(),
           dbName: dto.dbName?.trim() || null,
           empresaId: dto.empresaId ?? null,
+          sapEsquema: dto.sapEsquema ?? null,
+          sapUsuario: dto.sapUsuario ?? null,
+          sapContrasenia: dto.sapContrasenia || null,
           diasAvisoVencimiento: dto.diasAvisoVencimiento,
         },
         select: SELECT_EMPRESA_ADMIN,
@@ -142,6 +152,10 @@ export class AdminEmpresasService {
           dbName:
             dto.dbName === undefined ? undefined : dto.dbName?.trim() || null,
           empresaId: dto.empresaId,
+          sapEsquema: dto.sapEsquema,
+          sapUsuario: dto.sapUsuario,
+          // Vacía u omitida conserva la actual.
+          sapContrasenia: dto.sapContrasenia || undefined,
           diasAvisoVencimiento: dto.diasAvisoVencimiento,
         },
         select: SELECT_EMPRESA_ADMIN,

@@ -290,7 +290,6 @@ describe('Administración del supervisor', () => {
           nombreLogin: 'ana.paz',
           legajo: null,
           ERP_Repositor: 'R-15',
-          ERP_Impulsador: null,
           rol: { descripcion: 'Repositor' },
           _count: { asignacionesCampo: 12 },
         },

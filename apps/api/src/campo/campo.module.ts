@@ -17,6 +17,7 @@ import { AvisoService } from './services/aviso.service';
 import { OrganigramaService } from './services/organigrama.service';
 import { SupervisionService } from './services/supervision.service';
 import { LimpiezaFotosService } from './services/limpieza-fotos.service';
+import { RegistroMarcacionesService } from './services/registro-marcaciones.service';
 import { AdjuntoCampoService } from './services/adjunto-campo.service';
 
 @Module({
@@ -37,6 +38,7 @@ import { AdjuntoCampoService } from './services/adjunto-campo.service';
     OrganigramaService,
     AdjuntoCampoService,
     LimpiezaFotosService,
+    RegistroMarcacionesService,
   ],
   exports: [
     CampoAccesoService,

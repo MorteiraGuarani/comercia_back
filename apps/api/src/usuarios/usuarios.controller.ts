@@ -77,6 +77,32 @@ export class UsuariosController {
     return this.usuarios.listarLocales(req.usuarioId, query);
   }
 
+  @Get('canales-venta')
+  @ApiOperation({
+    summary: 'Canales de venta (tbl_jcanales) para la pestaña SAP',
+    description:
+      'Paginado (page, limit, buscar por Name) de la empresa del usuario o `empresaId`. El `id` es el Code que va en `ERP_CanalVenta`.',
+  })
+  listarCanalesVenta(
+    @Req() req: RequestConUsuario,
+    @Query() query: ListarUsuariosDto,
+  ) {
+    return this.usuarios.listarCatalogoErp(req.usuarioId, query, 'canales');
+  }
+
+  @Get('sucursales')
+  @ApiOperation({
+    summary: 'Sucursales (tbl_oclp) para la pestaña SAP',
+    description:
+      'Paginado (page, limit, buscar por Name) de la empresa del usuario o `empresaId`. El `id` es el Code que va en `ERP_Sucursal`.',
+  })
+  listarSucursales(
+    @Req() req: RequestConUsuario,
+    @Query() query: ListarUsuariosDto,
+  ) {
+    return this.usuarios.listarCatalogoErp(req.usuarioId, query, 'sucursales');
+  }
+
   @Get('meta')
   meta(@Req() req: RequestConUsuario) {
     return this.usuarios.meta(req.usuarioId);

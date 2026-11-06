@@ -1,5 +1,4 @@
 import type { Prisma } from '../../../generated/prisma/client';
-import { MAX_INT4, MIN_INT4 } from './numeros';
 
 // Cada término puede coincidir en una columna distinta; así "Ana Rojas"
 // encuentra nombre + apellido sin concatenaciones SQL ni consultas crudas.
@@ -27,31 +26,29 @@ export function filtrosBusquedaUsuario(
               },
             },
             {
-              ERP_Almacen: { contains: termino, mode: 'insensitive' as const },
-            },
-            {
-              ERP_Supervisor: {
-                contains: termino,
-                mode: 'insensitive' as const,
-              },
-            },
-            {
               ERP_Repositor: {
                 contains: termino,
                 mode: 'insensitive' as const,
               },
             },
             {
-              ERP_Impulsador: {
+              ERP_CodigoAlmacen: {
                 contains: termino,
                 mode: 'insensitive' as const,
               },
             },
-            ...(/^-?\d+$/.test(termino) &&
-            Number(termino) >= MIN_INT4 &&
-            Number(termino) <= MAX_INT4
-              ? [{ ERP_Vendedor: Number(termino) }]
-              : []),
+            {
+              ERP_NombreAlmacen: {
+                contains: termino,
+                mode: 'insensitive' as const,
+              },
+            },
+            {
+              ERP_CodUsuarioSap: {
+                contains: termino,
+                mode: 'insensitive' as const,
+              },
+            },
           ]
         : []),
     ],

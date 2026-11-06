@@ -139,7 +139,6 @@ export class CatalogoCampoService {
               { nombreLogin: { contains: buscar, mode: 'insensitive' } },
               { legajo: { contains: buscar, mode: 'insensitive' } },
               { ERP_Repositor: { contains: buscar, mode: 'insensitive' } },
-              { ERP_Impulsador: { contains: buscar, mode: 'insensitive' } },
             ],
           }
         : {}),
@@ -156,7 +155,6 @@ export class CatalogoCampoService {
           nombreLogin: true,
           legajo: true,
           ERP_Repositor: true,
-          ERP_Impulsador: true,
           rol: { select: { descripcion: true } },
           // Agrupar por colaborador: cuántos locales atiende hoy.
           _count: { select: { asignacionesCampo: { where: vigente } } },
@@ -172,8 +170,7 @@ export class CatalogoCampoService {
         nombre: `${x.nombre} ${x.apellido}`,
         descripcion: x.rol?.descripcion ?? 'Sin rol',
         // Código visible en la lista: el del ERP o, si no hay, el usuario.
-        codigo:
-          x.ERP_Repositor || x.ERP_Impulsador || x.legajo || x.nombreLogin,
+        codigo: x.ERP_Repositor || x.legajo || x.nombreLogin,
         locales: x._count.asignacionesCampo,
       })),
       total,

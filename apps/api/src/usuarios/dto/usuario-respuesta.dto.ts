@@ -1,5 +1,4 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { MAX_INT4, MIN_INT4 } from '../../common/utils/numeros';
 import type { UsuarioAdminDto } from '../interfaces/usuario-admin.interface';
 
 export class EmpresaUsuarioRespuestaDto {
@@ -26,22 +25,20 @@ export class UsuarioAdminRespuestaDto implements UsuarioAdminDto {
   legajo!: string | null;
   @ApiProperty({ type: String, nullable: true, maxLength: 50 })
   ERP_CanalVenta!: string | null;
-  @ApiProperty({ type: String, nullable: true, maxLength: 8 })
-  ERP_Almacen!: string | null;
-  @ApiProperty({ type: String, nullable: true, maxLength: 30 })
-  ERP_Supervisor!: string | null;
-  @ApiProperty({
-    type: 'integer',
-    format: 'int32',
-    nullable: true,
-    minimum: MIN_INT4,
-    maximum: MAX_INT4,
-  })
-  ERP_Vendedor!: number | null;
   @ApiProperty({ type: String, nullable: true, maxLength: 50 })
   ERP_Repositor!: string | null;
-  @ApiProperty({ type: String, nullable: true, maxLength: 50 })
-  ERP_Impulsador!: string | null;
+  @ApiProperty({ type: String, nullable: true, maxLength: 100 })
+  ERP_CodigoAlmacen!: string | null;
+  @ApiProperty({ type: String, nullable: true, maxLength: 100 })
+  ERP_NombreAlmacen!: string | null;
+  @ApiProperty({ type: String, nullable: true, maxLength: 100 })
+  ERP_CodUsuarioSap!: string | null;
+  @ApiProperty({ type: 'integer', format: 'int32', nullable: true })
+  ERP_Sucursal!: number | null;
+  @ApiProperty({ type: String, nullable: true, example: 'CANAL TRADICIONAL' })
+  canalVentaNombre!: string | null;
+  @ApiProperty({ type: String, nullable: true })
+  sucursalNombre!: string | null;
   empresa!: EmpresaUsuarioRespuestaDto;
   @ApiProperty({ type: RolUsuarioRespuestaDto, nullable: true })
   rol!: RolUsuarioRespuestaDto | null;

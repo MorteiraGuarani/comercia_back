@@ -570,11 +570,12 @@ model Usuario {
   celular                 String
   legajo                  String?                   @db.VarChar(64)
   ERP_CanalVenta          String?                   @db.VarChar(50)
-  ERP_Almacen             String?                   @db.VarChar(8)
-  ERP_Supervisor          String?                   @db.VarChar(30)
-  ERP_Vendedor            Int?
   ERP_Repositor           String?                   @db.VarChar(50)
-  ERP_Impulsador          String?                   @db.VarChar(50)
+  ERP_CodigoAlmacen       String?                   @db.VarChar(100)
+  ERP_NombreAlmacen       String?                   @db.VarChar(100)
+  ERP_CodUsuarioSap       String?                   @db.VarChar(100)
+  /// Code de tbl_oclp (sucursal) de su empresa; ERP_CanalVenta guarda el Code de tbl_jcanales.
+  ERP_Sucursal            Int?
   /// Foto de perfil: ruta relativa a UPLOADS_DIR y su tipo, la sube el propio usuario.
   fotoPerfil              String?                   @map("foto_perfil") @db.VarChar(255)
   fotoPerfilMime          String?                   @map("foto_perfil_mime") @db.VarChar(40)
@@ -1307,4 +1308,35 @@ model CategoriaCampo {
 
   @@index([empresaId, orden])
   @@map("campo_categoria")
+}
+
+// Registro de cada pedido de marca de campo que llega a Comercia (entrada,
+// salida y guardadas sin conexión): ACEPTADA, RECHAZADA (4xx, con su motivo,
+// sea de Comercia o de Ucheck) o ERROR (Ucheck caído, credencial entre
+// servidores, algo inesperado). Guarda el pedido completo (con coordenadas) y
+// la respuesta o el error, y quién marcó (copiado al momento). Sin encabezados:
+// no guarda credenciales. Sin claves foráneas: el insert nunca falla por una relación.
+model RegistroMarcacionCampo {
+  id            Int      @id @default(autoincrement())
+  creadoEn      DateTime @default(now()) @map("creado_en")
+  ruta          String   @db.VarChar(160)
+  tipo          String   @db.VarChar(10)
+  resultado     String   @db.VarChar(10)
+  usuarioId     Int?     @map("usuario_id")
+  usuarioNombre String?  @map("usuario_nombre") @db.VarChar(200)
+  usuarioCorreo String?  @map("usuario_correo") @db.VarChar(254)
+  usuarioLogin  String?  @map("usuario_login") @db.VarChar(100)
+  empresaId     Int?     @map("empresa_id")
+  empresaNombre String?  @map("empresa_nombre") @db.VarChar(200)
+  estadoHttp    Int      @map("estado_http")
+  codigo        String?  @db.VarChar(40)
+  motivo        String   @db.VarChar(1000)
+  duracionMs    Int      @map("duracion_ms")
+  solicitud     Json
+  respuesta     Json?
+
+  @@index([creadoEn])
+  @@index([resultado, creadoEn])
+  @@index([usuarioId, creadoEn])
+  @@map("campo_registro_marcaciones")
 }

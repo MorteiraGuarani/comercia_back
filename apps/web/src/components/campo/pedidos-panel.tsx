@@ -26,7 +26,7 @@ import type {
   ProductoPedido,
 } from "@/types/pedido";
 import { agregarDiasIso, fechaEnZonaIso, formatoDiaLargo } from "@/utils/fechas";
-import { ESTADOS_PEDIDO, guaranies, LINEAS_PEDIDO } from "@/utils/pedidos";
+import { armarPedidoSap, ESTADOS_PEDIDO, guaranies, LINEAS_PEDIDO } from "@/utils/pedidos";
 
 type Paso =
   | { k: "cliente"; t: string }
@@ -439,7 +439,9 @@ export function PedidosPanel() {
           </span>
           <b className="text-lg tabular-nums text-foreground">{guaranies(total)}</b>
         </p>
-        <div className={`grid grid-cols-[auto_1fr] gap-2 lg:grid-cols-1 ${ultimo ? "" : "lg:hidden"}`}>
+        <div
+          className={`grid gap-2 ${ultimo ? "grid-cols-[auto_1fr_auto] lg:grid-cols-[1fr_auto]" : "grid-cols-[auto_1fr] lg:hidden lg:grid-cols-1"}`}
+        >
           <button
             type="button"
             onClick={() => ir(paso - 1)}
@@ -459,6 +461,30 @@ export function PedidosPanel() {
             {ultimo ? "Guardar pedido" : `Siguiente: ${PASOS[paso + 1].t}`}
             {ultimo ? null : <Flecha />}
           </button>
+          {ultimo ? (
+            <button
+              type="button"
+              disabled={!cliente || !lista.length}
+              onClick={() =>
+                // shortcut: solo muestra el JSON en consola; el envío al Service Layer llega después.
+                console.log(
+                  "Pedido para SAP",
+                  armarPedidoSap({
+                    cardCode: cliente?.id ?? "",
+                    hoy,
+                    entrega,
+                    observaciones,
+                    usuarioLogin: usuario.nombreLogin,
+                    items: lista,
+                  }),
+                )
+              }
+              title="Muestra en la consola el JSON para SAP"
+              className={`${btnGhost} h-14 rounded-2xl px-5 text-base`}
+            >
+              Ver
+            </button>
+          ) : null}
         </div>
       </footer>
     </div>

@@ -67,10 +67,48 @@ aviso cuenta cuántas quedan y tiene **Enviar ahora**.
   valida con esa hora, como las marcas offline de su app, las guarda y COMERCIA
   trae la copia: recién ahí aparecen en Presentismo.
 - Reenviarlas no las duplica: UCHECK identifica cada marca por su operación.
-- Un corte deja el resto para el próximo intento. Un rechazo (fuera de radio,
-  horario, tareas del repositor sin terminar) se descarta y se avisa con un toast.
+- Un corte deja el resto para el próximo intento. Un rechazo (400/404/409/422:
+  fuera de radio, horario, tareas del repositor sin terminar, hora inválida)
+  sale de la cola y pasa a una lista de **rechazadas** en el mismo
+  `localStorage` por cuenta (`comercia.marcas-rechazadas.<usuario>`), con el
+  motivo y la fecha del rechazo. Además del toast, Ruta muestra un aviso fijo
+  con local, tipo, hora y motivo de cada una, que queda hasta tocar
+  **Entendido**.
+- Si UCHECK responde 401/403 (credencial o vínculo entre servidores), 408/429
+  o 5xx, COMERCIA devuelve 503 `UCHECK_SIN_CONEXION`: no es un "no" a la marca,
+  la web la conserva y reintenta.
+- Cada intento queda en el **registro de marcaciones** (ver abajo), y lo que
+  no se aceptó, también como `warn` en el log de la API.
 - Viven solo en ese navegador: si se borran sus datos (o se cierra una ventana
   privada) antes de enviarlas, se pierden.
+
+### Registro de marcaciones
+
+Cada pedido de marca de campo que llega a COMERCIA queda en la tabla
+`campo_registro_marcaciones`, aceptado o no. Lo guarda el interceptor
+`RegistroMarcacionInterceptor` en los endpoints `jornada/entrada`,
+`jornada/repositor/entrada`, `jornada/visitas/:id/salida`,
+`jornada/repositor/visitas/:id/salida` y `jornada/marcas-sin-conexion`.
+
+- `resultado`: `ACEPTADA`, `RECHAZADA` (4xx, con su motivo, lo rechace COMERCIA
+  —tareas sin terminar, hora inválida, datos inválidos— o UCHECK —fuera de
+  radio, horario—) o `ERROR` (UCHECK caído o sin responder, 401/403 entre
+  servidores, algo inesperado).
+- Guarda quién marcó, copiado al momento (id, nombre y apellido, correo, login
+  y empresa), la ruta, el estado HTTP, el código, el motivo y la duración.
+  También guarda el pedido completo en `solicitud` (parámetros, consulta y
+  cuerpo, con coordenadas) y la respuesta o el error en `respuesta`, ambos en
+  `jsonb`. No guarda encabezados ni credenciales. No tiene claves foráneas, y si
+  falla el guardado del registro, la marca sigue igual.
+- Lo que no se aceptó también queda como `warn` en el log de la API.
+- El superadmin lo ve en **Administración · Registro de marcaciones**
+  (`GET /campo/superadmin/registro-marcaciones?resultado=&page=&limit=`): de la
+  más reciente a la más antigua, filtrable por resultado, con el detalle del
+  pedido y la respuesta.
+- Lo que corta el guard (sin sesión) no llega al registro. No hay depuración
+  automática: la tabla crece con cada pedido.
+- UCHECK tiene su propio registro de lo que le llega (ver
+  `UCHECK/docs/integracion-programas.md`).
 
 ### Sincronización de copias
 

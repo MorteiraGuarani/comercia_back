@@ -2,6 +2,9 @@ export interface EmpresaAdminFila {
   id: number;
   nombre: string;
   dbName: string | null;
+  sapEsquema: string | null;
+  sapUsuario: string | null;
+  sapContrasenia: string | null;
   diasAvisoVencimiento: number;
   padre: { id: number; nombre: string } | null;
   _count: {
@@ -16,6 +19,10 @@ export interface EmpresaAdminDto {
   id: number;
   nombre: string;
   dbName: string | null;
+  sapEsquema: string | null;
+  sapUsuario: string | null;
+  /** La contraseña de SAP nunca sale por la API: solo si está cargada. */
+  tieneSapContrasenia: boolean;
   diasAvisoVencimiento: number;
   padre: { id: number; nombre: string } | null;
   usuariosCount: number;

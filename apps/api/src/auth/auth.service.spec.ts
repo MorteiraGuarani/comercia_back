@@ -93,11 +93,10 @@ describe('AuthService', () => {
 describe('Alta de usuario con referencias ERP', () => {
   const erp = {
     ERP_CanalVenta: 'MAYORISTA',
-    ERP_Almacen: 'ALM01',
-    ERP_Supervisor: 'SUP01',
-    ERP_Vendedor: 0,
     ERP_Repositor: 'REP01',
-    ERP_Impulsador: 'IMP01',
+    ERP_CodigoAlmacen: 'ALM01',
+    ERP_NombreAlmacen: 'Depósito central',
+    ERP_CodUsuarioSap: 'manager',
   };
 
   it.each([erp, undefined])(
@@ -145,7 +144,7 @@ describe('Alta de usuario con referencias ERP', () => {
       expect(prisma.usuario.create.mock.calls[0][0].data).toMatchObject(
         esperados,
       );
-      expect(sesion).not.toHaveProperty('ERP_Vendedor');
+      expect(sesion).not.toHaveProperty('ERP_CodUsuarioSap');
       expect(sesion).not.toHaveProperty('passwordHash');
     },
   );

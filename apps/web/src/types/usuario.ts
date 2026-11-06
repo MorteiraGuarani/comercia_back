@@ -1,13 +1,13 @@
 import type { CountryCode } from "libphonenumber-js";
 import type { EquipoCampo } from "./rol";
 
+/** Pestaña SAP: Codes de tbl_jcanales (como texto) y tbl_oclp de la empresa, más almacén y usuario SAP. */
 export interface DatosErpUsuario {
   ERP_CanalVenta: string | null;
-  ERP_Almacen: string | null;
-  ERP_Supervisor: string | null;
-  ERP_Vendedor: number | null;
-  ERP_Repositor: string | null;
-  ERP_Impulsador: string | null;
+  ERP_Sucursal: number | null;
+  ERP_CodigoAlmacen: string | null;
+  ERP_NombreAlmacen: string | null;
+  ERP_CodUsuarioSap: string | null;
 }
 
 export type FormularioErpUsuario = { [Campo in keyof DatosErpUsuario]: string };
@@ -68,6 +68,9 @@ export interface UsuarioAdmin extends DatosErpUsuario {
   ruc: string | null;
   celular: string;
   legajo: string | null;
+  /** Name del canal (tbl_jcanales) y de la sucursal (tbl_oclp) elegidos. */
+  canalVentaNombre: string | null;
+  sucursalNombre: string | null;
   empresa: { id: number; nombre: string };
   rol: { id: number; descripcion: string } | null;
   superior: { id: number; nombre: string } | null;

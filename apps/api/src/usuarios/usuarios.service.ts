@@ -59,6 +59,7 @@ import type { ActualizarPerfilDto } from './dto/perfil.dto';
 import { filtroLocales, nombreLocal } from '../campo/utils/local-ocrd';
 import { UcheckUsuariosService } from './ucheck-usuarios.service';
 import { programasUcheck } from './utils/programas-ucheck';
+import { MAX_INT4, MIN_INT4 } from '../common/utils/numeros';
 
 const SELECT_USUARIO_ADMIN = {
   id: true,
@@ -70,11 +71,11 @@ const SELECT_USUARIO_ADMIN = {
   celular: true,
   legajo: true,
   ERP_CanalVenta: true,
-  ERP_Almacen: true,
-  ERP_Supervisor: true,
-  ERP_Vendedor: true,
   ERP_Repositor: true,
-  ERP_Impulsador: true,
+  ERP_CodigoAlmacen: true,
+  ERP_NombreAlmacen: true,
+  ERP_CodUsuarioSap: true,
+  ERP_Sucursal: true,
   esSuperadmin: true,
   isActive: true,
   programasUcheck: true,
@@ -94,11 +95,11 @@ type UsuarioFila = {
   celular: string;
   legajo: string | null;
   ERP_CanalVenta: string | null;
-  ERP_Almacen: string | null;
-  ERP_Supervisor: string | null;
-  ERP_Vendedor: number | null;
   ERP_Repositor: string | null;
-  ERP_Impulsador: string | null;
+  ERP_CodigoAlmacen: string | null;
+  ERP_NombreAlmacen: string | null;
+  ERP_CodUsuarioSap: string | null;
+  ERP_Sucursal: number | null;
   esSuperadmin: boolean;
   isActive: boolean;
   programasUcheck: string[];
@@ -115,7 +116,18 @@ interface ContextoAdmin {
   accesoGlobal: boolean;
 }
 
-function aUsuarioDto(usuario: UsuarioFila): UsuarioAdminDto {
+// ERP_CanalVenta guarda como texto el Code (int4) de tbl_jcanales.
+function codigoCanal(texto: string | null | undefined): number | null {
+  const code = Number(texto ?? NaN);
+  return Number.isInteger(code) && code >= MIN_INT4 && code <= MAX_INT4
+    ? code
+    : null;
+}
+
+function aUsuarioDto(
+  usuario: UsuarioFila,
+  nombres: Pick<UsuarioAdminDto, 'canalVentaNombre' | 'sucursalNombre'>,
+): UsuarioAdminDto {
   return {
     id: usuario.id,
     nombre: usuario.nombre,
@@ -126,11 +138,12 @@ function aUsuarioDto(usuario: UsuarioFila): UsuarioAdminDto {
     celular: usuario.celular,
     legajo: usuario.legajo,
     ERP_CanalVenta: usuario.ERP_CanalVenta,
-    ERP_Almacen: usuario.ERP_Almacen,
-    ERP_Supervisor: usuario.ERP_Supervisor,
-    ERP_Vendedor: usuario.ERP_Vendedor,
     ERP_Repositor: usuario.ERP_Repositor,
-    ERP_Impulsador: usuario.ERP_Impulsador,
+    ERP_CodigoAlmacen: usuario.ERP_CodigoAlmacen,
+    ERP_NombreAlmacen: usuario.ERP_NombreAlmacen,
+    ERP_CodUsuarioSap: usuario.ERP_CodUsuarioSap,
+    ERP_Sucursal: usuario.ERP_Sucursal,
+    ...nombres,
     empresa: usuario.empresa,
     rol: usuario.rol,
     superior: usuario.superior
@@ -229,7 +242,12 @@ export class UsuariosService {
         take,
       }),
     ]);
-    return respuestaPaginada(usuarios.map(aUsuarioDto), total, page, limit);
+    return respuestaPaginada(
+      await this.aUsuariosDto(usuarios),
+      total,
+      page,
+      limit,
+    );
   }
 
   async meta(usuarioId: number): Promise<MetaUsuariosDto> {
@@ -342,6 +360,120 @@ export class UsuariosService {
       total,
       page,
       limit,
+    );
+  }
+
+  /** Opciones de «Canal de venta» (tbl_jcanales) o «Sucursal» (tbl_oclp) de la empresa. */
+  async listarCatalogoErp(
+    usuarioId: number,
+    query: ListarUsuariosDto,
+    tabla: 'canales' | 'sucursales',
+  ) {
+    const actual = await this.contexto(usuarioId);
+    const empresaId = this.empresaObjetivo(actual, query.empresaId);
+    const where = {
+      empresaId,
+      ...(query.buscar
+        ? { Name: { contains: query.buscar, mode: 'insensitive' as const } }
+        : {}),
+    };
+    const { skip, take, page, limit } = rangoPaginacion(query);
+    const args = {
+      where,
+      select: { Code: true, Name: true },
+      orderBy: [{ Name: 'asc' as const }, { Code: 'asc' as const }],
+      skip,
+      take,
+    };
+    const [total, filas] =
+      tabla === 'canales'
+        ? await Promise.all([
+            this.prisma.socioNegocioCanales.count({ where }),
+            this.prisma.socioNegocioCanales.findMany(args),
+          ])
+        : await Promise.all([
+            this.prisma.catalogoOclp.count({ where }),
+            this.prisma.catalogoOclp.findMany(args),
+          ]);
+    return respuestaPaginada(
+      filas.map((f) => ({ id: f.Code, nombre: f.Name ?? `Código ${f.Code}` })),
+      total,
+      page,
+      limit,
+    );
+  }
+
+  /**
+   * Canal (tbl_jcanales) y sucursal (tbl_oclp) se eligen del catálogo de la
+   * empresa y se guarda su Code. undefined conserva el valor; null lo borra.
+   */
+  private async validarErp(
+    empresaId: number,
+    dto: { ERP_CanalVenta?: string | null; ERP_Sucursal?: number | null },
+  ) {
+    const canal = codigoCanal(dto.ERP_CanalVenta);
+    if (
+      dto.ERP_CanalVenta != null &&
+      (canal === null ||
+        !(await this.prisma.socioNegocioCanales.count({
+          where: { empresaId, Code: canal },
+        })))
+    )
+      throw new BadRequestException(
+        'Elegí un canal de venta de la lista de la empresa',
+      );
+    if (
+      dto.ERP_Sucursal != null &&
+      !(await this.prisma.catalogoOclp.count({
+        where: { empresaId, Code: dto.ERP_Sucursal },
+      }))
+    )
+      throw new BadRequestException(
+        'Elegí una sucursal de la lista de la empresa',
+      );
+    return {
+      ERP_CanalVenta: canal === null ? dto.ERP_CanalVenta : String(canal),
+      ERP_Sucursal: dto.ERP_Sucursal,
+    };
+  }
+
+  /** DTO con los nombres de canal y sucursal: una consulta por catálogo para toda la página. */
+  private async aUsuariosDto(usuarios: UsuarioFila[]) {
+    const claves = (codigo: (u: UsuarioFila) => number | null) =>
+      usuarios.flatMap((u) => {
+        const Code = codigo(u);
+        return Code == null ? [] : [{ empresaId: u.empresa.id, Code }];
+      });
+    const canalDe = (u: UsuarioFila) => codigoCanal(u.ERP_CanalVenta);
+    const buscarCanales = claves(canalDe);
+    const buscarSucursales = claves((u) => u.ERP_Sucursal);
+    const select = { empresaId: true, Code: true, Name: true };
+    const [canales, sucursales] = await Promise.all([
+      buscarCanales.length
+        ? this.prisma.socioNegocioCanales.findMany({
+            where: { OR: buscarCanales },
+            select,
+          })
+        : [],
+      buscarSucursales.length
+        ? this.prisma.catalogoOclp.findMany({
+            where: { OR: buscarSucursales },
+            select,
+          })
+        : [],
+    ]);
+    const nombre = (
+      filas: { empresaId: number; Code: number; Name: string | null }[],
+      empresaId: number,
+      Code: number | null,
+    ) =>
+      filas.find((f) => f.empresaId === empresaId && f.Code === Code)?.Name ??
+      null;
+    return usuarios.map((u) =>
+      aUsuarioDto(u, {
+        canalVentaNombre: nombre(canales, u.empresa.id, canalDe(u)),
+        sucursalNombre: nombre(sucursales, u.empresa.id, u.ERP_Sucursal),
+      }),
     );
   }
 
@@ -602,6 +734,7 @@ export class UsuariosService {
       dto.rolId ?? null,
       dto.superiorId,
     );
+    const erp = await this.validarErp(empresaId, dto);
     const nombreLogin =
       dto.nombreLogin ??
       loginDesdeCorreo(dto.correo) ??
@@ -609,6 +742,7 @@ export class UsuariosService {
     const creado = await this.auth.crearUsuario(
       {
         ...dto,
+        ...erp,
         empresaId,
         nombreLogin,
         correo: dto.correo ?? `${nombreLogin}@sin-correo.invalid`,
@@ -642,7 +776,7 @@ export class UsuariosService {
       select: SELECT_USUARIO_ADMIN,
     });
     if (!usuario) throw new NotFoundException('El usuario no existe');
-    return aUsuarioDto(usuario);
+    return (await this.aUsuariosDto([usuario]))[0];
   }
 
   async actualizar(
@@ -708,6 +842,7 @@ export class UsuariosService {
       dto.superiorId === undefined ? objetivo.superiorId : dto.superiorId,
       id,
     );
+    const erp = await this.validarErp(objetivo.empresaId, dto);
     // Mismas reglas que el alta: RUC con dígito verificador y celular en E.164.
     const ruc =
       dto.ruc === undefined
@@ -747,12 +882,12 @@ export class UsuariosService {
           ruc,
           celular,
           legajo: dto.legajo,
-          ERP_CanalVenta: dto.ERP_CanalVenta,
-          ERP_Almacen: dto.ERP_Almacen,
-          ERP_Supervisor: dto.ERP_Supervisor,
-          ERP_Vendedor: dto.ERP_Vendedor,
+          ERP_CanalVenta: erp.ERP_CanalVenta,
           ERP_Repositor: dto.ERP_Repositor,
-          ERP_Impulsador: dto.ERP_Impulsador,
+          ERP_CodigoAlmacen: dto.ERP_CodigoAlmacen,
+          ERP_NombreAlmacen: dto.ERP_NombreAlmacen,
+          ERP_CodUsuarioSap: dto.ERP_CodUsuarioSap,
+          ERP_Sucursal: erp.ERP_Sucursal,
           rolId: dto.rolId,
           superiorId: dto.superiorId,
           isActive: dto.isActive,
@@ -787,7 +922,7 @@ export class UsuariosService {
         programas,
       });
       return {
-        ...aUsuarioDto(usuario),
+        ...(await this.aUsuariosDto([usuario]))[0],
         ...(programas ? { programasUcheck: programas } : {}),
       };
     } catch (error: unknown) {

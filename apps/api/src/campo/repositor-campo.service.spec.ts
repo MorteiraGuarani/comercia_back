@@ -228,6 +228,52 @@ describe('RepositorCampoService', () => {
     }
   });
 
+  it('un rechazo de Ucheck llega como 400; 401/403/5xx como 503 para que la web reintente', async () => {
+    const tomadaEn = new Date(Date.now() - 5 * 60_000).toISOString();
+    const marca = {
+      tipo: 'ENTRADA' as const,
+      asignacionId: 7,
+      fecha: tomadaEn.slice(0, 10),
+      tomadaEn,
+      nota: '',
+      ubicacion: {
+        latitud: -25.3,
+        longitud: -57.6,
+        precisionMetros: 9,
+        capturadaEn: tomadaEn,
+      },
+    };
+    const respuesta = (status: number, message: string) =>
+      new Response(JSON.stringify({ message }), { status });
+    const fetch = jest
+      .spyOn(global, 'fetch')
+      .mockResolvedValueOnce(respuesta(400, 'Estás fuera del radio permitido'))
+      .mockResolvedValueOnce(
+        respuesta(401, 'Credencial de integración inválida'),
+      )
+      .mockResolvedValueOnce(
+        respuesta(403, 'Programa de Comercia no habilitado'),
+      )
+      .mockResolvedValueOnce(respuesta(500, 'error'));
+    const servicio = supervisora();
+    try {
+      await expect(servicio.marcaSinConexion(3, marca)).rejects.toMatchObject({
+        status: 400,
+        message: 'Estás fuera del radio permitido',
+      });
+      for (const detalle of ['respondió 401', 'respondió 403', ''])
+        await expect(servicio.marcaSinConexion(3, marca)).rejects.toMatchObject(
+          {
+            status: 503,
+            message: expect.stringContaining(detalle) as unknown,
+            response: { codigo: 'UCHECK_SIN_CONEXION' },
+          },
+        );
+    } finally {
+      fetch.mockRestore();
+    }
+  });
+
   it('reintentar pide a Ucheck reenviar las marcas pendientes y las trae', async () => {
     const id = 'rep-' + 'a'.repeat(48);
     const count = jest.fn().mockResolvedValueOnce(0);

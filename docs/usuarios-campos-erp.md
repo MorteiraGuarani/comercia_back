@@ -1,21 +1,27 @@
 # Referencias ERP de usuarios
 
-Los seis campos son opcionales, admiten `null` y conservan estos nombres en
+Los campos son opcionales, admiten `null` y conservan estos nombres en
 PostgreSQL, en Prisma y en el contrato JSON:
 
 | Campo | Tipo |
 | --- | --- |
 | `ERP_CanalVenta` | `VARCHAR(50)` |
-| `ERP_Almacen` | `VARCHAR(8)` |
-| `ERP_Supervisor` | `VARCHAR(30)` |
-| `ERP_Vendedor` | `INTEGER` de 32 bits |
+| `ERP_Sucursal` | `INTEGER` de 32 bits |
 | `ERP_Repositor` | `VARCHAR(50)` |
-| `ERP_Impulsador` | `VARCHAR(50)` |
+| `ERP_CodigoAlmacen` | `VARCHAR(100)` |
+| `ERP_NombreAlmacen` | `VARCHAR(100)` |
+| `ERP_CodUsuarioSap` | `VARCHAR(100)` |
 
-El `ALTER TABLE` está en
-`apps/api/prisma/migrations/20261028160000_usuarios_campos_erp/migration.sql`.
-Los usuarios existentes quedan con estos campos en `NULL`. La migración se
-aplica mediante Prisma junto con las demás migraciones de la aplicación.
+Migraciones (`ALTER TABLE`, nunca se borra ni recrea la tabla):
+
+- `20261028160000_usuarios_campos_erp`: primeros campos ERP.
+- `20261106120000_usuario_erp_sucursal`: `ERP_Sucursal`.
+- `20261106160000_usuario_erp_almacen_sap`: agrega `ERP_CodigoAlmacen`,
+  `ERP_NombreAlmacen` y `ERP_CodUsuarioSap`; copia `ERP_Almacen` a
+  `ERP_CodigoAlmacen` y quita `ERP_Almacen`, `ERP_Supervisor`, `ERP_Vendedor`
+  y `ERP_Impulsador` (sus valores se pierden al aplicarla).
+
+Se aplican mediante Prisma junto con las demás migraciones de la aplicación.
 
 ## API y Swagger
 
@@ -28,33 +34,49 @@ Ejemplo de datos ERP que pueden acompañar el alta:
 
 ```json
 {
-  "ERP_CanalVenta": "MAYORISTA",
-  "ERP_Almacen": "ALM01",
-  "ERP_Supervisor": "SUP01",
-  "ERP_Vendedor": 27,
+  "ERP_CanalVenta": "1",
+  "ERP_Sucursal": 1,
   "ERP_Repositor": "REP01",
-  "ERP_Impulsador": "IMP01"
+  "ERP_CodigoAlmacen": "01",
+  "ERP_NombreAlmacen": "DEPÓSITO CENTRAL",
+  "ERP_CodUsuarioSap": "manager"
 }
 ```
 
 En una edición, omitir un campo conserva su valor. `null` o un texto vacío
 lo borra; los textos se recortan en los extremos y conservan mayúsculas.
-`ERP_Vendedor` recibe un número JSON entero entre -2147483648 y 2147483647;
-`0` es válido y se conserva. Los valores que exceden los tamaños declarados
-devuelven 400 antes de llegar a la base de datos.
+`ERP_Sucursal` recibe un número JSON entero entre -2147483648 y 2147483647;
+`0` es válido y se conserva. Los valores que exceden los tamaños declarados,
+o los campos quitados, devuelven 400 antes de llegar a la base de datos.
 
 Swagger documenta entradas y respuestas, tanto individuales como paginadas y
 en lote. El listado del ABM incluye las referencias ERP y permite buscarlas;
-para vendedor, la búsqueda coincide con el código numérico completo.
+
+## Pestaña SAP
+
+La pestaña SAP del ABM (alta y edición) muestra dos selectores con búsqueda y
+paginación, del catálogo de la empresa del usuario, y tres textos libres de
+hasta 100 caracteres: código de almacén, nombre de almacén y código de usuario
+SAP (`ERP_CodigoAlmacen`, `ERP_NombreAlmacen`, `ERP_CodUsuarioSap`). Un texto
+en blanco se guarda como `NULL`.
+
+| Campo | Catálogo | Se guarda | Opciones |
+| --- | --- | --- | --- |
+| Canal de venta | `tbl_jcanales` | `Code` como texto en `ERP_CanalVenta` | `GET /usuarios/canales-venta?empresaId=` |
+| Sucursal | `tbl_oclp` | `Code` en `ERP_Sucursal` (`INTEGER`, migración `20261106120000_usuario_erp_sucursal`) | `GET /usuarios/sucursales?empresaId=` |
+
+Alta y edición devuelven 400 si el Code no existe en ese catálogo de la
+empresa. La respuesta del ABM agrega `canalVentaNombre` y `sucursalNombre`.
+`ERP_Repositor` no se muestra en la pestaña, pero sigue en la base y en la API
+(alta, edición y lote) con las reglas de arriba.
 
 ## ABM y permisos
 
-El formulario de alta/edición agrupa los campos en “Datos ERP”. Los usuarios
-con datos cargados muestran ese detalle desplegable en móvil y escritorio.
+Los usuarios con algún dato SAP muestran el detalle “Datos SAP (ERP)”
+desplegable en móvil y escritorio.
 Se conservan los permisos y el aislamiento por empresa del ABM.
 
-Son referencias externas: `ERP_Supervisor` no cambia `superiorId`, y los
-códigos de vendedor, repositor o impulsador no asignan roles. Estos campos no
+Son referencias externas: no cambian `superiorId` ni asignan roles. Estos campos no
 se editan desde el perfil propio ni se agregan a la respuesta de sesión.
 
 ## Verificación sin base real ni navegador

@@ -72,4 +72,42 @@ describe('AdminEmpresasService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.empresa.update).not.toHaveBeenCalled();
   });
+
+  it('guarda los datos de SAP sin devolver la contraseña y la conserva si llega vacía', async () => {
+    const fila = {
+      id: 9,
+      nombre: 'Frigorífico',
+      dbName: null,
+      sapEsquema: 'SBO_FRIGO',
+      sapUsuario: 'B1USER',
+      sapContrasenia: 'secreta',
+      diasAvisoVencimiento: 5,
+      padre: null,
+      _count: { usuarios: 0, hijas: 0, modulos: 0, paginas: 0 },
+    };
+    prisma.empresa.findUnique.mockResolvedValue({ id: 9 });
+    prisma.empresa.update.mockResolvedValue(fila);
+
+    const respuesta = await service.actualizar(9, {
+      sapEsquema: 'SBO_FRIGO',
+      sapUsuario: 'B1USER',
+      sapContrasenia: '',
+    });
+
+    expect(prisma.empresa.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          sapEsquema: 'SBO_FRIGO',
+          sapUsuario: 'B1USER',
+          sapContrasenia: undefined,
+        }) as unknown,
+      }),
+    );
+    expect(respuesta).toMatchObject({
+      sapEsquema: 'SBO_FRIGO',
+      sapUsuario: 'B1USER',
+      tieneSapContrasenia: true,
+    });
+    expect(JSON.stringify(respuesta)).not.toContain('secreta');
+  });
 });
