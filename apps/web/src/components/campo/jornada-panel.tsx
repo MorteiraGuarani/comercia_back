@@ -119,7 +119,16 @@ function AgendaDelDia({
 }) {
   const { usuario, modulos } = usePanel();
   const hoyStr = useFechaCampo();
-  const lista = useListaCampo<AgendaCampo>(`/campo/jornada?${qsFecha}`);
+  // El buscador filtra en el servidor: encuentra locales de cualquier página.
+  const [busqueda, setBusqueda] = useState("");
+  const [buscar, setBuscar] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setBuscar(busqueda.trim()), 300);
+    return () => clearTimeout(t);
+  }, [busqueda]);
+  const lista = useListaCampo<AgendaCampo>(
+    `/campo/jornada?${qsFecha}${buscar ? `&buscar=${encodeURIComponent(buscar)}` : ""}`,
+  );
   const [expandida, setExpandida] = useState<number | null | undefined>();
   // Puede tener varias visitas abiertas: entró a otro local sin cerrar el anterior.
   const [visitasAbiertasHoy, setAbiertas] = useState<VisitaCampo[]>([]);
@@ -171,7 +180,6 @@ function AgendaDelDia({
   const [inventarioDe, setInventarioDe] = useState<string | null>(null);
   // Sube al cerrar el modal de tareas para refrescar el "2/5" de la tarjeta.
   const [revisionTareas, setRevisionTareas] = useState(0);
-  const [busqueda, setBusqueda] = useState("");
   const [filtro, setFiltro] = useState<FiltroRuta>("todos");
   // Ruta recomendada (solo sugerencia): orden de los pendientes y punto de partida.
   const [ruta, setRuta] = useState<{
@@ -509,15 +517,8 @@ function AgendaDelDia({
       filtro === "todos"
         ? itemsOrdenados
         : itemsOrdenados.filter((a) => a.estado === filtro);
-    if (!busqueda.trim()) return porEstado;
-    const q = busqueda.toLowerCase();
-    return porEstado.filter(
-      (a) =>
-        a.local.nombre.toLowerCase().includes(q) ||
-        a.local.id.toLowerCase().includes(q) ||
-        a.local.direccion.toLowerCase().includes(q),
-    );
-  }, [itemsOrdenados, busqueda, filtro]);
+    return porEstado;
+  }, [itemsOrdenados, filtro]);
 
   // Se abre sola la tarjeta en curso hasta que el usuario elige otra.
   const idExpandida =
@@ -649,17 +650,23 @@ function AgendaDelDia({
           <input
             type="text"
             value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            aria-label="Buscar local en esta página de la agenda"
+            onChange={(e) => {
+              setBusqueda(e.target.value);
+              lista.setPage(1);
+            }}
+            aria-label="Buscar local por nombre, código o dirección"
             name="buscar-local"
             autoComplete="off"
-            placeholder={esRepositor ? "Buscar local…" : "Buscar en esta página…"}
+            placeholder="Buscar local, código o dirección…"
             className={`h-11 min-h-11 w-full rounded-lg border border-line bg-surface-raised py-2 pl-9 ${busqueda ? "pr-11" : "pr-3"} text-base text-foreground outline-none transition-colors placeholder:text-muted focus-visible:border-brand-600 focus-visible:ring-2 focus-visible:ring-brand-600/30 sm:text-sm dark:border-line dark:bg-surface-raised dark:text-foreground`}
           />
           {busqueda && (
             <button
               type="button"
-              onClick={() => setBusqueda("")}
+              onClick={() => {
+                setBusqueda("");
+                lista.setPage(1);
+              }}
               aria-label="Limpiar búsqueda de locales"
               className="absolute inset-y-0 right-0 flex min-w-11 items-center justify-center rounded-r-xl text-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
               title="Limpiar búsqueda"

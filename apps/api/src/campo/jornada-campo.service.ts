@@ -45,7 +45,11 @@ import {
   relojCampo,
   ZONA_CAMPO,
 } from './utils/calendario';
-import { condicionAgenda, equipoTitular } from './utils/agenda-sql';
+import {
+  busquedaAgenda,
+  condicionAgenda,
+  equipoTitular,
+} from './utils/agenda-sql';
 import {
   obtenerColaboradoresGestionados,
   obtenerItinerarioHeredado,
@@ -115,7 +119,7 @@ export class JornadaCampoService {
       where: { id: u.id, empresaId: u.empresaId },
       select: { localPrincipalId: true },
     });
-    const base = Prisma.sql`FROM campo_asignaciones a JOIN tbl_ocrd l ON l.empresa_id = a.empresa_id AND l."CardCode" = a."CardCode" WHERE ${condicion}`;
+    const base = Prisma.sql`FROM campo_asignaciones a JOIN tbl_ocrd l ON l.empresa_id = a.empresa_id AND l."CardCode" = a."CardCode" WHERE ${condicion}${busquedaAgenda(query.buscar)}`;
     const [conteo, ids] = await Promise.all([
       this.prisma.$queryRaw<TotalAgenda[]>(
         Prisma.sql`SELECT COUNT(DISTINCT l."CardCode") AS total ${base}`,

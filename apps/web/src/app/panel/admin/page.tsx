@@ -11,8 +11,9 @@ import { UsuariosPanel } from "@/components/usuarios/usuarios-panel";
 import { ProductosPanel } from "@/components/admin/productos-panel";
 import { ConexionesPanel } from "@/components/admin/conexiones-panel";
 import { LocalesEmpresaPanel } from "@/components/admin/locales-empresa-panel";
+import { CategoriasPanel } from "@/components/admin/categorias-panel";
 
-type Tab = "usuarios" | "roles" | "empresas" | "modulos" | "conexiones" | "accesos" | "productos" | "locales";
+type Tab = "usuarios" | "roles" | "empresas" | "modulos" | "conexiones" | "accesos" | "productos" | "locales" | "categorias";
 
 export default function AdminPage() {
   const router = useRouter();
@@ -90,7 +91,8 @@ export default function AdminPage() {
           Conexiones
         </button>
         <button type="button" onClick={() => setTab("productos")} className={`${tabClase("productos")} whitespace-nowrap`}>Productos y precios</button>
-        <button type="button" onClick={() => setTab("locales")} className={`${tabClase("locales")} whitespace-nowrap`}>Locales</button></>}
+        <button type="button" onClick={() => setTab("locales")} className={`${tabClase("locales")} whitespace-nowrap`}>Locales</button>
+        <button type="button" onClick={() => setTab("categorias")} className={`${tabClase("categorias")} whitespace-nowrap`}>Categorías</button></>}
       </div>
 
       <div className="mt-6">
@@ -102,6 +104,7 @@ export default function AdminPage() {
         {tab === "accesos" && <EmpresasPanel />}
         {tab === "productos" && <ProductosPanel />}
         {tab === "locales" && <LocalesEmpresaPanel />}
+        {tab === "categorias" && usuario.esSuperadmin && <CategoriasPanel />}
       </div>
     </div>
   );

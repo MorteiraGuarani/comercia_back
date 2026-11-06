@@ -8,7 +8,6 @@ import {
   Patch,
   Post,
   Query,
-  Req,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -22,8 +21,7 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { AdminTiGuard } from '../auth/admin-ti.guard';
-import type { RequestConUsuario } from '../auth/interfaces/request-con-usuario.interface';
+import { SuperadminGuard } from '../auth/superadmin.guard';
 import {
   ActualizarCategoriaDto,
   ConsultaCategoriasDto,
@@ -42,10 +40,11 @@ const EJEMPLO = {
 @ApiTags('Categorías de pedidos (campo_categoria)')
 @ApiBearerAuth()
 @ApiUnauthorizedResponse({ description: 'Sesión requerida' })
-@ApiForbiddenResponse({ description: 'Solo Admin TI o superadmin' })
-@Controller('campo/categorias')
-// Igual que Pedidos mientras se arma: solo Admin TI y superadmin, en su empresa.
-@UseGuards(JwtAuthGuard, AdminTiGuard)
+@ApiForbiddenResponse({ description: 'Solo superadmin' })
+@ApiNotFoundResponse({ description: 'Empresa no disponible' })
+// Administración → Categorías: solo el superadmin, sobre la empresa que elige.
+@Controller('admin/empresas/:empresaId/categorias')
+@UseGuards(JwtAuthGuard, SuperadminGuard)
 export class CategoriasController {
   constructor(private readonly servicio: CategoriasService) {}
 
@@ -58,8 +57,11 @@ export class CategoriasController {
       example: { items: [EJEMPLO], total: 1, page: 1, limit: 7, totalPages: 1 },
     },
   })
-  listar(@Req() req: RequestConUsuario, @Query() query: ConsultaCategoriasDto) {
-    return this.servicio.listar(req.usuarioId, query);
+  listar(
+    @Param('empresaId', ParseIntPipe) empresaId: number,
+    @Query() query: ConsultaCategoriasDto,
+  ) {
+    return this.servicio.listar(empresaId, query);
   }
 
   @Get(':id')
@@ -67,17 +69,20 @@ export class CategoriasController {
   @ApiOkResponse({ schema: { example: EJEMPLO } })
   @ApiNotFoundResponse({ description: 'Categoría no disponible' })
   obtener(
-    @Req() req: RequestConUsuario,
+    @Param('empresaId', ParseIntPipe) empresaId: number,
     @Param('id', ParseIntPipe) id: number,
   ) {
-    return this.servicio.obtener(req.usuarioId, id);
+    return this.servicio.obtener(empresaId, id);
   }
 
   @Post()
   @ApiOperation({ summary: 'Crear una categoría' })
   @ApiCreatedResponse({ schema: { example: EJEMPLO } })
-  crear(@Req() req: RequestConUsuario, @Body() dto: CrearCategoriaDto) {
-    return this.servicio.crear(req.usuarioId, dto);
+  crear(
+    @Param('empresaId', ParseIntPipe) empresaId: number,
+    @Body() dto: CrearCategoriaDto,
+  ) {
+    return this.servicio.crear(empresaId, dto);
   }
 
   @Patch(':id')
@@ -87,11 +92,11 @@ export class CategoriasController {
   @ApiOkResponse({ schema: { example: EJEMPLO } })
   @ApiNotFoundResponse({ description: 'Categoría no disponible' })
   actualizar(
-    @Req() req: RequestConUsuario,
+    @Param('empresaId', ParseIntPipe) empresaId: number,
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: ActualizarCategoriaDto,
   ) {
-    return this.servicio.actualizar(req.usuarioId, id, dto);
+    return this.servicio.actualizar(empresaId, id, dto);
   }
 
   @Delete(':id')
@@ -99,9 +104,9 @@ export class CategoriasController {
   @ApiOkResponse({ schema: { example: { ok: true } } })
   @ApiNotFoundResponse({ description: 'Categoría no disponible' })
   eliminar(
-    @Req() req: RequestConUsuario,
+    @Param('empresaId', ParseIntPipe) empresaId: number,
     @Param('id', ParseIntPipe) id: number,
   ) {
-    return this.servicio.eliminar(req.usuarioId, id);
+    return this.servicio.eliminar(empresaId, id);
   }
 }

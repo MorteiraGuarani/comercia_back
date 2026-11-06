@@ -1,4 +1,5 @@
 "use client";
+import { normalizarBusqueda } from "@/utils/texto";
 import type { PeriodoFiltro } from "@/types/periodo-filtro";
 import dynamic from "next/dynamic";
 
@@ -160,7 +161,7 @@ function RutaImpulsadorDelPeriodo({
   }, [lista.items, ordenRuta]);
 
   const itemsFiltrados = useMemo(() => {
-    const q = busqueda.trim().toLowerCase();
+    const q = normalizarBusqueda(busqueda.trim());
     const porEstado =
       filtro === "todos"
         ? itemsOrdenados
@@ -168,9 +169,9 @@ function RutaImpulsadorDelPeriodo({
     const base = q
       ? porEstado.filter(
           (a) =>
-            a.local.nombre.toLowerCase().includes(q) ||
-            a.local.id.toLowerCase().includes(q) ||
-            a.local.direccion.toLowerCase().includes(q),
+            [a.local.nombre, a.local.id, a.local.direccion].some((t) =>
+              normalizarBusqueda(t).includes(q),
+            ),
         )
       : porEstado;
     return base;
@@ -415,7 +416,7 @@ function RutaImpulsadorDelPeriodo({
               setBusqueda(e.target.value);
               setPage(1);
             }}
-            placeholder="Buscar local o cliente…"
+            placeholder="Buscar local, código o dirección…"
             className={`h-11 min-h-11 w-full rounded-lg border border-line bg-surface-raised py-2 pl-9 ${busqueda ? "pr-11" : "pr-3"} text-base text-foreground outline-none transition-colors placeholder:text-muted focus-visible:border-brand-600 focus-visible:ring-2 focus-visible:ring-brand-600/30 sm:text-sm`}
           />
           {busqueda ? (

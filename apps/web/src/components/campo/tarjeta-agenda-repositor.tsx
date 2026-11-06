@@ -204,9 +204,8 @@ export function TarjetaAgendaRepositor({
       ? ultima.salida
         ? `Presente ${formatoHora(ultima.entrada)}–${formatoHora(ultima.salida)}`
         : `Entrada ${formatoHora(ultima.entrada)} · sin finalizar`
-      : [a.local.direccion || a.local.id, distancia]
-          .filter(Boolean)
-          .join(" · ");
+      : // El código del cliente (CardCode); la dirección va en el detalle.
+        [a.local.id, distancia].filter(Boolean).join(" · ");
 
   // Un solo "Marcar entrada": el del próximo horario que todavía no tiene visita.
   const entradasPendientes =
@@ -242,7 +241,7 @@ export function TarjetaAgendaRepositor({
             onClick={alternar}
             aria-expanded={abierta}
             aria-controls={idDetalle}
-            className="block w-full min-w-0 cursor-pointer truncate text-left text-sm font-semibold text-foreground after:absolute after:inset-0 after:rounded-xl after:content-[''] focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-inset focus-visible:after:ring-focus sm:text-[15px]"
+            className="line-clamp-2 w-full min-w-0 cursor-pointer break-words text-left text-[13px] font-semibold leading-tight text-foreground after:absolute after:inset-0 after:rounded-xl after:content-[''] focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-inset focus-visible:after:ring-focus sm:line-clamp-1 sm:text-[15px] sm:leading-normal"
           >
             {a.local.nombre}
           </button>
@@ -463,7 +462,6 @@ export function TarjetaAgendaRepositor({
               </p>
             </div>
           ) : null}
-
         </div>
       ) : null}
     </article>

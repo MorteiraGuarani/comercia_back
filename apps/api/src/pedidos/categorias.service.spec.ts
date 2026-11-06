@@ -28,21 +28,32 @@ describe('campo_categoria', () => {
 
   it('no modifica ni borra categorías de otra empresa', async () => {
     const prisma = {
-      usuario: { findUnique: jest.fn().mockResolvedValue({ empresaId: 2 }) },
       categoriaCampo: {
         updateMany: jest.fn().mockResolvedValue({ count: 0 }),
         deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
     };
     const servicio = new CategoriasService(prisma as unknown as PrismaService);
-    await expect(servicio.actualizar(7, 9, { orden: 1 })).rejects.toThrow(
+    await expect(servicio.actualizar(2, 9, { orden: 1 })).rejects.toThrow(
       'Categoría no disponible',
     );
-    await expect(servicio.eliminar(7, 9)).rejects.toThrow(
+    await expect(servicio.eliminar(2, 9)).rejects.toThrow(
       'Categoría no disponible',
     );
     expect(prisma.categoriaCampo.deleteMany).toHaveBeenCalledWith({
       where: { id: 9, empresaId: 2 },
     });
+  });
+
+  it('no crea categorías en una empresa que no existe', async () => {
+    const prisma = {
+      empresa: { findUnique: jest.fn().mockResolvedValue(null) },
+      categoriaCampo: { create: jest.fn() },
+    };
+    const servicio = new CategoriasService(prisma as unknown as PrismaService);
+    await expect(
+      servicio.crear(99, { nombre_categoria: 'Resto' }),
+    ).rejects.toThrow('Empresa no disponible');
+    expect(prisma.categoriaCampo.create).not.toHaveBeenCalled();
   });
 });

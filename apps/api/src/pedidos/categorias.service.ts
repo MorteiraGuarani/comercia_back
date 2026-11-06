@@ -1,8 +1,4 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { rangoPaginacion, respuestaPaginada } from '../common/utils/paginacion';
@@ -21,22 +17,24 @@ const SELECT_CATEGORIA = {
   orden: true,
 } satisfies Prisma.CategoriaCampoSelect;
 
-/** ABM de campo_categoria: cada empresa ve y edita solo las suyas. */
+/**
+ * ABM de campo_categoria para el superadmin: trabaja sobre la empresa elegida
+ * y nunca toca categorías de otra.
+ */
 @Injectable()
 export class CategoriasService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private async empresaDe(usuarioId: number) {
-    const u = await this.prisma.usuario.findUnique({
-      where: { id: usuarioId },
-      select: { empresaId: true },
+  private async existeEmpresa(empresaId: number) {
+    const empresa = await this.prisma.empresa.findUnique({
+      where: { id: empresaId },
+      select: { id: true },
     });
-    if (!u) throw new ForbiddenException('Sin acceso a categorías');
-    return u.empresaId;
+    if (!empresa) throw new NotFoundException('Empresa no disponible');
   }
 
-  async listar(usuarioId: number, query: ConsultaCategoriasDto) {
-    const empresaId = await this.empresaDe(usuarioId);
+  async listar(empresaId: number, query: ConsultaCategoriasDto) {
+    await this.existeEmpresa(empresaId);
     const texto = query.buscar?.trim();
     const where: Prisma.CategoriaCampoWhereInput = {
       empresaId,
@@ -58,8 +56,7 @@ export class CategoriasService {
     return respuestaPaginada<Categoria>(items, total, page, limit);
   }
 
-  async obtener(usuarioId: number, id: number): Promise<Categoria> {
-    const empresaId = await this.empresaDe(usuarioId);
+  async obtener(empresaId: number, id: number): Promise<Categoria> {
     const categoria = await this.prisma.categoriaCampo.findFirst({
       where: { id, empresaId },
       select: SELECT_CATEGORIA,
@@ -68,8 +65,8 @@ export class CategoriasService {
     return categoria;
   }
 
-  async crear(usuarioId: number, dto: CrearCategoriaDto): Promise<Categoria> {
-    const empresaId = await this.empresaDe(usuarioId);
+  async crear(empresaId: number, dto: CrearCategoriaDto): Promise<Categoria> {
+    await this.existeEmpresa(empresaId);
     return this.prisma.categoriaCampo.create({
       data: {
         empresaId,
@@ -83,11 +80,10 @@ export class CategoriasService {
   }
 
   async actualizar(
-    usuarioId: number,
+    empresaId: number,
     id: number,
     dto: ActualizarCategoriaDto,
   ): Promise<Categoria> {
-    const empresaId = await this.empresaDe(usuarioId);
     // Solo cambia lo enviado; null en codesap o Modo los deja vacíos.
     const { count } = await this.prisma.categoriaCampo.updateMany({
       where: { id, empresaId },
@@ -99,11 +95,10 @@ export class CategoriasService {
       },
     });
     if (!count) throw new NotFoundException('Categoría no disponible');
-    return this.obtener(usuarioId, id);
+    return this.obtener(empresaId, id);
   }
 
-  async eliminar(usuarioId: number, id: number) {
-    const empresaId = await this.empresaDe(usuarioId);
+  async eliminar(empresaId: number, id: number) {
     const { count } = await this.prisma.categoriaCampo.deleteMany({
       where: { id, empresaId },
     });

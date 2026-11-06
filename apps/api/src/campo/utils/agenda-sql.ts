@@ -120,3 +120,33 @@ export function condicionAgenda(
       )
     )`;
 }
+
+// La base no tiene la extensión unaccent: se sacan tildes y ñ con translate.
+const CON_TILDE = 'áéíóúüñàèìòùÁÉÍÓÚÜÑÀÈÌÒÙ';
+const SIN_TILDE = 'aeiouunaeiouAEIOUUNAEIOU';
+const sinTildes = (columna: Prisma.Sql) =>
+  Prisma.sql`lower(translate(${columna}, ${CON_TILDE}, ${SIN_TILDE}))`;
+
+/**
+ * Buscador de la agenda: nombre, alias, CardCode o dirección del local, sin
+ * distinguir mayúsculas ni acentos. Vacío no filtra.
+ */
+export function busquedaAgenda(buscar?: string) {
+  const texto = buscar
+    ?.trim()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase();
+  if (!texto) return Prisma.empty;
+  // \ % _ son comodines de LIKE: se escapan para buscarlos literales.
+  const patron = `%${texto.replace(/[\\%_]/g, '\\$&')}%`;
+  return Prisma.sql` AND (
+    ${sinTildes(Prisma.sql`l."CardName"`)} LIKE ${patron}
+    OR ${sinTildes(Prisma.sql`l."AliasName"`)} LIKE ${patron}
+    OR lower(l."CardCode") LIKE ${patron}
+    OR EXISTS (
+      SELECT 1 FROM tbl_crd1 d WHERE d.empresa_id = l.empresa_id AND d."CardCode" = l."CardCode"
+        AND ${sinTildes(Prisma.sql`concat_ws(' ', d."Address", d."Street")`)} LIKE ${patron}
+    )
+  )`;
+}
