@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  ParseIntPipe,
   Post,
   Query,
   Req,
@@ -55,6 +56,28 @@ export class PedidosController {
     @Param('cardCode', CardCodePipe) cardCode: string,
   ) {
     return this.servicio.perfil(req.usuarioId, cardCode);
+  }
+
+  // Sin paginar: el SP de SAP devuelve como máximo 4 facturas.
+  @Get('clientes/:cardCode/facturas')
+  @ApiOperation({ summary: 'Últimas 4 facturas del cliente en SAP' })
+  facturas(
+    @Req() req: RequestConUsuario,
+    @Param('cardCode', CardCodePipe) cardCode: string,
+  ) {
+    return this.servicio.facturas(req.usuarioId, cardCode);
+  }
+
+  @Get('clientes/:cardCode/facturas/:docEntry')
+  @ApiOperation({
+    summary: 'Líneas de una de las últimas facturas del cliente',
+  })
+  detalleFactura(
+    @Req() req: RequestConUsuario,
+    @Param('cardCode', CardCodePipe) cardCode: string,
+    @Param('docEntry', ParseIntPipe) docEntry: number,
+  ) {
+    return this.servicio.detalleFactura(req.usuarioId, cardCode, docEntry);
   }
 
   @Get('productos')

@@ -34,7 +34,8 @@ import { alcanceDeGestor } from '../campo/utils/equipos-gestion';
 
 // Lo que necesita aSesion(); la jefatura suma sus equipos y el elegido.
 const INCLUDE_SESION = {
-  empresa: true,
+  // Solo id y nombre: la fila trae credenciales SAP que no deben cargarse.
+  empresa: { select: { id: true, nombre: true } },
   equipoGestion: true,
   rol: {
     include: {

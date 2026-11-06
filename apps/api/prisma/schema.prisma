@@ -48,6 +48,10 @@ model Empresa {
   id                  Int                       @id @default(autoincrement())
   nombre              String                    @unique
   dbName              String?                   @map("db_name")
+  // Conexión a SAP por empresa. La contraseña nunca sale por la API ni a logs.
+  sapEsquema          String?                   @map("sap_esquema") @db.VarChar(100)
+  sapUsuario          String?                   @map("sap_usuario") @db.VarChar(100)
+  sapContrasenia      String?                   @map("sap_contrasenia") @db.VarChar(100)
   empresaId           Int?                      @map("empresas_id")
   padre               Empresa?                  @relation("EmpresaJerarquia", fields: [empresaId], references: [id])
   hijas               Empresa[]                 @relation("EmpresaJerarquia")

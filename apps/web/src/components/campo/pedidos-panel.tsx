@@ -17,6 +17,7 @@ import {
 } from "@/components/ui";
 import { ProductosLineaPedido } from "@/components/campo/productos-linea-pedido";
 import { PedidosCargados } from "@/components/campo/pedidos-cargados";
+import { FacturasClientePedido } from "@/components/campo/facturas-cliente-pedido";
 import type {
   ItemPedido,
   LineaPedido,
@@ -290,7 +291,10 @@ export function PedidosPanel() {
             ) : !perfil ? (
               <p className="py-6 text-center text-sm text-muted">Cargando cliente…</p>
             ) : (
-              <PerfilCliente perfil={perfil} />
+              <>
+                <PerfilCliente perfil={perfil} />
+                <FacturasClientePedido cardCode={perfil.id} nombre={perfil.nombre} />
+              </>
             )}
           </div>
         ) : null}

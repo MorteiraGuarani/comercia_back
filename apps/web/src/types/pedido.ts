@@ -59,3 +59,21 @@ export interface PedidoDetalle extends PedidoResumen {
     total: number | null;
   })[];
 }
+
+/** Factura del cliente en SAP (SP_ULTIMAS_4_FACTURAS_CLIENTE). */
+export interface FacturaCliente {
+  docEntry: number;
+  docNum: number;
+  fecha: string;
+  /** Ya formateado por SAP ("GS 191.780"). */
+  montoTotal: string;
+}
+
+/** Línea de una factura del cliente (SP_DETALLE_FACTURA_CLIENTE). */
+export interface LineaFacturaCliente {
+  itemCode: string;
+  nombre: string;
+  cantidad: number;
+  precioUnitario: string;
+  precioTotal: string;
+}

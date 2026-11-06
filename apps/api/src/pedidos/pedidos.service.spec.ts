@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
 import type { PrismaService } from '../prisma/prisma.service';
 import { PedidosService } from './pedidos.service';
@@ -149,6 +150,116 @@ describe('PedidosService.crear', () => {
       'Productos no disponibles: X9',
     );
     expect(prisma.pedido.create).not.toHaveBeenCalled();
+  });
+});
+
+describe('PedidosService facturas de SAP', () => {
+  const factura = {
+    DocEntry: 501,
+    DocNum: 18311,
+    Fecha: '02/10/2026',
+    MontoTotal: 'GS 191.780',
+  };
+  const linea = {
+    'ID Articulo': 'H1',
+    'Nombre Articulo': 'Hamburguesa clásica ',
+    'Precio Unitario': 'GS 3.890',
+    Cantidad: 12,
+    'Precio Total': 'GS 46.680',
+    Almacen: '01',
+  };
+  const sap = (filas: unknown) =>
+    ({
+      ok: true,
+      status: 201,
+      text: () => Promise.resolve(JSON.stringify(filas)),
+    }) as unknown as Response;
+
+  function preparar() {
+    const prisma = {
+      usuario: { findUnique: jest.fn().mockResolvedValue({ empresaId: 2 }) },
+      socioNegocio: {
+        findFirst: jest.fn().mockResolvedValue({ CardCode: 'C0001' }),
+      },
+    };
+    const servicio = new PedidosService(
+      prisma as unknown as PrismaService,
+      { get: () => 'http://sap.test' } as unknown as ConfigService,
+    );
+    return { prisma, servicio };
+  }
+  afterEach(() => jest.restoreAllMocks());
+  const cuerpo = (llamada: Parameters<typeof fetch>) =>
+    JSON.parse(llamada[1]?.body as string) as unknown;
+
+  it('devuelve las facturas del cliente de la empresa con DTO mínimo', async () => {
+    const { prisma, servicio } = preparar();
+    const fetchMock = jest
+      .spyOn(global, 'fetch')
+      .mockResolvedValue(sap([factura]));
+    await expect(servicio.facturas(7, 'C0001')).resolves.toEqual([
+      {
+        docEntry: 501,
+        docNum: 18311,
+        fecha: '02/10/2026',
+        montoTotal: 'GS 191.780',
+      },
+    ]);
+    expect(prisma.socioNegocio.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- matcher de jest
+        where: expect.objectContaining({ empresaId: 2, CardCode: 'C0001' }),
+      }),
+    );
+    expect(cuerpo(fetchMock.mock.calls[0])).toMatchObject({
+      procedureName: 'SP_ULTIMAS_4_FACTURAS_CLIENTE',
+      params: ['C0001'],
+    });
+  });
+
+  it('no consulta SAP para un cliente fuera de la empresa', async () => {
+    const { prisma, servicio } = preparar();
+    prisma.socioNegocio.findFirst.mockResolvedValue(null);
+    const fetchMock = jest.spyOn(global, 'fetch');
+    await expect(servicio.facturas(7, 'OTRO')).rejects.toThrow(
+      'Cliente no disponible',
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('da el detalle solo de una factura del cliente', async () => {
+    const { servicio } = preparar();
+    const fetchMock = jest
+      .spyOn(global, 'fetch')
+      .mockResolvedValueOnce(sap([factura]))
+      .mockResolvedValueOnce(sap([linea]))
+      .mockResolvedValueOnce(sap([factura]));
+    await expect(servicio.detalleFactura(7, 'C0001', 501)).resolves.toEqual([
+      {
+        itemCode: 'H1',
+        nombre: 'Hamburguesa clásica',
+        cantidad: 12,
+        precioUnitario: 'GS 3.890',
+        precioTotal: 'GS 46.680',
+      },
+    ]);
+    expect(cuerpo(fetchMock.mock.calls[1])).toMatchObject({
+      procedureName: 'SP_DETALLE_FACTURA_CLIENTE',
+      params: [501],
+    });
+    await expect(servicio.detalleFactura(7, 'C0001', 999)).rejects.toThrow(
+      'Factura no disponible',
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it('responde 503 si SAP no contesta', async () => {
+    const { servicio } = preparar();
+    jest.spyOn(global, 'fetch').mockRejectedValue(new Error('ECONNREFUSED'));
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+    await expect(servicio.facturas(7, 'C0001')).rejects.toThrow(
+      'No se pudieron consultar las facturas en SAP',
+    );
   });
 });
 

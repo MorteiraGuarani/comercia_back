@@ -4,6 +4,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Prisma } from '../../generated/prisma/client';
@@ -35,7 +36,14 @@ import type {
   CreditoCliente,
   FilaEstadoCredito,
 } from './interfaces/credito-cliente.interface';
+import type {
+  FacturaCliente,
+  FilaDetalleFactura,
+  FilaFacturaCliente,
+  LineaFacturaCliente,
+} from './interfaces/factura-cliente.interface';
 import { aCreditoCliente } from './utils/credito-cliente';
+import { aFacturaCliente, aLineaFactura } from './utils/facturas-cliente';
 import { lineaDeGrupo, whereLinea } from './utils/lineas-pedido';
 
 // Cliente habilitado en SAP: si está inhabilitado no se le carga el pedido.
@@ -101,18 +109,19 @@ export class PedidosService {
   ) {}
 
   /**
-   * Estado de crédito del cliente en SAP: SP_ESTADO_CREDITO_CLIENTES por el
-   * gateway UniversalBack. null si no está configurado o no responde.
+   * Ejecuta un procedimiento de FG_PROD por el gateway UniversalBack. Devuelve
+   * sus filas, o null (ya registrado) si no está configurado o no responde.
    */
-  // shortcut: sin respuesta de SAP el pedido se permite; bloquearlo cuando el pedido vaya a SAP.
-  private async credito(cardCode: string): Promise<CreditoCliente | null> {
+  private async procedimiento<T>(
+    nombre: string,
+    params: (string | number)[],
+    contexto: string,
+  ): Promise<T[] | null> {
     const base = this.config
       .get<string>('integrations.sapApiUrl')
       ?.replace(/\/$/, '');
     if (!base) {
-      this.logger.error(
-        `Estado de crédito de ${cardCode}: falta SAP_API_URL en el entorno`,
-      );
+      this.logger.error(`${contexto}: falta SAP_API_URL en el entorno`);
       return null;
     }
     const url = `${base}/execute/procedure`;
@@ -124,8 +133,8 @@ export class PedidosService {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           schema: 'FG_PROD',
-          procedureName: 'SP_ESTADO_CREDITO_CLIENTES',
-          params: [cardCode],
+          procedureName: nombre,
+          params,
         }),
       });
       const texto = await respuesta.text();
@@ -133,21 +142,17 @@ export class PedidosService {
       try {
         filas = JSON.parse(texto);
       } catch {
-        // Se informa abajo con el cuerpo tal como llegó.
+        // La respuesta puede contener datos del cliente o de sus facturas.
       }
-      if (!respuesta.ok || !Array.isArray(filas) || !filas.length) {
+      if (!respuesta.ok || !Array.isArray(filas)) {
         this.logger.error(
-          `Estado de crédito de ${cardCode}: SAP respondió HTTP ${respuesta.status} en ${
+          `${contexto}: SAP respondió HTTP ${respuesta.status} en ${
             Date.now() - inicio
-          } ms ${
-            Array.isArray(filas) && !filas.length
-              ? '(sin filas: el cliente no está en OCRD de SAP o no es CardType C)'
-              : ''
-          } · POST ${url} · cuerpo: ${texto.slice(0, 1000) || '(vacío)'}`,
+          } ms · respuesta inválida`,
         );
         return null;
       }
-      return aCreditoCliente(filas as FilaEstadoCredito[]);
+      return filas as T[];
     } catch (error) {
       // fetch de Node envuelve el error de red real (ECONNREFUSED, ETIMEDOUT…) en cause.
       const causa =
@@ -155,7 +160,7 @@ export class PedidosService {
           ? ` · causa: ${error.cause.message}`
           : '';
       this.logger.error(
-        `Estado de crédito de ${cardCode}: no se pudo llamar a SAP en ${
+        `${contexto}: no se pudo llamar a SAP en ${
           Date.now() - inicio
         } ms · POST ${url} · ${
           error instanceof Error
@@ -166,6 +171,76 @@ export class PedidosService {
       );
       return null;
     }
+  }
+
+  /**
+   * Estado de crédito del cliente en SAP: SP_ESTADO_CREDITO_CLIENTES.
+   * null si no está configurado o no responde.
+   */
+  // shortcut: sin respuesta de SAP el pedido se permite; bloquearlo cuando el pedido vaya a SAP.
+  private async credito(cardCode: string): Promise<CreditoCliente | null> {
+    const contexto = `Estado de crédito de ${cardCode}`;
+    const filas = await this.procedimiento<FilaEstadoCredito>(
+      'SP_ESTADO_CREDITO_CLIENTES',
+      [cardCode],
+      contexto,
+    );
+    if (filas && !filas.length)
+      this.logger.error(
+        `${contexto}: sin filas (el cliente no está en OCRD de SAP o no es CardType C)`,
+      );
+    return filas?.length ? aCreditoCliente(filas) : null;
+  }
+
+  /** Últimas facturas del cliente en SAP; 503 si SAP no responde. */
+  private async facturasSap(cardCode: string): Promise<FacturaCliente[]> {
+    const filas = await this.procedimiento<FilaFacturaCliente>(
+      'SP_ULTIMAS_4_FACTURAS_CLIENTE',
+      [cardCode],
+      `Últimas facturas de ${cardCode}`,
+    );
+    if (!filas)
+      throw new ServiceUnavailableException(
+        'No se pudieron consultar las facturas en SAP',
+      );
+    return filas.map(aFacturaCliente);
+  }
+
+  /**
+   * Últimas facturas del cliente (la más reciente primero).
+   * Sin paginar: el SP devuelve como máximo 4.
+   */
+  async facturas(
+    usuarioId: number,
+    cardCode: string,
+  ): Promise<FacturaCliente[]> {
+    const empresaId = await this.empresaDe(usuarioId);
+    const c = await this.cliente(empresaId, cardCode);
+    return this.facturasSap(c.CardCode);
+  }
+
+  /** Líneas de una de las últimas facturas del cliente. */
+  async detalleFactura(
+    usuarioId: number,
+    cardCode: string,
+    docEntry: number,
+  ): Promise<LineaFacturaCliente[]> {
+    const empresaId = await this.empresaDe(usuarioId);
+    const c = await this.cliente(empresaId, cardCode);
+    // Solo facturas del cliente: un DocEntry ajeno responde igual que uno inexistente.
+    const propias = await this.facturasSap(c.CardCode);
+    if (!propias.some((f) => f.docEntry === docEntry))
+      throw new NotFoundException('Factura no disponible');
+    const filas = await this.procedimiento<FilaDetalleFactura>(
+      'SP_DETALLE_FACTURA_CLIENTE',
+      [docEntry],
+      `Detalle de la factura ${docEntry}`,
+    );
+    if (!filas)
+      throw new ServiceUnavailableException(
+        'No se pudo consultar el detalle en SAP',
+      );
+    return filas.map(aLineaFactura);
   }
 
   private async empresaDe(usuarioId: number) {
