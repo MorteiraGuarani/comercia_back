@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
   Param,
   ParseIntPipe,
   Post,
@@ -104,5 +105,15 @@ export class PedidosController {
   })
   crear(@Req() req: RequestConUsuario, @Body() dto: CrearPedidoDto) {
     return this.servicio.crear(req.usuarioId, dto);
+  }
+
+  @Post('vista-sap')
+  @HttpCode(200)
+  @ApiOperation({
+    summary:
+      'JSON para el Service Layer (un pedido por almacén); no guarda ni envía nada',
+  })
+  vistaSap(@Req() req: RequestConUsuario, @Body() dto: CrearPedidoDto) {
+    return this.servicio.vistaSap(req.usuarioId, dto);
   }
 }

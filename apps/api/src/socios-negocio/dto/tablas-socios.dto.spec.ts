@@ -13,11 +13,11 @@ describe('Contrato OCRD ampliado', () => {
     expect(await validate(dto)).toHaveLength(0);
   });
 
-  it('OSLP: SalesEmployeeCode obligatorio; Active y Locked hasta 3 caracteres', async () => {
+  it('OSLP: SalesEmployeeCode obligatorio; Active y Locked hasta 4 caracteres', async () => {
     const ok = plainToInstance(SocioNegocioVendedorDto, {
       SalesEmployeeCode: 1,
       Remarks: 'Zona centro',
-      Active: 'Y',
+      Active: 'tYES',
       Locked: null,
       Email: 'vendedor@ejemplo.com.py',
     });
@@ -32,7 +32,7 @@ describe('Contrato OCRD ampliado', () => {
     ).toBe(true);
     const largo = plainToInstance(SocioNegocioVendedorDto, {
       SalesEmployeeCode: 1,
-      Active: 'tYES',
+      Active: 'tYESS',
     });
     expect((await validate(largo)).some((e) => e.property === 'Active')).toBe(
       true,

@@ -45,6 +45,8 @@ import type {
 import { aCreditoCliente } from './utils/credito-cliente';
 import { aFacturaCliente, aLineaFactura } from './utils/facturas-cliente';
 import { lineaDeGrupo, whereLinea } from './utils/lineas-pedido';
+import type { PedidoSap } from './interfaces/pedido-sap.interface';
+import { armarPedidosSap } from './utils/pedido-sap';
 
 // Cliente habilitado en SAP: si está inhabilitado no se le carga el pedido.
 const CLIENTE_ACTIVO = {
@@ -501,6 +503,60 @@ export class PedidosService {
       select: SELECT_PEDIDO,
     });
     return { ...aResumen(pedido), observaciones, lineas };
+  }
+
+  /** JSON para el Service Layer, un pedido por almacén; no guarda ni envía nada. */
+  async vistaSap(usuarioId: number, dto: CrearPedidoDto): Promise<PedidoSap[]> {
+    fechaCampo(dto.fechaEntrega);
+    if (dto.fechaEntrega <= relojCampo().fecha)
+      throw new BadRequestException('La entrega tiene que ser desde mañana');
+    const u = await this.prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      select: {
+        empresaId: true,
+        nombreLogin: true,
+        ERP_Sucursal: true,
+        ERP_CanalVenta: true,
+        ERP_CodigoAlmacen: true,
+        ERP_NombreAlmacen: true,
+      },
+    });
+    if (!u) throw new ForbiddenException('Sin acceso a pedidos');
+    const c = await this.cliente(u.empresaId, dto.cardCode);
+    const [productos, almacenes] = await Promise.all([
+      this.prisma.producto.findMany({
+        where: { itemcode: { in: dto.lineas.map((l) => l.itemCode) } },
+        select: { itemcode: true, almacen: true },
+      }),
+      u.ERP_Sucursal === null || !u.ERP_CanalVenta
+        ? ([] as { WarehouseCode: string }[])
+        : this.prisma.almacen.findMany({
+            where: {
+              empresaId: u.empresaId,
+              Location: u.ERP_Sucursal,
+              GlobalLocationNumber: u.ERP_CanalVenta,
+            },
+            select: { WarehouseCode: true },
+            take: 100,
+          }),
+    ]);
+    const almacenDe = new Map(productos.map((p) => [p.itemcode, p.almacen]));
+    const { fecha, hora } = relojCampo();
+    return armarPedidosSap({
+      cardCode: c.CardCode,
+      hoy: fecha,
+      fechaEntrega: dto.fechaEntrega,
+      hora,
+      usuarioLogin: u.nombreLogin,
+      canal: u.ERP_CanalVenta,
+      almacenUsuario: u.ERP_CodigoAlmacen,
+      nombreAlmacenUsuario: u.ERP_NombreAlmacen,
+      almacenesCanal: almacenes.map((a) => a.WarehouseCode),
+      lineas: dto.lineas.map((l) => ({
+        ...l,
+        almacen: almacenDe.get(l.itemCode) ?? null,
+      })),
+    });
   }
 
   /** Pedidos cargados por el usuario, del más reciente al más viejo. */

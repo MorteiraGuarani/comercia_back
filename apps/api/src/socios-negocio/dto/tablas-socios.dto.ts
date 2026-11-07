@@ -265,11 +265,11 @@ export class SocioNegocioVendedorDto {
   CommissionForSalesEmployee?: number | null;
   @enteroOpcional('Grupo de comisiones.', 0)
   CommissionGroup?: number | null;
-  @textoOpcional(3, 'Bloqueado en SAP, tal como lo envía SAP.', 'N')
+  @textoOpcional(4, 'Bloqueado en SAP, tal como lo envía SAP.', 'N')
   Locked?: string | null;
   @enteroOpcional('Empleado de SAP asociado.', 1)
   EmployeeID?: number | null;
-  @textoOpcional(3, 'Activo en SAP, tal como lo envía SAP.', 'Y')
+  @textoOpcional(4, 'Activo en SAP, tal como lo envía SAP.', 'Y')
   Active?: string | null;
   @textoOpcional(100, 'Teléfono del vendedor.', '021000000')
   Telephone?: string | null;

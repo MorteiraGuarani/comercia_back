@@ -22,11 +22,12 @@ import type {
   ItemPedido,
   LineaPedido,
   PedidoDetalle,
+  PedidoSap,
   PerfilClientePedido,
   ProductoPedido,
 } from "@/types/pedido";
 import { agregarDiasIso, fechaEnZonaIso, formatoDiaLargo } from "@/utils/fechas";
-import { armarPedidoSap, ESTADOS_PEDIDO, guaranies, LINEAS_PEDIDO } from "@/utils/pedidos";
+import { ESTADOS_PEDIDO, guaranies, LINEAS_PEDIDO } from "@/utils/pedidos";
 
 type Paso =
   | { k: "cliente"; t: string }
@@ -57,6 +58,7 @@ export function PedidosPanel() {
   const [entrega, setEntrega] = useState(manana);
   const [observaciones, setObservaciones] = useState("");
   const [guardando, setGuardando] = useState(false);
+  const [viendoSap, setViendoSap] = useState(false);
   const [error, setError] = useState("");
   const [pedido, setPedido] = useState<PedidoDetalle | null>(null);
   const pasosRef = useRef<HTMLElement>(null);
@@ -120,6 +122,31 @@ export function PedidosPanel() {
     });
   }
 
+  const cuerpoPedido = () =>
+    JSON.stringify({
+      cardCode: cliente?.id,
+      fechaEntrega: entrega,
+      observaciones: observaciones.trim() || undefined,
+      lineas: lista.map((i) => ({ itemCode: i.itemCode, cantidad: i.cantidad })),
+    });
+
+  // shortcut: solo muestra el JSON en consola; el envío al Service Layer llega después.
+  async function verSap() {
+    if (!cliente || !lista.length || viendoSap) return;
+    setViendoSap(true);
+    try {
+      const pedidos = await apiFetch<PedidoSap[]>("/pedidos/vista-sap", {
+        method: "POST",
+        body: cuerpoPedido(),
+      });
+      console.log("Pedidos para SAP", pedidos);
+    } catch (e) {
+      mostrarToast("error", e instanceof Error ? e.message : "No se pudo armar el JSON para SAP");
+    } finally {
+      setViendoSap(false);
+    }
+  }
+
   async function guardar() {
     if (!cliente || !lista.length || guardando) return;
     setGuardando(true);
@@ -127,12 +154,7 @@ export function PedidosPanel() {
     try {
       const creado = await apiFetch<PedidoDetalle>("/pedidos", {
         method: "POST",
-        body: JSON.stringify({
-          cardCode: cliente.id,
-          fechaEntrega: entrega,
-          observaciones: observaciones.trim() || undefined,
-          lineas: lista.map((i) => ({ itemCode: i.itemCode, cantidad: i.cantidad })),
-        }),
+        body: cuerpoPedido(),
       });
       setPedido(creado);
       mostrarToast("exito", `Pedido ${creado.numero} guardado`);
@@ -246,6 +268,7 @@ export function PedidosPanel() {
   return (
     <div className="mx-auto flex min-h-[calc(100dvh-8rem)] w-full min-w-0 max-w-md flex-col lg:grid lg:max-w-6xl lg:grid-cols-[minmax(0,1fr)_22rem] lg:content-start lg:items-start lg:gap-x-6 lg:px-6">
       <PantallaCarga visible={guardando} mensaje="Guardando pedido" />
+      <PantallaCarga visible={viendoSap} mensaje="Armando JSON para SAP" />
       {encabezado}
       <section className="flex-1 px-4 py-4 lg:grid lg:grid-cols-[3.5rem_minmax(0,1fr)_3.5rem] lg:gap-3 lg:px-0 lg:py-6">
         <FlechaLateral
@@ -464,21 +487,8 @@ export function PedidosPanel() {
           {ultimo ? (
             <button
               type="button"
-              disabled={!cliente || !lista.length}
-              onClick={() =>
-                // shortcut: solo muestra el JSON en consola; el envío al Service Layer llega después.
-                console.log(
-                  "Pedido para SAP",
-                  armarPedidoSap({
-                    cardCode: cliente?.id ?? "",
-                    hoy,
-                    entrega,
-                    observaciones,
-                    usuarioLogin: usuario.nombreLogin,
-                    items: lista,
-                  }),
-                )
-              }
+              disabled={!cliente || !lista.length || viendoSap}
+              onClick={() => void verSap()}
               title="Muestra en la consola el JSON para SAP"
               className={`${btnGhost} h-14 rounded-2xl px-5 text-base`}
             >

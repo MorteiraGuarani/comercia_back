@@ -237,9 +237,9 @@ model SocioNegocioVendedor {
   Remarks String? @db.VarChar(150)
   CommissionForSalesEmployee Int?
   CommissionGroup Int?
-  Locked String? @db.VarChar(3)
+  Locked String? @db.VarChar(4)
   EmployeeID Int?
-  Active String? @db.VarChar(3)
+  Active String? @db.VarChar(4)
   Telephone String? @db.VarChar(100)
   Mobile String? @db.VarChar(100)
   Fax String? @db.VarChar(100)
