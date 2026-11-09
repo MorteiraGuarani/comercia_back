@@ -24,7 +24,6 @@ import type {
   ItemPedido,
   LineaPedido,
   PedidoDetalle,
-  PedidoSap,
   PerfilClientePedido,
   ProductoPedido,
 } from "@/types/pedido";
@@ -58,8 +57,8 @@ export function PedidosPanel() {
   const [errorPerfil, setErrorPerfil] = useState("");
   const [items, setItems] = useState<Record<string, ItemPedido>>({});
   const [entrega, setEntrega] = useState(manana);
+  const [observaciones, setObservaciones] = useState("");
   const [guardando, setGuardando] = useState(false);
-  const [viendoSap, setViendoSap] = useState(false);
   const [error, setError] = useState("");
   const [pedido, setPedido] = useState<PedidoDetalle | null>(null);
   const [versionLista, setVersionLista] = useState(0);
@@ -117,6 +116,14 @@ export function PedidosPanel() {
 
   function cantidad(linea: LineaPedido, p: ProductoPedido, n: number) {
     const valor = Math.max(0, Math.min(9999, Math.trunc(n) || 0));
+    // Se avisa una sola vez, al elegirlo; cambiar la cantidad no repite el aviso.
+    if (valor && !items[p.itemCode])
+      mostrarToast(
+        p.almacen ? "info" : "alerta",
+        p.almacen
+          ? `${p.nombre}: sale del almacén ${p.almacen}`
+          : `${p.nombre} no tiene almacén: no se va a poder enviar a SAP`,
+      );
     setItems((actuales) => {
       const siguientes = { ...actuales };
       if (valor) siguientes[p.itemCode] = { ...p, linea, cantidad: valor };
@@ -128,25 +135,9 @@ export function PedidosPanel() {
   const datosPedido = () => ({
     cardCode: cliente?.id,
     fechaEntrega: entrega,
+    observaciones: observaciones.trim() || undefined,
     lineas: lista.map((i) => ({ itemCode: i.itemCode, cantidad: i.cantidad })),
   });
-
-  // Ver no guarda ni envía: solo muestra el JSON en consola.
-  async function verSap() {
-    if (!cliente || !lista.length || viendoSap) return;
-    setViendoSap(true);
-    try {
-      const pedidos = await apiFetch<PedidoSap[]>("/pedidos/vista-sap", {
-        method: "POST",
-        body: JSON.stringify(datosPedido()),
-      });
-      console.log("Pedidos para SAP", pedidos);
-    } catch (e) {
-      mostrarToast("error", e instanceof Error ? e.message : "No se pudo armar el JSON para SAP");
-    } finally {
-      setViendoSap(false);
-    }
-  }
 
   // Primero queda guardado en Comercia o, sin señal, en este dispositivo.
   async function guardar(enviarSap: boolean) {
@@ -195,6 +186,7 @@ export function PedidosPanel() {
     setPerfil(null);
     setItems({});
     setEntrega(manana);
+    setObservaciones("");
     ir(0);
   }
 
@@ -290,7 +282,6 @@ export function PedidosPanel() {
   return (
     <div className="mx-auto flex min-h-[calc(100dvh-8rem)] w-full min-w-0 max-w-md flex-col lg:grid lg:max-w-6xl lg:grid-cols-[minmax(0,1fr)_22rem] lg:content-start lg:items-start lg:gap-x-6 lg:px-6">
       <PantallaCarga visible={guardando} mensaje="Guardando pedido" />
-      <PantallaCarga visible={viendoSap} mensaje="Armando JSON para SAP" />
       {encabezado}
       <section className="flex-1 px-4 py-4 lg:grid lg:grid-cols-[3.5rem_minmax(0,1fr)_3.5rem] lg:gap-3 lg:px-0 lg:py-6">
         <FlechaLateral
@@ -418,18 +409,34 @@ export function PedidosPanel() {
                 Los productos sin precio en la lista del cliente no suman al total.
               </p>
             ) : null}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <label className={labelBase}>
-                Entrega
-                <input
-                  type="date"
-                  value={entrega}
-                  min={manana}
-                  onChange={(e) => setEntrega(e.target.value)}
-                  className={inputBase}
-                />
-              </label>
-            </div>
+            <label className={labelBase}>
+              Entrega
+              <input
+                type="date"
+                value={entrega}
+                min={manana}
+                onChange={(e) => setEntrega(e.target.value)}
+                className={inputBase}
+              />
+            </label>
+            <label className={labelBase}>
+              Comentarios
+              <textarea
+                value={observaciones}
+                maxLength={200}
+                onChange={(e) => setObservaciones(e.target.value)}
+                className={`${inputBase} min-h-20 resize-y`}
+              />
+            </label>
+            <button
+              type="button"
+              onClick={() => void guardar(false)}
+              disabled={bloqueado || !lista.length || guardando}
+              title="Guarda el pedido para editarlo y enviarlo después"
+              className={`${btnGhost} w-full`}
+            >
+              Guardar
+            </button>
             {error ? <p className={errorBox}>{error}</p> : null}
           </div>
         ) : null}
@@ -471,7 +478,7 @@ export function PedidosPanel() {
           <b className="text-lg tabular-nums text-foreground">{guaranies(total)}</b>
         </p>
         <div
-          className={`grid gap-2 ${ultimo ? "grid-cols-[auto_1fr_1fr_auto] lg:grid-cols-[1fr_1fr_auto]" : "grid-cols-[auto_1fr] lg:hidden lg:grid-cols-1"}`}
+          className={`grid grid-cols-[auto_1fr] gap-2 lg:grid-cols-1 ${ultimo ? "" : "lg:hidden"}`}
         >
           <button
             type="button"
@@ -485,36 +492,14 @@ export function PedidosPanel() {
           </button>
           <button
             type="button"
-            onClick={() => (ultimo ? void guardar(false) : ir(paso + 1))}
+            onClick={() => (ultimo ? void guardar(true) : ir(paso + 1))}
             disabled={bloqueado || (ultimo ? !lista.length || guardando : !cliente)}
-            title={ultimo ? "Guarda el pedido para editarlo y enviarlo después" : undefined}
-            className={`${ultimo ? btnGhost : btnPrimary} h-14 gap-2 rounded-2xl text-base`}
+            title={ultimo ? "Guarda el pedido y lo envía a SAP" : undefined}
+            className={`${btnPrimary} h-14 gap-2 rounded-2xl text-base`}
           >
-            {ultimo ? "Guardar" : `Siguiente: ${PASOS[paso + 1].t}`}
+            {ultimo ? "Enviar" : `Siguiente: ${PASOS[paso + 1].t}`}
             {ultimo ? null : <Flecha />}
           </button>
-          {ultimo ? (
-            <button
-              type="button"
-              onClick={() => void guardar(true)}
-              disabled={bloqueado || !lista.length || guardando}
-              title="Guarda el pedido y lo envía a SAP"
-              className={`${btnPrimary} h-14 rounded-2xl text-base`}
-            >
-              Enviar
-            </button>
-          ) : null}
-          {ultimo ? (
-            <button
-              type="button"
-              disabled={!cliente || !lista.length || viendoSap}
-              onClick={() => void verSap()}
-              title="Muestra en la consola el JSON para SAP"
-              className={`${btnGhost} h-14 rounded-2xl px-5 text-base`}
-            >
-              Ver
-            </button>
-          ) : null}
         </div>
       </footer>
     </div>
@@ -664,7 +649,9 @@ function EstadoPedido({ pedido }: { pedido: PedidoDetalle }) {
         .filter((d) => d.errorSap)
         .map((d) => (
           <p key={d.id} className={errorBox}>
-            {d.sap.DocumentLines[0]?.WarehouseCode || "Sin almacén"}: {d.errorSap}
+            {[d.sap.DocumentLines[0]?.WarehouseCode, d.errorSap]
+              .filter(Boolean)
+              .join(": ")}
           </p>
         ))}
       <ol className="space-y-2">

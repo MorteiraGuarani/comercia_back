@@ -45,19 +45,8 @@ export interface AlmacenSap {
   GlobalLocationNumber: string | null;
 }
 
-/** Lo que hace falta para armar los pedidos SAP de una carga. */
-export interface DatosPedidoSap {
-  cardCode: string;
-  /** AAAA-MM-DD, en hora de campo. */
-  hoy: string;
-  /** Día de entrega elegido en el pedido (AAAA-MM-DD). */
-  fechaEntrega: string;
-  /** HH:MM, en hora de campo. */
-  hora: string;
-  /** AAAAMMDDHHMMSS, en hora de campo. */
-  sello: string;
-  usuarioLogin: string;
-  celular: string;
+/** Datos SAP del usuario que deciden el almacén de cada producto. */
+export interface DatosAlmacenUsuario {
   /** ERP_CanalVenta del usuario (Code de tbl_jcanales). */
   canal: string | null;
   /** ERP_Sucursal del usuario (Code de tbl_oclp). */
@@ -66,6 +55,23 @@ export interface DatosPedidoSap {
   almacenUsuario: string | null;
   /** Almacenes del usuario y de los productos. */
   almacenes: AlmacenSap[];
+}
+
+/** Lo que hace falta para armar los pedidos SAP de una carga. */
+export interface DatosPedidoSap extends DatosAlmacenUsuario {
+  cardCode: string;
+  /** AAAA-MM-DD, en hora de campo. */
+  hoy: string;
+  /** Día de entrega elegido en el pedido (AAAA-MM-DD). */
+  fechaEntrega: string;
+  /** HH:MM, en hora de campo. */
+  hora: string;
+  /** Comentario del usuario; va debajo de «Migrado por Comercia…». */
+  observaciones: string;
+  /** AAAAMMDDHHMMSS, en hora de campo. */
+  sello: string;
+  usuarioLogin: string;
+  celular: string;
   /** almacen: DfltWH de tbl_oitm. */
   lineas: { itemCode: string; cantidad: number; almacen: string | null }[];
 }

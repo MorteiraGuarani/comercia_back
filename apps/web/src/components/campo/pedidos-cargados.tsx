@@ -17,9 +17,16 @@ import { ESTADOS_PEDIDO, guaranies } from "@/utils/pedidos";
 
 function EstadoChip({ pedido }: { pedido: PedidoResumen }) {
   return (
-    <span className="shrink-0 whitespace-nowrap rounded-full bg-accent-soft px-2 py-0.5 text-xs font-bold text-accent">
-      {ESTADOS_PEDIDO.find((e) => e.id === pedido.estado)?.nombre ?? pedido.estado}
-    </span>
+    <div className="flex shrink-0 flex-col items-end gap-0.5">
+      <span className="whitespace-nowrap rounded-full bg-accent-soft px-2 py-0.5 text-xs font-bold text-accent">
+        {ESTADOS_PEDIDO.find((e) => e.id === pedido.estado)?.nombre ?? pedido.estado}
+      </span>
+      {pedido.docNums.length ? (
+        <span className="text-right font-mono text-xs text-muted">
+          DocNum {pedido.docNums.join(", ")}
+        </span>
+      ) : null}
+    </div>
   );
 }
 
@@ -142,7 +149,7 @@ export function PedidosCargados() {
                     <td className="whitespace-nowrap px-3 py-2 text-right font-semibold tabular-nums">
                       {guaranies(p.total)}
                     </td>
-                    <td className="px-3 py-2 text-right">
+                    <td className="px-3 py-2">
                       <EstadoChip pedido={p} />
                     </td>
                     <td className="px-3 py-2">

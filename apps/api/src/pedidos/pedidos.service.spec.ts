@@ -68,6 +68,7 @@ describe('PedidosService.crear', () => {
         }),
       },
       producto: {
+        count: jest.fn().mockResolvedValue(2),
         findMany: jest.fn().mockResolvedValue([
           {
             itemcode: 'H1',
@@ -100,6 +101,7 @@ describe('PedidosService.crear', () => {
           docNumSap: null,
           createdAt: new Date('2026-11-03T13:00:00.000Z'),
           _count: { lineas: 2 },
+          documentos: [],
         }),
       },
     };
@@ -152,6 +154,19 @@ describe('PedidosService.crear', () => {
       },
     });
     expect(pedido).toMatchObject({ numero: 'PV-12', total: 38900 });
+  });
+
+  it('el buscador dice de qué almacén sale cada producto', async () => {
+    const { prisma, servicio } = preparar();
+    prisma.producto.findMany.mockResolvedValue([
+      { itemcode: 'H1', itemname: 'Hamburguesa', almacen: 'ITG-HAM' },
+      { itemcode: 'PV14', itemname: 'Besito', almacen: null },
+    ]);
+    const { items } = await servicio.productos(7, {
+      cardCode: 'C0001',
+      linea: 'embutidos',
+    });
+    expect(items.map((p) => p.almacen)).toEqual(['ITG-HAM', null]);
   });
 
   it('guarda el documento de SAP con su id en U_beas_version', async () => {
@@ -279,6 +294,11 @@ describe('PedidosService.enviarDocumento', () => {
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
         update: jest.fn<Promise<unknown>, [unknown]>().mockResolvedValue({}),
       },
+      pedidoLinea: {
+        findMany: jest
+          .fn()
+          .mockResolvedValue([{ itemCode: 'H1', nombre: 'Hamburguesa' }]),
+      },
     };
     const prisma = {
       ...tx,
@@ -340,7 +360,7 @@ describe('PedidosService.enviarDocumento', () => {
       lineas: [{ LineNum: 0, ItemCode: 'H1', Quantity: 1, WarehouseCode: '' }],
     });
     await expect(sinAlmacen.servicio.enviarDocumento(7, 41)).rejects.toThrow(
-      'Hay productos sin almacén',
+      'Productos sin almacén: H1 (Hamburguesa)',
     );
     expect(sinAlmacen.crearOrden).not.toHaveBeenCalled();
   });
@@ -398,6 +418,7 @@ describe('PedidosService.editarDocumento', () => {
         findFirst: jest.fn().mockResolvedValue({
           pedidoId: 12,
           enviadoSap,
+          Comments: 'Migrado por Comercia el 03/11/2026 10:00\nViejo',
           lineas: [
             { ItemCode: 'H1', WarehouseCode: 'ITG-HAM' },
             { ItemCode: 'H2', WarehouseCode: 'ITG-HAM' },
@@ -453,7 +474,7 @@ describe('PedidosService.editarDocumento', () => {
     ]);
     expect(tx.campoDocumento.update.mock.calls[0][0]).toMatchObject({
       data: {
-        Comments: 'Cambio',
+        Comments: 'Migrado por Comercia el 03/11/2026 10:00\nCambio',
         lineas: {
           create: [
             {

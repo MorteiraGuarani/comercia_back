@@ -103,7 +103,9 @@ function FormularioDocumento({
 }) {
   const { sap, enviadoSap, docNum } = documento;
   const [entrega, setEntrega] = useState(sap.DocDueDate.slice(0, 10));
-  const [comentarios, setComentarios] = useState(sap.Comments);
+  // La primera línea es «Migrado por Comercia…» y no se edita.
+  const [migrado, ...delUsuario] = sap.Comments.split("\n");
+  const [comentarios, setComentarios] = useState(delUsuario.join("\n"));
   const [lineas, setLineas] = useState(
     sap.DocumentLines.map((l) => ({
       ItemCode: l.ItemCode,
@@ -178,9 +180,10 @@ function FormularioDocumento({
       </label>
       <label className={labelBase}>
         Comentarios
+        <span className="block text-xs font-normal text-muted">{migrado}</span>
         <textarea
           rows={2}
-          maxLength={254}
+          maxLength={200}
           value={comentarios}
           onChange={(e) => setComentarios(e.target.value)}
           className={inputBase}

@@ -21,6 +21,7 @@ const recibidas = new Map();
 const intentos = [];
 const cuerposPedido = new Map();
 let entregaRechazada = null;
+let retener = null;
 async function apiFetch(ruta, opciones) {
   if (ruta === "/auth/me") return { usuario: { id: usuarioActual } };
   const id = opciones.body instanceof FormData
@@ -29,6 +30,7 @@ async function apiFetch(ruta, opciones) {
   if (ruta === "/pedidos") {
     const cuerpo = JSON.parse(opciones.body);
     if (cuerpo.fechaEntrega === entregaRechazada) throw new ApiError(400, "Cliente inhabilitado");
+    if (cuerpo.fechaEntrega === "2026-12-24") await retener;
     cuerposPedido.set(id, cuerpo);
     return { ok: true, documentos: ["documento"] };
   }
@@ -128,4 +130,21 @@ assert.deepEqual(Array.from(await lib.listarPendientes(8), (a) => [a.id, a.estad
 assert.equal(cuerposPedido.get(pedidoVencido.id).fechaEntrega, "2026-11-10");
 assert.equal(cuerposPedido.get(pedidoVencido.id).enviarSap, true, "El envío a SAP viaja con el pedido");
 await lib.descartarPendiente(8, pedidoRechazado.id);
+// Si otra sincronización ya había leído la cola, el pedido nuevo igual sale y devuelve su respuesta.
+navigator.onLine = false;
+const anterior = await lib.enviarAccionTarea(8, "/pedidos", "Pedido C", { fechaEntrega: "2026-12-24" });
+navigator.onLine = true;
+let soltar;
+retener = new Promise((listo) => { soltar = listo; });
+const enMarcha = lib.sincronizarPendientes(8);
+const pausa = () => new Promise((listo) => setTimeout(listo, 5));
+while (!intentos.includes(anterior.id)) await pausa();
+const nuevoPedido = lib.enviarAccionTarea(8, "/pedidos", "Pedido D", { fechaEntrega: "2026-12-25" });
+while ((await lib.listarPendientes(8)).length < 2) await pausa();
+await pausa();
+soltar();
+await enMarcha;
+const respuestaNuevo = await nuevoPedido;
+assert.equal(respuestaNuevo.pendiente, false, "No queda como guardado en el dispositivo");
+assert.ok(respuestaNuevo.resultado, "Devuelve el pedido para mostrar sus estados");
 console.log("OK: persistencia de fotos y borradores, orden, aislamiento de cuentas, reintentos sin falsa confirmacion y rechazos con su motivo.");

@@ -52,7 +52,8 @@ export class CrearPedidoDto {
   })
   fechaEntrega!: string;
 
-  @IsOptional() @IsString() @MaxLength(500) observaciones?: string;
+  /** Va en Comments después de «Migrado por Comercia…»; SAP admite 254 en total. */
+  @IsOptional() @IsString() @MaxLength(200) observaciones?: string;
 
   @IsArray()
   @ArrayMinSize(1, { message: 'Agregá al menos un producto' })
@@ -85,7 +86,8 @@ export class EditarDocumentoDto {
   })
   DocDueDate!: string;
 
-  @IsString() @MaxLength(254) Comments!: string;
+  /** Solo lo que escribe el usuario: «Migrado por Comercia…» lo mantiene la API. */
+  @IsString() @MaxLength(200) Comments!: string;
 
   /** Solo cantidades de sus productos: la que no venga se quita del documento. */
   @IsArray()

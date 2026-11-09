@@ -1,4 +1,5 @@
 import type {
+  DatosAlmacenUsuario,
   DatosPedidoSap,
   PedidoSap,
 } from '../interfaces/pedido-sap.interface';
@@ -11,14 +12,12 @@ export const conIdDocumento = (version: string, id: number) =>
   version.replace(/\d+$/, String(id));
 
 /**
- * Pedidos para el Service Layer, uno por almacén. Canal 1: todo sale del
- * almacén del usuario (un pedido). Otro canal: cada producto sale de su DfltWH
- * si es un almacén de la sucursal y canal del usuario; si no, queda vacío.
+ * Almacén de un producto a partir de su DfltWH. Canal 1: siempre el del usuario.
+ * Otro canal: su DfltWH si es de la sucursal y canal del usuario; si no, vacío.
  */
-export function armarPedidosSap(d: DatosPedidoSap): PedidoSap[] {
-  const [anio, mes, dia] = d.hoy.split('-');
+export function resolverAlmacen(d: DatosAlmacenUsuario) {
   const porCodigo = new Map(d.almacenes.map((a) => [a.WarehouseCode, a]));
-  const almacenDe = (codigo: string | null) => {
+  return (codigo: string | null) => {
     if (d.canal === CANAL_ALMACEN_UNICO) return d.almacenUsuario ?? '';
     const a = codigo ? porCodigo.get(codigo) : undefined;
     return a &&
@@ -29,6 +28,13 @@ export function armarPedidosSap(d: DatosPedidoSap): PedidoSap[] {
       ? a.WarehouseCode
       : '';
   };
+}
+
+/** Pedidos para el Service Layer, uno por almacén. */
+export function armarPedidosSap(d: DatosPedidoSap): PedidoSap[] {
+  const [anio, mes, dia] = d.hoy.split('-');
+  const porCodigo = new Map(d.almacenes.map((a) => [a.WarehouseCode, a]));
+  const almacenDe = resolverAlmacen(d);
   const porAlmacen = new Map<string, DatosPedidoSap['lineas']>();
   for (const l of d.lineas) {
     const codigo = almacenDe(l.almacen);
@@ -41,7 +47,12 @@ export function armarPedidosSap(d: DatosPedidoSap): PedidoSap[] {
     NumAtCard: porCodigo.get(almacen)?.AddressName2 ?? '',
     DocCurrency: 'GS',
     DocRate: 1,
-    Comments: `Migrado por Comercia el ${dia}/${mes}/${anio} ${d.hora}`,
+    Comments: [
+      `Migrado por Comercia el ${dia}/${mes}/${anio} ${d.hora}`,
+      d.observaciones,
+    ]
+      .filter(Boolean)
+      .join('\n'),
     JournalMemo: `Pedidos de cliente - ${d.cardCode}`,
     Series: null,
     U_beas_pers_id: d.usuarioLogin,

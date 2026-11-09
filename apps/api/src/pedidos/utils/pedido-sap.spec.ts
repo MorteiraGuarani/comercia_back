@@ -21,6 +21,7 @@ const base: DatosPedidoSap = {
   hoy: '2026-11-30',
   fechaEntrega: '2026-12-05',
   hora: '10:47',
+  observaciones: '',
   sello: '20261130104755',
   usuarioLogin: 'vendedor',
   celular: '+595991188620',
@@ -89,6 +90,16 @@ describe('armarPedidosSap', () => {
       lineas: [{ itemCode: 'H1', cantidad: 1, almacen: '1' }],
     });
     expect(pedidos[0].DocumentLines[0].WarehouseCode).toBe('');
+  });
+
+  it('el comentario del usuario va en otra línea, después del migrado', () => {
+    const [pedido] = armarPedidosSap({
+      ...base,
+      observaciones: 'Portón lateral',
+    });
+    expect(pedido.Comments).toBe(
+      'Migrado por Comercia el 30/11/2026 10:47\nPortón lateral',
+    );
   });
 
   it('pone el id del documento en el último tramo', () => {

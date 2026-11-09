@@ -18,6 +18,8 @@ export interface PedidoResumen {
   estado: 'CARGADO' | 'MIGRADO' | 'FACTURADO' | 'ENTREGADO';
   total: number;
   docNumSap: number | null;
+  /** DocNum de cada documento que ya llegó a SAP. */
+  docNums: number[];
   creadoEn: string;
   cantidadProductos: number;
   /** Solo guardado: nada de él llegó a SAP. */

@@ -31,6 +31,8 @@ export interface ProductoPedido {
   nombre: string;
   /** Precio de la lista del cliente; null si no tiene. */
   precio: number | null;
+  /** Solo en el buscador: almacén del que saldría; null si no tiene. */
+  almacen?: string | null;
 }
 
 /** Producto cargado en el pedido en curso. */
@@ -47,6 +49,8 @@ export interface PedidoResumen {
   estado: EstadoPedido;
   total: number;
   docNumSap: number | null;
+  /** DocNum de cada documento que ya llegó a SAP. */
+  docNums: number[];
   creadoEn: string;
   cantidadProductos: number;
   /** Solo guardado: nada de él llegó a SAP. */

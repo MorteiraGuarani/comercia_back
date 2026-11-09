@@ -55,10 +55,11 @@ en lote. El listado del ABM incluye las referencias ERP y permite buscarlas;
 ## Pestaña SAP
 
 La pestaña SAP del ABM (alta y edición) muestra dos selectores con búsqueda y
-paginación, del catálogo de la empresa del usuario, y tres textos libres de
-hasta 100 caracteres: código de almacén, nombre de almacén y código de usuario
-SAP (`ERP_CodigoAlmacen`, `ERP_NombreAlmacen`, `ERP_CodUsuarioSap`). Un texto
-en blanco se guarda como `NULL`.
+paginación, del catálogo de la empresa del usuario, y el código de usuario SAP
+(`ERP_CodUsuarioSap`), texto libre de hasta 100 caracteres. Un texto en blanco
+se guarda como `NULL`. `ERP_CodigoAlmacen` y `ERP_NombreAlmacen` no se muestran
+en la pestaña, pero siguen en la base y en la API, y editar un usuario conserva
+su valor.
 
 | Campo | Catálogo | Se guarda | Opciones |
 | --- | --- | --- | --- |

@@ -2,14 +2,7 @@ import type { FormularioErpUsuario, UsuarioAdmin } from "@/types/usuario";
 import { SelectorPaginado } from "@/components/selector-paginado";
 import { inputBase, labelBase } from "@/components/ui";
 
-// Texto libre, hasta 100 caracteres como la columna.
-const TEXTOS_SAP = [
-  ["ERP_CodigoAlmacen", "Código de almacén"],
-  ["ERP_NombreAlmacen", "Nombre de almacén"],
-  ["ERP_CodUsuarioSap", "Código de usuario SAP"],
-] as const;
-
-/** Pestaña SAP: canal de venta (tbl_jcanales), sucursal (tbl_oclp), almacén y usuario SAP. */
+/** Pestaña SAP: canal de venta (tbl_jcanales), sucursal (tbl_oclp) y usuario SAP. */
 export function CamposErpUsuario({
   base,
   empresaId,
@@ -62,18 +55,16 @@ export function CamposErpUsuario({
             limite={50}
           />
         ))}
-        {TEXTOS_SAP.map(([campo, etiqueta]) => (
-          <label key={campo} className={labelBase}>
-            {etiqueta}
-            <input
-              value={valor[campo]}
-              onChange={(e) => onChange(campo, e.target.value)}
-              maxLength={100}
-              autoComplete="off"
-              className={inputBase}
-            />
-          </label>
-        ))}
+        <label className={`${labelBase} sm:col-span-2`}>
+          Código de usuario SAP
+          <input
+            value={valor.ERP_CodUsuarioSap}
+            onChange={(e) => onChange("ERP_CodUsuarioSap", e.target.value)}
+            maxLength={100}
+            autoComplete="off"
+            className={inputBase}
+          />
+        </label>
       </div>
     </fieldset>
   );

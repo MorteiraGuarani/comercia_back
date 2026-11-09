@@ -213,6 +213,8 @@ export async function enviarAccionTarea<T>(
     campos,
   } satisfies AccionTareaPendiente);
   esperandoRespuesta.add(id);
+  // Una sincronización ya en marcha pudo leer la cola antes de esta acción: al terminar se corre otra.
+  await enCurso.get(usuarioId)?.catch(() => undefined);
   await sincronizarPendientes(usuarioId).catch(() => undefined);
   const quedan = await listarPendientes(usuarioId);
   const propia = quedan.find((a) => a.id === id);

@@ -8,4 +8,6 @@ export interface ProductoPedido {
   descripcion: string;
   /** Precio de tbl_itm1 en la lista del cliente; null si no tiene. */
   precio: number | null;
+  /** Almacén del que saldría para este usuario; null si no tiene. */
+  almacen: string | null;
 }

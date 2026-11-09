@@ -56,7 +56,11 @@ import type {
   DocumentoSap,
   PedidoSap,
 } from './interfaces/pedido-sap.interface';
-import { armarPedidosSap, conIdDocumento } from './utils/pedido-sap';
+import {
+  armarPedidosSap,
+  conIdDocumento,
+  resolverAlmacen,
+} from './utils/pedido-sap';
 import { ServiceLayerService } from './service-layer.service';
 
 // Cliente habilitado en SAP: si está inhabilitado no se le carga el pedido.
@@ -86,6 +90,7 @@ const SELECT_PEDIDO = {
   _count: {
     select: { lineas: true, documentos: { where: { enviadoSap: true } } },
   },
+  documentos: { select: { DocNum: true }, orderBy: { id: 'asc' }, take: 200 },
 } satisfies Prisma.PedidoSelect;
 
 const contiene = (texto: string) => ({
@@ -184,6 +189,7 @@ function aResumen(
     estado: p.estado,
     total: Number(p.total),
     docNumSap: p.docNumSap,
+    docNums: p.documentos.flatMap((d) => d.DocNum ?? []),
     creadoEn: p.createdAt.toISOString(),
     cantidadProductos: p._count.lineas,
     eliminable:
@@ -488,7 +494,8 @@ export class PedidosService {
   }
 
   async productos(usuarioId: number, query: BuscarProductosPedidoDto) {
-    const empresaId = await this.empresaDe(usuarioId);
+    const u = await this.usuarioSap(usuarioId);
+    const { empresaId } = u;
     const c = await this.cliente(empresaId, query.cardCode);
     const texto = query.buscar?.trim();
     // shortcut: sin filtro por perfil del vendedor (U_beas_vg); agregarlo cuando exista el perfil.
@@ -513,17 +520,29 @@ export class PedidosService {
       this.prisma.producto.count({ where }),
       this.prisma.producto.findMany({
         where,
-        select: { itemcode: true, itemname: true },
+        select: { itemcode: true, itemname: true, almacen: true },
         orderBy: [{ itemname: 'asc' }, { itemcode: 'asc' }],
         skip,
         take,
       }),
     ]);
-    const precios = await this.precios(
-      empresaId,
-      c.ListNum,
-      filas.map((f) => f.itemcode),
-    );
+    const [precios, almacenes] = await Promise.all([
+      this.precios(
+        empresaId,
+        c.ListNum,
+        filas.map((f) => f.itemcode),
+      ),
+      this.almacenesSap(
+        u,
+        filas.map((f) => f.almacen),
+      ),
+    ]);
+    const almacenDe = resolverAlmacen({
+      canal: u.ERP_CanalVenta,
+      sucursal: u.ERP_Sucursal,
+      almacenUsuario: u.ERP_CodigoAlmacen,
+      almacenes,
+    });
     return respuestaPaginada<ProductoPedido>(
       filas.map((f) => {
         const precio = precios.get(f.itemcode) ?? null;
@@ -537,6 +556,7 @@ export class PedidosService {
               : `Gs. ${Math.round(precio).toLocaleString('es-PY')}`
           }`,
           precio,
+          almacen: almacenDe(f.almacen) || null,
         };
       }),
       total,
@@ -554,20 +574,16 @@ export class PedidosService {
     return u;
   }
 
-  /** Arma los documentos de SAP de una carga, uno por almacén. */
-  private async documentosSap(
+  /** Filas de tbl_owhs del almacén del usuario y de los códigos pedidos. */
+  private almacenesSap(
     u: Prisma.UsuarioGetPayload<{ select: typeof SELECT_USUARIO_SAP }>,
-    cardCode: string,
-    dto: CrearPedidoDto,
-    almacenDe: Map<string, string | null>,
-  ): Promise<PedidoSap[]> {
-    const almacenes = await this.prisma.almacen.findMany({
+    codigos: (string | null)[],
+  ) {
+    return this.prisma.almacen.findMany({
       where: {
         empresaId: u.empresaId,
         WarehouseCode: {
-          in: [u.ERP_CodigoAlmacen, ...almacenDe.values()].filter(
-            (c): c is string => !!c,
-          ),
+          in: [u.ERP_CodigoAlmacen, ...codigos].filter((c): c is string => !!c),
         },
       },
       select: {
@@ -578,12 +594,23 @@ export class PedidosService {
         GlobalLocationNumber: true,
       },
     });
+  }
+
+  /** Arma los documentos de SAP de una carga, uno por almacén. */
+  private async documentosSap(
+    u: Prisma.UsuarioGetPayload<{ select: typeof SELECT_USUARIO_SAP }>,
+    cardCode: string,
+    dto: CrearPedidoDto,
+    almacenDe: Map<string, string | null>,
+  ): Promise<PedidoSap[]> {
+    const almacenes = await this.almacenesSap(u, [...almacenDe.values()]);
     const { fecha, hora, segundo } = relojCampo();
     return armarPedidosSap({
       cardCode,
       hoy: fecha,
       fechaEntrega: dto.fechaEntrega,
       hora,
+      observaciones: dto.observaciones?.trim() ?? '',
       sello: `${fecha.replace(/-/g, '')}${hora.replace(':', '')}${segundo}`,
       usuarioLogin: u.nombreLogin,
       celular: u.celular,
@@ -671,10 +698,20 @@ export class PedidosService {
     const documento = aDocumento(datos);
     if (documento.enviadoSap) return documento;
     // Sin almacén SAP podría tomar uno por defecto y descontar de otro depósito.
-    if (documento.sap.DocumentLines.some((l) => !l.WarehouseCode))
+    const sinAlmacen = documento.sap.DocumentLines.filter(
+      (l) => !l.WarehouseCode,
+    ).map((l) => l.ItemCode);
+    if (sinAlmacen.length) {
+      const productos = await this.prisma.pedidoLinea.findMany({
+        where: { pedidoId, itemCode: { in: sinAlmacen } },
+        select: { itemCode: true, nombre: true },
+      });
       throw new BadRequestException(
-        'Hay productos sin almacén: cargá su almacén por defecto en SAP',
+        `Productos sin almacén: ${productos
+          .map((p) => `${p.itemCode} (${p.nombre})`)
+          .join(', ')}. Revisá su almacén por defecto en SAP`,
       );
+    }
     if (this.enviando.has(id))
       throw new ConflictException('Este documento ya se está enviando');
     this.enviando.add(id);
@@ -875,6 +912,7 @@ export class PedidosService {
       select: {
         pedidoId: true,
         enviadoSap: true,
+        Comments: true,
         lineas: { select: { ItemCode: true, WarehouseCode: true }, take: 200 },
       },
     });
@@ -899,7 +937,10 @@ export class PedidosService {
         where: { id },
         data: {
           DocDueDate: entrega,
-          Comments: dto.Comments.trim(),
+          // La primera línea («Migrado por Comercia…») no la cambia el usuario.
+          Comments: [doc.Comments.split('\n')[0], dto.Comments.trim()]
+            .filter(Boolean)
+            .join('\n'),
           lineas: {
             create: dto.lineas.map((l, i) => ({
               LineNum: i,
@@ -943,25 +984,6 @@ export class PedidosService {
       });
       return aDocumento(actualizado);
     });
-  }
-
-  /** JSON para el Service Layer, un pedido por almacén; no guarda ni envía nada. */
-  async vistaSap(usuarioId: number, dto: CrearPedidoDto): Promise<PedidoSap[]> {
-    fechaCampo(dto.fechaEntrega);
-    if (dto.fechaEntrega <= relojCampo().fecha)
-      throw new BadRequestException('La entrega tiene que ser desde mañana');
-    const u = await this.usuarioSap(usuarioId);
-    const c = await this.cliente(u.empresaId, dto.cardCode);
-    const productos = await this.prisma.producto.findMany({
-      where: { itemcode: { in: dto.lineas.map((l) => l.itemCode) } },
-      select: { itemcode: true, almacen: true },
-    });
-    return this.documentosSap(
-      u,
-      c.CardCode,
-      dto,
-      new Map(productos.map((p) => [p.itemcode, p.almacen])),
-    );
   }
 
   /** Pedidos cargados por el usuario, del más reciente al más viejo. */
