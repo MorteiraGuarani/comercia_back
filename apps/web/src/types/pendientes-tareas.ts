@@ -8,6 +8,8 @@ export interface AccionTareaPendiente {
   error: string | null;
   cuerpo: string | null;
   campos?: Array<{ nombre: string; valor: string | Blob; archivo?: string }>;
+  /** Pedido que además de guardarse pasa a SAP al llegar a Comercia. */
+  enviarSap?: boolean;
 }
 
 export interface ResultadoAccionTarea<T> {

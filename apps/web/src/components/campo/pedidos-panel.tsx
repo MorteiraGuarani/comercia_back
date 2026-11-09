@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch } from "@/lib/api";
+import { enviarAccionTarea } from "@/lib/pendientes-tareas";
 import { usePanel } from "@/components/panel/contexto";
 import { BotonEditar } from "@/components/boton-editar";
 import { IconoMas } from "@/components/icono-mas";
@@ -17,6 +18,7 @@ import {
 } from "@/components/ui";
 import { ProductosLineaPedido } from "@/components/campo/productos-linea-pedido";
 import { PedidosCargados } from "@/components/campo/pedidos-cargados";
+import { PendientesTareas } from "@/components/campo/pendientes-tareas";
 import { FacturasClientePedido } from "@/components/campo/facturas-cliente-pedido";
 import type {
   ItemPedido,
@@ -61,6 +63,8 @@ export function PedidosPanel() {
   const [viendoSap, setViendoSap] = useState(false);
   const [error, setError] = useState("");
   const [pedido, setPedido] = useState<PedidoDetalle | null>(null);
+  const [versionLista, setVersionLista] = useState(0);
+  const refrescarLista = useCallback(() => setVersionLista((v) => v + 1), []);
   const pasosRef = useRef<HTMLElement>(null);
 
   // La pestaña activa queda centrada para no perderla al avanzar.
@@ -122,13 +126,12 @@ export function PedidosPanel() {
     });
   }
 
-  const cuerpoPedido = () =>
-    JSON.stringify({
-      cardCode: cliente?.id,
-      fechaEntrega: entrega,
-      observaciones: observaciones.trim() || undefined,
-      lineas: lista.map((i) => ({ itemCode: i.itemCode, cantidad: i.cantidad })),
-    });
+  const datosPedido = () => ({
+    cardCode: cliente?.id,
+    fechaEntrega: entrega,
+    observaciones: observaciones.trim() || undefined,
+    lineas: lista.map((i) => ({ itemCode: i.itemCode, cantidad: i.cantidad })),
+  });
 
   // shortcut: solo muestra el JSON en consola; el envío al Service Layer llega después.
   async function verSap() {
@@ -137,7 +140,7 @@ export function PedidosPanel() {
     try {
       const pedidos = await apiFetch<PedidoSap[]>("/pedidos/vista-sap", {
         method: "POST",
-        body: cuerpoPedido(),
+        body: JSON.stringify(datosPedido()),
       });
       console.log("Pedidos para SAP", pedidos);
     } catch (e) {
@@ -147,17 +150,32 @@ export function PedidosPanel() {
     }
   }
 
-  async function guardar() {
+  // Primero queda guardado en Comercia o, sin señal, en este dispositivo.
+  async function guardar(enviarSap: boolean) {
     if (!cliente || !lista.length || guardando) return;
     setGuardando(true);
     setError("");
     try {
-      const creado = await apiFetch<PedidoDetalle>("/pedidos", {
-        method: "POST",
-        body: cuerpoPedido(),
-      });
-      setPedido(creado);
-      mostrarToast("exito", `Pedido ${creado.numero} guardado`);
+      const { pendiente, resultado } = await enviarAccionTarea<PedidoDetalle>(
+        usuario.id,
+        "/pedidos",
+        `Pedido de ${cliente.nombre}`,
+        datosPedido(),
+        { enviarSap },
+      );
+      if (pendiente || !resultado) {
+        mostrarToast(
+          "alerta",
+          "El pedido quedó guardado en este dispositivo y se sincroniza al volver la conexión",
+        );
+        nuevo();
+        return;
+      }
+      setPedido(resultado);
+      mostrarToast(
+        "exito",
+        `Pedido ${resultado.numero} guardado${enviarSap ? "; el JSON para SAP está en la consola" : ""}`,
+      );
       window.scrollTo(0, 0);
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo guardar el pedido");
@@ -259,8 +277,9 @@ export function PedidosPanel() {
             <button type="button" onClick={nuevo} className={`${btnPrimary} w-full`}>
               Nuevo pedido
             </button>
+            <PendientesTareas onSincronizar={refrescarLista} />
           </div>
-          <PedidosCargados />
+          <PedidosCargados key={versionLista} />
         </div>
       </div>
     );
@@ -278,6 +297,7 @@ export function PedidosPanel() {
           onClick={() => ir(paso - 1)}
         />
         <div className="min-w-0 space-y-3">
+        <PendientesTareas onSincronizar={refrescarLista} />
         {actual.k === "cliente" ? (
           <div className="space-y-3">
             <div className="relative [&_input]:pr-12">
@@ -319,6 +339,7 @@ export function PedidosPanel() {
                 <FacturasClientePedido cardCode={perfil.id} nombre={perfil.nombre} />
               </>
             )}
+            {!cliente ? <PedidosCargados key={versionLista} /> : null}
           </div>
         ) : null}
 
@@ -463,7 +484,7 @@ export function PedidosPanel() {
           <b className="text-lg tabular-nums text-foreground">{guaranies(total)}</b>
         </p>
         <div
-          className={`grid gap-2 ${ultimo ? "grid-cols-[auto_1fr_auto] lg:grid-cols-[1fr_auto]" : "grid-cols-[auto_1fr] lg:hidden lg:grid-cols-1"}`}
+          className={`grid gap-2 ${ultimo ? "grid-cols-[auto_1fr_1fr_auto] lg:grid-cols-[1fr_1fr_auto]" : "grid-cols-[auto_1fr] lg:hidden lg:grid-cols-1"}`}
         >
           <button
             type="button"
@@ -477,13 +498,25 @@ export function PedidosPanel() {
           </button>
           <button
             type="button"
-            onClick={() => (ultimo ? void guardar() : ir(paso + 1))}
+            onClick={() => (ultimo ? void guardar(false) : ir(paso + 1))}
             disabled={bloqueado || (ultimo ? !lista.length || guardando : !cliente)}
-            className={`${btnPrimary} h-14 gap-2 rounded-2xl text-base`}
+            title={ultimo ? "Guarda el pedido para editarlo y enviarlo después" : undefined}
+            className={`${ultimo ? btnGhost : btnPrimary} h-14 gap-2 rounded-2xl text-base`}
           >
-            {ultimo ? "Guardar pedido" : `Siguiente: ${PASOS[paso + 1].t}`}
+            {ultimo ? "Guardar" : `Siguiente: ${PASOS[paso + 1].t}`}
             {ultimo ? null : <Flecha />}
           </button>
+          {ultimo ? (
+            <button
+              type="button"
+              onClick={() => void guardar(true)}
+              disabled={bloqueado || !lista.length || guardando}
+              title="Guarda el pedido y lo pasa a SAP (por ahora, a la consola)"
+              className={`${btnPrimary} h-14 rounded-2xl text-base`}
+            >
+              Enviar
+            </button>
+          ) : null}
           {ultimo ? (
             <button
               type="button"

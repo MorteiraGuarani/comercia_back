@@ -5,6 +5,7 @@ import {
   HttpCode,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
   Query,
   Req,
@@ -26,6 +27,7 @@ import {
   BuscarClientesPedidoDto,
   BuscarProductosPedidoDto,
   CrearPedidoDto,
+  EditarDocumentoDto,
 } from './dto/pedido.dto';
 import { PedidosService } from './pedidos.service';
 
@@ -99,9 +101,31 @@ export class PedidosController {
     return this.servicio.listar(req.usuarioId, query);
   }
 
+  @Get(':id')
+  @ApiOperation({ summary: 'Pedido propio con sus documentos para SAP' })
+  detalle(
+    @Req() req: RequestConUsuario,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.servicio.detalle(req.usuarioId, id);
+  }
+
+  @Patch('documentos/:id')
+  @ApiOperation({
+    summary: 'Editar un documento propio que todavía no se envió a SAP',
+  })
+  editarDocumento(
+    @Req() req: RequestConUsuario,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: EditarDocumentoDto,
+  ) {
+    return this.servicio.editarDocumento(req.usuarioId, id, dto);
+  }
+
   @Post()
   @ApiOperation({
-    summary: 'Guardar un pedido en Comercia (todavía no se envía a SAP)',
+    summary:
+      'Guardar un pedido y sus documentos para SAP (todavía no se envía a SAP)',
   })
   crear(@Req() req: RequestConUsuario, @Body() dto: CrearPedidoDto) {
     return this.servicio.crear(req.usuarioId, dto);

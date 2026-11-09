@@ -1,4 +1,5 @@
 import type { LineaPedido } from '../utils/lineas-pedido';
+import type { DocumentoSap } from './pedido-sap.interface';
 
 export interface LineaPedidoRespuesta {
   itemCode: string;
@@ -24,4 +25,5 @@ export interface PedidoResumen {
 export interface PedidoDetalle extends PedidoResumen {
   observaciones: string;
   lineas: LineaPedidoRespuesta[];
+  documentos: DocumentoSap[];
 }

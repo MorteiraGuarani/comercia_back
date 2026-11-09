@@ -28,8 +28,32 @@ describe('PedidosService.crear', () => {
   afterEach(() => jest.useRealTimers());
 
   function preparar(sapApiUrl?: string) {
-    const prisma = {
-      usuario: { findUnique: jest.fn().mockResolvedValue({ empresaId: 2 }) },
+    const tx = {
+      usuario: {
+        findUnique: jest.fn().mockResolvedValue({
+          empresaId: 2,
+          nombreLogin: 'vendedor',
+          celular: '+595991188620',
+          ERP_Sucursal: 3,
+          ERP_CanalVenta: '2',
+          ERP_CodigoAlmacen: null,
+        }),
+      },
+      almacen: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            WarehouseCode: 'ITG-HAM',
+            WarehouseName: 'Hamburguesas',
+            AddressName2: 'ITAUGUA',
+            Location: 3,
+            GlobalLocationNumber: '2',
+          },
+        ]),
+      },
+      campoDocumento: {
+        create: jest.fn().mockResolvedValue({ id: 41 }),
+        update: jest.fn<Promise<unknown>, [unknown]>().mockResolvedValue({}),
+      },
       socioNegocio: {
         findFirst: jest.fn().mockResolvedValue({
           CardCode: 'C0001',
@@ -40,8 +64,18 @@ describe('PedidosService.crear', () => {
       },
       producto: {
         findMany: jest.fn().mockResolvedValue([
-          { itemcode: 'H1', itemname: 'Hamburguesa clásica', itmsgrpcode: 144 },
-          { itemcode: 'X9', itemname: 'Papas bastón', itmsgrpcode: 300 },
+          {
+            itemcode: 'H1',
+            itemname: 'Hamburguesa clásica',
+            itmsgrpcode: 144,
+            almacen: 'ITG-HAM',
+          },
+          {
+            itemcode: 'X9',
+            itemname: 'Papas bastón',
+            itmsgrpcode: 300,
+            almacen: 'ITG-HAM',
+          },
         ]),
       },
       productoPrecio: {
@@ -50,6 +84,7 @@ describe('PedidosService.crear', () => {
           .mockResolvedValue([{ itemcode: 'H1', price: '3890.000000' }]),
       },
       pedido: {
+        findFirst: jest.fn().mockResolvedValue(null),
         create: jest.fn<Promise<unknown>, [unknown]>().mockResolvedValue({
           id: 12,
           cardCode: 'C0001',
@@ -62,6 +97,10 @@ describe('PedidosService.crear', () => {
           _count: { lineas: 2 },
         }),
       },
+    };
+    const prisma = {
+      ...tx,
+      $transaction: (f: (cliente: typeof tx) => unknown) => f(tx),
     };
     const servicio = new PedidosService(
       prisma as unknown as PrismaService,
@@ -109,6 +148,53 @@ describe('PedidosService.crear', () => {
     expect(pedido).toMatchObject({ numero: 'PV-12', total: 38900 });
   });
 
+  it('guarda el documento de SAP con su id en U_beas_version', async () => {
+    const { prisma, servicio, dto } = preparar();
+    const { documentos } = await servicio.crear(7, dto);
+    expect(prisma.campoDocumento.create).toHaveBeenCalledTimes(1);
+    expect(prisma.campoDocumento.update.mock.calls[0][0]).toEqual({
+      where: { id: 41 },
+      data: { U_beas_version: 'C|595991188620|20261103100000|41' },
+    });
+    expect(documentos).toEqual([
+      expect.objectContaining({
+        id: 41,
+        enviadoSap: false,
+        sap: expect.objectContaining({
+          NumAtCard: 'ITAUGUA',
+          U_par: 'Hamburguesas',
+          Series: null,
+          U_beas_version: 'C|595991188620|20261103100000|41',
+        }) as unknown,
+      }),
+    ]);
+  });
+
+  it('una sincronización repetida devuelve el pedido ya guardado', async () => {
+    const { prisma, servicio, dto } = preparar();
+    prisma.pedido.findFirst.mockResolvedValue({
+      id: 12,
+      cardCode: 'C0001',
+      clienteNombre: 'Despensa Don Tito',
+      fechaEntrega: new Date('2026-11-04T00:00:00.000Z'),
+      estado: 'CARGADO',
+      total: '38900',
+      docNumSap: null,
+      createdAt: new Date('2026-11-03T13:00:00.000Z'),
+      _count: { lineas: 0 },
+      observaciones: '',
+      lineas: [],
+      documentos: [],
+    });
+    const operacionId = '6f1c1c4e-0d6b-4a3e-9a55-111111111111';
+    const pedido = await servicio.crear(7, { ...dto, operacionId });
+    expect(prisma.pedido.findFirst.mock.calls[0]).toMatchObject([
+      { where: { usuarioId: 7, operacionId } },
+    ]);
+    expect(pedido.numero).toBe('PV-12');
+    expect(prisma.pedido.create).not.toHaveBeenCalled();
+  });
+
   it('no guarda el pedido de un cliente inhabilitado en SAP', async () => {
     const { prisma, servicio, dto } = preparar('http://sap.test');
     const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue({
@@ -150,6 +236,111 @@ describe('PedidosService.crear', () => {
       'Productos no disponibles: X9',
     );
     expect(prisma.pedido.create).not.toHaveBeenCalled();
+  });
+});
+
+describe('PedidosService.editarDocumento', () => {
+  beforeEach(() =>
+    jest.useFakeTimers().setSystemTime(new Date('2026-11-03T10:00:00-03:00')),
+  );
+  afterEach(() => jest.useRealTimers());
+
+  function preparar(enviadoSap = false) {
+    const tx = {
+      campoDocumento: {
+        findFirst: jest.fn().mockResolvedValue({
+          pedidoId: 12,
+          enviadoSap,
+          lineas: [
+            { ItemCode: 'H1', WarehouseCode: 'ITG-HAM' },
+            { ItemCode: 'H2', WarehouseCode: 'ITG-HAM' },
+          ],
+        }),
+        update: jest.fn<Promise<unknown>, [unknown]>().mockResolvedValue({
+          id: 41,
+          enviadoSap: false,
+          DocDate: new Date('2026-11-03T00:00:00.000Z'),
+          DocDueDate: new Date('2026-11-05T00:00:00.000Z'),
+          DocRate: '1',
+          lineas: [],
+        }),
+      },
+      campoDocumentoLinea: { deleteMany: jest.fn().mockResolvedValue({}) },
+      pedidoLinea: {
+        deleteMany: jest
+          .fn<Promise<unknown>, [unknown]>()
+          .mockResolvedValue({}),
+        findMany: jest
+          .fn()
+          .mockResolvedValue([{ id: 5, itemCode: 'H1', precio: '100' }]),
+        update: jest.fn<Promise<unknown>, [unknown]>().mockResolvedValue({}),
+        aggregate: jest.fn().mockResolvedValue({ _sum: { total: 300 } }),
+      },
+      pedido: {
+        update: jest.fn<Promise<unknown>, [unknown]>().mockResolvedValue({}),
+      },
+    };
+    const prisma = {
+      ...tx,
+      $transaction: (f: (cliente: typeof tx) => unknown) => f(tx),
+    };
+    const servicio = new PedidosService(
+      prisma as unknown as PrismaService,
+      { get: () => undefined } as unknown as ConfigService,
+    );
+    return { tx, servicio };
+  }
+
+  const dto = {
+    DocDueDate: '2026-11-05',
+    Comments: ' Cambio ',
+    lineas: [{ ItemCode: 'H1', Quantity: 3 }],
+  };
+
+  it('quita lo que no viene, renumera y mantiene el total del pedido', async () => {
+    const { tx, servicio } = preparar();
+    await servicio.editarDocumento(7, 41, dto);
+    expect(tx.campoDocumento.findFirst.mock.calls[0]).toMatchObject([
+      { where: { id: 41, usuarioId: 7 } },
+    ]);
+    expect(tx.campoDocumento.update.mock.calls[0][0]).toMatchObject({
+      data: {
+        Comments: 'Cambio',
+        lineas: {
+          create: [
+            {
+              LineNum: 0,
+              ItemCode: 'H1',
+              Quantity: 3,
+              WarehouseCode: 'ITG-HAM',
+            },
+          ],
+        },
+      },
+    });
+    expect(tx.pedidoLinea.deleteMany.mock.calls[0][0]).toEqual({
+      where: { pedidoId: 12, itemCode: { in: ['H2'] } },
+    });
+    expect(tx.pedidoLinea.update.mock.calls[0][0]).toEqual({
+      where: { id: 5 },
+      data: { cantidad: 3, total: 300 },
+    });
+    expect(tx.pedido.update.mock.calls[0][0]).toEqual({
+      where: { id: 12 },
+      data: { total: 300 },
+    });
+  });
+
+  it('no edita uno ya enviado ni agrega productos ajenos', async () => {
+    await expect(
+      preparar(true).servicio.editarDocumento(7, 41, dto),
+    ).rejects.toThrow('El documento ya se envió a SAP');
+    await expect(
+      preparar().servicio.editarDocumento(7, 41, {
+        ...dto,
+        lineas: [{ ItemCode: 'Z9', Quantity: 1 }],
+      }),
+    ).rejects.toThrow('Los productos no corresponden a este documento');
   });
 });
 

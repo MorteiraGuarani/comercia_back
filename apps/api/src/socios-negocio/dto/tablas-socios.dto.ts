@@ -297,6 +297,8 @@ export class AlmacenDto {
   Location?: number | null;
   @textoOpcional(100, 'Número de ubicación global (GLN).', '7840000000001')
   GlobalLocationNumber?: string | null;
+  @textoOpcional(150, 'Dirección 2 del almacén (AddressName2).', 'Ruta 2 km 20')
+  AddressName2?: string | null;
 }
 
 export class CatalogoOclpDto {

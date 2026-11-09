@@ -269,6 +269,7 @@ export const TABLAS_SOCIOS = {
       'WarehouseName',
       'Location',
       'GlobalLocationNumber',
+      'AddressName2',
     ],
     clave: ['WarehouseCode'],
     predeterminados: {},
@@ -278,6 +279,7 @@ export const TABLAS_SOCIOS = {
       WarehouseName: 'Depósito central',
       Location: 1,
       GlobalLocationNumber: '7840000000001',
+      AddressName2: 'Ruta 2 km 20',
     },
   },
   tbl_oclp: {

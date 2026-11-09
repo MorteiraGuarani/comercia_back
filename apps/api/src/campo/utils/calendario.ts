@@ -10,12 +10,14 @@ export function relojCampo(ahora = new Date(), zonaHoraria = ZONA_CAMPO) {
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
+    second: '2-digit',
     hourCycle: 'h23',
   }).formatToParts(ahora);
   const p = (tipo: string) => partes.find((x) => x.type === tipo)!.value;
   return {
     fecha: `${p('year')}-${p('month')}-${p('day')}`,
     hora: `${p('hour')}:${p('minute')}`,
+    segundo: p('second'),
   };
 }
 export function fechaCampo(fecha: string): Date {

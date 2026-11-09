@@ -4,7 +4,11 @@ import type {
   AccionTareaPendiente,
   ResultadoAccionTarea,
 } from "@/types/pendientes-tareas";
+import type { PedidoDetalle } from "@/types/pedido";
+import { agregarDiasIso, fechaEnZonaIso } from "@/utils/fechas";
+import { enviarASap } from "@/utils/pedidos";
 
+const RUTA_PEDIDOS = "/pedidos";
 const NOMBRE_DB = "comercia-tareas-pendientes";
 const EVENTO = "comercia-pendientes-tareas";
 let apertura: Promise<IDBDatabase> | null = null;
@@ -90,9 +94,19 @@ export async function reintentarPendientes(usuarioId: number) {
   await sincronizarPendientes(usuarioId);
 }
 
-/** Las acciones de una misma tarea se envían en orden: comparten grupo. */
-function grupoAccion(ruta: string) {
+/** Las acciones de una misma tarea se envían en orden: comparten grupo. Cada pedido va solo. */
+function grupoAccion({ id, ruta }: { id: string; ruta: string }) {
+  if (ruta === RUTA_PEDIDOS) return id;
   return ruta.match(/^\/campo\/jornada\/visitas\/\d+\/tareas\/\d+/)?.[0] ?? ruta;
+}
+
+/** Un pedido que tardó en sincronizarse puede tener la entrega vencida: pasa a mañana, la primera fecha válida. */
+function conEntregaVigente(json: string) {
+  const datos = JSON.parse(json) as { fechaEntrega: string };
+  const hoy = fechaEnZonaIso(new Date());
+  return datos.fechaEntrega > hoy
+    ? json
+    : JSON.stringify({ ...datos, fechaEntrega: agregarDiasIso(hoy, 1) });
 }
 
 export function sincronizarPendientes(usuarioId: number): Promise<void> {
@@ -106,7 +120,7 @@ export function sincronizarPendientes(usuarioId: number): Promise<void> {
       throw new Error("Ingresá con la cuenta propietaria de estos pendientes");
     const bloqueadas = new Set<string>();
     for (const accion of await listarPendientes(usuarioId)) {
-      const grupo = grupoAccion(accion.ruta);
+      const grupo = grupoAccion(accion);
       if (accion.estado === "REVISAR") {
         bloqueadas.add(grupo);
         continue;
@@ -114,6 +128,8 @@ export function sincronizarPendientes(usuarioId: number): Promise<void> {
       if (bloqueadas.has(grupo)) continue;
       try {
         let cuerpo: BodyInit | undefined = accion.cuerpo ?? undefined;
+        if (accion.ruta === RUTA_PEDIDOS && accion.cuerpo)
+          cuerpo = conEntregaVigente(accion.cuerpo);
         if (accion.campos) {
           const form = new FormData();
           for (const c of accion.campos) {
@@ -130,6 +146,8 @@ export function sincronizarPendientes(usuarioId: number): Promise<void> {
         if (esperandoRespuesta.has(accion.id))
           resultados.set(accion.id, resultado);
         await escribir("acciones", null, accion.id);
+        if (accion.enviarSap)
+          enviarASap((resultado as PedidoDetalle).documentos);
       } catch (e) {
         const revisar =
           e instanceof ApiError &&
@@ -157,8 +175,10 @@ export async function enviarAccionTarea<T>(
   ruta: string,
   etiqueta: string,
   cuerpo?: object | FormData,
+  opciones?: { enviarSap?: boolean },
 ): Promise<ResultadoAccionTarea<T>> {
   if (
+    ruta !== RUTA_PEDIDOS &&
     !/^\/campo\/jornada\/visitas\/\d+\/tareas\/\d+(?:\/iniciar|\/comentarios|\/fotos)?$/.test(
       ruta,
     )
@@ -196,6 +216,7 @@ export async function enviarAccionTarea<T>(
     error: null,
     cuerpo: json,
     campos,
+    enviarSap: opciones?.enviarSap,
   } satisfies AccionTareaPendiente);
   esperandoRespuesta.add(id);
   await sincronizarPendientes(usuarioId).catch(() => undefined);
@@ -211,7 +232,7 @@ export async function enviarAccionTarea<T>(
       ? quedan.find(
           (a) =>
             a.estado === "REVISAR" &&
-            grupoAccion(a.ruta) === grupoAccion(ruta),
+            grupoAccion(a) === grupoAccion({ id, ruta }),
         )
       : undefined;
   if (propia && (propia.estado === "REVISAR" || frenadaPor)) {

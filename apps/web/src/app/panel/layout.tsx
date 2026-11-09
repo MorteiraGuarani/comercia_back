@@ -455,11 +455,10 @@ export default function PanelLayout({
           {tieneInventario ? (
             <SincronizadorInventario usuarioId={usuario.id} />
           ) : null}
+          {/* También lleva los pedidos guardados sin señal, que no dependen del equipo de campo. */}
+          <SincronizadorTareas usuarioId={usuario.id} />
           {usuario.rol?.equipoCampo && !usuario.esSuperadmin ? (
-            <>
-              <SincronizadorTareas usuarioId={usuario.id} />
-              <SincronizadorMarcas usuarioId={usuario.id} />
-            </>
+            <SincronizadorMarcas usuarioId={usuario.id} />
           ) : null}
           {tieneAccesoUbicaciones &&
           usuario.rol?.equipoCampo?.activo &&

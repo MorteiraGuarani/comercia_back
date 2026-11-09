@@ -42,6 +42,7 @@ model Empresa {
   catalogoJfdvFilas CatalogoJfdv[]
   configuracionesTolerancia ConfiguracionTolerancia[]
   pedidos Pedido[]
+  documentosCampo CampoDocumento[]
   categoriasCampo CategoriaCampo[]
   // Días antes del vencimiento en que se avisa por inventario de campo.
   diasAvisoVencimiento Int @default(5) @map("dias_aviso_vencimiento")
@@ -257,6 +258,7 @@ model Almacen {
   WarehouseName String? @db.VarChar(300)
   Location Int?
   GlobalLocationNumber String? @db.VarChar(100)
+  AddressName2 String? @db.VarChar(150)
   @@unique([empresaId, WarehouseCode], map: "uq_tbl_owhs_empresa_clave")
   @@map("tbl_owhs")
 }
@@ -609,6 +611,7 @@ model Usuario {
   identidadUcheck         IdentidadUcheck?
   ucheckPendiente         UcheckUsuarioPendiente?
   pedidos                 Pedido[]
+  documentosCampo         CampoDocumento[]
   /// Copia de sus programas de Ucheck (códigos): el ABM los elige y Ucheck confirma.
   programasUcheck         String[]                  @default([]) @map("programas_ucheck")
   permitirVinculoAutomatico Boolean @default(true) @map("permitir_vinculo_automatico")
@@ -1270,9 +1273,12 @@ model Pedido {
   estado         EstadoPedido  @default(CARGADO)
   total          Decimal       @db.Decimal(21, 6)
   docNumSap      Int?          @map("doc_num_sap")
+  // Generado en el dispositivo: reintentar la sincronización no duplica el pedido.
+  operacionId    String?       @unique @map("operacion_id") @db.VarChar(36)
   createdAt      DateTime      @default(now()) @map("created_at")
   updatedAt      DateTime      @updatedAt @map("updated_at")
   lineas         PedidoLinea[]
+  documentos     CampoDocumento[]
 
   @@index([empresaId, usuarioId, createdAt])
   @@map("pedidos")
@@ -1293,6 +1299,51 @@ model PedidoLinea {
 
   @@unique([pedidoId, itemCode])
   @@map("pedido_lineas")
+}
+
+// Orden de venta para el Service Layer, una por almacén de cada pedido. Se
+// guarda para poder editarla y enviarla a SAP después; columnas con el nombre de SAP.
+model CampoDocumento {
+  id             Int                   @id @default(autoincrement())
+  empresaId      Int                   @map("empresa_id")
+  empresa        Empresa               @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  usuarioId      Int                   @map("usuario_id")
+  usuario        Usuario               @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
+  pedidoId       Int                   @map("pedido_id")
+  pedido         Pedido                @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  enviadoSap     Boolean               @default(false) @map("enviado_sap")
+  DocDate        DateTime              @db.Date
+  DocDueDate     DateTime              @db.Date
+  CardCode       String                @db.VarChar(50)
+  NumAtCard      String                @default("") @db.VarChar(150)
+  DocCurrency    String                @db.VarChar(3)
+  DocRate        Decimal               @db.Decimal(21, 6)
+  Comments       String                @default("") @db.VarChar(254)
+  JournalMemo    String                @default("") @db.VarChar(254)
+  Series         Int?
+  U_beas_pers_id String                @db.VarChar(150)
+  U_beas_version String                @default("") @db.VarChar(100)
+  U_par          String                @default("") @db.VarChar(300)
+  createdAt      DateTime              @default(now()) @map("created_at")
+  updatedAt      DateTime              @updatedAt @map("updated_at")
+  lineas         CampoDocumentoLinea[]
+
+  @@index([empresaId, usuarioId, createdAt])
+  @@index([pedidoId])
+  @@map("campo_documento")
+}
+
+model CampoDocumentoLinea {
+  id            Int            @id @default(autoincrement())
+  documentoId   Int            @map("documento_id")
+  documento     CampoDocumento @relation(fields: [documentoId], references: [id], onDelete: Cascade)
+  LineNum       Int
+  ItemCode      String         @db.VarChar(100)
+  Quantity      Int
+  WarehouseCode String         @default("") @db.VarChar(100)
+
+  @@unique([documentoId, LineNum])
+  @@map("campo_documento_linea")
 }
 
 // Categorías (líneas) de productos para Pedidos: cada una agrupa artículos de

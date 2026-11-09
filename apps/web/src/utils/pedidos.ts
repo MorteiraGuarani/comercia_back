@@ -1,4 +1,4 @@
-import type { EstadoPedido, LineaPedido } from "@/types/pedido";
+import type { DocumentoSap, EstadoPedido, LineaPedido } from "@/types/pedido";
 
 /** Pasos de productos del pedido; los mismos ids que valida la API. */
 export const LINEAS_PEDIDO: { id: LineaPedido; nombre: string }[] = [
@@ -17,4 +17,12 @@ export const ESTADOS_PEDIDO: { id: EstadoPedido; nombre: string }[] = [
 
 export function guaranies(valor: number): string {
   return `Gs. ${Math.round(valor).toLocaleString("es-PY")}`;
+}
+
+// shortcut: SAP es solo un console.log; cambiar por el envío al Service Layer cuando esté listo.
+export function enviarASap(documentos: DocumentoSap[]) {
+  console.log(
+    "Pedidos para SAP",
+    documentos.map((d) => d.sap),
+  );
 }

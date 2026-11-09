@@ -3,7 +3,7 @@ export interface PedidoSap {
   DocDate: string;
   DocDueDate: string;
   CardCode: string;
-  /** Pendiente de definir. */
+  /** AddressName2 del almacén (tbl_owhs). */
   NumAtCard: string;
   DocCurrency: string;
   DocRate: number;
@@ -13,9 +13,9 @@ export interface PedidoSap {
   Series: number | null;
   /** Usuario de Comercia. */
   U_beas_pers_id: string;
-  /** Número del pedido en Comercia: 4 números separados por «|» (por ahora aleatorio). */
+  /** «C|celular|AAAAMMDDHHMMSS|id de campo_documento». */
   U_beas_version: string;
-  /** WarehouseName del usuario (ERP_NombreAlmacen). */
+  /** WarehouseName del almacén (tbl_owhs). */
   U_par: string;
   DocumentLines: {
     LineNum: number;
@@ -25,23 +25,43 @@ export interface PedidoSap {
   }[];
 }
 
+/** Fila de campo_documento: el JSON para SAP y si ya se envió. */
+export interface DocumentoSap {
+  id: number;
+  enviadoSap: boolean;
+  sap: PedidoSap;
+}
+
+/** Fila de tbl_owhs que usa el armado de los documentos. */
+export interface AlmacenSap {
+  WarehouseCode: string;
+  WarehouseName: string | null;
+  AddressName2: string | null;
+  Location: number | null;
+  GlobalLocationNumber: string | null;
+}
+
 /** Lo que hace falta para armar los pedidos SAP de una carga. */
 export interface DatosPedidoSap {
   cardCode: string;
   /** AAAA-MM-DD, en hora de campo. */
   hoy: string;
-  /** DÃ­a de entrega elegido en el pedido (AAAA-MM-DD). */
+  /** Día de entrega elegido en el pedido (AAAA-MM-DD). */
   fechaEntrega: string;
   /** HH:MM, en hora de campo. */
   hora: string;
+  /** AAAAMMDDHHMMSS, en hora de campo. */
+  sello: string;
   usuarioLogin: string;
+  celular: string;
   /** ERP_CanalVenta del usuario (Code de tbl_jcanales). */
   canal: string | null;
-  /** ERP_CodigoAlmacen y ERP_NombreAlmacen del usuario. */
+  /** ERP_Sucursal del usuario (Code de tbl_oclp). */
+  sucursal: number | null;
+  /** ERP_CodigoAlmacen del usuario. */
   almacenUsuario: string | null;
-  nombreAlmacenUsuario: string | null;
-  /** tbl_owhs con Location = sucursal y GlobalLocationNumber = canal del usuario. */
-  almacenesCanal: string[];
+  /** Almacenes del usuario y de los productos. */
+  almacenes: AlmacenSap[];
   /** almacen: DfltWH de tbl_oitm. */
   lineas: { itemCode: string; cantidad: number; almacen: string | null }[];
 }

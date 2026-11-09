@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
+import { BotonEditar } from "@/components/boton-editar";
+import { DocumentosPedidoModal } from "@/components/campo/documentos-pedido-modal";
 import { Paginacion } from "@/components/paginacion";
 import { errorBox } from "@/components/ui";
 import type { RespuestaPaginada } from "@/types/paginacion";
@@ -17,6 +19,8 @@ export function PedidosCargados() {
     null,
   );
   const [error, setError] = useState("");
+  const [abierto, setAbierto] = useState<PedidoResumen | null>(null);
+  const [recarga, setRecarga] = useState(0);
 
   useEffect(() => {
     const control = new AbortController();
@@ -30,7 +34,7 @@ export function PedidosCargados() {
           setError(e instanceof Error ? e.message : "No se pudieron traer los pedidos");
       });
     return () => control.abort();
-  }, [page, limit]);
+  }, [page, limit, recarga]);
 
   return (
     <section className="space-y-3">
@@ -65,9 +69,15 @@ export function PedidosCargados() {
                       {guaranies(p.total)}
                     </td>
                     <td className="whitespace-nowrap px-3 py-2 text-right">
-                      <span className="rounded-full bg-accent-soft px-2 py-0.5 text-xs font-bold text-accent">
-                        {ESTADOS_PEDIDO.find((e) => e.id === p.estado)?.nombre ?? p.estado}
-                      </span>
+                      <div className="flex items-center justify-end gap-1">
+                        <span className="rounded-full bg-accent-soft px-2 py-0.5 text-xs font-bold text-accent">
+                          {ESTADOS_PEDIDO.find((e) => e.id === p.estado)?.nombre ?? p.estado}
+                        </span>
+                        <BotonEditar
+                          etiqueta={`Editar y enviar ${p.numero}`}
+                          onClick={() => setAbierto(p)}
+                        />
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -88,6 +98,14 @@ export function PedidosCargados() {
           />
         </>
       )}
+      {abierto ? (
+        <DocumentosPedidoModal
+          key={abierto.id}
+          pedido={abierto}
+          onCerrar={() => setAbierto(null)}
+          onCambio={() => setRecarga((n) => n + 1)}
+        />
+      ) : null}
     </section>
   );
 }

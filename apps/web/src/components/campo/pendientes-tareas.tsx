@@ -67,14 +67,14 @@ export function PendientesTareas({
     >
       <PantallaCarga
         visible={enviando}
-        mensaje="Sincronizando tareas pendientes"
+        mensaje="Sincronizando pendientes"
       />
       <p className="font-semibold">
         {pendientes.length} acciones guardadas en este dispositivo
       </p>
       <p>
-        Siguen pendientes: aún no cuentan como tareas completadas ni fotos
-        recibidas por el supervisor.
+        Siguen pendientes: hasta que lleguen al servidor no cuentan como
+        tareas completadas, fotos recibidas ni pedidos cargados.
       </p>
       {error ? <p role="alert">{error}</p> : null}
       <button

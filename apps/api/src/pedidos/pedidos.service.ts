@@ -14,6 +14,7 @@ import {
   respuestaPaginada,
   type PaginacionDto,
 } from '../common/utils/paginacion';
+import { esErrorDuplicado } from '../common/utils/error-prisma';
 import { activosAnd } from '../common/utils/productos-activos';
 import { fechaCampo, relojCampo } from '../campo/utils/calendario';
 import { direccionesLocales, nombreLocal } from '../campo/utils/local-ocrd';
@@ -21,6 +22,7 @@ import type {
   BuscarClientesPedidoDto,
   BuscarProductosPedidoDto,
   CrearPedidoDto,
+  EditarDocumentoDto,
 } from './dto/pedido.dto';
 import type {
   ClientePedido,
@@ -44,9 +46,16 @@ import type {
 } from './interfaces/factura-cliente.interface';
 import { aCreditoCliente } from './utils/credito-cliente';
 import { aFacturaCliente, aLineaFactura } from './utils/facturas-cliente';
-import { lineaDeGrupo, whereLinea } from './utils/lineas-pedido';
-import type { PedidoSap } from './interfaces/pedido-sap.interface';
-import { armarPedidosSap } from './utils/pedido-sap';
+import {
+  lineaDeGrupo,
+  whereLinea,
+  type LineaPedido,
+} from './utils/lineas-pedido';
+import type {
+  DocumentoSap,
+  PedidoSap,
+} from './interfaces/pedido-sap.interface';
+import { armarPedidosSap, conIdDocumento } from './utils/pedido-sap';
 
 // Cliente habilitado en SAP: si está inhabilitado no se le carga el pedido.
 const CLIENTE_ACTIVO = {
@@ -79,6 +88,84 @@ const contiene = (texto: string) => ({
   contains: texto,
   mode: 'insensitive' as const,
 });
+
+const SELECT_DOCUMENTO = {
+  id: true,
+  enviadoSap: true,
+  DocDate: true,
+  DocDueDate: true,
+  CardCode: true,
+  NumAtCard: true,
+  DocCurrency: true,
+  DocRate: true,
+  Comments: true,
+  JournalMemo: true,
+  Series: true,
+  U_beas_pers_id: true,
+  U_beas_version: true,
+  U_par: true,
+  lineas: {
+    select: {
+      LineNum: true,
+      ItemCode: true,
+      Quantity: true,
+      WarehouseCode: true,
+    },
+    orderBy: { LineNum: 'asc' },
+    take: 200,
+  },
+} satisfies Prisma.CampoDocumentoSelect;
+
+const SELECT_DETALLE = {
+  ...SELECT_PEDIDO,
+  observaciones: true,
+  lineas: {
+    select: {
+      itemCode: true,
+      nombre: true,
+      linea: true,
+      cantidad: true,
+      precio: true,
+      total: true,
+    },
+    orderBy: { id: 'asc' },
+    take: 200,
+  },
+  documentos: {
+    select: SELECT_DOCUMENTO,
+    orderBy: { id: 'asc' },
+    take: 200,
+  },
+} satisfies Prisma.PedidoSelect;
+
+const SELECT_USUARIO_SAP = {
+  empresaId: true,
+  nombreLogin: true,
+  celular: true,
+  ERP_Sucursal: true,
+  ERP_CanalVenta: true,
+  ERP_CodigoAlmacen: true,
+} satisfies Prisma.UsuarioSelect;
+
+const fechaSap = (fecha: Date) =>
+  `${fecha.toISOString().slice(0, 10)}T00:00:00Z`;
+
+function aDocumento(
+  d: Prisma.CampoDocumentoGetPayload<{ select: typeof SELECT_DOCUMENTO }>,
+): DocumentoSap {
+  const { id, enviadoSap, lineas, ...cabecera } = d;
+  return {
+    id,
+    enviadoSap,
+    sap: {
+      ...cabecera,
+      DocDate: fechaSap(d.DocDate),
+      DocDueDate: fechaSap(d.DocDueDate),
+      DocRate: Number(d.DocRate),
+      DocumentLines: lineas,
+    },
+  };
+}
 
 function aResumen(
   p: Prisma.PedidoGetPayload<{ select: typeof SELECT_PEDIDO }>,
@@ -447,8 +534,97 @@ export class PedidosService {
     );
   }
 
+  private async usuarioSap(usuarioId: number) {
+    const u = await this.prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      select: SELECT_USUARIO_SAP,
+    });
+    if (!u) throw new ForbiddenException('Sin acceso a pedidos');
+    return u;
+  }
+
+  /** Arma los documentos de SAP de una carga, uno por almacén. */
+  private async documentosSap(
+    u: Prisma.UsuarioGetPayload<{ select: typeof SELECT_USUARIO_SAP }>,
+    cardCode: string,
+    dto: CrearPedidoDto,
+    almacenDe: Map<string, string | null>,
+  ): Promise<PedidoSap[]> {
+    const almacenes = await this.prisma.almacen.findMany({
+      where: {
+        empresaId: u.empresaId,
+        WarehouseCode: {
+          in: [u.ERP_CodigoAlmacen, ...almacenDe.values()].filter(
+            (c): c is string => !!c,
+          ),
+        },
+      },
+      select: {
+        WarehouseCode: true,
+        WarehouseName: true,
+        AddressName2: true,
+        Location: true,
+        GlobalLocationNumber: true,
+      },
+    });
+    const { fecha, hora, segundo } = relojCampo();
+    return armarPedidosSap({
+      cardCode,
+      hoy: fecha,
+      fechaEntrega: dto.fechaEntrega,
+      hora,
+      sello: `${fecha.replace(/-/g, '')}${hora.replace(':', '')}${segundo}`,
+      usuarioLogin: u.nombreLogin,
+      celular: u.celular,
+      canal: u.ERP_CanalVenta,
+      sucursal: u.ERP_Sucursal,
+      almacenUsuario: u.ERP_CodigoAlmacen,
+      almacenes,
+      lineas: dto.lineas.map((l) => ({
+        itemCode: l.itemCode,
+        cantidad: l.cantidad,
+        almacen: almacenDe.get(l.itemCode) ?? null,
+      })),
+    });
+  }
+
+  private async detalleDonde(
+    where: Prisma.PedidoWhereInput,
+  ): Promise<PedidoDetalle | null> {
+    const p = await this.prisma.pedido.findFirst({
+      where,
+      select: SELECT_DETALLE,
+    });
+    return (
+      p && {
+        ...aResumen(p),
+        observaciones: p.observaciones,
+        lineas: p.lineas.map((l) => ({
+          ...l,
+          linea: l.linea as LineaPedido,
+          precio: l.precio === null ? null : Number(l.precio),
+          total: l.total === null ? null : Number(l.total),
+        })),
+        documentos: p.documentos.map(aDocumento),
+      }
+    );
+  }
+
+  async detalle(usuarioId: number, id: number): Promise<PedidoDetalle> {
+    const pedido = await this.detalleDonde({ id, usuarioId });
+    if (!pedido) throw new NotFoundException('Pedido no encontrado');
+    return pedido;
+  }
+
   async crear(usuarioId: number, dto: CrearPedidoDto): Promise<PedidoDetalle> {
-    const empresaId = await this.empresaDe(usuarioId);
+    const { operacionId } = dto;
+    // Reintento de una sincronización: ese pedido ya quedó guardado.
+    if (operacionId) {
+      const repetido = await this.detalleDonde({ usuarioId, operacionId });
+      if (repetido) return repetido;
+    }
+    const u = await this.usuarioSap(usuarioId);
+    const { empresaId } = u;
     const c = await this.cliente(empresaId, dto.cardCode);
     const entrega = fechaCampo(dto.fechaEntrega);
     if (dto.fechaEntrega <= relojCampo().fecha)
@@ -463,7 +639,12 @@ export class PedidosService {
       throw new BadRequestException('Hay productos repetidos en el pedido');
     const productos = await this.prisma.producto.findMany({
       where: { itemcode: { in: codigos }, AND: activosAnd },
-      select: { itemcode: true, itemname: true, itmsgrpcode: true },
+      select: {
+        itemcode: true,
+        itemname: true,
+        itmsgrpcode: true,
+        almacen: true,
+      },
     });
     const porCodigo = new Map(productos.map((p) => [p.itemcode, p]));
     const faltan = codigos.filter((codigo) => !porCodigo.has(codigo));
@@ -487,22 +668,151 @@ export class PedidosService {
     });
     const total = lineas.reduce((suma, l) => suma + (l.total ?? 0), 0);
     const observaciones = dto.observaciones?.trim() ?? '';
-    const pedido = await this.prisma.pedido.create({
-      data: {
-        empresaId,
-        usuarioId,
-        cardCode: c.CardCode,
-        clienteNombre: nombreLocal(c),
-        listaPrecios: c.ListNum,
-        condicionPago: c.GroupNum,
-        fechaEntrega: entrega,
-        observaciones,
-        total,
-        lineas: { create: lineas },
+    const sap = await this.documentosSap(
+      u,
+      c.CardCode,
+      dto,
+      new Map(productos.map((p) => [p.itemcode, p.almacen])),
+    );
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const pedido = await tx.pedido.create({
+          data: {
+            empresaId,
+            usuarioId,
+            cardCode: c.CardCode,
+            clienteNombre: nombreLocal(c),
+            listaPrecios: c.ListNum,
+            condicionPago: c.GroupNum,
+            fechaEntrega: entrega,
+            observaciones,
+            total,
+            operacionId,
+            lineas: { create: lineas },
+          },
+          select: SELECT_PEDIDO,
+        });
+        const documentos: DocumentoSap[] = [];
+        for (const s of sap) {
+          const { DocumentLines, ...cabecera } = s;
+          const { id } = await tx.campoDocumento.create({
+            data: {
+              ...cabecera,
+              DocDate: new Date(s.DocDate),
+              DocDueDate: new Date(s.DocDueDate),
+              empresaId,
+              usuarioId,
+              pedidoId: pedido.id,
+              lineas: { create: DocumentLines },
+            },
+            select: { id: true },
+          });
+          const U_beas_version = conIdDocumento(s.U_beas_version, id);
+          await tx.campoDocumento.update({
+            where: { id },
+            data: { U_beas_version },
+          });
+          documentos.push({
+            id,
+            enviadoSap: false,
+            sap: { ...s, U_beas_version },
+          });
+        }
+        return { ...aResumen(pedido), observaciones, lineas, documentos };
+      });
+    } catch (e) {
+      // Dos reintentos a la vez: el otro lo guardó primero.
+      const repetido =
+        operacionId && esErrorDuplicado(e)
+          ? await this.detalleDonde({ usuarioId, operacionId })
+          : null;
+      if (repetido) return repetido;
+      throw e;
+    }
+  }
+
+  /** Cambia entrega, comentario y cantidades, y mantiene el total del pedido. */
+  async editarDocumento(
+    usuarioId: number,
+    id: number,
+    dto: EditarDocumentoDto,
+  ): Promise<DocumentoSap> {
+    const entrega = fechaCampo(dto.DocDueDate);
+    if (dto.DocDueDate <= relojCampo().fecha)
+      throw new BadRequestException('La entrega tiene que ser desde mañana');
+    const doc = await this.prisma.campoDocumento.findFirst({
+      where: { id, usuarioId },
+      select: {
+        pedidoId: true,
+        enviadoSap: true,
+        lineas: { select: { ItemCode: true, WarehouseCode: true }, take: 200 },
       },
-      select: SELECT_PEDIDO,
     });
-    return { ...aResumen(pedido), observaciones, lineas };
+    if (!doc) throw new NotFoundException('Documento no encontrado');
+    if (doc.enviadoSap)
+      throw new BadRequestException('El documento ya se envió a SAP');
+    const almacenDe = new Map(
+      doc.lineas.map((l) => [l.ItemCode, l.WarehouseCode]),
+    );
+    const cantidades = new Map(dto.lineas.map((l) => [l.ItemCode, l.Quantity]));
+    if (
+      cantidades.size !== dto.lineas.length ||
+      [...cantidades.keys()].some((codigo) => !almacenDe.has(codigo))
+    )
+      throw new BadRequestException(
+        'Los productos no corresponden a este documento',
+      );
+    const { pedidoId } = doc;
+    return this.prisma.$transaction(async (tx) => {
+      await tx.campoDocumentoLinea.deleteMany({ where: { documentoId: id } });
+      const actualizado = await tx.campoDocumento.update({
+        where: { id },
+        data: {
+          DocDueDate: entrega,
+          Comments: dto.Comments.trim(),
+          lineas: {
+            create: dto.lineas.map((l, i) => ({
+              LineNum: i,
+              ItemCode: l.ItemCode,
+              Quantity: l.Quantity,
+              WarehouseCode: almacenDe.get(l.ItemCode)!,
+            })),
+          },
+        },
+        select: SELECT_DOCUMENTO,
+      });
+      await tx.pedidoLinea.deleteMany({
+        where: {
+          pedidoId,
+          itemCode: {
+            in: [...almacenDe.keys()].filter((c) => !cantidades.has(c)),
+          },
+        },
+      });
+      const lineasPedido = await tx.pedidoLinea.findMany({
+        where: { pedidoId, itemCode: { in: [...cantidades.keys()] } },
+        select: { id: true, itemCode: true, precio: true },
+      });
+      for (const l of lineasPedido) {
+        const cantidad = cantidades.get(l.itemCode)!;
+        await tx.pedidoLinea.update({
+          where: { id: l.id },
+          data: {
+            cantidad,
+            total: l.precio === null ? null : Number(l.precio) * cantidad,
+          },
+        });
+      }
+      const { _sum } = await tx.pedidoLinea.aggregate({
+        where: { pedidoId },
+        _sum: { total: true },
+      });
+      await tx.pedido.update({
+        where: { id: pedidoId },
+        data: { total: _sum.total ?? 0 },
+      });
+      return aDocumento(actualizado);
+    });
   }
 
   /** JSON para el Service Layer, un pedido por almacén; no guarda ni envía nada. */
@@ -510,53 +820,18 @@ export class PedidosService {
     fechaCampo(dto.fechaEntrega);
     if (dto.fechaEntrega <= relojCampo().fecha)
       throw new BadRequestException('La entrega tiene que ser desde mañana');
-    const u = await this.prisma.usuario.findUnique({
-      where: { id: usuarioId },
-      select: {
-        empresaId: true,
-        nombreLogin: true,
-        ERP_Sucursal: true,
-        ERP_CanalVenta: true,
-        ERP_CodigoAlmacen: true,
-        ERP_NombreAlmacen: true,
-      },
-    });
-    if (!u) throw new ForbiddenException('Sin acceso a pedidos');
+    const u = await this.usuarioSap(usuarioId);
     const c = await this.cliente(u.empresaId, dto.cardCode);
-    const [productos, almacenes] = await Promise.all([
-      this.prisma.producto.findMany({
-        where: { itemcode: { in: dto.lineas.map((l) => l.itemCode) } },
-        select: { itemcode: true, almacen: true },
-      }),
-      u.ERP_Sucursal === null || !u.ERP_CanalVenta
-        ? ([] as { WarehouseCode: string }[])
-        : this.prisma.almacen.findMany({
-            where: {
-              empresaId: u.empresaId,
-              Location: u.ERP_Sucursal,
-              GlobalLocationNumber: u.ERP_CanalVenta,
-            },
-            select: { WarehouseCode: true },
-            take: 100,
-          }),
-    ]);
-    const almacenDe = new Map(productos.map((p) => [p.itemcode, p.almacen]));
-    const { fecha, hora } = relojCampo();
-    return armarPedidosSap({
-      cardCode: c.CardCode,
-      hoy: fecha,
-      fechaEntrega: dto.fechaEntrega,
-      hora,
-      usuarioLogin: u.nombreLogin,
-      canal: u.ERP_CanalVenta,
-      almacenUsuario: u.ERP_CodigoAlmacen,
-      nombreAlmacenUsuario: u.ERP_NombreAlmacen,
-      almacenesCanal: almacenes.map((a) => a.WarehouseCode),
-      lineas: dto.lineas.map((l) => ({
-        ...l,
-        almacen: almacenDe.get(l.itemCode) ?? null,
-      })),
+    const productos = await this.prisma.producto.findMany({
+      where: { itemcode: { in: dto.lineas.map((l) => l.itemCode) } },
+      select: { itemcode: true, almacen: true },
     });
+    return this.documentosSap(
+      u,
+      c.CardCode,
+      dto,
+      new Map(productos.map((p) => [p.itemcode, p.almacen])),
+    );
   }
 
   /** Pedidos cargados por el usuario, del más reciente al más viejo. */

@@ -58,6 +58,7 @@ export interface PedidoDetalle extends PedidoResumen {
     cantidad: number;
     total: number | null;
   })[];
+  documentos: DocumentoSap[];
 }
 
 /** Factura del cliente en SAP (SP_ULTIMAS_4_FACTURAS_CLIENTE). */
@@ -83,7 +84,7 @@ export interface PedidoSap {
   DocDate: string;
   DocDueDate: string;
   CardCode: string;
-  /** Pendiente de definir. */
+  /** AddressName2 del almacén. */
   NumAtCard: string;
   DocCurrency: string;
   DocRate: number;
@@ -93,9 +94,9 @@ export interface PedidoSap {
   Series: number | null;
   /** Usuario de Comercia. */
   U_beas_pers_id: string;
-  /** Número del pedido en Comercia: 4 números separados por «|». */
+  /** «C|celular|AAAAMMDDHHMMSS|id de campo_documento». */
   U_beas_version: string;
-  /** WarehouseName del usuario. */
+  /** WarehouseName del almacén. */
   U_par: string;
   DocumentLines: {
     LineNum: number;
@@ -103,4 +104,11 @@ export interface PedidoSap {
     Quantity: number;
     WarehouseCode: string;
   }[];
+}
+
+/** Documento guardado en campo_documento: el JSON para SAP y si ya se envió. */
+export interface DocumentoSap {
+  id: number;
+  enviadoSap: boolean;
+  sap: PedidoSap;
 }
