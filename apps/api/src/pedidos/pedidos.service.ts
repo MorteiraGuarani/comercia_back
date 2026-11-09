@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   Logger,
@@ -56,6 +57,7 @@ import type {
   PedidoSap,
 } from './interfaces/pedido-sap.interface';
 import { armarPedidosSap, conIdDocumento } from './utils/pedido-sap';
+import { ServiceLayerService } from './service-layer.service';
 
 // Cliente habilitado en SAP: si está inhabilitado no se le carga el pedido.
 const CLIENTE_ACTIVO = {
@@ -81,7 +83,9 @@ const SELECT_PEDIDO = {
   total: true,
   docNumSap: true,
   createdAt: true,
-  _count: { select: { lineas: true } },
+  _count: {
+    select: { lineas: true, documentos: { where: { enviadoSap: true } } },
+  },
 } satisfies Prisma.PedidoSelect;
 
 const contiene = (texto: string) => ({
@@ -92,6 +96,7 @@ const contiene = (texto: string) => ({
 const SELECT_DOCUMENTO = {
   id: true,
   enviadoSap: true,
+  DocNum: true,
   DocDate: true,
   DocDueDate: true,
   CardCode: true,
@@ -153,10 +158,11 @@ const fechaSap = (fecha: Date) =>
 function aDocumento(
   d: Prisma.CampoDocumentoGetPayload<{ select: typeof SELECT_DOCUMENTO }>,
 ): DocumentoSap {
-  const { id, enviadoSap, lineas, ...cabecera } = d;
+  const { id, enviadoSap, DocNum, lineas, ...cabecera } = d;
   return {
     id,
     enviadoSap,
+    docNum: DocNum,
     sap: {
       ...cabecera,
       DocDate: fechaSap(d.DocDate),
@@ -180,21 +186,26 @@ function aResumen(
     docNumSap: p.docNumSap,
     creadoEn: p.createdAt.toISOString(),
     cantidadProductos: p._count.lineas,
+    eliminable:
+      p.estado === 'CARGADO' && p.docNumSap === null && !p._count.documentos,
   };
 }
 
 /**
  * Carga de pedidos de preventa: cliente de tbl_ocrd, productos de OITM por
- * línea con el precio de su lista (tbl_itm1) y el pedido guardado en Comercia.
- * Todavía no consulta crédito ni envía nada a SAP.
+ * línea con el precio de su lista (tbl_itm1), el pedido guardado en Comercia
+ * y sus documentos enviados a SAP por almacén.
  */
 @Injectable()
 export class PedidosService {
   private readonly logger = new Logger(PedidosService.name);
+  // shortcut: traba en memoria contra el doble toque, sirve con una sola instancia de la API; pasar a la base si se escala.
+  private readonly enviando = new Set<number>();
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
+    private readonly serviceLayer: ServiceLayerService,
   ) {}
 
   /**
@@ -616,7 +627,106 @@ export class PedidosService {
     return pedido;
   }
 
+  /** Primero guarda; después, si se pidió, va a SAP. */
   async crear(usuarioId: number, dto: CrearPedidoDto): Promise<PedidoDetalle> {
+    const pedido = await this.guardarPedido(usuarioId, dto);
+    return dto.enviarSap ? this.enviarPedido(usuarioId, pedido) : pedido;
+  }
+
+  /** Si SAP rechaza un documento, el pedido sigue guardado y vuelve el motivo. */
+  private async enviarPedido(
+    usuarioId: number,
+    pedido: PedidoDetalle,
+  ): Promise<PedidoDetalle> {
+    const errores = new Map<number, string>();
+    for (const d of pedido.documentos.filter((x) => !x.enviadoSap)) {
+      try {
+        await this.enviarDocumento(usuarioId, d.id);
+      } catch (e) {
+        errores.set(
+          d.id,
+          e instanceof Error ? e.message : 'No se pudo enviar a SAP',
+        );
+      }
+    }
+    const actual =
+      (await this.detalleDonde({ id: pedido.id, usuarioId })) ?? pedido;
+    return {
+      ...actual,
+      documentos: actual.documentos.map((d) => ({
+        ...d,
+        errorSap: errores.get(d.id),
+      })),
+    };
+  }
+
+  /** Crea la orden en SAP con los datos de la empresa del usuario. */
+  async enviarDocumento(usuarioId: number, id: number): Promise<DocumentoSap> {
+    const fila = await this.prisma.campoDocumento.findFirst({
+      where: { id, usuarioId },
+      select: { ...SELECT_DOCUMENTO, empresaId: true, pedidoId: true },
+    });
+    if (!fila) throw new NotFoundException('Documento no encontrado');
+    const { empresaId, pedidoId, ...datos } = fila;
+    const documento = aDocumento(datos);
+    if (documento.enviadoSap) return documento;
+    // Sin almacén SAP podría tomar uno por defecto y descontar de otro depósito.
+    if (documento.sap.DocumentLines.some((l) => !l.WarehouseCode))
+      throw new BadRequestException(
+        'Hay productos sin almacén: cargá su almacén por defecto en SAP',
+      );
+    if (this.enviando.has(id))
+      throw new ConflictException('Este documento ya se está enviando');
+    this.enviando.add(id);
+    try {
+      const empresa = await this.prisma.empresa.findUnique({
+        where: { id: empresaId },
+        select: { sapEsquema: true, sapUsuario: true, sapContrasenia: true },
+      });
+      if (
+        !empresa?.sapEsquema ||
+        !empresa.sapUsuario ||
+        !empresa.sapContrasenia
+      )
+        throw new BadRequestException(
+          'La empresa no tiene cargados el esquema, usuario y contraseña de SAP',
+        );
+      const { DocNum = null } = await this.serviceLayer.crearOrden(
+        {
+          esquema: empresa.sapEsquema,
+          usuario: empresa.sapUsuario,
+          contrasenia: empresa.sapContrasenia,
+        },
+        documento.sap,
+      );
+      await this.prisma.$transaction(async (tx) => {
+        await tx.campoDocumento.update({
+          where: { id },
+          data: { enviadoSap: true, DocNum },
+        });
+        await tx.pedido.updateMany({
+          where: { id: pedidoId, docNumSap: null },
+          data: { docNumSap: DocNum },
+        });
+        const faltan = await tx.campoDocumento.count({
+          where: { pedidoId, enviadoSap: false },
+        });
+        if (!faltan)
+          await tx.pedido.update({
+            where: { id: pedidoId },
+            data: { estado: 'MIGRADO' },
+          });
+      });
+      return { ...documento, enviadoSap: true, docNum: DocNum };
+    } finally {
+      this.enviando.delete(id);
+    }
+  }
+
+  private async guardarPedido(
+    usuarioId: number,
+    dto: CrearPedidoDto,
+  ): Promise<PedidoDetalle> {
     const { operacionId } = dto;
     // Reintento de una sincronización: ese pedido ya quedó guardado.
     if (operacionId) {
@@ -715,6 +825,7 @@ export class PedidosService {
           documentos.push({
             id,
             enviadoSap: false,
+            docNum: null,
             sap: { ...s, U_beas_version },
           });
         }
@@ -729,6 +840,25 @@ export class PedidosService {
       if (repetido) return repetido;
       throw e;
     }
+  }
+
+  /** Solo si está guardado: con algo enviado a SAP no se borra. Lleva sus documentos. */
+  async eliminar(usuarioId: number, id: number): Promise<void> {
+    const { count } = await this.prisma.pedido.deleteMany({
+      where: {
+        id,
+        usuarioId,
+        estado: 'CARGADO',
+        docNumSap: null,
+        documentos: { none: { enviadoSap: true } },
+      },
+    });
+    if (count) return;
+    if (await this.prisma.pedido.count({ where: { id, usuarioId } }))
+      throw new BadRequestException(
+        'Un pedido enviado a SAP no se puede eliminar',
+      );
+    throw new NotFoundException('Pedido no encontrado');
   }
 
   /** Cambia entrega, comentario y cantidades, y mantiene el total del pedido. */

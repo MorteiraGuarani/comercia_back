@@ -2,12 +2,17 @@ import { Logger } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
 import type { PrismaService } from '../prisma/prisma.service';
 import { PedidosService } from './pedidos.service';
+import type { ServiceLayerService } from './service-layer.service';
 import { aCreditoCliente } from './utils/credito-cliente';
 import { lineaDeGrupo, whereLinea } from './utils/lineas-pedido';
 
 jest.mock('../prisma/prisma.service', () => ({
   PrismaService: class PrismaService {},
 }));
+
+const sinServiceLayer = {
+  crearOrden: jest.fn(),
+} as unknown as ServiceLayerService;
 
 describe('lineas de pedido', () => {
   it('ubica cada grupo de OITM en su línea y el resto fuera de las demás', () => {
@@ -105,6 +110,7 @@ describe('PedidosService.crear', () => {
     const servicio = new PedidosService(
       prisma as unknown as PrismaService,
       { get: () => sapApiUrl } as unknown as ConfigService,
+      sinServiceLayer,
     );
     const dto = {
       cardCode: 'C0001',
@@ -239,6 +245,147 @@ describe('PedidosService.crear', () => {
   });
 });
 
+describe('PedidosService.enviarDocumento', () => {
+  function preparar(cambios: object = {}) {
+    const fila = {
+      id: 41,
+      enviadoSap: false,
+      DocNum: null,
+      empresaId: 2,
+      pedidoId: 12,
+      DocDate: new Date('2026-11-03T00:00:00.000Z'),
+      DocDueDate: new Date('2026-11-05T00:00:00.000Z'),
+      DocRate: '1',
+      CardCode: 'C1',
+      lineas: [
+        { LineNum: 0, ItemCode: 'H1', Quantity: 1, WarehouseCode: 'ITG-HAM' },
+      ],
+      ...cambios,
+    };
+    const tx = {
+      campoDocumento: {
+        findFirst: jest.fn().mockResolvedValue(fila),
+        update: jest.fn<Promise<unknown>, [unknown]>().mockResolvedValue({}),
+        count: jest.fn().mockResolvedValue(0),
+      },
+      empresa: {
+        findUnique: jest.fn().mockResolvedValue({
+          sapEsquema: 'FG_DESARROLLO',
+          sapUsuario: 'comercia',
+          sapContrasenia: 'clave',
+        }),
+      },
+      pedido: {
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        update: jest.fn<Promise<unknown>, [unknown]>().mockResolvedValue({}),
+      },
+    };
+    const prisma = {
+      ...tx,
+      $transaction: (f: (cliente: typeof tx) => unknown) => f(tx),
+    };
+    const crearOrden = jest
+      .fn<Promise<unknown>, [unknown, Record<string, unknown>]>()
+      .mockResolvedValue({ DocEntry: 9, DocNum: 700 });
+    const servicio = new PedidosService(
+      prisma as unknown as PrismaService,
+      { get: () => undefined } as unknown as ConfigService,
+      { crearOrden } as unknown as ServiceLayerService,
+    );
+    return { tx, crearOrden, servicio };
+  }
+
+  it('usa los datos de la empresa y lo marca enviado con su número', async () => {
+    const { tx, crearOrden, servicio } = preparar();
+    await expect(servicio.enviarDocumento(7, 41)).resolves.toMatchObject({
+      enviadoSap: true,
+      docNum: 700,
+    });
+    expect(tx.campoDocumento.findFirst.mock.calls[0]).toMatchObject([
+      { where: { id: 41, usuarioId: 7 } },
+    ]);
+    expect(crearOrden.mock.calls[0][0]).toEqual({
+      esquema: 'FG_DESARROLLO',
+      usuario: 'comercia',
+      contrasenia: 'clave',
+    });
+    expect(crearOrden.mock.calls[0][1]).not.toHaveProperty('DocNum');
+    expect(crearOrden.mock.calls[0][1]).not.toHaveProperty('pedidoId');
+    expect(tx.campoDocumento.update.mock.calls[0][0]).toEqual({
+      where: { id: 41 },
+      data: { enviadoSap: true, DocNum: 700 },
+    });
+    expect(tx.pedido.update.mock.calls[0][0]).toEqual({
+      where: { id: 12 },
+      data: { estado: 'MIGRADO' },
+    });
+  });
+
+  it('si SAP falla sigue sin enviar', async () => {
+    const { tx, crearOrden, servicio } = preparar();
+    crearOrden.mockRejectedValue(new Error('SAP: Invalid item'));
+    await expect(servicio.enviarDocumento(7, 41)).rejects.toThrow(
+      'SAP: Invalid item',
+    );
+    expect(tx.campoDocumento.update).not.toHaveBeenCalled();
+  });
+
+  it('no reenvía uno enviado ni manda líneas sin almacén', async () => {
+    const enviado = preparar({ enviadoSap: true, DocNum: 700 });
+    await expect(
+      enviado.servicio.enviarDocumento(7, 41),
+    ).resolves.toMatchObject({ docNum: 700 });
+    expect(enviado.crearOrden).not.toHaveBeenCalled();
+    const sinAlmacen = preparar({
+      lineas: [{ LineNum: 0, ItemCode: 'H1', Quantity: 1, WarehouseCode: '' }],
+    });
+    await expect(sinAlmacen.servicio.enviarDocumento(7, 41)).rejects.toThrow(
+      'Hay productos sin almacén',
+    );
+    expect(sinAlmacen.crearOrden).not.toHaveBeenCalled();
+  });
+});
+
+describe('PedidosService.eliminar', () => {
+  function preparar(borrados: number, existentes: number) {
+    const pedido = {
+      deleteMany: jest
+        .fn<Promise<unknown>, [unknown]>()
+        .mockResolvedValue({ count: borrados }),
+      count: jest.fn().mockResolvedValue(existentes),
+    };
+    const servicio = new PedidosService(
+      { pedido } as unknown as PrismaService,
+      { get: () => undefined } as unknown as ConfigService,
+      sinServiceLayer,
+    );
+    return { pedido, servicio };
+  }
+
+  it('borra solo si es propio y no llegó a SAP', async () => {
+    const { pedido, servicio } = preparar(1, 1);
+    await servicio.eliminar(7, 12);
+    expect(pedido.deleteMany.mock.calls[0][0]).toEqual({
+      where: {
+        id: 12,
+        usuarioId: 7,
+        estado: 'CARGADO',
+        docNumSap: null,
+        documentos: { none: { enviadoSap: true } },
+      },
+    });
+  });
+
+  it('rechaza el enviado y no revela el ajeno', async () => {
+    await expect(preparar(0, 1).servicio.eliminar(7, 12)).rejects.toThrow(
+      'Un pedido enviado a SAP no se puede eliminar',
+    );
+    await expect(preparar(0, 0).servicio.eliminar(7, 12)).rejects.toThrow(
+      'Pedido no encontrado',
+    );
+  });
+});
+
 describe('PedidosService.editarDocumento', () => {
   beforeEach(() =>
     jest.useFakeTimers().setSystemTime(new Date('2026-11-03T10:00:00-03:00')),
@@ -287,6 +434,7 @@ describe('PedidosService.editarDocumento', () => {
     const servicio = new PedidosService(
       prisma as unknown as PrismaService,
       { get: () => undefined } as unknown as ConfigService,
+      sinServiceLayer,
     );
     return { tx, servicio };
   }
@@ -376,6 +524,7 @@ describe('PedidosService facturas de SAP', () => {
     const servicio = new PedidosService(
       prisma as unknown as PrismaService,
       { get: () => 'http://sap.test' } as unknown as ConfigService,
+      sinServiceLayer,
     );
     return { prisma, servicio };
   }

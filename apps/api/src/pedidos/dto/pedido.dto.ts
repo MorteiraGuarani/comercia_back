@@ -3,6 +3,7 @@ import {
   ArrayMaxSize,
   ArrayMinSize,
   IsArray,
+  IsBoolean,
   IsIn,
   IsInt,
   IsOptional,
@@ -62,6 +63,9 @@ export class CrearPedidoDto {
 
   /** Generado en el dispositivo: reintentar la sincronización no duplica el pedido. */
   @IsOptional() @IsUUID() operacionId?: string;
+
+  /** Además de guardarlo, lo envía a SAP. */
+  @IsOptional() @IsBoolean() enviarSap?: boolean;
 }
 
 export class LineaDocumentoDto {

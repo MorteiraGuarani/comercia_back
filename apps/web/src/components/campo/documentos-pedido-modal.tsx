@@ -18,7 +18,6 @@ import type {
   PedidoResumen,
 } from "@/types/pedido";
 import { agregarDiasIso, fechaEnZonaIso } from "@/utils/fechas";
-import { enviarASap } from "@/utils/pedidos";
 
 /** Documentos de SAP de un pedido, uno por almacén: se editan y se envían cuando se quiera. */
 export function DocumentosPedidoModal({
@@ -72,7 +71,15 @@ export function DocumentosPedidoModal({
               key={d.id}
               documento={d}
               nombres={nombres}
-              onListo={() => {
+              onListo={(actualizado) => {
+                setDetalle((actual) =>
+                  actual && {
+                    ...actual,
+                    documentos: actual.documentos.map((x) =>
+                      x.id === actualizado.id ? actualizado : x,
+                    ),
+                  },
+                );
                 onCambio();
                 // Con varios almacenes queda abierto para seguir con los demás.
                 if (detalle.documentos.length === 1) onCerrar();
@@ -92,9 +99,9 @@ function FormularioDocumento({
 }: {
   documento: DocumentoSap;
   nombres: Map<string, string>;
-  onListo: () => void;
+  onListo: (actualizado: DocumentoSap) => void;
 }) {
-  const { sap, enviadoSap } = documento;
+  const { sap, enviadoSap, docNum } = documento;
   const [entrega, setEntrega] = useState(sap.DocDueDate.slice(0, 10));
   const [comentarios, setComentarios] = useState(sap.Comments);
   const [lineas, setLineas] = useState(
@@ -103,16 +110,16 @@ function FormularioDocumento({
       Quantity: l.Quantity,
     })),
   );
-  const [procesando, setProcesando] = useState(false);
+  const [procesando, setProcesando] = useState("");
   const [error, setError] = useState("");
   const etiquetaAlmacen = sap.DocumentLines[0]?.WarehouseCode || "Sin almacén";
 
   // Enviar guarda primero: a SAP va siempre lo que quedó en Comercia.
   async function guardar(enviar: boolean) {
-    setProcesando(true);
+    setProcesando(enviar ? "Enviando a SAP" : "Guardando documento");
     setError("");
     try {
-      const actualizado = await apiFetch<DocumentoSap>(
+      let actualizado = await apiFetch<DocumentoSap>(
         `/pedidos/documentos/${documento.id}`,
         {
           method: "PATCH",
@@ -123,27 +130,31 @@ function FormularioDocumento({
           }),
         },
       );
-      if (enviar) enviarASap([actualizado]);
+      if (enviar)
+        actualizado = await apiFetch<DocumentoSap>(
+          `/pedidos/documentos/${documento.id}/enviar`,
+          { method: "POST" },
+        );
       mostrarToast(
         "exito",
         enviar
-          ? "Documento guardado; el JSON para SAP está en la consola"
+          ? `Enviado a SAP${actualizado.docNum ? `: documento ${actualizado.docNum}` : ""}`
           : "Documento guardado",
       );
-      onListo();
+      onListo(actualizado);
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo guardar el documento");
     } finally {
-      setProcesando(false);
+      setProcesando("");
     }
   }
 
   return (
     <fieldset
-      disabled={enviadoSap || procesando}
+      disabled={enviadoSap || !!procesando}
       className="min-w-0 space-y-3 rounded-2xl border border-line p-3"
     >
-      <PantallaCarga visible={procesando} mensaje="Guardando documento" />
+      <PantallaCarga visible={!!procesando} mensaje={procesando} />
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="font-semibold text-foreground">{etiquetaAlmacen}</p>
@@ -152,7 +163,7 @@ function FormularioDocumento({
           </p>
         </div>
         <span className="shrink-0 rounded-full bg-accent-soft px-2 py-0.5 text-xs font-bold text-accent">
-          {enviadoSap ? "Enviado a SAP" : "Sin enviar"}
+          {enviadoSap ? `Enviado a SAP${docNum ? ` · ${docNum}` : ""}` : "Sin enviar"}
         </span>
       </div>
       <label className={labelBase}>
@@ -181,30 +192,33 @@ function FormularioDocumento({
           return (
             <li key={l.ItemCode} className="flex items-center gap-2 px-3 py-2">
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-foreground">
+                <p className="line-clamp-2 text-sm font-medium text-foreground">
                   {nombre}
                 </p>
                 <p className="font-mono text-xs text-muted">{l.ItemCode}</p>
               </div>
-              <input
-                type="number"
-                min={1}
-                max={9999}
-                value={l.Quantity}
-                aria-label={`Cantidad de ${nombre}`}
-                onChange={(e) => {
-                  const Quantity = Math.max(
-                    1,
-                    Math.min(9999, Math.trunc(Number(e.target.value)) || 1),
-                  );
-                  setLineas((actuales) =>
-                    actuales.map((x) =>
-                      x.ItemCode === l.ItemCode ? { ...x, Quantity } : x,
-                    ),
-                  );
-                }}
-                className={`${inputBase} w-20 shrink-0 text-right`}
-              />
+              {/* inputBase trae w-full: el ancho lo fija este contenedor. */}
+              <div className="w-20 shrink-0">
+                <input
+                  type="number"
+                  min={1}
+                  max={9999}
+                  value={l.Quantity}
+                  aria-label={`Cantidad de ${nombre}`}
+                  onChange={(e) => {
+                    const Quantity = Math.max(
+                      1,
+                      Math.min(9999, Math.trunc(Number(e.target.value)) || 1),
+                    );
+                    setLineas((actuales) =>
+                      actuales.map((x) =>
+                        x.ItemCode === l.ItemCode ? { ...x, Quantity } : x,
+                      ),
+                    );
+                  }}
+                  className={`${inputBase} text-right`}
+                />
+              </div>
               <button
                 type="button"
                 disabled={lineas.length === 1}
@@ -236,7 +250,7 @@ function FormularioDocumento({
           <button
             type="button"
             onClick={() => void guardar(true)}
-            title="Guarda el documento y lo pasa a SAP (por ahora, a la consola)"
+            title="Guarda el documento y lo envía a SAP"
             className={btnPrimary}
           >
             Enviar

@@ -20,7 +20,6 @@ let perderRespuesta = false;
 const recibidas = new Map();
 const intentos = [];
 const cuerposPedido = new Map();
-const enviadosSap = [];
 let entregaRechazada = null;
 async function apiFetch(ruta, opciones) {
   if (ruta === "/auth/me") return { usuario: { id: usuarioActual } };
@@ -46,7 +45,6 @@ function cargarModulo() {
       apiFetch, ApiError,
       fechaEnZonaIso: () => "2026-11-09",
       agregarDiasIso: () => "2026-11-10",
-      enviarASap: (documentos) => enviadosSap.push(documentos),
     }), indexedDB, navigator,
     window: new EventTarget(), Event, Blob, File, FormData, crypto, Error,
     // Acciones sucesivas con el mismo reloj conservan el orden de insercion.
@@ -121,15 +119,13 @@ assert.equal((await lib.listarPendientes(8)).length, 0);
 // Un pedido sin señal no frena a otro, llega con entrega vigente y recién ahí pasa a SAP.
 navigator.onLine = false;
 const pedidoRechazado = await lib.enviarAccionTarea(8, "/pedidos", "Pedido A", { fechaEntrega: "2026-12-01" });
-const pedidoVencido = await lib.enviarAccionTarea(8, "/pedidos", "Pedido B", { fechaEntrega: "2026-11-08" }, { enviarSap: true });
+const pedidoVencido = await lib.enviarAccionTarea(8, "/pedidos", "Pedido B", { fechaEntrega: "2026-11-08", enviarSap: true });
 assert.equal(pedidoVencido.pendiente, true);
-assert.equal(enviadosSap.length, 0, "Sin llegar a Comercia no pasa a SAP");
 navigator.onLine = true;
 entregaRechazada = "2026-12-01";
 await lib.sincronizarPendientes(8);
 assert.deepEqual(Array.from(await lib.listarPendientes(8), (a) => [a.id, a.estado]), [[pedidoRechazado.id, "REVISAR"]]);
 assert.equal(cuerposPedido.get(pedidoVencido.id).fechaEntrega, "2026-11-10");
-assert.equal(enviadosSap.length, 1);
-assert.deepEqual([...enviadosSap[0]], ["documento"]);
+assert.equal(cuerposPedido.get(pedidoVencido.id).enviarSap, true, "El envío a SAP viaja con el pedido");
 await lib.descartarPendiente(8, pedidoRechazado.id);
 console.log("OK: persistencia de fotos y borradores, orden, aislamiento de cuentas, reintentos sin falsa confirmacion y rechazos con su motivo.");

@@ -49,6 +49,8 @@ export interface PedidoResumen {
   docNumSap: number | null;
   creadoEn: string;
   cantidadProductos: number;
+  /** Solo guardado: nada de él llegó a SAP. */
+  eliminable: boolean;
 }
 
 export interface PedidoDetalle extends PedidoResumen {
@@ -110,5 +112,9 @@ export interface PedidoSap {
 export interface DocumentoSap {
   id: number;
   enviadoSap: boolean;
+  /** Número que le asignó SAP. */
+  docNum: number | null;
+  /** Motivo por el que no llegó a SAP al enviarlo junto con el pedido. */
+  errorSap?: string;
   sap: PedidoSap;
 }

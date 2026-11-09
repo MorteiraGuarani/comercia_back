@@ -1312,6 +1312,7 @@ model CampoDocumento {
   pedidoId       Int                   @map("pedido_id")
   pedido         Pedido                @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
   enviadoSap     Boolean               @default(false) @map("enviado_sap")
+  DocNum         Int?
   DocDate        DateTime              @db.Date
   DocDueDate     DateTime              @db.Date
   CardCode       String                @db.VarChar(50)

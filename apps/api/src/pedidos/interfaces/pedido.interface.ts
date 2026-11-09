@@ -20,6 +20,8 @@ export interface PedidoResumen {
   docNumSap: number | null;
   creadoEn: string;
   cantidadProductos: number;
+  /** Solo guardado: nada de él llegó a SAP. */
+  eliminable: boolean;
 }
 
 export interface PedidoDetalle extends PedidoResumen {

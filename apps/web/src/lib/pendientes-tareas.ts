@@ -4,9 +4,7 @@ import type {
   AccionTareaPendiente,
   ResultadoAccionTarea,
 } from "@/types/pendientes-tareas";
-import type { PedidoDetalle } from "@/types/pedido";
 import { agregarDiasIso, fechaEnZonaIso } from "@/utils/fechas";
-import { enviarASap } from "@/utils/pedidos";
 
 const RUTA_PEDIDOS = "/pedidos";
 const NOMBRE_DB = "comercia-tareas-pendientes";
@@ -146,8 +144,6 @@ export function sincronizarPendientes(usuarioId: number): Promise<void> {
         if (esperandoRespuesta.has(accion.id))
           resultados.set(accion.id, resultado);
         await escribir("acciones", null, accion.id);
-        if (accion.enviarSap)
-          enviarASap((resultado as PedidoDetalle).documentos);
       } catch (e) {
         const revisar =
           e instanceof ApiError &&
@@ -175,7 +171,6 @@ export async function enviarAccionTarea<T>(
   ruta: string,
   etiqueta: string,
   cuerpo?: object | FormData,
-  opciones?: { enviarSap?: boolean },
 ): Promise<ResultadoAccionTarea<T>> {
   if (
     ruta !== RUTA_PEDIDOS &&
@@ -216,7 +211,6 @@ export async function enviarAccionTarea<T>(
     error: null,
     cuerpo: json,
     campos,
-    enviarSap: opciones?.enviarSap,
   } satisfies AccionTareaPendiente);
   esperandoRespuesta.add(id);
   await sincronizarPendientes(usuarioId).catch(() => undefined);

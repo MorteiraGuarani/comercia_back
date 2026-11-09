@@ -29,6 +29,10 @@ export interface PedidoSap {
 export interface DocumentoSap {
   id: number;
   enviadoSap: boolean;
+  /** Número que le asignó SAP. */
+  docNum: number | null;
+  /** Motivo por el que no llegó a SAP al enviarlo junto con el pedido. */
+  errorSap?: string;
   sap: PedidoSap;
 }
 

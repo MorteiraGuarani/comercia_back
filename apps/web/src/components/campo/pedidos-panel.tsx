@@ -45,7 +45,7 @@ const PASOS: Paso[] = [
 const chip =
   "inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap rounded-full border px-3 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50";
 
-/** Asistente de carga de pedidos de preventa (por ahora no se envía a SAP). */
+/** Asistente de carga de pedidos de preventa. */
 export function PedidosPanel() {
   const { usuario } = usePanel();
   const hoy = fechaEnZonaIso(new Date());
@@ -58,7 +58,6 @@ export function PedidosPanel() {
   const [errorPerfil, setErrorPerfil] = useState("");
   const [items, setItems] = useState<Record<string, ItemPedido>>({});
   const [entrega, setEntrega] = useState(manana);
-  const [observaciones, setObservaciones] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [viendoSap, setViendoSap] = useState(false);
   const [error, setError] = useState("");
@@ -129,11 +128,10 @@ export function PedidosPanel() {
   const datosPedido = () => ({
     cardCode: cliente?.id,
     fechaEntrega: entrega,
-    observaciones: observaciones.trim() || undefined,
     lineas: lista.map((i) => ({ itemCode: i.itemCode, cantidad: i.cantidad })),
   });
 
-  // shortcut: solo muestra el JSON en consola; el envío al Service Layer llega después.
+  // Ver no guarda ni envía: solo muestra el JSON en consola.
   async function verSap() {
     if (!cliente || !lista.length || viendoSap) return;
     setViendoSap(true);
@@ -160,22 +158,28 @@ export function PedidosPanel() {
         usuario.id,
         "/pedidos",
         `Pedido de ${cliente.nombre}`,
-        datosPedido(),
-        { enviarSap },
+        { ...datosPedido(), enviarSap },
       );
       if (pendiente || !resultado) {
         mostrarToast(
           "alerta",
-          "El pedido quedó guardado en este dispositivo y se sincroniza al volver la conexión",
+          `El pedido quedó guardado en este dispositivo y ${enviarSap ? "se envía a SAP" : "se sincroniza"} al volver la conexión`,
         );
         nuevo();
         return;
       }
       setPedido(resultado);
-      mostrarToast(
-        "exito",
-        `Pedido ${resultado.numero} guardado${enviarSap ? "; el JSON para SAP está en la consola" : ""}`,
-      );
+      const rechazados = resultado.documentos.filter((d) => d.errorSap).length;
+      if (rechazados)
+        mostrarToast(
+          "alerta",
+          `Pedido ${resultado.numero} guardado, pero ${rechazados} de ${resultado.documentos.length} documentos no llegaron a SAP`,
+        );
+      else
+        mostrarToast(
+          "exito",
+          `Pedido ${resultado.numero} ${enviarSap ? "enviado a SAP" : "guardado"}`,
+        );
       window.scrollTo(0, 0);
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo guardar el pedido");
@@ -190,7 +194,6 @@ export function PedidosPanel() {
     setCliente(null);
     setPerfil(null);
     setItems({});
-    setObservaciones("");
     setEntrega(manana);
     ir(0);
   }
@@ -426,22 +429,6 @@ export function PedidosPanel() {
                   className={inputBase}
                 />
               </label>
-              <div className={labelBase}>
-                Condición de pago
-                <p className={`${inputBase} flex items-center text-muted`}>
-                  {perfil?.condicionPago ?? "La del cliente en SAP"}
-                </p>
-              </div>
-              <label className={`${labelBase} sm:col-span-2`}>
-                Observaciones
-                <textarea
-                  value={observaciones}
-                  maxLength={500}
-                  onChange={(e) => setObservaciones(e.target.value)}
-                  placeholder="Ej.: recibir por el portón lateral, antes de las 12"
-                  className={`${inputBase} min-h-20 resize-y`}
-                />
-              </label>
             </div>
             {error ? <p className={errorBox}>{error}</p> : null}
           </div>
@@ -511,7 +498,7 @@ export function PedidosPanel() {
               type="button"
               onClick={() => void guardar(true)}
               disabled={bloqueado || !lista.length || guardando}
-              title="Guarda el pedido y lo pasa a SAP (por ahora, a la consola)"
+              title="Guarda el pedido y lo envía a SAP"
               className={`${btnPrimary} h-14 rounded-2xl text-base`}
             >
               Enviar
@@ -669,9 +656,17 @@ function EstadoPedido({ pedido }: { pedido: PedidoDetalle }) {
           DocNum del pedido SAP
         </p>
         <p className="font-mono text-sm text-foreground">
-          {pedido.docNumSap ?? "Se asigna cuando el pedido llegue a SAP"}
+          {pedido.documentos.flatMap((d) => d.docNum ?? []).join(", ") ||
+            "Se asigna cuando el pedido llegue a SAP"}
         </p>
       </div>
+      {pedido.documentos
+        .filter((d) => d.errorSap)
+        .map((d) => (
+          <p key={d.id} className={errorBox}>
+            {d.sap.DocumentLines[0]?.WarehouseCode || "Sin almacén"}: {d.errorSap}
+          </p>
+        ))}
       <ol className="space-y-2">
         {ESTADOS_PEDIDO.map((e, i) => (
           <li key={e.id} className="flex items-center gap-2.5 text-sm">

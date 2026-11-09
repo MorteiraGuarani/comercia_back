@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   Param,
@@ -110,6 +111,26 @@ export class PedidosController {
     return this.servicio.detalle(req.usuarioId, id);
   }
 
+  @Post('documentos/:id/enviar')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Enviar a SAP un documento propio' })
+  enviarDocumento(
+    @Req() req: RequestConUsuario,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.servicio.enviarDocumento(req.usuarioId, id);
+  }
+
+  @Delete(':id')
+  @HttpCode(204)
+  @ApiOperation({ summary: 'Eliminar un pedido propio que no se envió a SAP' })
+  eliminar(
+    @Req() req: RequestConUsuario,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.servicio.eliminar(req.usuarioId, id);
+  }
+
   @Patch('documentos/:id')
   @ApiOperation({
     summary: 'Editar un documento propio que todavía no se envió a SAP',
@@ -125,7 +146,7 @@ export class PedidosController {
   @Post()
   @ApiOperation({
     summary:
-      'Guardar un pedido y sus documentos para SAP (todavía no se envía a SAP)',
+      'Guardar un pedido con sus documentos y, si se pide, enviarlos a SAP',
   })
   crear(@Req() req: RequestConUsuario, @Body() dto: CrearPedidoDto) {
     return this.servicio.crear(req.usuarioId, dto);
