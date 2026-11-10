@@ -20,7 +20,7 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { AdminTiGuard } from '../auth/admin-ti.guard';
+import { PedidosAccesoGuard } from './pedidos-acceso.guard';
 import type { RequestConUsuario } from '../auth/interfaces/request-con-usuario.interface';
 import { CardCodePipe } from '../common/pipes/card-code.pipe';
 import {
@@ -38,8 +38,8 @@ import { PedidosService } from './pedidos.service';
 @ApiUnauthorizedResponse({ description: 'Sesión requerida' })
 @ApiForbiddenResponse({ description: 'Sin acceso a pedidos' })
 @Controller('pedidos')
-// shortcut: Pedidos se arma solo con Admin TI; pasar a exigirAccesoPagina cuando se habilite por Acceso por empresa.
-@UseGuards(JwtAuthGuard, AdminTiGuard)
+// shortcut: Pedidos en pruebas con Admin TI y usuarios fijos; pasar a exigirAccesoPagina cuando se habilite por Acceso por empresa.
+@UseGuards(JwtAuthGuard, PedidosAccesoGuard)
 export class PedidosController {
   constructor(private readonly servicio: PedidosService) {}
 

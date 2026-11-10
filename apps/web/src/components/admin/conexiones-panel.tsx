@@ -130,13 +130,8 @@ export function ConexionesPanel() {
   return (
     <div data-inicio-listado className="w-full min-w-0 scroll-mt-20">
       <PantallaCarga visible={!!procesando} mensaje={procesando ?? "Procesando"} />
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight">Conexiones</h1>
-          <p className="mt-1 text-sm text-muted">
-            Bases externas (SAP HANA, SQL, etc.) que usan los ejecutables de las páginas.
-          </p>
-        </div>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="min-w-0 text-xl font-bold tracking-tight">Conexiones</h1>
         <button
           type="button"
           onClick={() => abrir("nueva")}

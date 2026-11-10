@@ -236,8 +236,8 @@ export class InventarioLocalService {
       productos: productos.map((p) => ({
         itemcode: p.itemcode,
         itemname: p.itemname ?? p.itemcode,
-        // QryInventario = 'Y': se precarga en el inventario de todos los locales.
-        inventario: p.inventory === 'Y',
+        // QryInventario Y (o tYES de SAP): se precarga en el inventario de todos los locales.
+        inventario: p.inventory === 'Y' || p.inventory === 'tYES',
       })),
       locales: locales.map((l) => ({
         id: l.CardCode,

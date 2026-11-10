@@ -1,4 +1,14 @@
-import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  ParseIntPipe,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiForbiddenResponse,
@@ -29,6 +39,15 @@ export class InventarioCargasController {
   })
   listar(@Req() r: RequestConUsuario, @Query() q: ConsultaCargasInventarioDto) {
     return this.servicio.listar(r.usuarioId, q);
+  }
+
+  @Delete(':id')
+  @HttpCode(204)
+  @ApiOperation({
+    summary: 'Borrar una carga dentro del alcance, con sus avisos',
+  })
+  eliminar(@Req() r: RequestConUsuario, @Param('id', ParseIntPipe) id: number) {
+    return this.servicio.eliminar(r.usuarioId, id);
   }
 
   @Get('empresas')

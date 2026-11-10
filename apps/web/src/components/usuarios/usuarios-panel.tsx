@@ -350,16 +350,10 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
 
   return (
     <div data-inicio-listado className="w-full min-w-0 scroll-mt-20">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight">
-            {soloSuperadmin ? "Usuarios de empresas" : "Usuarios"}
-          </h1>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            Creá impulsadores, administradores y superadmins; asigná superiores,
-            locales y las tareas que reciben en su agenda.
-          </p>
-        </div>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="min-w-0 text-xl font-bold tracking-tight">
+          {soloSuperadmin ? "Usuarios de empresas" : "Usuarios"}
+        </h1>
         <button
           type="button"
           onClick={abrirNuevo}

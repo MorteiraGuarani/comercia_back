@@ -166,14 +166,9 @@ function RegistrosCatalogo({ empresa }: { empresa: EmpresaCatalogo }) {
   return (
     <div className="min-w-0 w-full space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="text-lg font-semibold text-foreground dark:text-foreground">
-            Artículos y precios
-          </h2>
-          <p className="text-sm text-muted dark:text-muted">
-            Una fila por artículo y lista. Los datos generales se comparten entre listas.
-          </p>
-        </div>
+        <h2 className="min-w-0 text-lg font-semibold text-foreground dark:text-foreground">
+          Artículos y precios
+        </h2>
         <button
           type="button"
           className={`${btnPrimary} h-11 w-11 shrink-0 px-0`}

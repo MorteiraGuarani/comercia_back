@@ -39,7 +39,7 @@ export class ArticuloDto {
   ItmsGrpCod?: number | null;
   @CampoTabla({
     tipo: 'texto',
-    longitud: 1,
+    longitud: 4,
     requerido: false,
     nullable: true,
     defecto: 'N',
@@ -66,7 +66,7 @@ export class ArticuloDto {
   DfltWH?: string | null;
   @CampoTabla({
     tipo: 'texto',
-    longitud: 1,
+    longitud: 4,
     requerido: false,
     nullable: true,
     defecto: 'Y',
@@ -76,7 +76,7 @@ export class ArticuloDto {
   validFor?: string | null;
   @CampoTabla({
     tipo: 'texto',
-    longitud: 1,
+    longitud: 4,
     requerido: false,
     nullable: true,
     defecto: 'N',

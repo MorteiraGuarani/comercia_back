@@ -34,6 +34,7 @@ import { BotonSubir } from "@/components/boton-subir";
 import { etiquetaPaginaMenu, sinMisTareas } from "@/utils/nombres-menu";
 import { EnlacePanel } from "@/components/panel/enlace-panel";
 import { useDisponibilidadTareas } from "@/hooks/use-disponibilidad-tareas";
+import { puedeUsarPedidos } from "@/utils/pedidos";
 
 const cargarAnimaciones = () =>
   import("@/lib/funciones-animacion").then((modulo) => modulo.default);
@@ -179,9 +180,11 @@ export default function PanelLayout({
       { href: "/panel/organigrama", nombre: "Organigrama", icono: "inicio", disabled: false },
       { href: "/panel/admin", nombre: "Administración", icono: "inicio", disabled: false },
       { href: "/panel/ubicaciones", nombre: "Ubicaciones", icono: "inicio", disabled: false },
-      // shortcut: Pedidos fijo para Admin TI mientras se arma; quitar al pasarlo a Acceso por empresa.
-      { href: "/panel/pedidos", nombre: "Pedidos", icono: "pedidos", disabled: false },
     ] : []),
+    // shortcut: Pedidos fijo para Admin TI y usuarios de prueba; quitar al pasarlo a Acceso por empresa.
+    ...(puedeUsarPedidos(usuario) && !usuario.esSuperadmin
+      ? [{ href: "/panel/pedidos", nombre: "Pedidos", icono: "pedidos", disabled: false }]
+      : []),
     ...modulos.flatMap((m) =>
       m.paginas
         .filter(

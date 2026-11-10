@@ -20,12 +20,7 @@ export function CategoriasPanel() {
   const [empresa, setEmpresa] = useState<EmpresaCatalogo | null>(null);
   return (
     <section className="min-w-0 w-full space-y-4" aria-label="Categorías de pedidos">
-      <div>
-        <h1 className="text-xl font-bold tracking-tight">Categorías de pedidos</h1>
-        <p className="mt-1 text-sm text-muted">
-          Tabla campo_categoria: los pasos del asistente de pedidos de cada empresa, en orden.
-        </p>
-      </div>
+      <h1 className="text-xl font-bold tracking-tight">Categorías de pedidos</h1>
       <div className="min-w-0 sm:w-80 lg:w-96">
         <SelectorPaginado
           url="/admin/catalogo/empresas"

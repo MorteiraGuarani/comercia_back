@@ -1,9 +1,13 @@
 import {
   ForbiddenException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import type { Prisma } from '../../generated/prisma/client';
+import {
+  type Prisma,
+  TipoNotificacionCampo,
+} from '../../generated/prisma/client';
 import { fechaCampo, relojCampo } from '../campo/utils/calendario';
 import {
   obtenerPersonalJefatura,
@@ -174,6 +178,31 @@ export class InventarioCargasService {
       page,
       limit,
     );
+  }
+
+  /** Borra una carga dentro del alcance de la sesión, con sus avisos de vencimiento. */
+  async eliminar(usuarioId: number, id: number): Promise<void> {
+    const a = await this.alcance(usuarioId);
+    // Fuera del alcance responde igual que inexistente.
+    const carga = await this.prisma.cargaInventarioCampo.findFirst({
+      where: {
+        id,
+        ...this.deEmpresa(a.empresaId),
+        ...(a.ids ? { usuarioId: { in: a.ids } } : {}),
+      },
+      select: { id: true, empresaId: true },
+    });
+    if (!carga) throw new NotFoundException('Carga no encontrada');
+    await this.prisma.$transaction([
+      this.prisma.notificacionCampo.deleteMany({
+        where: {
+          empresaId: carga.empresaId,
+          tipo: TipoNotificacionCampo.VENCIMIENTO_PROXIMO,
+          referenciaId: carga.id,
+        },
+      }),
+      this.prisma.cargaInventarioCampo.delete({ where: { id: carga.id } }),
+    ]);
   }
 
   async listar(usuarioId: number, q: ConsultaCargasInventarioDto) {

@@ -74,6 +74,35 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Back: ver la regla espejo en el AGENTS.md de la raíz (helper
   `apps/api/src/common/paginacion.ts`).
 
+# Caché y consumo de datos (OBLIGATORIO)
+
+El rendimiento y el ahorro de datos del usuario (celular, datos móviles) son
+prioridad. No volver a descargar lo que la pantalla ya tiene.
+
+- **Listados paginados: usar siempre `useListaCampo`** (`src/hooks/use-lista-campo.ts`).
+  No escribir un `useEffect` + `apiFetch` propio para una lista paginada.
+- El hook guarda las páginas ya vistas mientras la pantalla siga montada:
+  volver de la página 2 a la 1 no llama a la API. Salir de la pantalla y
+  volver a entrar sí consulta de nuevo.
+- La caché se descarta sola al cambiar la URL (filtros), `revision` o al llamar
+  `refrescar()`. Después de crear, editar o eliminar, llamar `refrescar()` (o
+  subir `revision`) para no mostrar datos viejos.
+- Un botón **Buscar** que aplica filtros debe llamar `refrescar()`: buscar de
+  nuevo trae datos frescos.
+- Para consultas de conteo u opciones (ej. `limit=1` para saber si mostrar un
+  filtro) también usar el hook, así comparten el mismo comportamiento.
+- **Icono, apple-icon y manifest van fijos en el `<head>` del layout raíz**
+  (`src/app/layout.tsx`), servidos desde `public/` o `src/app/pwa/`. No usar
+  las convenciones `app/favicon.ico`, `app/manifest.ts` ni `app/apple-icon.tsx`:
+  Next los reinserta en cada navegación y el navegador los vuelve a descargar.
+- `experimental.staleTimes.dynamic` (`next.config.ts`) mantiene 5 minutos en
+  memoria las pantallas ya abiertas. Los datos no dependen de eso: cada pantalla
+  los pide a la API al montarse.
+- Nada de sondeos frecuentes que descarguen HTML o listas completas: la
+  comprobación de versión (`ActualizadorDespliegue`) descarga como mucho una
+  vez cada 15 minutos. Cualquier sondeo nuevo necesita un intervalo justificado
+  y no debe dispararse en cada foco o cambio de pestaña sin un tope.
+
 # Reglas de UI/UX de Comercia (OBLIGATORIAS — aplicarlas en TODO lo que se construya)
 
 ## Vista móvil de tablas (OBLIGATORIA)

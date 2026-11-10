@@ -124,13 +124,13 @@ export function PedidosPanel() {
   function cantidad(linea: LineaPedido, p: ProductoPedido, n: number) {
     const valor = Math.max(0, Math.min(9999, Math.trunc(n) || 0));
     // Se avisa una sola vez, al elegirlo; cambiar la cantidad no repite el aviso.
-    if (valor && !items[p.itemCode])
-      mostrarToast(
-        p.almacen ? "info" : "alerta",
-        p.almacen
-          ? `${p.nombre}: sale del almacén ${p.almacen}`
-          : `${p.nombre} no tiene almacén: no se va a poder enviar a SAP`,
-      );
+    if (valor && !items[p.itemCode]) {
+      if (!p.almacen) {
+        mostrarToast("alerta", `${p.nombre} no tiene almacén: no se puede agregar`);
+        return;
+      }
+      mostrarToast("info", `${p.nombre}: sale del almacén ${p.almacen}`);
+    }
     setItems((actuales) => {
       const siguientes = { ...actuales };
       if (valor) siguientes[p.itemCode] = { ...p, linea, cantidad: valor };
@@ -211,26 +211,26 @@ export function PedidosPanel() {
         method: "POST",
         body: JSON.stringify({ cardCode, lineas }),
       });
-      if (!copia.items.length) {
+      // Sin almacén no se puede enviar a SAP: queda afuera como los no disponibles.
+      const copiables = copia.items.filter((i) => i.almacen);
+      if (!copiables.length) {
         mostrarToast("error", "Ninguno de esos productos se puede pedir hoy");
         return;
       }
       setPedido(null);
       setPerfil(null);
       setCliente(copia.cliente);
-      setItems(Object.fromEntries(copia.items.map((i) => [i.itemCode, i])));
+      setItems(Object.fromEntries(copiables.map((i) => [i.itemCode, i])));
       setEntrega(manana);
       setObservaciones(comentario.slice(0, 200));
       ir(PASOS.length - 1);
       const faltan = copia.noDisponibles.map(
         (c) => origen.find((l) => l.itemCode === c)?.nombre ?? c,
       );
-      const sinAlmacen = copia.items.filter((i) => !i.almacen).length;
+      const sinAlmacen = copia.items.filter((i) => !i.almacen).map((i) => i.nombre);
       const avisos = [
         faltan.length ? `Ya no se pueden pedir: ${faltan.join(", ")}` : "",
-        sinAlmacen
-          ? `${sinAlmacen} sin almacén: no se van a poder enviar a SAP`
-          : "",
+        sinAlmacen.length ? `Sin almacén, quedaron afuera: ${sinAlmacen.join(", ")}` : "",
       ].filter(Boolean);
       mostrarToast(
         avisos.length ? "alerta" : "exito",

@@ -84,11 +84,6 @@ export function RegistroMarcacionesPanel() {
   );
   return (
     <section className="campo-screen min-w-0 w-full space-y-4" aria-label="Registro de marcaciones">
-      <p className="text-sm text-muted">
-        Cada entrada y salida pedida desde Comercia (también las guardadas sin conexión): quién
-        marcó, si se aceptó, se rechazó y por qué (en Comercia o en Ucheck), o si falló algo, con
-        el pedido y la respuesta completos.
-      </p>
       <div className="flex min-w-0 flex-wrap items-center gap-2" role="group" aria-label="Resultado">
         {FILTROS.map((f) => (
           <button

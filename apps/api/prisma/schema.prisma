@@ -327,11 +327,11 @@ model Producto {
   itemname String? @map("ItemName") @db.VarChar(200)
   iva Int? @map("TaxCodeAR") @db.SmallInt
   itmsgrpcode Int? @default(-1) @map("ItmsGrpCod") @db.SmallInt
-  inventory String? @default("N") @map("QryInventario") @db.VarChar(1)
+  inventory String? @map("QryInventario") @db.VarChar(4)
   peso Decimal? @map("SWeight1") @db.Decimal(21, 6)
   almacen String? @map("DfltWH") @db.VarChar(10)
-  validFor String? @default("Y") @db.VarChar(1)
-  frozenFor String? @default("N") @db.VarChar(1)
+  validFor String? @db.VarChar(4)
+  frozenFor String? @db.VarChar(4)
   cantidadItem Decimal? @map("U_ItemQty") @db.Decimal(21, 6)
   tipo String? @map("U_beas_vg") @db.VarChar(50)
   @@map("tbl_oitm")

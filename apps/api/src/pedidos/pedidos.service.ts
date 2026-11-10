@@ -545,6 +545,7 @@ export class PedidosService {
     return respuestaPaginada<ProductoPedido>(
       filas.map((f) => {
         const precio = precios.get(f.itemcode) ?? null;
+        const almacen = almacenDe(f.almacen) || null;
         return {
           id: f.itemcode,
           itemCode: f.itemcode,
@@ -553,9 +554,9 @@ export class PedidosService {
             precio === null
               ? 'Sin precio'
               : `Gs. ${Math.round(precio).toLocaleString('es-PY')}`
-          }`,
+          }${almacen ? '' : ' · Sin almacén'}`,
           precio,
-          almacen: almacenDe(f.almacen) || null,
+          almacen,
         };
       }),
       total,
@@ -875,6 +876,19 @@ export class PedidosService {
       dto,
       new Map(productos.map((p) => [p.itemcode, p.almacen])),
     );
+    // Sin almacén SAP no puede recibirlo: no se guarda un pedido que no se va a poder enviar.
+    const sinAlmacen = new Set(
+      sap.flatMap((s) =>
+        s.DocumentLines.filter((l) => !l.WarehouseCode).map((l) => l.ItemCode),
+      ),
+    );
+    if (sinAlmacen.size)
+      throw new BadRequestException(
+        `Productos sin almacén: ${lineas
+          .filter((l) => sinAlmacen.has(l.itemCode))
+          .map((l) => `${l.itemCode} (${l.nombre})`)
+          .join(', ')}. Revisá su almacén por defecto en SAP`,
+      );
     try {
       return await this.prisma.$transaction(async (tx) => {
         const pedido = await tx.pedido.create({

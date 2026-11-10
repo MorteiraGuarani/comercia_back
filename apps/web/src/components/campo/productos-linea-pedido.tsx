@@ -225,11 +225,13 @@ function FilaProducto({
   quitable?: boolean;
   onCantidad: (producto: ProductoPedido, cantidad: number) => void;
 }) {
+  // Sin almacén no se puede enviar a SAP: se muestra pero no se agrega.
+  const sinAlmacen = producto.almacen === null;
   return (
     <li
       className={`flex items-center gap-3 px-3 py-2.5 ${
         cantidad ? "bg-brand-50 dark:bg-brand-950" : "bg-surface-raised"
-      }`}
+      } ${sinAlmacen ? "opacity-60" : ""}`}
     >
       <div className="min-w-0 flex-1">
         <p className="text-[15px] font-semibold leading-snug text-foreground">
@@ -240,6 +242,9 @@ function FilaProducto({
           <span>
             {producto.precio === null ? "Sin precio" : `${guaranies(producto.precio)} u.`}
           </span>
+          {sinAlmacen ? (
+            <span className="font-semibold text-red-700 dark:text-red-300">Sin almacén</span>
+          ) : null}
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-1">
@@ -259,13 +264,16 @@ function FilaProducto({
           max={9999}
           value={cantidad || ""}
           placeholder="0"
+          disabled={sinAlmacen}
           onChange={(e) => onCantidad(producto, Number(e.target.value))}
           aria-label={`Cantidad de ${producto.nombre}`}
-          className="h-11 w-14 rounded-xl border border-control-line bg-surface-raised text-center text-base font-bold text-foreground outline-none [appearance:textfield] focus:border-brand-600 focus:ring-2 focus:ring-focus [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          className="h-11 w-14 rounded-xl border border-control-line bg-surface-raised text-center text-base font-bold text-foreground outline-none [appearance:textfield] disabled:cursor-not-allowed focus:border-brand-600 focus:ring-2 focus:ring-focus [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
         />
         <button
           type="button"
           onClick={() => onCantidad(producto, cantidad + 1)}
+          disabled={sinAlmacen}
+          title={sinAlmacen ? "Sin almacén: no se puede agregar" : undefined}
           aria-label={`Sumar ${producto.nombre}`}
           className={botonCantidad}
         >

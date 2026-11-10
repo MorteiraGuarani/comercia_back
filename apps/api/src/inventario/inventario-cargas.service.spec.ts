@@ -1,4 +1,4 @@
-import { ForbiddenException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import type { AccesoPlataformaService } from '../plataforma/acceso-plataforma.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import { InventarioCargasService } from './inventario-cargas.service';
@@ -27,7 +27,13 @@ describe('InventarioCargasService', () => {
     cargaInventarioCampo: {
       count: jest.fn().mockResolvedValue(0),
       findMany: jest.fn().mockResolvedValue([]),
+      findFirst: jest.fn(),
+      delete: jest.fn().mockReturnValue('borrar-carga'),
     },
+    notificacionCampo: {
+      deleteMany: jest.fn().mockReturnValue('borrar-avisos'),
+    },
+    $transaction: jest.fn().mockResolvedValue([]),
   };
   const plataforma = {
     exigirAccesoPagina: jest.fn().mockResolvedValue({ id: 5, empresaId: 2 }),
@@ -125,6 +131,32 @@ describe('InventarioCargasService', () => {
     await servicio.listar(5, { responsableId: 6 });
     // 8 depende de 6 pero no está en el alcance de la sesión.
     expect(where()).toMatchObject({ usuarioId: { in: [6, 7] } });
+  });
+
+  it('borra solo dentro del alcance, junto con sus avisos', async () => {
+    prisma.cargaInventarioCampo.findFirst.mockResolvedValue(null);
+    await expect(servicio.eliminar(5, 40)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    expect(prisma.cargaInventarioCampo.findFirst).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        where: { id: 40, empresaId: 2, usuarioId: { in: [5, 6, 7] } },
+      }),
+    );
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+
+    prisma.cargaInventarioCampo.findFirst.mockResolvedValue({
+      id: 41,
+      empresaId: 2,
+    });
+    await servicio.eliminar(5, 41);
+    expect(prisma.notificacionCampo.deleteMany).toHaveBeenCalledWith({
+      where: { empresaId: 2, tipo: 'VENCIMIENTO_PROXIMO', referenciaId: 41 },
+    });
+    expect(prisma.$transaction).toHaveBeenCalledWith([
+      'borrar-avisos',
+      'borrar-carga',
+    ]);
   });
 
   it('estado: mismo plazo que los avisos', () => {

@@ -215,13 +215,8 @@ export function EmpresasAbmPanel() {
 
   return (
     <div data-inicio-listado className="w-full min-w-0 scroll-mt-20">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h2 className="text-xl font-bold tracking-tight">Empresas</h2>
-          <p className="mt-1 text-sm text-muted">
-            Administrá empresas y su jerarquía.
-          </p>
-        </div>
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="min-w-0 text-xl font-bold tracking-tight">Empresas</h2>
         <button
           type="button"
           onClick={() => abrir("nueva")}

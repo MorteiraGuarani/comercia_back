@@ -2,6 +2,10 @@
 
 import { useEffect, useId, useState, type ReactNode } from "react";
 import { apiFetch } from "@/lib/api";
+import { BotonEliminarCampo } from "@/components/campo/boton-eliminar-campo";
+import { confirmar } from "@/components/confirmacion/confirmacion-controller";
+import { PantallaCarga } from "@/components/pantalla-carga";
+import { mostrarToast } from "@/components/toast/toast-controller";
 import { SelectorPaginado } from "@/components/selector-paginado";
 import { ConfigVencimientosModal } from "@/components/campo/config-vencimientos-modal";
 import { TablaCampo } from "@/components/campo/tabla-campo";
@@ -136,7 +140,15 @@ function Dato({ etiqueta, children }: { etiqueta: string; children: ReactNode })
 }
 
 /** En celular, lo esencial a la vista y el resto en Detalle. */
-function TarjetaCarga({ c, conEmpresa }: { c: CargaInventarioFila; conEmpresa: boolean }) {
+function TarjetaCarga({
+  c,
+  conEmpresa,
+  onEliminar,
+}: {
+  c: CargaInventarioFila;
+  conEmpresa: boolean;
+  onEliminar: () => void;
+}) {
   const puesto = puestoDe(c);
   return (
     <div className="min-w-0 rounded-xl border border-line bg-surface-raised">
@@ -179,6 +191,9 @@ function TarjetaCarga({ c, conEmpresa }: { c: CargaInventarioFila; conEmpresa: b
         {conEmpresa ? <Dato etiqueta="Empresa">{c.usuario.empresa}</Dato> : null}
         <Dato etiqueta="Cargado">{formatoFechaHora(c.cargadaEn)}</Dato>
       </dl>
+      <div className="flex justify-end border-t border-line px-3 py-2">
+        <BotonEliminarCampo modo="texto" etiqueta={`Eliminar ${c.producto}`} onClick={onEliminar} />
+      </div>
       </details>
     </div>
   );
@@ -197,6 +212,7 @@ export function InventariosPanel() {
   const [filtrosAbiertos, setFiltrosAbiertos] = useState(true);
   const [puedeConfigurarAvisos, setPuedeConfigurarAvisos] = useState(false);
   const [avisosAbierto, setAvisosAbierto] = useState(false);
+  const [eliminando, setEliminando] = useState(false);
 
   useEffect(() => {
     const control = new AbortController();
@@ -223,6 +239,30 @@ export function InventariosPanel() {
     aplicados !== null,
   );
 
+  async function eliminar(c: CargaInventarioFila) {
+    if (
+      !(await confirmar({
+        titulo: "Eliminar carga",
+        mensaje: `¿Eliminar ${c.producto} de ${c.local.nombre}, cargado por ${c.usuario.nombre}? No se puede deshacer.`,
+        textoConfirmar: "Eliminar",
+        peligro: true,
+      }))
+    )
+      return;
+    setEliminando(true);
+    try {
+      await apiFetch<null>(`${BASE}/${c.id}`, { method: "DELETE" });
+      mostrarToast("exito", "Carga eliminada");
+      // Era la última de su página: se vuelve a la anterior.
+      if (lista.items.length === 1 && lista.page > 1) lista.setPage(lista.page - 1);
+      lista.refrescar();
+    } catch (e) {
+      mostrarToast("error", e instanceof Error ? e.message : "No se pudo eliminar la carga");
+    } finally {
+      setEliminando(false);
+    }
+  }
+
   const buscar = () => {
     if (!filtros.periodo) return;
     setAplicados(filtros);
@@ -246,6 +286,7 @@ export function InventariosPanel() {
       className="campo-screen w-full min-w-0 space-y-4 p-4 sm:p-6 lg:p-8"
       aria-label="Inventarios"
     >
+      <PantallaCarga visible={eliminando} mensaje="Eliminando carga" />
       <div className="flex min-w-0 items-center justify-between gap-3">
         <h1 className="ft-display text-2xl font-semibold text-foreground">Inventarios</h1>
         <div className="flex shrink-0 items-center gap-2">
@@ -369,7 +410,12 @@ export function InventariosPanel() {
           { titulo: "Vence", valor: (c) => <span className="whitespace-nowrap text-xs text-foreground">{fechaCorta(c.vencimiento)}</span> },
           { titulo: "Estado", valor: (c) => <Estado c={c} /> },
         ]}
-        tarjetaMovil={(c) => <TarjetaCarga c={c} conEmpresa={conEmpresa} />}
+        acciones={(c) => (
+          <BotonEliminarCampo etiqueta={`Eliminar ${c.producto}`} onClick={() => void eliminar(c)} />
+        )}
+        tarjetaMovil={(c) => (
+          <TarjetaCarga c={c} conEmpresa={conEmpresa} onEliminar={() => void eliminar(c)} />
+        )}
       />
       )}
       {avisosAbierto ? (
