@@ -3,8 +3,10 @@ import { AyudaApp } from "./ui/ayuda-app";
 import type { PeriodoFiltro } from "@/types/periodo-filtro";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
 import { apiFetch } from "@/lib/api";
+import { usePorTandas } from "@/hooks/use-por-tandas";
+import { BotonTandas } from "@/components/boton-tandas";
 import { guardarCacheSesion, leerCacheSesion } from "@/lib/cache-sesion";
 import { usePanel } from "@/components/panel/contexto";
 import { Modal } from "@/components/modal";
@@ -318,6 +320,7 @@ export function HoyEnCampo() {
                 ))}
               </div>
               <ListaEquipo
+                key={filtro}
                 equipo={visibles}
                 cuando={cuando}
                 onAbrir={(id) => abrir({ tipo: "persona", id })}
@@ -621,6 +624,8 @@ function ListaEquipo({
   cuando: string;
   onAbrir: (id: number) => void;
 }) {
+  const tandas = usePorTandas(equipo);
+  const idLista = useId();
   if (!equipo.length)
     return (
       <p className="rounded-xl border border-dashed border-line p-4 text-center text-sm text-muted">
@@ -628,11 +633,13 @@ function ListaEquipo({
       </p>
     );
   return (
+    <>
     <ul
+      id={idLista}
       aria-label="Equipo"
       className="overflow-hidden rounded-2xl border border-line bg-surface-raised shadow-[0_2px_8px_rgba(var(--warm-shadow),0.06)]"
     >
-      {equipo.map((c) => (
+      {tandas.visibles.map((c) => (
         <li key={c.id} className="border-t border-line first:border-t-0 [content-visibility:auto]">
           <button
             type="button"
@@ -685,6 +692,14 @@ function ListaEquipo({
         </li>
       ))}
     </ul>
+    <BotonTandas
+      restantes={tandas.restantes}
+      expandida={tandas.expandida}
+      controla={idLista}
+      onVerMas={tandas.verMas}
+      onOcultar={tandas.ocultar}
+    />
+    </>
   );
 }
 

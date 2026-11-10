@@ -271,6 +271,7 @@ export function InicioJefatura() {
       </div>
 
       <GruposCascada
+        key={elegido ? responsableId : 0}
         nodos={subgrupos}
         metric="ruta"
         onAbrir={(n) => setResponsableId(n.persona.id)}

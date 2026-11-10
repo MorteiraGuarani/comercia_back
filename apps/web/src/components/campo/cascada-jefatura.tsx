@@ -1,6 +1,9 @@
 "use client";
 
+import { useId } from "react";
+import { BotonTandas } from "@/components/boton-tandas";
 import { usePanel } from "@/components/panel/contexto";
+import { usePorTandas } from "@/hooks/use-por-tandas";
 import { inputBase, labelBase } from "@/components/ui";
 import type { NodoDesempeno } from "@/utils/desempeno-jefatura";
 import { aCargo, personasRama, responsablesCascada } from "@/utils/desempeno-jefatura";
@@ -112,14 +115,16 @@ export function GruposCascada({
   metric: "presentismo" | "ruta" | "tareas";
   onAbrir: (nodo: NodoDesempeno) => void;
 }) {
+  const tandas = usePorTandas(nodos);
+  const idLista = useId();
   if (!nodos.length) return null;
   return (
     <section aria-label="Equipos a cargo" className="min-w-0 space-y-2">
       <h2 className="text-xs font-bold uppercase tracking-wide text-muted">
         Equipos a cargo · {nodos.length}
       </h2>
-      <ul className="grid min-w-0 grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
-        {nodos.map((nodo) => {
+      <ul id={idLista} className="grid min-w-0 grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
+        {tandas.visibles.map((nodo) => {
           const rama = personasRama(nodo);
           const estados = Object.fromEntries(
             ORDEN_PRESENTISMO.map((e) => [e, rama.filter((c) => c.estadoPresentismo === e).length]),
@@ -217,6 +222,13 @@ export function GruposCascada({
           );
         })}
       </ul>
+      <BotonTandas
+        restantes={tandas.restantes}
+        expandida={tandas.expandida}
+        controla={idLista}
+        onVerMas={tandas.verMas}
+        onOcultar={tandas.ocultar}
+      />
     </section>
   );
 }

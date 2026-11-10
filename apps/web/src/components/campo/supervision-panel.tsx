@@ -653,6 +653,7 @@ export function SupervisionPanel({
             onIr={(n) => setCamino(ramas.slice(0, n).map((r) => r.persona.id))}
           />
           <GruposCascada
+            key={nodoActual?.persona.id ?? 0}
             nodos={grupos}
             metric={metric}
             onAbrir={(n) => {
