@@ -13,6 +13,18 @@ export function periodosDesdeHoy(hoy: string): PeriodoFiltro[] {
   ];
 }
 
+/** Inventarios y Pedidos: Ayer, Hoy y Semana (los últimos 7 días). */
+export function periodosInventario(hoy: string): PeriodoFiltro[] {
+  const [h, a, semana] = periodosDesdeHoy(hoy);
+  return [a, h, { ...semana, etiqueta: "Semana" }];
+}
+
+/** Pedidos: solo Ayer y Hoy; el resto, con el calendario. */
+export function periodosPedidos(hoy: string): PeriodoFiltro[] {
+  const [h, a] = periodosDesdeHoy(hoy);
+  return [a, h];
+}
+
 export function periodoInicioHoy(hoy: string): PeriodoFiltro {
   return periodosDesdeHoy(hoy)[0];
 }

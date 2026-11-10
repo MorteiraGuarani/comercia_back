@@ -97,3 +97,14 @@ export class EditarDocumentoDto {
   @Type(() => LineaDocumentoDto)
   lineas!: LineaDocumentoDto[];
 }
+
+const DIA = /^\d{4}-\d{2}-\d{2}$/;
+
+export class ConsultaPedidosDto extends PaginacionDto {
+  /** Días de carga (AAAA-MM-DD, hora de Asunción). */
+  @IsOptional() @Matches(DIA) desde?: string;
+  @IsOptional() @Matches(DIA) hasta?: string;
+  @IsOptional()
+  @IsIn(['CARGADO', 'MIGRADO', 'FACTURADO', 'ENTREGADO'])
+  estado?: 'CARGADO' | 'MIGRADO' | 'FACTURADO' | 'ENTREGADO';
+}

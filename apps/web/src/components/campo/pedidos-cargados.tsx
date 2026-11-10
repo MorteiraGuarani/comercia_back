@@ -9,29 +9,40 @@ import { confirmar } from "@/components/confirmacion/confirmacion-controller";
 import { Paginacion } from "@/components/paginacion";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { mostrarToast } from "@/components/toast/toast-controller";
+import {
+  BOTON_FILTRO_COMPACTO,
+  SelectorFechaFiltro,
+} from "@/components/campo/ui/selector-fecha-filtro";
 import { errorBox } from "@/components/ui";
 import type { RespuestaPaginada } from "@/types/paginacion";
-import type { PedidoResumen } from "@/types/pedido";
-import { horaOFechaCorta } from "@/utils/fechas";
+import type { EstadoPedido, PedidoResumen } from "@/types/pedido";
+import type { PeriodoFiltro } from "@/types/periodo-filtro";
+import { fechaEnZonaIso, horaOFechaCorta } from "@/utils/fechas";
+import { periodosPedidos, rangoPeriodoInicio } from "@/utils/periodo-inicio";
 import { ESTADOS_PEDIDO, guaranies } from "@/utils/pedidos";
 
 function EstadoChip({ pedido }: { pedido: PedidoResumen }) {
   return (
-    <div className="flex shrink-0 flex-col items-end gap-0.5">
+    <div className="flex shrink-0 justify-end">
       <span className="whitespace-nowrap rounded-full bg-accent-soft px-2 py-0.5 text-xs font-bold text-accent">
         {ESTADOS_PEDIDO.find((e) => e.id === pedido.estado)?.nombre ?? pedido.estado}
       </span>
-      {pedido.docNums.length ? (
-        <span className="text-right font-mono text-xs text-muted">
-          DocNum {pedido.docNums.join(", ")}
-        </span>
-      ) : null}
     </div>
   );
 }
 
+// Filtros de la lista: un toque filtra y otro toque en el mismo lo saca.
+const FILTROS_ESTADO = ESTADOS_PEDIDO.filter(
+  (e) => e.id === "MIGRADO" || e.id === "CARGADO",
+);
+
 /** Pedidos que cargó el usuario, del más reciente al más viejo. */
 export function PedidosCargados() {
+  const hoy = fechaEnZonaIso(new Date());
+  const [periodo, setPeriodo] = useState<PeriodoFiltro>(
+    () => periodosPedidos(hoy)[1],
+  );
+  const [estado, setEstado] = useState<EstadoPedido | "">("");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(7);
   const [datos, setDatos] = useState<RespuestaPaginada<PedidoResumen> | null>(
@@ -42,10 +53,12 @@ export function PedidosCargados() {
   const [recarga, setRecarga] = useState(0);
   const [eliminando, setEliminando] = useState(false);
 
+  const { desde, hasta } = rangoPeriodoInicio(periodo, hoy);
+
   useEffect(() => {
     const control = new AbortController();
     apiFetch<RespuestaPaginada<PedidoResumen>>(
-      `/pedidos?page=${page}&limit=${limit}`,
+      `/pedidos?page=${page}&limit=${limit}&desde=${desde}&hasta=${hasta}${estado ? `&estado=${estado}` : ""}`,
       { signal: control.signal },
     )
       .then(setDatos)
@@ -54,7 +67,7 @@ export function PedidosCargados() {
           setError(e instanceof Error ? e.message : "No se pudieron traer los pedidos");
       });
     return () => control.abort();
-  }, [page, limit, recarga]);
+  }, [page, limit, recarga, desde, hasta, estado]);
 
   async function eliminar(p: PedidoResumen) {
     if (
@@ -83,15 +96,50 @@ export function PedidosCargados() {
   return (
     <section className="w-full min-w-0 space-y-3">
       <PantallaCarga visible={eliminando} mensaje="Eliminando pedido" />
-      <h2 className="text-lg font-bold text-foreground">Pedidos cargados</h2>
+      <h2 className="text-sm font-bold text-foreground">Pedidos</h2>
+      <div className="flex min-w-0 items-center justify-between gap-1">
+        <SelectorFechaFiltro
+          valorActual={periodo}
+          periodos={periodosPedidos}
+          compacto
+          onChange={(p) => {
+            setPeriodo(p);
+            setPage(1);
+          }}
+        />
+        <div role="group" aria-label="Estado" className="flex shrink-0 items-center gap-1">
+          {FILTROS_ESTADO.map((e) => (
+            <button
+              key={e.id}
+              type="button"
+              aria-pressed={estado === e.id}
+              onClick={() => {
+                setEstado((actual) => (actual === e.id ? "" : e.id));
+                setPage(1);
+              }}
+              className={`${BOTON_FILTRO_COMPACTO} cursor-pointer whitespace-nowrap rounded-full border font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${
+                estado === e.id
+                  ? "border-brand-700 bg-brand-700 text-white dark:border-brand-500 dark:bg-brand-500 dark:text-brand-950"
+                  : "border-line bg-surface-raised text-foreground hover:bg-surface-soft"
+              }`}
+            >
+              {e.nombre}
+            </button>
+          ))}
+        </div>
+      </div>
       {error ? (
         <p className={errorBox}>{error}</p>
       ) : !datos ? (
         <p className="text-sm text-muted">Cargando pedidos…</p>
+      ) : !datos.total ? (
+        <p className="rounded-2xl border border-line bg-surface-raised p-4 text-center text-sm text-muted">
+          No hay pedidos con estos filtros.
+        </p>
       ) : (
         <>
           <ul
-            aria-label="Pedidos cargados"
+            aria-label="Pedidos"
             className="divide-y divide-line rounded-2xl border border-line bg-surface-raised md:hidden"
           >
             {datos.items.map((p) => (

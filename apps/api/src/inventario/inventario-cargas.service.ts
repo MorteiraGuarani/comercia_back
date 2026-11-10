@@ -1,0 +1,340 @@
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
+import type { Prisma } from '../../generated/prisma/client';
+import { fechaCampo, relojCampo } from '../campo/utils/calendario';
+import {
+  obtenerPersonalJefatura,
+  obtenerSubordinadosActivos,
+} from '../campo/utils/autorizacion';
+import { nombreLocal } from '../campo/utils/local-ocrd';
+import { filtrosBusquedaUsuario } from '../common/utils/busqueda-usuario';
+import { puedeAdministrarUsuarios } from '../common/utils/permisos-usuario';
+import { rangoPaginacion, respuestaPaginada } from '../common/utils/paginacion';
+import { diasParaVencer } from '../common/utils/vencimiento';
+import { AccesoPlataformaService } from '../plataforma/acceso-plataforma.service';
+import { PrismaService } from '../prisma/prisma.service';
+import type {
+  ConsultaCargasInventarioDto,
+  OpcionesCargasInventarioDto,
+} from './dto/inventario-cargas.dto';
+import {
+  MODULO_INVENTARIOS,
+  PAGINA_CARGAS_INVENTARIO,
+} from './inventario.constants';
+import { estadoCarga } from './utils/estado-carga';
+
+const dia = (fecha: Date) => fecha.toISOString().slice(0, 10);
+const masDias = (fecha: Date, dias: number) =>
+  new Date(fecha.getTime() + dias * 86_400_000);
+// shortcut: la búsqueda por nombre de producto mira hasta 200 coincidencias; ampliar si quedan cortas.
+const MAX_PRODUCTOS_BUSQUEDA = 200;
+
+// shortcut: el filtro de estado recorre hasta 1000 empresas; alcanza de sobra por ahora.
+const MAX_EMPRESAS = 1000;
+
+/**
+ * Consulta de lo cargado. Cada uno ve lo suyo y su cadena hacia abajo; el
+ * administrador, toda su empresa; el superadmin, todas las empresas.
+ */
+@Injectable()
+export class InventarioCargasService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly plataforma: AccesoPlataformaService,
+  ) {}
+
+  private async yo(usuarioId: number) {
+    const yo = await this.prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      select: {
+        isActive: true,
+        esSuperadmin: true,
+        rol: { select: { descripcion: true, esAdminTi: true } },
+      },
+    });
+    if (!yo?.isActive) throw new UnauthorizedException();
+    return yo;
+  }
+
+  /** `empresaId` null: todas las empresas. `ids` null: toda la empresa. */
+  private async alcance(usuarioId: number, empresaElegida?: number) {
+    const yo = await this.yo(usuarioId);
+    // El superadmin no depende de lo activado en una empresa.
+    if (yo.esSuperadmin)
+      return { empresaId: empresaElegida ?? null, ids: null };
+    const u = await this.plataforma.exigirAccesoPagina(
+      usuarioId,
+      MODULO_INVENTARIOS,
+      PAGINA_CARGAS_INVENTARIO,
+    );
+    const empresaEntera =
+      !!yo.rol?.esAdminTi ||
+      puedeAdministrarUsuarios(false, yo.rol?.descripcion ?? null);
+    return {
+      empresaId: u.empresaId as number | null,
+      ids: empresaEntera
+        ? null
+        : [u.id, ...(await obtenerPersonalJefatura(this.prisma, u))],
+    };
+  }
+
+  private deEmpresa(empresaId: number | null) {
+    return empresaId === null ? {} : { empresaId };
+  }
+
+  private personas(
+    a: { empresaId: number | null; ids: number[] | null },
+    equipoId?: number,
+  ): Prisma.UsuarioWhereInput {
+    return {
+      ...this.deEmpresa(a.empresaId),
+      ...(a.ids ? { id: { in: a.ids } } : {}),
+      ...(equipoId ? { rol: { equipoCampoId: equipoId } } : {}),
+    };
+  }
+
+  /** Solo el superadmin elige empresa; el resto recibe la lista vacía. */
+  async empresas(usuarioId: number, q: OpcionesCargasInventarioDto) {
+    const { skip, take, page, limit } = rangoPaginacion(q);
+    const yo = await this.yo(usuarioId);
+    if (!yo.esSuperadmin) return respuestaPaginada([], 0, page, limit);
+    const where: Prisma.EmpresaWhereInput = q.buscar?.trim()
+      ? { nombre: { contains: q.buscar.trim(), mode: 'insensitive' } }
+      : {};
+    const [total, items] = await Promise.all([
+      this.prisma.empresa.count({ where }),
+      this.prisma.empresa.findMany({
+        where,
+        select: { id: true, nombre: true },
+        orderBy: { nombre: 'asc' },
+        skip,
+        take,
+      }),
+    ]);
+    return respuestaPaginada(items, total, page, limit);
+  }
+
+  async equipos(usuarioId: number, q: OpcionesCargasInventarioDto) {
+    const a = await this.alcance(usuarioId, q.empresaId);
+    const where: Prisma.EquipoCampoWhereInput = {
+      ...this.deEmpresa(a.empresaId),
+      activo: true,
+      roles: { some: { usuarios: { some: this.personas(a) } } },
+      ...(q.buscar?.trim()
+        ? { nombre: { contains: q.buscar.trim(), mode: 'insensitive' } }
+        : {}),
+    };
+    const { skip, take, page, limit } = rangoPaginacion(q);
+    const [total, items] = await Promise.all([
+      this.prisma.equipoCampo.count({ where }),
+      this.prisma.equipoCampo.findMany({
+        where,
+        select: { id: true, nombre: true },
+        orderBy: { nombre: 'asc' },
+        skip,
+        take,
+      }),
+    ]);
+    return respuestaPaginada(items, total, page, limit);
+  }
+
+  async responsables(usuarioId: number, q: OpcionesCargasInventarioDto) {
+    const a = await this.alcance(usuarioId, q.empresaId);
+    const where: Prisma.UsuarioWhereInput = {
+      ...this.personas(a, q.equipoId),
+      isActive: true,
+      AND: filtrosBusquedaUsuario(q.buscar),
+    };
+    const { skip, take, page, limit } = rangoPaginacion(q);
+    const [total, filas] = await Promise.all([
+      this.prisma.usuario.count({ where }),
+      this.prisma.usuario.findMany({
+        where,
+        select: {
+          id: true,
+          nombre: true,
+          apellido: true,
+          rol: { select: { descripcion: true } },
+        },
+        orderBy: [{ nombre: 'asc' }, { apellido: 'asc' }, { id: 'asc' }],
+        skip,
+        take,
+      }),
+    ]);
+    return respuestaPaginada(
+      filas.map((u) => ({
+        id: u.id,
+        nombre: `${u.nombre} ${u.apellido}`.trim(),
+        descripcion: u.rol?.descripcion ?? 'Sin rol',
+      })),
+      total,
+      page,
+      limit,
+    );
+  }
+
+  async listar(usuarioId: number, q: ConsultaCargasInventarioDto) {
+    const a = await this.alcance(usuarioId, q.empresaId);
+    if (q.responsableId && a.ids && !a.ids.includes(q.responsableId))
+      throw new ForbiddenException('No tenés acceso a esta sección');
+    if (a.empresaId === null && (q.responsableId || q.equipoId))
+      throw new BadRequestException('Elegí una empresa');
+    const cadena =
+      q.responsableId && a.empresaId !== null
+        ? [
+            q.responsableId,
+            ...(await obtenerSubordinadosActivos(
+              this.prisma,
+              q.responsableId,
+              a.empresaId,
+            )),
+          ]
+        : null;
+    const visibles = cadena
+      ? cadena.filter((id) => !a.ids || a.ids.includes(id))
+      : a.ids;
+
+    const hoy = relojCampo().fecha;
+    const inicioHoy = fechaCampo(hoy);
+    // Cada empresa define sus días de aviso.
+    const empresas = await this.prisma.empresa.findMany({
+      where: a.empresaId === null ? {} : { id: a.empresaId },
+      select: { id: true, diasAvisoVencimiento: true },
+      take: MAX_EMPRESAS,
+    });
+    const diasAviso = new Map(
+      empresas.map((e) => [e.id, e.diasAvisoVencimiento]),
+    );
+    const rangoEstado = (
+      dias: number,
+    ): Record<string, Prisma.DateTimeFilter> => ({
+      VENCIDO: { lt: inicioHoy },
+      POR_VENCER: { gte: inicioHoy, lte: masDias(inicioHoy, dias) },
+      VIGENTE: { gt: masDias(inicioHoy, dias) },
+    });
+
+    const buscar = q.buscar?.trim();
+    const productosBuscados = buscar
+      ? await this.prisma.producto.findMany({
+          where: { itemname: { contains: buscar, mode: 'insensitive' } },
+          select: { itemcode: true },
+          take: MAX_PRODUCTOS_BUSQUEDA,
+        })
+      : [];
+    const where: Prisma.CargaInventarioCampoWhereInput = {
+      ...this.deEmpresa(a.empresaId),
+      fecha: {
+        gte: fechaCampo(q.desde ?? hoy),
+        lte: fechaCampo(q.hasta ?? q.desde ?? hoy),
+      },
+      ...(visibles ? { usuarioId: { in: visibles } } : {}),
+      ...(q.equipoId
+        ? { usuario: { rol: { equipoCampoId: q.equipoId } } }
+        : {}),
+      AND: [
+        ...(q.estado
+          ? [
+              {
+                OR: empresas.map((e) => ({
+                  empresaId: e.id,
+                  vencimiento: rangoEstado(e.diasAvisoVencimiento)[q.estado!],
+                })),
+              },
+            ]
+          : []),
+        ...(buscar
+          ? [
+              {
+                OR: [
+                  { localId: { contains: buscar, mode: 'insensitive' } },
+                  {
+                    local: {
+                      CardName: { contains: buscar, mode: 'insensitive' },
+                    },
+                  },
+                  { itemcode: { contains: buscar, mode: 'insensitive' } },
+                  {
+                    itemcode: { in: productosBuscados.map((p) => p.itemcode) },
+                  },
+                ] as Prisma.CargaInventarioCampoWhereInput[],
+              },
+            ]
+          : []),
+      ],
+    };
+    const { skip, take, page, limit } = rangoPaginacion(q);
+    const [total, filas] = await Promise.all([
+      this.prisma.cargaInventarioCampo.count({ where }),
+      this.prisma.cargaInventarioCampo.findMany({
+        where,
+        select: {
+          id: true,
+          empresaId: true,
+          fecha: true,
+          itemcode: true,
+          cantidad: true,
+          vencimiento: true,
+          actualizadaEn: true,
+          local: { select: { CardCode: true, CardName: true } },
+          usuario: {
+            select: {
+              id: true,
+              nombre: true,
+              apellido: true,
+              empresa: { select: { nombre: true } },
+              rol: {
+                select: {
+                  descripcion: true,
+                  equipoCampo: { select: { nombre: true } },
+                },
+              },
+            },
+          },
+        },
+        orderBy: [{ fecha: 'desc' }, { actualizadaEn: 'desc' }, { id: 'desc' }],
+        skip,
+        take,
+      }),
+    ]);
+    const nombres = new Map(
+      (
+        await this.prisma.producto.findMany({
+          where: { itemcode: { in: filas.map((f) => f.itemcode) } },
+          select: { itemcode: true, itemname: true },
+          take: filas.length,
+        })
+      ).map((p) => [p.itemcode, p.itemname]),
+    );
+    return respuestaPaginada(
+      filas.map((f) => {
+        const dias = diasParaVencer(f.vencimiento, hoy);
+        return {
+          id: f.id,
+          fecha: dia(f.fecha),
+          local: { id: f.local.CardCode, nombre: nombreLocal(f.local) },
+          itemcode: f.itemcode,
+          producto: nombres.get(f.itemcode) ?? f.itemcode,
+          cantidad: f.cantidad,
+          vencimiento: dia(f.vencimiento),
+          diasParaVencer: dias,
+          estado: estadoCarga(dias, diasAviso.get(f.empresaId) ?? 0),
+          usuario: {
+            id: f.usuario.id,
+            nombre: `${f.usuario.nombre} ${f.usuario.apellido}`.trim(),
+            rol: f.usuario.rol?.descripcion ?? 'Sin rol',
+            equipo: f.usuario.rol?.equipoCampo?.nombre ?? null,
+            empresa: f.usuario.empresa.nombre,
+          },
+          cargadaEn: f.actualizadaEn.toISOString(),
+        };
+      }),
+      total,
+      page,
+      limit,
+    );
+  }
+}

@@ -1,7 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import type { ModuloMenu } from './interfaces/plataforma.interface';
-import { rolVe } from './utils/visibilidad';
+import { MODULOS_ADMIN_TI, rolVe } from './utils/visibilidad';
 
 @Injectable()
 export class MiPlataformaService {
@@ -24,7 +24,7 @@ export class MiPlataformaService {
     if (!usuario || !usuario.isActive) {
       throw new UnauthorizedException();
     }
-    if (usuario.rol?.esAdminTi && !usuario.esSuperadmin) return [];
+    const soloAdminTi = !!usuario.rol?.esAdminTi && !usuario.esSuperadmin;
 
     // Módulos y páginas asignadas no dependen entre sí: van juntos.
     const [habilitados, paginasAsignadas] = await Promise.all([
@@ -54,7 +54,11 @@ export class MiPlataformaService {
 
     return (
       habilitados
-        .filter((em) => rolVe(em.rolIds, usuario.rolId))
+        .filter(
+          (em) =>
+            rolVe(em.rolIds, usuario.rolId) &&
+            (!soloAdminTi || MODULOS_ADMIN_TI.has(em.modulo.ruta)),
+        )
         .map((em) => {
           const paginas = em.modulo.paginas
             .filter((p) => {

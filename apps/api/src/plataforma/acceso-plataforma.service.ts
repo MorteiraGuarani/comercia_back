@@ -6,7 +6,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import type { UsuarioConAcceso } from './interfaces/usuario-con-acceso.interface';
 import type { AccesoModulos } from './interfaces/acceso-modulos.interface';
-import { rolVe } from './utils/visibilidad';
+import { MODULOS_ADMIN_TI, rolVe } from './utils/visibilidad';
 import { EQUIPO_CAMPO_SELECT } from '../campo/utils/equipo-campo';
 
 // Control de acceso del plano de DATOS de un módulo (no solo del menú):
@@ -112,7 +112,11 @@ export class AccesoPlataformaService {
     if (!usuario || !usuario.isActive) {
       throw new UnauthorizedException();
     }
-    if (usuario.rol?.esAdminTi && !usuario.esSuperadmin)
+    if (
+      usuario.rol?.esAdminTi &&
+      !usuario.esSuperadmin &&
+      !MODULOS_ADMIN_TI.has(moduloRuta)
+    )
       throw new ForbiddenException('No tenés acceso a esta sección');
     const pagina = modulo?.paginas[0];
     // Mensaje neutro: no revela si el módulo/página existe (AGENTS.md)

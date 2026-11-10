@@ -23,10 +23,10 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AdminTiGuard } from '../auth/admin-ti.guard';
 import type { RequestConUsuario } from '../auth/interfaces/request-con-usuario.interface';
 import { CardCodePipe } from '../common/pipes/card-code.pipe';
-import { PaginacionDto } from '../common/utils/paginacion';
 import {
   BuscarClientesPedidoDto,
   BuscarProductosPedidoDto,
+  ConsultaPedidosDto,
   CrearPedidoDto,
   EditarDocumentoDto,
 } from './dto/pedido.dto';
@@ -98,7 +98,7 @@ export class PedidosController {
 
   @Get()
   @ApiOperation({ summary: 'Pedidos cargados por el usuario' })
-  listar(@Req() req: RequestConUsuario, @Query() query: PaginacionDto) {
+  listar(@Req() req: RequestConUsuario, @Query() query: ConsultaPedidosDto) {
     return this.servicio.listar(req.usuarioId, query);
   }
 

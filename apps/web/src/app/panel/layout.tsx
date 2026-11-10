@@ -28,6 +28,7 @@ import { urlFotoPerfil } from "@/lib/api-perfil";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { PanelProvider } from "@/components/panel/contexto";
 import { IconoModulo, resolverIconoPagina } from "@/components/panel/iconos";
+import { IconoCaja } from "@/components/campo/ui/iconos-campo";
 import { EVENTO_PLATAFORMA_ACTUALIZADA } from "@/lib/eventos-plataforma";
 import { BotonSubir } from "@/components/boton-subir";
 import { etiquetaPaginaMenu, sinMisTareas } from "@/utils/nombres-menu";
@@ -158,6 +159,10 @@ export default function PanelLayout({
     !usuario.esSuperadmin &&
     moduloRuta === "gestion-campo" &&
     paginaRuta === "locales";
+  const tieneInventarios = modulos.some(
+    (m) =>
+      m.ruta === "inventarios" && m.paginas.some((p) => p.ruta === "cargas"),
+  );
   const tieneAdministracion = modulos.some(
     (m) =>
       m.ruta === "gestion-campo" && m.paginas.some((p) => p.ruta === "locales"),
@@ -183,6 +188,7 @@ export default function PanelLayout({
           (p) =>
             !soloEnCampana(m.ruta, p.ruta) &&
             !enPerfil(m.ruta, p.ruta) &&
+            m.ruta !== "inventarios" &&
             // El inventario se carga desde el Itinerario, no desde el menú.
             !(m.ruta === "mi-jornada" && p.ruta === "inventario"),
         )
@@ -339,6 +345,16 @@ export default function PanelLayout({
                       >
                         <IconoPersona /> Mis Datos
                       </button>
+                      {(tieneInventarios || usuario.esSuperadmin) && (
+                        <Link
+                          role="menuitem"
+                          href="/panel/inventarios"
+                          onClick={() => setMenuAbierto(false)}
+                          className={itemMenu}
+                        >
+                          <IconoCaja className="h-4 w-4" /> Inventarios
+                        </Link>
+                      )}
                       {tieneAdministracion && !usuario.esSuperadmin && (
                         <Link
                           role="menuitem"

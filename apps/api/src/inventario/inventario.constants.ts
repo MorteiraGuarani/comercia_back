@@ -1,6 +1,9 @@
 // Página de plataforma que habilita el inventario (menú y autorización).
 export const MODULO_INVENTARIO = 'mi-jornada';
 export const PAGINA_INVENTARIO = 'inventario';
+// Consulta de lo cargado, por empresa y rol; se abre desde el menú del perfil.
+export const MODULO_INVENTARIOS = 'inventarios';
+export const PAGINA_CARGAS_INVENTARIO = 'cargas';
 
 // Topes de la copia sin conexión (se entrega sin paginar, por pedido explícito
 // del usuario, para guardarla en el navegador): si se superan, 413 en vez de truncar.

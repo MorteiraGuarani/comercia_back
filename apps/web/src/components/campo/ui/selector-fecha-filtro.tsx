@@ -9,14 +9,27 @@ import { useHojaDeslizable } from "@/hooks/use-hoja-deslizable";
 interface SelectorFechaFiltroProps {
   valorActual: PeriodoFiltro;
   onChange: (periodo: PeriodoFiltro) => void;
+  /** Chips a la vista; por defecto Hoy, Ayer, 7 días y Mes. */
+  periodos?: (hoy: string) => PeriodoFiltro[];
+  /** Botones chicos, para que entren en una fila junto a otros filtros. */
+  compacto?: boolean;
 }
 
-export function SelectorFechaFiltro({ valorActual, onChange }: SelectorFechaFiltroProps) {
+// 36 px a la vista; el área táctil sigue siendo de 44 px.
+export const BOTON_FILTRO_COMPACTO =
+  "relative min-h-9 px-2 text-[11px] before:absolute before:inset-x-0 before:-inset-y-1 before:content-['']";
+
+export function SelectorFechaFiltro({
+  valorActual,
+  onChange,
+  periodos = periodosDesdeHoy,
+  compacto = false,
+}: SelectorFechaFiltroProps) {
   const hoyStr = fechaEnZonaIso(new Date());
-  const presets = periodosDesdeHoy(hoyStr);
+  const presets = periodos(hoyStr);
   const seleccion = presets.find((p) => p.clave === valorActual.clave) ?? valorActual;
   // A la vista van Hoy, Ayer, 7 días y Mes; el calendario es solo para un rango personalizado.
-  const otroPeriodo = !presets.some((p) => p.clave === valorActual.clave);
+  const otroPeriodo = valorActual.clave !== "" && !presets.some((p) => p.clave === valorActual.clave);
   const [abierto, setAbierto] = useState(false);
   const panelId = useId();
   // Desde `sm` el panel flota junto al botón, del lado donde hay lugar.
@@ -100,8 +113,8 @@ export function SelectorFechaFiltro({ valorActual, onChange }: SelectorFechaFilt
       : (seleccion.fecha ?? hoyStr);
 
   return (
-    <div className="relative flex min-w-0 flex-wrap items-center gap-1.5 text-left" ref={popoverRef}>
-      <div role="group" aria-label="Período" className="flex min-w-0 items-center gap-1.5">
+    <div className={`relative flex min-w-0 items-center text-left ${compacto ? "gap-1" : "flex-wrap gap-1.5"}`} ref={popoverRef}>
+      <div role="group" aria-label="Período" className={`flex min-w-0 items-center ${compacto ? "gap-1" : "gap-1.5"}`}>
         {presets.map((p) => {
           const activo = valorActual.clave === p.clave;
           return (
@@ -110,7 +123,7 @@ export function SelectorFechaFiltro({ valorActual, onChange }: SelectorFechaFilt
               type="button"
               aria-pressed={activo}
               onClick={() => seleccionarPreset(p)}
-              className={`min-h-11 shrink-0 cursor-pointer whitespace-nowrap rounded-full border px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${
+              className={`${compacto ? BOTON_FILTRO_COMPACTO : "min-h-11 px-3 text-xs"} shrink-0 cursor-pointer whitespace-nowrap rounded-full border font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${
                 activo
                   ? "border-brand-700 bg-brand-700 text-white dark:border-brand-500 dark:bg-brand-500 dark:text-brand-950"
                   : "border-line bg-surface-raised text-foreground hover:bg-surface-soft"
@@ -129,13 +142,13 @@ export function SelectorFechaFiltro({ valorActual, onChange }: SelectorFechaFilt
         aria-haspopup="dialog"
         aria-label={otroPeriodo ? `Período: ${valorActual.etiqueta}. Personalizar fecha` : "Personalizar fecha"}
         title="Personalizar fecha"
-        className={`ml-auto flex min-h-11 min-w-11 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-full border px-2.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${
+        className={`${compacto ? `${BOTON_FILTRO_COMPACTO} min-w-9` : "ml-auto min-h-11 min-w-11 px-2.5 text-xs"} flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-full border font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${
           otroPeriodo
             ? "border-brand-700 bg-brand-700 text-white dark:border-brand-500 dark:bg-brand-500 dark:text-brand-950"
             : "border-line bg-surface-raised text-accent-ink hover:bg-surface-soft"
         }`}
       >
-        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <svg aria-hidden="true" width={compacto ? 15 : 18} height={compacto ? 15 : 18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
           <line x1="16" y1="2" x2="16" y2="6" />
           <line x1="8" y1="2" x2="8" y2="6" />

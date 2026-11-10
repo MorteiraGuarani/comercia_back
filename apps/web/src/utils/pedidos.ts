@@ -9,8 +9,8 @@ export const LINEAS_PEDIDO: { id: LineaPedido; nombre: string }[] = [
 ];
 
 export const ESTADOS_PEDIDO: { id: EstadoPedido; nombre: string }[] = [
-  { id: "CARGADO", nombre: "Cargado" },
-  { id: "MIGRADO", nombre: "Migrado a SAP" },
+  { id: "CARGADO", nombre: "Guardado" },
+  { id: "MIGRADO", nombre: "Migrado" },
   { id: "FACTURADO", nombre: "Facturado" },
   { id: "ENTREGADO", nombre: "Entregado" },
 ];

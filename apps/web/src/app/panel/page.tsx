@@ -96,7 +96,8 @@ export default function PanelInicioPage() {
             />
           ))}
 
-      {modulos.map((modulo) => (
+      {/* Inventarios se abre desde el menú del perfil. */}
+      {modulos.filter((m) => m.ruta !== "inventarios").map((modulo) => (
         <section key={modulo.id} aria-labelledby={`inicio-modulo-${modulo.id}`}>
           <h2
             id={`inicio-modulo-${modulo.id}`}

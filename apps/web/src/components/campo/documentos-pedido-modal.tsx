@@ -71,6 +71,7 @@ export function DocumentosPedidoModal({
               key={d.id}
               documento={d}
               nombres={nombres}
+              abierto={detalle.documentos.length === 1}
               onListo={(actualizado) => {
                 setDetalle((actual) =>
                   actual && {
@@ -95,10 +96,13 @@ export function DocumentosPedidoModal({
 function FormularioDocumento({
   documento,
   nombres,
+  abierto,
   onListo,
 }: {
   documento: DocumentoSap;
   nombres: Map<string, string>;
+  /** Con varios documentos arrancan plegados: cada uno muestra su DocNum. */
+  abierto: boolean;
   onListo: (actualizado: DocumentoSap) => void;
 }) {
   const { sap, enviadoSap, docNum } = documento;
@@ -152,22 +156,31 @@ function FormularioDocumento({
   }
 
   return (
-    <fieldset
-      disabled={enviadoSap || !!procesando}
-      className="min-w-0 space-y-3 rounded-2xl border border-line p-3"
-    >
+    <details open={abierto} className="group min-w-0 rounded-2xl border border-line">
       <PantallaCarga visible={!!procesando} mensaje={procesando} />
-      <div className="flex items-start justify-between gap-2">
+      <summary className="flex min-h-11 cursor-pointer list-none items-start justify-between gap-2 rounded-2xl p-3 hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus">
         <div className="min-w-0">
           <p className="font-semibold text-foreground">{etiquetaAlmacen}</p>
           <p className="truncate text-xs text-muted">
             {[sap.NumAtCard, sap.U_par].filter(Boolean).join(" · ") || "—"}
           </p>
+          {docNum ? (
+            <p className="font-mono text-xs text-muted">DocNum {docNum}</p>
+          ) : null}
         </div>
-        <span className="shrink-0 rounded-full bg-accent-soft px-2 py-0.5 text-xs font-bold text-accent">
-          {enviadoSap ? `Enviado a SAP${docNum ? ` · ${docNum}` : ""}` : "Sin enviar"}
-        </span>
-      </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <span className="rounded-full bg-accent-soft px-2 py-0.5 text-xs font-bold text-accent">
+            {enviadoSap ? "Migrado" : "Guardado"}
+          </span>
+          <span aria-hidden="true" className="text-muted transition group-open:rotate-180">
+            ▾
+          </span>
+        </div>
+      </summary>
+      <fieldset
+        disabled={enviadoSap || !!procesando}
+        className="min-w-0 space-y-3 px-3 pb-3"
+      >
       <label className={labelBase}>
         Fecha de entrega
         <input
@@ -260,6 +273,7 @@ function FormularioDocumento({
           </button>
         </div>
       )}
-    </fieldset>
+      </fieldset>
+    </details>
   );
 }

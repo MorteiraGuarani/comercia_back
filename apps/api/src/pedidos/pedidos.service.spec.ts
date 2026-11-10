@@ -659,3 +659,36 @@ describe('estado de crédito en SAP', () => {
     });
   });
 });
+
+describe('PedidosService.listar', () => {
+  it('filtra por estado y por días completos de Asunción, solo lo propio', async () => {
+    const prisma = {
+      usuario: { findUnique: jest.fn().mockResolvedValue({ empresaId: 2 }) },
+      pedido: {
+        count: jest.fn().mockResolvedValue(0),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+    };
+    const servicio = new PedidosService(
+      prisma as unknown as PrismaService,
+      { get: () => 'http://sap.test' } as unknown as ConfigService,
+      sinServiceLayer,
+    );
+    await servicio.listar(7, {
+      desde: '2026-11-09',
+      hasta: '2026-11-10',
+      estado: 'MIGRADO',
+    });
+    expect(prisma.pedido.count).toHaveBeenCalledWith({
+      where: {
+        empresaId: 2,
+        usuarioId: 7,
+        estado: 'MIGRADO',
+        createdAt: {
+          gte: new Date('2026-11-09T03:00:00.000Z'),
+          lt: new Date('2026-11-11T03:00:00.000Z'),
+        },
+      },
+    });
+  });
+});

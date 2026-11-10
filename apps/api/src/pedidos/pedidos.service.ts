@@ -10,17 +10,14 @@ import {
 import { ConfigService } from '@nestjs/config';
 import type { Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  rangoPaginacion,
-  respuestaPaginada,
-  type PaginacionDto,
-} from '../common/utils/paginacion';
+import { rangoPaginacion, respuestaPaginada } from '../common/utils/paginacion';
 import { esErrorDuplicado } from '../common/utils/error-prisma';
 import { activosAnd } from '../common/utils/productos-activos';
 import { fechaCampo, relojCampo } from '../campo/utils/calendario';
 import { direccionesLocales, nombreLocal } from '../campo/utils/local-ocrd';
 import type {
   BuscarClientesPedidoDto,
+  ConsultaPedidosDto,
   BuscarProductosPedidoDto,
   CrearPedidoDto,
   EditarDocumentoDto,
@@ -987,9 +984,27 @@ export class PedidosService {
   }
 
   /** Pedidos cargados por el usuario, del más reciente al más viejo. */
-  async listar(usuarioId: number, query: PaginacionDto) {
+  async listar(usuarioId: number, query: ConsultaPedidosDto) {
     const empresaId = await this.empresaDe(usuarioId);
-    const where = { empresaId, usuarioId };
+    // Paraguay es UTC-3 todo el año.
+    const inicioDia = (dia: string) => new Date(`${dia}T00:00:00-03:00`);
+    const where = {
+      empresaId,
+      usuarioId,
+      ...(query.estado ? { estado: query.estado } : {}),
+      ...(query.desde || query.hasta
+        ? {
+            createdAt: {
+              ...(query.desde ? { gte: inicioDia(query.desde) } : {}),
+              ...(query.hasta
+                ? {
+                    lt: new Date(inicioDia(query.hasta).getTime() + 86_400_000),
+                  }
+                : {}),
+            },
+          }
+        : {}),
+    };
     const { skip, take, page, limit } = rangoPaginacion(query);
     const [total, filas] = await Promise.all([
       this.prisma.pedido.count({ where }),
