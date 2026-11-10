@@ -25,6 +25,7 @@ export const TABLAS_PRODUCTOS = {
       frozenFor: 'frozenFor',
       U_ItemQty: 'cantidadItem',
       U_beas_vg: 'tipo',
+      QryGroup3: 'qryGroup3',
     },
     clave: ['ItemCode'],
     textos: [
@@ -35,6 +36,7 @@ export const TABLAS_PRODUCTOS = {
       'validFor',
       'frozenFor',
       'U_beas_vg',
+      'QryGroup3',
     ],
     decimales: ['SWeight1', 'U_ItemQty'],
     ejemplo: {
@@ -49,6 +51,7 @@ export const TABLAS_PRODUCTOS = {
       frozenFor: 'N',
       U_ItemQty: '12.000000',
       U_beas_vg: '2',
+      QryGroup3: 'N',
     },
   },
   tbl_itm1: {

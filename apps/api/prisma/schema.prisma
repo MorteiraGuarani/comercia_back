@@ -334,6 +334,7 @@ model Producto {
   frozenFor String? @db.VarChar(4)
   cantidadItem Decimal? @map("U_ItemQty") @db.Decimal(21, 6)
   tipo String? @map("U_beas_vg") @db.VarChar(50)
+  qryGroup3 String? @map("QryGroup3") @db.VarChar(4)
   @@map("tbl_oitm")
 }
 

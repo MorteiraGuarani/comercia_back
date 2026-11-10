@@ -102,6 +102,15 @@ export class ArticuloDto {
     ejemplo: '2',
   })
   U_beas_vg?: string | null;
+  @CampoTabla({
+    tipo: 'texto',
+    longitud: 4,
+    requerido: false,
+    nullable: true,
+    descripcion: 'Propiedad 3 del artículo en SAP (QryGroup3).',
+    ejemplo: 'N',
+  })
+  QryGroup3?: string | null;
 }
 export class PrecioListaDto {
   @CampoTabla({
