@@ -27,6 +27,7 @@ import {
   BuscarClientesPedidoDto,
   BuscarProductosPedidoDto,
   ConsultaPedidosDto,
+  CopiarPedidoDto,
   CrearPedidoDto,
   EditarDocumentoDto,
 } from './dto/pedido.dto';
@@ -141,6 +142,15 @@ export class PedidosController {
     @Body() dto: EditarDocumentoDto,
   ) {
     return this.servicio.editarDocumento(req.usuarioId, id, dto);
+  }
+
+  @Post('copia')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Productos de otro pedido con los precios vigentes del cliente',
+  })
+  copiar(@Req() req: RequestConUsuario, @Body() dto: CopiarPedidoDto) {
+    return this.servicio.copiar(req.usuarioId, dto);
   }
 
   @Post()

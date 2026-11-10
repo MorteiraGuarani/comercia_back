@@ -17,13 +17,11 @@ import { FotoLocal } from "./ui/foto-local";
 import { TextoExpandible } from "./ui/texto-expandible";
 import {
   IconoAlerta,
-  IconoCalendario,
   IconoMapa,
   IconoPin,
   IconoTienda,
 } from "./ui/iconos-campo";
 import { formatearTelefono } from "@/utils/telefono";
-import { ConfigVencimientosModal } from "./config-vencimientos-modal";
 import type { ClientePdv, EstadoLocales } from "@/types/campo";
 import { SelectorPaginado } from "@/components/selector-paginado";
 import { LocalesPorColaborador } from "./locales-por-colaborador";
@@ -98,7 +96,6 @@ export function LocalesPanel() {
     !esSupervisor && vista === "locales",
   );
   const [revisionMapa, setRevisionMapa] = useState(0);
-  const [configVencimientos, setConfigVencimientos] = useState(false);
 
   const totalRegistros = lista.datos?.total ?? lista.items.length;
 
@@ -142,15 +139,6 @@ export function LocalesPanel() {
               className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-line bg-surface-raised text-foreground transition hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
             >
               <IconoMapa className="h-5 w-5" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setConfigVencimientos(true)}
-              aria-label="Avisos de vencimiento"
-              title="Avisos de vencimiento del inventario"
-              className="grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-xl border border-line bg-surface-raised text-foreground transition hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
-            >
-              <IconoCalendario className="h-5 w-5" />
             </button>
           </>
         }
@@ -511,12 +499,6 @@ export function LocalesPanel() {
           </>
         )}
       </main>
-
-      {configVencimientos && (
-        <ConfigVencimientosModal
-          onCerrar={() => setConfigVencimientos(false)}
-        />
-      )}
 
       {traspaso && (
         <TraspasoLocalesModal

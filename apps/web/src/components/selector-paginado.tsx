@@ -7,6 +7,10 @@ import type { RespuestaPaginada } from "@/types/paginacion";
 import { Paginacion } from "@/components/paginacion";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { btnGhost, errorBox, inputBase, labelBase } from "@/components/ui";
+import { opcionesMasCercanas } from "@/utils/texto";
+
+// shortcut: al tipear se ordenan hasta 50 coincidencias (tope de la API); si no alcanza, ordenar en el servidor.
+const MAX_COINCIDENCIAS = 50;
 
 const INPUT_COMPACTO =
   "h-11 w-full min-w-0 rounded-xl border border-line bg-surface-raised px-3 text-base text-foreground outline-none transition-colors placeholder:text-muted hover:border-brand-500 focus:border-brand-600 focus:ring-2 focus:ring-brand-600/30 sm:text-sm";
@@ -26,7 +30,7 @@ export function SelectorPaginado<TId extends number | string = number>({
   placeholder = "Seleccioná o escribí para buscar",
   compacto = false,
   etiquetaOculta = false,
-  limite = 7,
+  limite = buscable ? 5 : 7,
   opcionVacia,
   limpiable = false,
 }: {
@@ -46,7 +50,7 @@ export function SelectorPaginado<TId extends number | string = number>({
   compacto?: boolean;
   /** Solo con buscable: etiqueta solo para lectores de pantalla, con el campo y el desplegable normales. */
   etiquetaOculta?: boolean;
-  /** Opciones por página al abrir (7 por defecto). */
+  /** Opciones a la vista: con buscable, 5 sin paginar; sin buscable, 7 por página. */
   limite?: number;
   /** Solo con buscable: primera opción sin ID (p. ej. «Todos»). Escribir no la elige. */
   opcionVacia?: { texto: string; onElegir: () => void };
@@ -68,6 +72,7 @@ export function SelectorPaginado<TId extends number | string = number>({
   const [activa, setActiva] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
   const listaId = useId();
+  const buscando = buscable && buscar.trim() !== "";
 
   useEffect(() => {
     inputRef.current?.setCustomValidity(
@@ -88,7 +93,7 @@ export function SelectorPaginado<TId extends number | string = number>({
     const timer = setTimeout(
       () => {
         apiFetch<RespuestaPaginada<OpcionSelector<TId>>>(
-          `${url}${url.includes("?") ? "&" : "?"}page=${page}&limit=${limit}${buscable ? `&buscar=${encodeURIComponent(buscar.trim())}` : ""}`,
+          `${url}${url.includes("?") ? "&" : "?"}page=${page}&limit=${buscando ? MAX_COINCIDENCIAS : limit}${buscable ? `&buscar=${encodeURIComponent(buscar.trim())}` : ""}`,
           { signal: controller.signal },
         )
           .then((respuesta) => {
@@ -116,9 +121,19 @@ export function SelectorPaginado<TId extends number | string = number>({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [url, page, limit, intento, buscar, buscable]);
+  }, [url, page, limit, intento, buscar, buscable, buscando]);
 
-  const opciones = (datos?.items ?? []).filter((item) => item.id !== excluirId);
+  const disponibles = (datos?.items ?? []).filter(
+    (item) => item.id !== excluirId,
+  );
+  const opciones = buscando
+    ? opcionesMasCercanas(
+        disponibles,
+        (item) => item.nombre ?? item.descripcion ?? "",
+        buscar,
+        limit,
+      )
+    : disponibles;
   // null = la opción vacía; va primero mientras no se busca.
   const lista: (OpcionSelector<TId> | null)[] =
     opcionVacia && !buscar.trim() ? [null, ...opciones] : opciones;
@@ -367,7 +382,7 @@ export function SelectorPaginado<TId extends number | string = number>({
               </button>
             </div>
           ) : null}
-          {datos && !cargando && !error && datos.totalPages > 1 ? (
+          {!buscable && datos && !cargando && !error && datos.totalPages > 1 ? (
             <Paginacion
               desplazarAlInicio={false}
               page={datos.page}

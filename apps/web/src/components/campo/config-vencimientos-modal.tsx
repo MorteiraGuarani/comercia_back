@@ -48,8 +48,7 @@ export function ConfigVencimientosModal({ onCerrar }: { onCerrar: () => void }) 
         >
           <p className="text-sm text-muted">
             Cuando un producto cargado en el inventario de un local está por
-            vencer, avisamos en la campana a quien lo cargó, al personal del local
-            y a sus jefes.
+            vencer, avisamos en la campana a quien lo cargó y a sus superiores.
           </p>
           {error || op.error ? (
             <p

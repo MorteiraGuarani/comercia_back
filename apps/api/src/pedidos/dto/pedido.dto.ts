@@ -6,6 +6,7 @@ import {
   IsBoolean,
   IsIn,
   IsInt,
+  IsNumber,
   IsOptional,
   IsString,
   IsUUID,
@@ -67,6 +68,24 @@ export class CrearPedidoDto {
 
   /** Además de guardarlo, lo envía a SAP. */
   @IsOptional() @IsBoolean() enviarSap?: boolean;
+}
+
+export class LineaCopiaPedidoDto {
+  @IsString() @Length(1, 100) itemCode!: string;
+
+  /** Sin exigir entero: las facturas de SAP pueden traer decimales. */
+  @Type(() => Number) @IsNumber() @Min(0) @Max(1_000_000) cantidad!: number;
+}
+
+export class CopiarPedidoDto {
+  @IsString() @Length(1, 50) cardCode!: string;
+
+  @IsArray()
+  @ArrayMinSize(1, { message: 'El pedido a copiar no tiene productos' })
+  @ArrayMaxSize(200)
+  @ValidateNested({ each: true })
+  @Type(() => LineaCopiaPedidoDto)
+  lineas!: LineaCopiaPedidoDto[];
 }
 
 export class LineaDocumentoDto {

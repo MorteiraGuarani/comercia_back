@@ -31,11 +31,6 @@ function preparar() {
         },
       ]),
     },
-    asignacionCampo: {
-      findMany: jest
-        .fn()
-        .mockResolvedValue([{ usuarioId: 4 }, { usuarioId: 3 }]),
-    },
     usuario: {
       findMany: jest.fn(
         ({
@@ -75,7 +70,7 @@ function preparar() {
 }
 
 describe('avisos de vencimiento', () => {
-  it('notifica al autor, asignados y todos los superiores una sola vez, dentro de la transacción', async () => {
+  it('notifica solo al autor y su cadena de superiores, una sola vez, dentro de la transacción', async () => {
     const { servicio, prisma, tx } = preparar();
     expect(await servicio.procesar()).toBe(1);
     expect(prisma.$transaction).toHaveBeenCalledTimes(1);
@@ -84,7 +79,7 @@ describe('avisos de vencimiento', () => {
       avisos
         .map((n: { usuarioDestinatarioId: number }) => n.usuarioDestinatarioId)
         .sort(),
-    ).toEqual([1, 2, 3, 4]);
+    ).toEqual([1, 2, 3]);
     expect(avisos[0]).toMatchObject({
       empresaId: 10,
       referenciaId: 8,

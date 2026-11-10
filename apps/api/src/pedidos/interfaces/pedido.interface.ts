@@ -10,6 +10,21 @@ export interface LineaPedidoRespuesta {
   total: number | null;
 }
 
+/** Pedido armado desde otro, con productos y precios vigentes. */
+export interface CopiaPedido {
+  cliente: { id: string; nombre: string };
+  items: {
+    itemCode: string;
+    nombre: string;
+    linea: LineaPedido;
+    cantidad: number;
+    precio: number | null;
+    almacen: string | null;
+  }[];
+  /** ItemCode que ya no se pueden pedir. */
+  noDisponibles: string[];
+}
+
 export interface PedidoResumen {
   id: number;
   numero: string;

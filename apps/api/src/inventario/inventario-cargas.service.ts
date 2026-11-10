@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   ForbiddenException,
   Injectable,
   UnauthorizedException,
@@ -181,19 +180,29 @@ export class InventarioCargasService {
     const a = await this.alcance(usuarioId, q.empresaId);
     if (q.responsableId && a.ids && !a.ids.includes(q.responsableId))
       throw new ForbiddenException('No tenés acceso a esta sección');
-    if (a.empresaId === null && (q.responsableId || q.equipoId))
-      throw new BadRequestException('Elegí una empresa');
-    const cadena =
-      q.responsableId && a.empresaId !== null
-        ? [
-            q.responsableId,
-            ...(await obtenerSubordinadosActivos(
-              this.prisma,
-              q.responsableId,
-              a.empresaId,
-            )),
-          ]
-        : null;
+    // Sin empresa elegida (superadmin), la cadena es la de la empresa del responsable.
+    const empresaResponsable =
+      a.empresaId ??
+      (q.responsableId
+        ? (
+            await this.prisma.usuario.findUnique({
+              where: { id: q.responsableId },
+              select: { empresaId: true },
+            })
+          )?.empresaId
+        : null);
+    const cadena = q.responsableId
+      ? [
+          q.responsableId,
+          ...(empresaResponsable
+            ? await obtenerSubordinadosActivos(
+                this.prisma,
+                q.responsableId,
+                empresaResponsable,
+              )
+            : []),
+        ]
+      : null;
     const visibles = cadena
       ? cadena.filter((id) => !a.ids || a.ids.includes(id))
       : a.ids;

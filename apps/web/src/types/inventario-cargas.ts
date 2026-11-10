@@ -1,4 +1,14 @@
+import type { PeriodoFiltro } from "@/types/periodo-filtro";
+
 export type EstadoCargaInventario = "VIGENTE" | "POR_VENCER" | "VENCIDO";
+
+export interface FiltrosCargaInventario {
+  periodo: PeriodoFiltro | null;
+  estado: EstadoCargaInventario | "";
+  empresaId: number | "";
+  equipoId: number | "";
+  responsableId: number | "";
+}
 
 export interface CargaInventarioFila {
   id: number;

@@ -17,8 +17,19 @@ export function useListaCampo<T>(
   const [error, setError] = useState<string | null>(null);
   const [recarga, setRecarga] = useState(0);
   const consulta = `${url}|${page}|${limit}|${revision}|${recarga}`;
+  // Las páginas ya vistas no se piden de nuevo mientras la pantalla siga abierta;
+  // cambiar filtros o refrescar las descarta.
+  const generacion = `${url}|${revision}|${recarga}`;
+  const clavePagina = `${page}|${limit}`;
+  const [cache, setCache] = useState<{
+    generacion: string;
+    paginas: Record<string, RespuestaPaginada<T>>;
+  }>({ generacion: "", paginas: {} });
+  const guardada =
+    cache.generacion === generacion ? cache.paginas[clavePagina] : undefined;
+  const enCache = guardada !== undefined;
   useEffect(() => {
-    if (!activa) return;
+    if (!activa || enCache) return;
     let vigente = true;
     apiFetch<RespuestaPaginada<T>>(
       `${url}${url.includes("?") ? "&" : "?"}page=${page}&limit=${limit}`,
@@ -28,6 +39,13 @@ export function useListaCampo<T>(
           if (page > Math.max(1, res.totalPages))
             setPage(Math.max(1, res.totalPages));
           setDatos(res);
+          setCache((c) => ({
+            generacion,
+            paginas: {
+              ...(c.generacion === generacion ? c.paginas : {}),
+              [clavePagina]: res,
+            },
+          }));
           setError(null);
         }
       })
@@ -45,15 +63,15 @@ export function useListaCampo<T>(
     return () => {
       vigente = false;
     };
-  }, [url, page, limit, consulta, activa]);
+  }, [url, page, limit, consulta, activa, enCache, generacion, clavePagina]);
   const refrescar = useCallback(() => setRecarga((n) => n + 1), []);
   return {
     page,
     limit,
-    datos,
-    items: datos?.items ?? [],
-    cargando: activa && consultaTerminada !== consulta,
-    error,
+    datos: guardada ?? datos,
+    items: (guardada ?? datos)?.items ?? [],
+    cargando: activa && !enCache && consultaTerminada !== consulta,
+    error: enCache ? null : error,
     refrescar,
     setPage,
     setLimit: (n: number) => {

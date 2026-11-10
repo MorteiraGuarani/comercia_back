@@ -46,6 +46,13 @@ export default function RootLayout({
       className={`${manrope.variable} h-full antialiased`}
       suppressHydrationWarning
     >
+      {/* Fijos acá y no con favicon.ico/manifest.ts/apple-icon.tsx de Next: esos se
+          reinsertan en cada navegación y el navegador los vuelve a descargar. */}
+      <head>
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="apple-touch-icon" href="/pwa/apple-icon.png" />
+        <link rel="manifest" href="/pwa/manifest.webmanifest" />
+      </head>
       {/* suppressHydrationWarning: las extensiones del navegador (ColorZilla,
           Grammarly, etc.) inyectan atributos en el body antes de que React
           hidrate; eso no es un error nuestro y no debe ensuciar la consola */}

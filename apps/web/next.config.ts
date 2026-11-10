@@ -31,6 +31,9 @@ const nextConfig: NextConfig = {
   // para que el standalone incluya las dependencias hoisted de la raíz.
   output: "standalone",
   outputFileTracingRoot: path.join(currentDirectory, "../../"),
+  // Volver a una pantalla ya abierta no la descarga de nuevo durante 5 minutos.
+  // Los datos no entran acá: cada pantalla los pide a la API al montarse.
+  experimental: { staleTimes: { dynamic: 300 } },
   // El service worker se revisa en cada carga: un despliegue nuevo lo
   // reemplaza sin esperar a que venza ninguna caché.
   async headers() {

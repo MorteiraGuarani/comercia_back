@@ -21,8 +21,11 @@ import {
   LIMITE_LOCALES_COPIA,
   LIMITE_PRODUCTOS_COPIA,
   MODULO_INVENTARIO,
+  MODULO_INVENTARIOS,
+  PAGINA_CARGAS_INVENTARIO,
   PAGINA_INVENTARIO,
 } from './inventario.constants';
+import { puedeAdministrarUsuarios } from '../common/utils/permisos-usuario';
 import type { ItemCopiaInventario } from './interfaces/item-copia-inventario.interface';
 import type {
   AgregarProductosInventarioDto,
@@ -545,10 +548,26 @@ export class InventarioLocalService {
       if (!(error instanceof ForbiddenException)) throw error;
       const usuario = await this.prisma.usuario.findUnique({
         where: { id: usuarioId },
-        select: { empresaId: true, isActive: true, esSuperadmin: true },
+        select: {
+          empresaId: true,
+          isActive: true,
+          esSuperadmin: true,
+          rol: { select: { descripcion: true, esAdminTi: true } },
+        },
       });
-      if (!usuario?.isActive || !usuario.esSuperadmin) throw error;
-      return usuario;
+      if (!usuario?.isActive) throw error;
+      if (usuario.esSuperadmin) return usuario;
+      if (
+        !usuario.rol?.esAdminTi &&
+        !puedeAdministrarUsuarios(false, usuario.rol?.descripcion ?? null)
+      )
+        throw error;
+      // El botón vive en Inventarios: quien administra la empresa entra por esa página.
+      return this.plataforma.exigirAccesoPagina(
+        usuarioId,
+        MODULO_INVENTARIOS,
+        PAGINA_CARGAS_INVENTARIO,
+      );
     }
   }
 

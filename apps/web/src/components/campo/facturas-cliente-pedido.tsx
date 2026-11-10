@@ -2,13 +2,22 @@
 
 import { useEffect, useId, useState } from "react";
 import { apiFetch } from "@/lib/api";
+import { BotonCopiar } from "@/components/boton-copiar";
 import { Modal } from "@/components/modal";
 import { mostrarToast } from "@/components/toast/toast-controller";
 import { btnGhost } from "@/components/ui";
 import type { FacturaCliente, LineaFacturaCliente } from "@/types/pedido";
 
 /** Último pedido facturado del cliente en SAP y, en una hoja, los anteriores. */
-export function FacturasClientePedido({ cardCode, nombre }: { cardCode: string; nombre: string }) {
+export function FacturasClientePedido({
+  cardCode,
+  nombre,
+  onCopiar,
+}: {
+  cardCode: string;
+  nombre: string;
+  onCopiar: (lineas: LineaFacturaCliente[]) => void;
+}) {
   const [facturas, setFacturas] = useState<FacturaCliente[] | null>(null);
   const [error, setError] = useState("");
   const [intento, setIntento] = useState(0);
@@ -51,7 +60,7 @@ export function FacturasClientePedido({ cardCode, nombre }: { cardCode: string; 
       ) : (
         <>
           <div className="overflow-hidden rounded-2xl border border-line bg-surface-raised">
-            <FacturaDesplegable cardCode={cardCode} factura={ultima} destacada />
+            <FacturaDesplegable cardCode={cardCode} factura={ultima} destacada onCopiar={onCopiar} />
           </div>
           {previas.length ? (
             <button type="button" onClick={() => setAnteriores(true)} className={`${btnGhost} w-full gap-2`}>
@@ -76,7 +85,7 @@ export function FacturasClientePedido({ cardCode, nombre }: { cardCode: string; 
           >
             <div className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface-raised">
               {previas.map((f) => (
-                <FacturaDesplegable key={f.docEntry} cardCode={cardCode} factura={f} />
+                <FacturaDesplegable key={f.docEntry} cardCode={cardCode} factura={f} onCopiar={onCopiar} />
               ))}
             </div>
           </Modal>
@@ -91,10 +100,12 @@ function FacturaDesplegable({
   cardCode,
   factura,
   destacada,
+  onCopiar,
 }: {
   cardCode: string;
   factura: FacturaCliente;
   destacada?: boolean;
+  onCopiar: (lineas: LineaFacturaCliente[]) => void;
 }) {
   const [abierto, setAbierto] = useState(false);
   const [lineas, setLineas] = useState<LineaFacturaCliente[] | null>(null);
@@ -199,6 +210,14 @@ function FacturaDesplegable({
               <li className="flex justify-between gap-3 bg-surface-soft px-4 py-2.5 font-bold text-foreground">
                 <span>Total</span>
                 <span className="tabular-nums">{factura.montoTotal}</span>
+              </li>
+              <li className="p-2">
+                <BotonCopiar
+                  modo="texto"
+                  etiqueta={`Copiar factura ${factura.docNum} a un pedido nuevo`}
+                  className="w-full"
+                  onClick={() => onCopiar(lineas)}
+                />
               </li>
             </ul>
           )}

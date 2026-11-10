@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { apiFetch } from "@/lib/api";
+import { BotonCopiar } from "@/components/boton-copiar";
 import { BotonEditar } from "@/components/boton-editar";
 import { BotonEliminarCampo } from "@/components/campo/boton-eliminar-campo";
 import { DocumentosPedidoModal } from "@/components/campo/documentos-pedido-modal";
@@ -14,7 +15,7 @@ import {
   SelectorFechaFiltro,
 } from "@/components/campo/ui/selector-fecha-filtro";
 import { errorBox } from "@/components/ui";
-import type { RespuestaPaginada } from "@/types/paginacion";
+import { useListaCampo } from "@/hooks/use-lista-campo";
 import type { EstadoPedido, PedidoResumen } from "@/types/pedido";
 import type { PeriodoFiltro } from "@/types/periodo-filtro";
 import { fechaEnZonaIso, horaOFechaCorta } from "@/utils/fechas";
@@ -24,7 +25,12 @@ import { ESTADOS_PEDIDO, guaranies } from "@/utils/pedidos";
 function EstadoChip({ pedido }: { pedido: PedidoResumen }) {
   return (
     <div className="flex shrink-0 justify-end">
-      <span className="whitespace-nowrap rounded-full bg-accent-soft px-2 py-0.5 text-xs font-bold text-accent">
+      <span
+        className={`whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-bold ${
+          FILTROS_ESTADO.find((f) => f.id === pedido.estado)?.apagado ??
+          "border-transparent bg-accent-soft text-accent"
+        }`}
+      >
         {ESTADOS_PEDIDO.find((e) => e.id === pedido.estado)?.nombre ?? pedido.estado}
       </span>
     </div>
@@ -32,42 +38,51 @@ function EstadoChip({ pedido }: { pedido: PedidoResumen }) {
 }
 
 // Filtros de la lista: un toque filtra y otro toque en el mismo lo saca.
-const FILTROS_ESTADO = ESTADOS_PEDIDO.filter(
-  (e) => e.id === "MIGRADO" || e.id === "CARGADO",
-);
+const FILTROS_ESTADO: {
+  id: EstadoPedido;
+  nombre: string;
+  apagado: string;
+  activo: string;
+}[] = [
+  {
+    id: "MIGRADO",
+    nombre: "Migrado",
+    apagado:
+      "border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-800/60 dark:bg-sky-950/40 dark:text-sky-200/80",
+    activo:
+      "border-sky-700 bg-sky-700 text-white dark:border-sky-700 dark:bg-sky-800 dark:text-sky-50",
+  },
+  {
+    id: "CARGADO",
+    nombre: "Guardado",
+    apagado:
+      "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200/80",
+    activo:
+      "border-emerald-700 bg-emerald-700 text-white dark:border-emerald-700 dark:bg-emerald-800 dark:text-emerald-50",
+  },
+];
 
 /** Pedidos que cargó el usuario, del más reciente al más viejo. */
-export function PedidosCargados() {
+export function PedidosCargados({
+  onCopiar,
+}: {
+  onCopiar: (pedido: PedidoResumen) => void;
+}) {
   const hoy = fechaEnZonaIso(new Date());
   const [periodo, setPeriodo] = useState<PeriodoFiltro>(
     () => periodosPedidos(hoy)[1],
   );
   const [estado, setEstado] = useState<EstadoPedido | "">("");
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(7);
-  const [datos, setDatos] = useState<RespuestaPaginada<PedidoResumen> | null>(
-    null,
-  );
-  const [error, setError] = useState("");
   const [abierto, setAbierto] = useState<PedidoResumen | null>(null);
-  const [recarga, setRecarga] = useState(0);
   const [eliminando, setEliminando] = useState(false);
 
   const { desde, hasta } = rangoPeriodoInicio(periodo, hoy);
-
-  useEffect(() => {
-    const control = new AbortController();
-    apiFetch<RespuestaPaginada<PedidoResumen>>(
-      `/pedidos?page=${page}&limit=${limit}&desde=${desde}&hasta=${hasta}${estado ? `&estado=${estado}` : ""}`,
-      { signal: control.signal },
-    )
-      .then(setDatos)
-      .catch((e: unknown) => {
-        if (!control.signal.aborted)
-          setError(e instanceof Error ? e.message : "No se pudieron traer los pedidos");
-      });
-    return () => control.abort();
-  }, [page, limit, recarga, desde, hasta, estado]);
+  const { datos, error, page, limit, setPage, setLimit, refrescar } =
+    useListaCampo<PedidoResumen>(
+      `/pedidos?desde=${desde}&hasta=${hasta}${estado ? `&estado=${estado}` : ""}`,
+      0,
+      7,
+    );
 
   async function eliminar(p: PedidoResumen) {
     if (
@@ -85,7 +100,7 @@ export function PedidosCargados() {
       mostrarToast("exito", `Pedido ${p.numero} eliminado`);
       // Era el último de su página: se vuelve a la anterior.
       if (datos?.items.length === 1 && page > 1) setPage(page - 1);
-      else setRecarga((n) => n + 1);
+      else refrescar();
     } catch (e) {
       mostrarToast("error", e instanceof Error ? e.message : "No se pudo eliminar el pedido");
     } finally {
@@ -117,10 +132,8 @@ export function PedidosCargados() {
                 setEstado((actual) => (actual === e.id ? "" : e.id));
                 setPage(1);
               }}
-              className={`${BOTON_FILTRO_COMPACTO} cursor-pointer whitespace-nowrap rounded-full border font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${
-                estado === e.id
-                  ? "border-brand-700 bg-brand-700 text-white dark:border-brand-500 dark:bg-brand-500 dark:text-brand-950"
-                  : "border-line bg-surface-raised text-foreground hover:bg-surface-soft"
+              className={`${BOTON_FILTRO_COMPACTO} cursor-pointer whitespace-nowrap rounded-full border font-semibold transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:hover:brightness-125 ${
+                estado === e.id ? e.activo : e.apagado
               }`}
             >
               {e.nombre}
@@ -156,6 +169,13 @@ export function PedidosCargados() {
                 <div className="flex items-center justify-between gap-2">
                   <b className="tabular-nums text-foreground">{guaranies(p.total)}</b>
                   <div className="flex items-center gap-1">
+                    {p.estado !== "CARGADO" ? (
+                      <BotonCopiar
+                        modo="texto"
+                        etiqueta={`Copiar ${p.numero}`}
+                        onClick={() => onCopiar(p)}
+                      />
+                    ) : null}
                     {p.eliminable ? (
                       <BotonEliminarCampo
                         modo="texto"
@@ -202,6 +222,12 @@ export function PedidosCargados() {
                     </td>
                     <td className="px-3 py-2">
                       <div className="flex items-center justify-end gap-1">
+                        {p.estado !== "CARGADO" ? (
+                          <BotonCopiar
+                            etiqueta={`Copiar ${p.numero}`}
+                            onClick={() => onCopiar(p)}
+                          />
+                        ) : null}
                         <BotonEditar
                           etiqueta={`Editar y enviar ${p.numero}`}
                           onClick={() => setAbierto(p)}
@@ -238,7 +264,7 @@ export function PedidosCargados() {
           key={abierto.id}
           pedido={abierto}
           onCerrar={() => setAbierto(null)}
-          onCambio={() => setRecarga((n) => n + 1)}
+          onCambio={refrescar}
         />
       ) : null}
     </section>

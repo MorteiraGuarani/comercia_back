@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { ForbiddenException } from '@nestjs/common';
 import type { AccesoPlataformaService } from '../plataforma/acceso-plataforma.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import { InventarioCargasService } from './inventario-cargas.service';
@@ -81,15 +81,18 @@ describe('InventarioCargasService', () => {
     expect(where()).toMatchObject({ empresaId: 9 });
   });
 
-  it('el superadmin debe elegir empresa para filtrar por persona', async () => {
-    prisma.usuario.findUnique.mockResolvedValue({
-      isActive: true,
-      esSuperadmin: true,
-      rol: null,
-    });
-    await expect(
-      servicio.listar(5, { responsableId: 6 }),
-    ).rejects.toBeInstanceOf(BadRequestException);
+  it('sin empresa elegida, la cadena sale de la empresa del responsable', async () => {
+    prisma.usuario.findUnique
+      .mockResolvedValueOnce({
+        isActive: true,
+        esSuperadmin: true,
+        rol: null,
+      })
+      .mockResolvedValueOnce({ empresaId: 3 });
+    await servicio.listar(5, { responsableId: 6 });
+    expect(obtenerSubordinadosActivos).toHaveBeenCalledWith(prisma, 6, 3);
+    expect(where()).toMatchObject({ usuarioId: { in: [6, 7, 8] } });
+    expect(where()).not.toHaveProperty('empresaId');
   });
 
   it('Admin TI ve toda su empresa y no puede pedir otra', async () => {

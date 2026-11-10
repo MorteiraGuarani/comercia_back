@@ -2,7 +2,10 @@
 
 import { useEffect } from "react";
 
-const INTERVALO_COMPROBACION_MS = 60_000;
+// Cada comprobación descarga el HTML de la pantalla: como mucho una cada 15 minutos.
+const INTERVALO_COMPROBACION_MS = 15 * 60_000;
+// Solo mira si ya toca comprobar; no usa la red.
+const INTERVALO_REVISION_MS = 60_000;
 const PARAMETRO_VERSION = "_comercia_dpl";
 const REGEX_DEPLOYMENT_ID = /\bdata-dpl-id=(?:"([^"]+)"|'([^']+)')/;
 
@@ -36,12 +39,14 @@ export function ActualizadorDespliegue() {
 
     const controller = new AbortController();
     let comprobando = false;
+    let ultimaComprobacion = 0;
 
     const comprobarVersion = async () => {
       const versionCargada = document.documentElement.dataset.dplId;
       if (
         !versionCargada ||
         document.visibilityState === "hidden" ||
+        Date.now() - ultimaComprobacion < INTERVALO_COMPROBACION_MS ||
         comprobando
       ) {
         return;
@@ -50,6 +55,7 @@ export function ActualizadorDespliegue() {
       comprobando = true;
       try {
         const versionServidor = await obtenerDeploymentId(controller.signal);
+        ultimaComprobacion = Date.now();
         if (versionServidor && versionServidor !== versionCargada) {
           const destino = new URL(window.location.href);
           destino.searchParams.set(PARAMETRO_VERSION, versionServidor);
@@ -65,7 +71,7 @@ export function ActualizadorDespliegue() {
     void comprobarVersion();
     const intervalo = window.setInterval(
       comprobarVersion,
-      INTERVALO_COMPROBACION_MS,
+      INTERVALO_REVISION_MS,
     );
     window.addEventListener("focus", comprobarVersion);
     document.addEventListener("visibilitychange", comprobarVersion);

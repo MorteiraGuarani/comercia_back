@@ -18,6 +18,7 @@ import { direccionesLocales, nombreLocal } from '../campo/utils/local-ocrd';
 import type {
   BuscarClientesPedidoDto,
   ConsultaPedidosDto,
+  CopiarPedidoDto,
   BuscarProductosPedidoDto,
   CrearPedidoDto,
   EditarDocumentoDto,
@@ -28,6 +29,7 @@ import type {
 } from './interfaces/cliente-pedido.interface';
 import type { ProductoPedido } from './interfaces/producto-pedido.interface';
 import type {
+  CopiaPedido,
   LineaPedidoRespuesta,
   PedidoDetalle,
   PedidoResumen,
@@ -560,6 +562,61 @@ export class PedidosService {
       page,
       limit,
     );
+  }
+
+  /** Arma un pedido nuevo desde otro: productos activos y precios de hoy. */
+  async copiar(usuarioId: number, dto: CopiarPedidoDto): Promise<CopiaPedido> {
+    const u = await this.usuarioSap(usuarioId);
+    const { empresaId } = u;
+    const c = await this.cliente(empresaId, dto.cardCode);
+    // Una factura puede repetir un producto.
+    const cantidades = new Map<string, number>();
+    for (const l of dto.lineas)
+      cantidades.set(
+        l.itemCode,
+        (cantidades.get(l.itemCode) ?? 0) + l.cantidad,
+      );
+    const codigos = [...cantidades.keys()];
+    const productos = await this.prisma.producto.findMany({
+      where: { itemcode: { in: codigos }, AND: activosAnd },
+      select: {
+        itemcode: true,
+        itemname: true,
+        itmsgrpcode: true,
+        almacen: true,
+      },
+      take: codigos.length,
+    });
+    const [precios, almacenes] = await Promise.all([
+      this.precios(empresaId, c.ListNum, codigos),
+      this.almacenesSap(
+        u,
+        productos.map((p) => p.almacen),
+      ),
+    ]);
+    const almacenDe = resolverAlmacen({
+      canal: u.ERP_CanalVenta,
+      sucursal: u.ERP_Sucursal,
+      almacenUsuario: u.ERP_CodigoAlmacen,
+      almacenes,
+    });
+    const activos = new Set(productos.map((p) => p.itemcode));
+    return {
+      cliente: { id: c.CardCode, nombre: nombreLocal(c) },
+      items: productos.map((p) => ({
+        itemCode: p.itemcode,
+        nombre: p.itemname?.trim() || p.itemcode,
+        linea: lineaDeGrupo(p.itmsgrpcode),
+        // Un pedido admite enteros de 1 a 9999; la factura puede traer decimales.
+        cantidad: Math.min(
+          9999,
+          Math.max(1, Math.round(cantidades.get(p.itemcode)!)),
+        ),
+        precio: precios.get(p.itemcode) ?? null,
+        almacen: almacenDe(p.almacen) || null,
+      })),
+      noDisponibles: codigos.filter((codigo) => !activos.has(codigo)),
+    };
   }
 
   private async usuarioSap(usuarioId: number) {

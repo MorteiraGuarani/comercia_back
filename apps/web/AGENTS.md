@@ -26,9 +26,9 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   (combobox)** con la etiqueta del dato, por ejemplo «Cliente». No agregar
   un input «Buscar cliente» separado de otro select «Cliente».
 - Al enfocar o hacer clic, abrir el desplegable con la primera página sin
-  exigir texto previo: 7 opciones por defecto (al menos 5 si existen).
+  exigir texto previo: 5 opciones, sin paginador; al escribir, las 5 más parecidas.
   Escribir filtra la búsqueda remota; elegir una opción muestra su nombre
-  en ese mismo campo y cierra el desplegable. Paginar dentro del desplegable.
+  en ese mismo campo y cierra el desplegable.
 - Permitir flechas, Enter para elegir y Escape para cerrar, además de clic
   y toque. El texto libre no es una selección válida: guardar exige un ID
   elegido cuando el campo es obligatorio.

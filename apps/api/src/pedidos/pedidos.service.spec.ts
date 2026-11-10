@@ -26,6 +26,71 @@ describe('lineas de pedido', () => {
   });
 });
 
+describe('PedidosService.copiar', () => {
+  const prisma = {
+    usuario: {
+      findUnique: jest.fn().mockResolvedValue({
+        empresaId: 2,
+        nombreLogin: 'vendedor',
+        celular: '+595991188620',
+        ERP_Sucursal: 3,
+        ERP_CanalVenta: '2',
+        ERP_CodigoAlmacen: null,
+      }),
+    },
+    socioNegocio: {
+      findFirst: jest.fn().mockResolvedValue({
+        CardCode: 'C0001',
+        CardName: 'Despensa Don Tito',
+        ListNum: 3,
+      }),
+    },
+    producto: {
+      findMany: jest.fn().mockResolvedValue([
+        {
+          itemcode: 'H1',
+          itemname: 'Hamburguesa clásica',
+          itmsgrpcode: 144,
+          almacen: null,
+        },
+      ]),
+    },
+    productoPrecio: {
+      findMany: jest
+        .fn()
+        .mockResolvedValue([{ itemcode: 'H1', price: '3890.000000' }]),
+    },
+    almacen: { findMany: jest.fn().mockResolvedValue([]) },
+  };
+  const servicio = new PedidosService(
+    prisma as unknown as PrismaService,
+    { get: () => undefined } as unknown as ConfigService,
+    sinServiceLayer,
+  );
+
+  it('suma repetidos, usa el precio de hoy y separa lo que ya no se vende', async () => {
+    const copia = await servicio.copiar(7, {
+      cardCode: 'C0001',
+      lineas: [
+        { itemCode: 'H1', cantidad: 2 },
+        { itemCode: 'H1', cantidad: 1.6 },
+        { itemCode: 'VIEJO', cantidad: 1 },
+      ],
+    });
+    expect(copia.items).toEqual([
+      {
+        itemCode: 'H1',
+        nombre: 'Hamburguesa clásica',
+        linea: 'hamburguesas',
+        cantidad: 4,
+        precio: 3890,
+        almacen: null,
+      },
+    ]);
+    expect(copia.noDisponibles).toEqual(['VIEJO']);
+  });
+});
+
 describe('PedidosService.crear', () => {
   beforeEach(() =>
     jest.useFakeTimers().setSystemTime(new Date('2026-11-03T10:00:00-03:00')),

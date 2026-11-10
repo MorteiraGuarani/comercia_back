@@ -9,7 +9,7 @@ import {
   type Prisma,
   TipoNotificacionCampo,
 } from '../../generated/prisma/client';
-import { fechaCampo, relojCampo } from '../campo/utils/calendario';
+import { relojCampo } from '../campo/utils/calendario';
 import { nombreLocal } from '../campo/utils/local-ocrd';
 import { textoAvisoVencimiento } from './utils/vencimiento';
 import { obtenerSuperioresActivos } from '../common/utils/superiores';
@@ -94,33 +94,15 @@ export class VencimientosService implements OnModuleInit, OnModuleDestroy {
               })
             ).map((p) => [p.itemcode, p.itemname]),
           );
-          const fecha = fechaCampo(hoy);
           const avisos: Prisma.NotificacionCampoCreateManyInput[] = [];
           for (const carga of cargas) {
-            // Quien cargó, el personal asignado hoy y toda su cadena de superiores.
-            const asignados = await tx.asignacionCampo.findMany({
-              where: {
-                empresaId: carga.empresaId,
-                localId: carga.localId,
-                activo: true,
-                fechaDesde: { lte: fecha },
-                OR: [{ fechaHasta: null }, { fechaHasta: { gte: fecha } }],
-              },
-              select: {
-                usuarioId: true,
-              },
-            });
-            const responsables = [
-              carga.usuarioId,
-              ...asignados.map((a) => a.usuarioId),
-            ];
+            // Quien cargó y su cadena de superiores: un local lo comparten varias
+            // ramas (impulsadores, repositores) y cada una ve solo lo suyo.
             const candidatos = new Set<number>([
-              ...responsables,
-              ...(await obtenerSuperioresActivos(
-                tx,
-                carga.empresaId,
-                responsables,
-              )),
+              carga.usuarioId,
+              ...(await obtenerSuperioresActivos(tx, carga.empresaId, [
+                carga.usuarioId,
+              ])),
             ]);
             const activos = await tx.usuario.findMany({
               where: {

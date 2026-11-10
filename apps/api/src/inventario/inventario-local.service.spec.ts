@@ -1,4 +1,8 @@
-import { BadRequestException, PayloadTooLargeException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  PayloadTooLargeException,
+} from '@nestjs/common';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { AccesoPlataformaService } from '../plataforma/acceso-plataforma.service';
 import type { VencimientosService } from './vencimientos.service';
@@ -146,6 +150,60 @@ describe('Inventario por local · carga de hoy', () => {
 });
 
 describe('Inventario por local · copia sin conexión', () => {
+  describe('configuración de avisos sin la página Administración', () => {
+    const conRol = (descripcion: string, esAdminTi: boolean) => {
+      const prisma = {
+        usuario: {
+          findUnique: jest.fn().mockResolvedValue({
+            empresaId: 10,
+            isActive: true,
+            esSuperadmin: false,
+            rol: { descripcion, esAdminTi },
+          }),
+        },
+        empresa: {
+          findUniqueOrThrow: jest
+            .fn()
+            .mockResolvedValue({ diasAvisoVencimiento: 5 }),
+        },
+      };
+      const plataforma = {
+        exigirAccesoPagina: jest
+          .fn()
+          .mockRejectedValueOnce(new ForbiddenException())
+          .mockResolvedValueOnce({ empresaId: 10 }),
+      };
+      return {
+        plataforma,
+        servicio: new InventarioLocalService(
+          prisma as unknown as PrismaService,
+          plataforma as unknown as AccesoPlataformaService,
+          {} as VencimientosService,
+        ),
+      };
+    };
+
+    it('Admin TI entra por la página de Inventarios', async () => {
+      const { servicio, plataforma } = conRol('AdminTI', true);
+      await expect(servicio.configuracion(7)).resolves.toEqual({
+        diasAviso: 5,
+      });
+      expect(plataforma.exigirAccesoPagina).toHaveBeenLastCalledWith(
+        7,
+        'inventarios',
+        'cargas',
+      );
+    });
+
+    it('un rol común sigue sin acceso', async () => {
+      const { servicio, plataforma } = conRol('Impulsador', false);
+      await expect(servicio.configuracion(7)).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+      expect(plataforma.exigirAccesoPagina).toHaveBeenCalledTimes(1);
+    });
+  });
+
   function copia(productos = 1) {
     const prisma = {
       empresa: {

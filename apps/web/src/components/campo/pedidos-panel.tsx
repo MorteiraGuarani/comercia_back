@@ -20,10 +20,14 @@ import { ProductosLineaPedido } from "@/components/campo/productos-linea-pedido"
 import { PedidosCargados } from "@/components/campo/pedidos-cargados";
 import { PendientesTareas } from "@/components/campo/pendientes-tareas";
 import { FacturasClientePedido } from "@/components/campo/facturas-cliente-pedido";
+import { confirmar } from "@/components/confirmacion/confirmacion-controller";
 import type {
+  CopiaPedido,
   ItemPedido,
+  LineaFacturaCliente,
   LineaPedido,
   PedidoDetalle,
+  PedidoResumen,
   PerfilClientePedido,
   ProductoPedido,
 } from "@/types/pedido";
@@ -49,11 +53,16 @@ export function PedidosPanel() {
   const { usuario } = usePanel();
   const hoy = fechaEnZonaIso(new Date());
   const manana = agregarDiasIso(hoy, 1);
-  const [paso, setPaso] = useState(0);
+  const [pasoElegido, setPaso] = useState(0);
   const [cliente, setCliente] = useState<{ id: string; nombre: string } | null>(
     null,
   );
   const [perfil, setPerfil] = useState<PerfilClientePedido | null>(null);
+  // Inhabilitado en SAP (facturas vencidas): no se le carga el pedido.
+  const bloqueado = perfil?.credito?.habilitado === false;
+  // Al copiar se salta a Revisar: si está inhabilitado, vuelve a ver el motivo.
+  const paso = bloqueado ? 0 : pasoElegido;
+  const [copiando, setCopiando] = useState(false);
   const [errorPerfil, setErrorPerfil] = useState("");
   const [items, setItems] = useState<Record<string, ItemPedido>>({});
   const [entrega, setEntrega] = useState(manana);
@@ -96,8 +105,6 @@ export function PedidosPanel() {
   const unidades = lista.reduce((suma, i) => suma + i.cantidad, 0);
   const total = lista.reduce((suma, i) => suma + (i.precio ?? 0) * i.cantidad, 0);
   const actual = PASOS[paso];
-  // Inhabilitado en SAP (facturas vencidas): no se le carga el pedido.
-  const bloqueado = perfil?.credito?.habilitado === false;
   const ultimo = paso === PASOS.length - 1;
 
   function ir(i: number) {
@@ -177,6 +184,76 @@ export function PedidosPanel() {
       mostrarToast("error", "No se pudo guardar el pedido");
     } finally {
       setGuardando(false);
+    }
+  }
+
+  async function copiarLineas(
+    cardCode: string,
+    origen: Pick<LineaFacturaCliente, "itemCode" | "nombre" | "cantidad">[],
+    comentario = "",
+  ) {
+    if (
+      !pedido &&
+      lista.length &&
+      !(await confirmar({
+        titulo: "Copiar pedido",
+        mensaje: "Se reemplaza lo que estás cargando en este pedido.",
+        textoConfirmar: "Copiar",
+      }))
+    )
+      return;
+    setCopiando(true);
+    try {
+      const lineas = origen
+        .filter((l) => l.itemCode)
+        .map((l) => ({ itemCode: l.itemCode, cantidad: l.cantidad }));
+      const copia = await apiFetch<CopiaPedido>("/pedidos/copia", {
+        method: "POST",
+        body: JSON.stringify({ cardCode, lineas }),
+      });
+      if (!copia.items.length) {
+        mostrarToast("error", "Ninguno de esos productos se puede pedir hoy");
+        return;
+      }
+      setPedido(null);
+      setPerfil(null);
+      setCliente(copia.cliente);
+      setItems(Object.fromEntries(copia.items.map((i) => [i.itemCode, i])));
+      setEntrega(manana);
+      setObservaciones(comentario.slice(0, 200));
+      ir(PASOS.length - 1);
+      const faltan = copia.noDisponibles.map(
+        (c) => origen.find((l) => l.itemCode === c)?.nombre ?? c,
+      );
+      const sinAlmacen = copia.items.filter((i) => !i.almacen).length;
+      const avisos = [
+        faltan.length ? `Ya no se pueden pedir: ${faltan.join(", ")}` : "",
+        sinAlmacen
+          ? `${sinAlmacen} sin almacén: no se van a poder enviar a SAP`
+          : "",
+      ].filter(Boolean);
+      mostrarToast(
+        avisos.length ? "alerta" : "exito",
+        avisos.length
+          ? `Pedido copiado. ${avisos.join(". ")}`
+          : "Pedido copiado con los precios de hoy: revisalo y envialo",
+      );
+    } catch (e) {
+      mostrarToast("error", e instanceof Error ? e.message : "No se pudo copiar el pedido");
+    } finally {
+      setCopiando(false);
+    }
+  }
+
+  async function copiarPedido(p: PedidoResumen) {
+    setCopiando(true);
+    try {
+      const detalle = await apiFetch<PedidoDetalle>(`/pedidos/${p.id}`);
+      await copiarLineas(detalle.cliente.id, detalle.lineas, detalle.observaciones);
+    } catch (e) {
+      mostrarToast("error", e instanceof Error ? e.message : "No se pudo copiar el pedido");
+    } finally {
+      setCopiando(false);
     }
   }
 
@@ -265,6 +342,7 @@ export function PedidosPanel() {
   if (pedido)
     return (
       <div className="mx-auto w-full min-w-0 max-w-md lg:max-w-6xl lg:px-6">
+        <PantallaCarga visible={copiando} mensaje="Copiando pedido" />
         {encabezado}
         <div className="space-y-4 px-4 py-4 lg:grid lg:grid-cols-[22rem_minmax(0,1fr)] lg:items-start lg:gap-6 lg:space-y-0 lg:px-0 lg:py-6">
           <div className="space-y-4">
@@ -274,7 +352,7 @@ export function PedidosPanel() {
             </button>
             <PendientesTareas onSincronizar={refrescarLista} />
           </div>
-          <PedidosCargados key={versionLista} />
+          <PedidosCargados key={versionLista} onCopiar={(p) => void copiarPedido(p)} />
         </div>
       </div>
     );
@@ -282,6 +360,7 @@ export function PedidosPanel() {
   return (
     <div className="mx-auto flex min-h-[calc(100dvh-8rem)] w-full min-w-0 max-w-md flex-col lg:grid lg:max-w-6xl lg:grid-cols-[minmax(0,1fr)_22rem] lg:content-start lg:items-start lg:gap-x-6 lg:px-6">
       <PantallaCarga visible={guardando} mensaje="Guardando pedido" />
+      <PantallaCarga visible={copiando} mensaje="Copiando pedido" />
       {encabezado}
       <section className="flex-1 px-4 py-4 lg:grid lg:grid-cols-[3.5rem_minmax(0,1fr)_3.5rem] lg:gap-3 lg:px-0 lg:py-6">
         <FlechaLateral
@@ -330,10 +409,16 @@ export function PedidosPanel() {
             ) : (
               <>
                 <PerfilCliente perfil={perfil} />
-                <FacturasClientePedido cardCode={perfil.id} nombre={perfil.nombre} />
+                <FacturasClientePedido
+                  cardCode={perfil.id}
+                  nombre={perfil.nombre}
+                  onCopiar={(lineas) => void copiarLineas(perfil.id, lineas)}
+                />
               </>
             )}
-            {!cliente ? <PedidosCargados key={versionLista} /> : null}
+            {!cliente ? (
+              <PedidosCargados key={versionLista} onCopiar={(p) => void copiarPedido(p)} />
+            ) : null}
           </div>
         ) : null}
 

@@ -41,6 +41,14 @@ export interface ItemPedido extends ProductoPedido {
   cantidad: number;
 }
 
+/** Pedido armado desde otro, con productos y precios vigentes. */
+export interface CopiaPedido {
+  cliente: { id: string; nombre: string };
+  items: ItemPedido[];
+  /** ItemCode que ya no se pueden pedir. */
+  noDisponibles: string[];
+}
+
 export interface PedidoResumen {
   id: number;
   numero: string;
