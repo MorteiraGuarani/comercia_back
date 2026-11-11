@@ -161,7 +161,8 @@ export function Modal({
             </button>
           </header>
         </div>
-        <div className={`${hojaMovil ? "mt-2 sm:mt-4" : "mt-4"} min-h-0 min-w-0 w-full overflow-y-auto overscroll-contain`}>{children}</div>
+        {/* El scroll recorta lo que sale de la caja: el margen de 4px deja ver el anillo de foco de los campos. */}
+        <div className={`${hojaMovil ? "mt-1 sm:mt-3" : "mt-3"} -mx-1 -mb-1 min-h-0 min-w-0 overflow-y-auto overscroll-contain p-1`}>{children}</div>
         {pie || textoCerrar ? (
           <footer className="mt-3 shrink-0 border-t border-line dark:border-line">
             {pie}

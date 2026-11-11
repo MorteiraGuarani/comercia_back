@@ -530,7 +530,7 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
           <div
             role="tablist"
             aria-label="Secciones del usuario"
-            className="flex min-w-0 gap-2 border-b border-line pb-3"
+            className="grid min-w-0 grid-cols-3 gap-1 rounded-xl border border-line bg-surface-soft p-1 dark:border-line dark:bg-surface-soft"
           >
             {PASOS_USUARIO.map((texto, i) => (
               <button
@@ -541,12 +541,22 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
                 aria-selected={paso === i}
                 aria-controls={`usuario-paso-${i}`}
                 onClick={() => setPaso(i)}
-                className={`min-h-11 min-w-0 flex-1 cursor-pointer whitespace-nowrap rounded-lg px-3 text-xs font-bold uppercase tracking-wider transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 sm:flex-none sm:px-4 ${
+                className={`flex min-h-11 min-w-0 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-lg px-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${
                   paso === i
-                    ? "bg-foreground text-background"
-                    : "border border-line bg-surface-raised text-muted hover:bg-surface-soft hover:text-foreground"
+                    ? "bg-surface-raised text-foreground shadow-sm dark:bg-surface-raised dark:text-foreground"
+                    : "text-muted hover:bg-surface-raised/60 hover:text-foreground dark:text-muted dark:hover:bg-surface-raised/60 dark:hover:text-foreground"
                 }`}
               >
+                <span
+                  aria-hidden
+                  className={`grid h-5 w-5 shrink-0 place-items-center rounded-full text-[11px] font-bold ${
+                    paso === i
+                      ? "bg-brand-700 text-white dark:bg-brand-600 dark:text-white"
+                      : "bg-line text-muted dark:bg-line dark:text-muted"
+                  }`}
+                >
+                  {i + 1}
+                </span>
                 {texto}
               </button>
             ))}
