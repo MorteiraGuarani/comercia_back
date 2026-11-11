@@ -24,12 +24,16 @@ describe('AdminTI: alcance y límites', () => {
   const prisma = {
     usuario: { findUnique: jest.fn(), count: jest.fn(), findMany: jest.fn() },
     empresa: { findMany: jest.fn(), findUnique: jest.fn() },
+    empresaModulo: { findMany: jest.fn() },
+    empresaPagina: { findMany: jest.fn() },
     modulo: { findUnique: jest.fn() },
   };
   const db = prisma as unknown as PrismaService;
   beforeEach(() => {
     jest.resetAllMocks();
     prisma.usuario.findUnique.mockResolvedValue(actor);
+    prisma.empresaModulo.findMany.mockResolvedValue([]);
+    prisma.empresaPagina.findMany.mockResolvedValue([]);
   });
 
   it('autoriza por el permiso explícito, no por el nombre del rol', async () => {
