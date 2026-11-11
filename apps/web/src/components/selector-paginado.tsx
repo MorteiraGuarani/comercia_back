@@ -33,6 +33,7 @@ export function SelectorPaginado<TId extends number | string = number>({
   limite = buscable ? 5 : 7,
   opcionVacia,
   limpiable = false,
+  conDescripcion = false,
 }: {
   url: string;
   etiqueta: string;
@@ -56,6 +57,8 @@ export function SelectorPaginado<TId extends number | string = number>({
   opcionVacia?: { texto: string; onElegir: () => void };
   /** Solo con buscable: una X dentro del campo deja la selección vacía. */
   limpiable?: boolean;
+  /** Solo con buscable: la descripción va en una segunda línea bajo el nombre (p. ej. sucursal y código). */
+  conDescripcion?: boolean;
 }) {
   const [datos, setDatos] = useState<RespuestaPaginada<
     OpcionSelector<TId>
@@ -357,9 +360,16 @@ export function SelectorPaginado<TId extends number | string = number>({
                           onMouseDown={(e) => e.preventDefault()}
                           onClick={() => elegir(item)}
                         >
-                          {item
-                            ? (item.nombre ?? item.descripcion)
-                            : opcionVacia?.texto}
+                          {item && conDescripcion && item.nombre && item.descripcion ? (
+                            <span className="min-w-0">
+                              <span className="block break-words">{item.nombre}</span>
+                              <span className="block break-words text-xs text-muted">{item.descripcion}</span>
+                            </span>
+                          ) : item ? (
+                            (item.nombre ?? item.descripcion)
+                          ) : (
+                            opcionVacia?.texto
+                          )}
                         </li>
                       );
                     })

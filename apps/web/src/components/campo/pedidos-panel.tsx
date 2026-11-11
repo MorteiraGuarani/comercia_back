@@ -379,6 +379,7 @@ export function PedidosPanel() {
               etiqueta="Cliente"
               etiquetaOculta
               buscable
+              conDescripcion
               value={cliente?.id ?? ""}
               seleccionActual={cliente?.nombre}
               placeholder="Buscá por nombre o código"

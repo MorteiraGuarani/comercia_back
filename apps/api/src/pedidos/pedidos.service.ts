@@ -436,7 +436,7 @@ export class PedidosService {
       filas.map((f) => ({
         id: f.CardCode,
         nombre: nombreLocal(f),
-        descripcion: [f.CardCode, direcciones.get(f.CardCode)?.direccion]
+        descripcion: [direcciones.get(f.CardCode)?.direccion, f.CardCode]
           .filter(Boolean)
           .join(' · '),
       })),

@@ -4,7 +4,7 @@ import type { CreditoCliente } from './credito-cliente.interface';
 export interface ClientePedido {
   id: string;
   nombre: string;
-  /** CardCode y dirección, para distinguir clientes con el mismo nombre. */
+  /** Sucursal (dirección de CRD1) y CardCode, para distinguir clientes con el mismo nombre. */
   descripcion: string;
 }
 
