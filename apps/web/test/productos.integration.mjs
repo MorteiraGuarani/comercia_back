@@ -26,6 +26,7 @@ function cargar(ruta) {
   vm.runInNewContext(js, { module: modulo, exports: modulo.exports, require: (nombre) => stubs[nombre] ?? require(nombre), window, document, setTimeout, clearTimeout, AbortController }, { filename: ruta });
   return modulo.exports;
 }
+stubs['@/utils/texto'] = cargar('utils/texto.ts');
 const { SelectorPaginado } = cargar('components/selector-paginado.tsx');
 const { normalizarPrecio, datosProducto, formularioProducto } = cargar('utils/precio-producto.ts');
 const root = createRoot(document.getElementById('app'));
