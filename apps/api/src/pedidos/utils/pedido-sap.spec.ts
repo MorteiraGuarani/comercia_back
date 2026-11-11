@@ -27,7 +27,6 @@ const base: DatosPedidoSap = {
   celular: '+595991188620',
   canal: '1',
   sucursal: 3,
-  almacenUsuario: 'ITG-PRV',
   almacenes: [
     almacen('ITG-PRV', '1', 'PV-ITAUGUA'),
     almacen('ITG-EMB', '2', 'ITAUGUA'),
@@ -42,7 +41,22 @@ const base: DatosPedidoSap = {
 };
 
 describe('armarPedidosSap', () => {
-  it('canal 1: un solo pedido desde el almacén del usuario', () => {
+  it('canal 1: sin almacén si su sucursal no tiene uno solo de canal 1', () => {
+    const otraSucursal = { ...almacen('ITG-PV2', '1', 'PV'), Location: 4 };
+    const almacenesDe = (lista: AlmacenSap[]) =>
+      armarPedidosSap({ ...base, almacenes: lista }).map(
+        (p) => p.DocumentLines[0].WarehouseCode,
+      );
+    expect(almacenesDe([otraSucursal])).toEqual(['']);
+    expect(
+      almacenesDe([almacen('ITG-PRV', '1', 'A'), almacen('ITG-PR2', '1', 'B')]),
+    ).toEqual(['']);
+    expect(almacenesDe([almacen('ITG-PRV', '1', 'A'), otraSucursal])).toEqual([
+      'ITG-PRV',
+    ]);
+  });
+
+  it('canal 1: un solo pedido desde el almacén de su sucursal y canal', () => {
     const pedidos = armarPedidosSap(base);
     expect(pedidos).toHaveLength(1);
     expect(pedidos[0]).toMatchObject({

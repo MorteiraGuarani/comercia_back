@@ -88,6 +88,14 @@ describe('PedidosService.copiar', () => {
       },
     ]);
     expect(copia.noDisponibles).toEqual(['VIEJO']);
+    // Sin almacenes en su sucursal y canal, ningún producto se puede pedir.
+    expect(prisma.producto.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          AND: expect.arrayContaining([{ almacen: { in: [] } }]) as unknown,
+        }) as unknown,
+      }),
+    );
   });
 });
 
@@ -221,17 +229,28 @@ describe('PedidosService.crear', () => {
     expect(pedido).toMatchObject({ numero: 'PV-12', total: 38900 });
   });
 
-  it('el buscador dice de qué almacén sale cada producto', async () => {
+  it('el buscador solo muestra productos de un almacén de su sucursal y canal', async () => {
     const { prisma, servicio } = preparar();
     prisma.producto.findMany.mockResolvedValue([
       { itemcode: 'H1', itemname: 'Hamburguesa', almacen: 'ITG-HAM' },
-      { itemcode: 'PV14', itemname: 'Besito', almacen: null },
     ]);
     const { items } = await servicio.productos(7, {
       cardCode: 'C0001',
       linea: 'embutidos',
     });
-    expect(items.map((p) => p.almacen)).toEqual(['ITG-HAM', null]);
+    expect(prisma.almacen.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { empresaId: 2, Location: 3, GlobalLocationNumber: '2' },
+      }),
+    );
+    expect(prisma.producto.count).toHaveBeenCalledWith({
+      where: {
+        AND: expect.arrayContaining([
+          { almacen: { in: ['ITG-HAM'] } },
+        ]) as unknown,
+      },
+    });
+    expect(items.map((p) => p.almacen)).toEqual(['ITG-HAM']);
   });
 
   it('guarda el documento de SAP con su id en U_beas_version', async () => {

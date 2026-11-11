@@ -1,34 +1,52 @@
+import type { Prisma } from '../../../generated/prisma/client';
 import type {
+  AlmacenSap,
   DatosAlmacenUsuario,
   DatosPedidoSap,
   PedidoSap,
 } from '../interfaces/pedido-sap.interface';
 
-/** Canal de tbl_jcanales que sale de un solo almacén: el del usuario. */
-const CANAL_ALMACEN_UNICO = '1';
+/** Canal de tbl_jcanales que sale de un solo almacén: el de la sucursal del usuario. */
+export const CANAL_ALMACEN_UNICO = '1';
 
 /** El último tramo de U_beas_version es el id de campo_documento: se conoce al guardarlo. */
 export const conIdDocumento = (version: string, id: number) =>
   version.replace(/\d+$/, String(id));
 
 /**
- * Almacén de un producto a partir de su DfltWH. Canal 1: siempre el del usuario.
- * Otro canal: su DfltWH si es de la sucursal y canal del usuario; si no, vacío.
+ * Almacén de un producto. Canal 1: el único almacén de tbl_owhs de la sucursal
+ * y canal del usuario, para todos los productos. Otro canal: el DfltWH del
+ * producto si es de la sucursal y canal del usuario. Si no, vacío.
  */
 export function resolverAlmacen(d: DatosAlmacenUsuario) {
   const porCodigo = new Map(d.almacenes.map((a) => [a.WarehouseCode, a]));
+  const deSucursal = (a: AlmacenSap) =>
+    !!d.canal &&
+    d.sucursal !== null &&
+    a.Location === d.sucursal &&
+    a.GlobalLocationNumber === d.canal;
+  // Con cero o varios no se elige ninguno: elegir uno podría descontar del depósito equivocado.
+  const delCanal = d.almacenes.filter(deSucursal);
+  const almacenCanal = delCanal.length === 1 ? delCanal[0].WarehouseCode : '';
   return (codigo: string | null) => {
-    if (d.canal === CANAL_ALMACEN_UNICO) return d.almacenUsuario ?? '';
+    if (d.canal === CANAL_ALMACEN_UNICO) return almacenCanal;
     const a = codigo ? porCodigo.get(codigo) : undefined;
-    return a &&
-      d.canal &&
-      d.sucursal !== null &&
-      a.Location === d.sucursal &&
-      a.GlobalLocationNumber === d.canal
-      ? a.WarehouseCode
-      : '';
+    return a && deSucursal(a) ? a.WarehouseCode : '';
   };
 }
+
+/**
+ * Productos que el usuario puede pedir. Canal 1: todos, salen del almacén de su
+ * sucursal (si falta, el aviso "Sin almacén" lo hace visible). Otro canal: solo
+ * los que tienen DfltWH en un almacén de su sucursal y canal.
+ */
+export const whereConAlmacen = (
+  canal: string | null,
+  almacenes: AlmacenSap[],
+): Prisma.ProductoWhereInput =>
+  canal === CANAL_ALMACEN_UNICO
+    ? {}
+    : { almacen: { in: almacenes.map((a) => a.WarehouseCode) } };
 
 /** Pedidos para el Service Layer, uno por almacén. */
 export function armarPedidosSap(d: DatosPedidoSap): PedidoSap[] {
