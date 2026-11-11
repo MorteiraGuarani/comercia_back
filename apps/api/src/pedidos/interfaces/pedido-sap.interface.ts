@@ -51,7 +51,7 @@ export interface DatosAlmacenUsuario {
   canal: string | null;
   /** ERP_Sucursal del usuario (Code de tbl_oclp). */
   sucursal: number | null;
-  /** Canal 1: los de su sucursal y canal. Otro canal: los DfltWH de los productos. */
+  /** Filas de tbl_owhs de su sucursal y canal: una es pedido unificado; varias, distribuido. */
   almacenes: AlmacenSap[];
 }
 

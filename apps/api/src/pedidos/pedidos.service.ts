@@ -52,15 +52,16 @@ import {
   type LineaPedido,
 } from './utils/lineas-pedido';
 import type {
+  DatosAlmacenUsuario,
   DocumentoSap,
   PedidoSap,
 } from './interfaces/pedido-sap.interface';
 import {
-  CANAL_ALMACEN_UNICO,
+  almacenesDelUsuario,
   armarPedidosSap,
   conIdDocumento,
   resolverAlmacen,
-  whereConAlmacen,
+  whereProductosUsuario,
 } from './utils/pedido-sap';
 import { ServiceLayerService } from './service-layer.service';
 
@@ -498,12 +499,11 @@ export class PedidosService {
     const { empresaId } = u;
     const c = await this.cliente(empresaId, query.cardCode);
     const texto = query.buscar?.trim();
-    const almacenes = await this.almacenesSap(u);
-    // shortcut: sin filtro por perfil del vendedor (U_beas_vg); agregarlo cuando exista el perfil.
+    const datos = await this.datosAlmacen(u);
     const where: Prisma.ProductoWhereInput = {
       AND: [
         ...activosAnd,
-        whereConAlmacen(u.ERP_CanalVenta, almacenes),
+        whereProductosUsuario(datos),
         whereLinea(query.linea),
         ...(texto
           ? [
@@ -533,11 +533,7 @@ export class PedidosService {
       c.ListNum,
       filas.map((f) => f.itemcode),
     );
-    const almacenDe = resolverAlmacen({
-      canal: u.ERP_CanalVenta,
-      sucursal: u.ERP_Sucursal,
-      almacenes,
-    });
+    const almacenDe = resolverAlmacen(datos);
     return respuestaPaginada<ProductoPedido>(
       filas.map((f) => {
         const precio = precios.get(f.itemcode) ?? null;
@@ -574,11 +570,11 @@ export class PedidosService {
         (cantidades.get(l.itemCode) ?? 0) + l.cantidad,
       );
     const codigos = [...cantidades.keys()];
-    const almacenes = await this.almacenesSap(u);
+    const datos = await this.datosAlmacen(u);
     const productos = await this.prisma.producto.findMany({
       where: {
         itemcode: { in: codigos },
-        AND: [...activosAnd, whereConAlmacen(u.ERP_CanalVenta, almacenes)],
+        AND: [...activosAnd, whereProductosUsuario(datos)],
       },
       select: {
         itemcode: true,
@@ -589,11 +585,7 @@ export class PedidosService {
       take: codigos.length,
     });
     const precios = await this.precios(empresaId, c.ListNum, codigos);
-    const almacenDe = resolverAlmacen({
-      canal: u.ERP_CanalVenta,
-      sucursal: u.ERP_Sucursal,
-      almacenes,
-    });
+    const almacenDe = resolverAlmacen(datos);
     const activos = new Set(productos.map((p) => p.itemcode));
     return {
       cliente: { id: c.CardCode, nombre: nombreLocal(c) },
@@ -623,39 +615,45 @@ export class PedidosService {
   }
 
   /**
-   * Filas de tbl_owhs de la sucursal y canal del usuario: son los únicos
+   * Canal, sucursal y filas de tbl_owhs de esa sucursal y canal: son los únicos
    * almacenes de los que puede salir su pedido.
    */
-  private async almacenesSap(
+  private async datosAlmacen(
     u: Prisma.UsuarioGetPayload<{ select: typeof SELECT_USUARIO_SAP }>,
-  ) {
-    if (u.ERP_Sucursal === null || !u.ERP_CanalVenta) return [];
-    return this.prisma.almacen.findMany({
-      where: {
-        empresaId: u.empresaId,
-        Location: u.ERP_Sucursal,
-        GlobalLocationNumber: u.ERP_CanalVenta,
-      },
-      select: {
-        WarehouseCode: true,
-        WarehouseName: true,
-        AddressName2: true,
-        Location: true,
-        GlobalLocationNumber: true,
-      },
-    });
+  ): Promise<DatosAlmacenUsuario> {
+    const canal = u.ERP_CanalVenta;
+    const sucursal = u.ERP_Sucursal;
+    const almacenes =
+      sucursal === null || !canal
+        ? []
+        : await this.prisma.almacen.findMany({
+            where: {
+              empresaId: u.empresaId,
+              Location: sucursal,
+              GlobalLocationNumber: canal,
+            },
+            select: {
+              WarehouseCode: true,
+              WarehouseName: true,
+              AddressName2: true,
+              Location: true,
+              GlobalLocationNumber: true,
+            },
+          });
+    return { canal, sucursal, almacenes };
   }
 
   /** Arma los documentos de SAP de una carga, uno por almacén. */
-  private async documentosSap(
+  private documentosSap(
     u: Prisma.UsuarioGetPayload<{ select: typeof SELECT_USUARIO_SAP }>,
+    datos: DatosAlmacenUsuario,
     cardCode: string,
     dto: CrearPedidoDto,
     almacenDe: Map<string, string | null>,
-  ): Promise<PedidoSap[]> {
-    const almacenes = await this.almacenesSap(u);
+  ): PedidoSap[] {
     const { fecha, hora, segundo } = relojCampo();
     return armarPedidosSap({
+      ...datos,
       cardCode,
       hoy: fecha,
       fechaEntrega: dto.fechaEntrega,
@@ -664,9 +662,6 @@ export class PedidosService {
       sello: `${fecha.replace(/-/g, '')}${hora.replace(':', '')}${segundo}`,
       usuarioLogin: u.nombreLogin,
       celular: u.celular,
-      canal: u.ERP_CanalVenta,
-      sucursal: u.ERP_Sucursal,
-      almacenes,
       lineas: dto.lineas.map((l) => ({
         itemCode: l.itemCode,
         cantidad: l.cantidad,
@@ -833,8 +828,13 @@ export class PedidosService {
     const codigos = dto.lineas.map((l) => l.itemCode);
     if (new Set(codigos).size !== codigos.length)
       throw new BadRequestException('Hay productos repetidos en el pedido');
+    // Solo productos de su canal (U_beas_vg); el almacén se revisa abajo para avisar cuál falta.
     const productos = await this.prisma.producto.findMany({
-      where: { itemcode: { in: codigos }, AND: activosAnd },
+      where: {
+        itemcode: { in: codigos },
+        tipo: u.ERP_CanalVenta ?? '',
+        AND: activosAnd,
+      },
       select: {
         itemcode: true,
         itemname: true,
@@ -864,8 +864,10 @@ export class PedidosService {
     });
     const total = lineas.reduce((suma, l) => suma + (l.total ?? 0), 0);
     const observaciones = dto.observaciones?.trim() ?? '';
-    const sap = await this.documentosSap(
+    const datos = await this.datosAlmacen(u);
+    const sap = this.documentosSap(
       u,
+      datos,
       c.CardCode,
       dto,
       new Map(productos.map((p) => [p.itemcode, p.almacen])),
@@ -876,9 +878,9 @@ export class PedidosService {
         s.DocumentLines.filter((l) => !l.WarehouseCode).map((l) => l.ItemCode),
       ),
     );
-    if (sinAlmacen.size && u.ERP_CanalVenta === CANAL_ALMACEN_UNICO)
+    if (sinAlmacen.size && !almacenesDelUsuario(datos).length)
       throw new BadRequestException(
-        'Tu sucursal no tiene un único almacén de canal 1 en SAP. Pedí que lo revisen',
+        'Tu sucursal y canal no tienen almacenes en SAP. Pedí que lo revisen',
       );
     if (sinAlmacen.size)
       throw new BadRequestException(

@@ -2,7 +2,11 @@ import type {
   AlmacenSap,
   DatosPedidoSap,
 } from '../interfaces/pedido-sap.interface';
-import { armarPedidosSap, conIdDocumento } from './pedido-sap';
+import {
+  armarPedidosSap,
+  conIdDocumento,
+  whereProductosUsuario,
+} from './pedido-sap';
 
 const almacen = (
   WarehouseCode: string,
@@ -41,22 +45,43 @@ const base: DatosPedidoSap = {
 };
 
 describe('armarPedidosSap', () => {
-  it('canal 1: sin almacén si su sucursal no tiene uno solo de canal 1', () => {
-    const otraSucursal = { ...almacen('ITG-PV2', '1', 'PV'), Location: 4 };
+  it('cualquier canal con un solo almacén en su sucursal es pedido unificado', () => {
+    const pedidos = armarPedidosSap({
+      ...base,
+      canal: '3',
+      almacenes: [
+        almacen('CDE-VEN', '3', 'PV-CDE'),
+        { ...almacen('CDE-OTR', '3', 'OTRA'), Location: 4 },
+      ],
+    });
+    expect(pedidos).toHaveLength(1);
+    expect(pedidos[0]).toMatchObject({
+      NumAtCard: 'PV-CDE',
+      U_par: 'Depósito CDE-VEN',
+    });
+    expect(pedidos[0].DocumentLines.map((l) => l.WarehouseCode)).toEqual([
+      'CDE-VEN',
+      'CDE-VEN',
+      'CDE-VEN',
+      'CDE-VEN',
+    ]);
+  });
+
+  it('sin almacenes de su sucursal y canal, o con varios y sin DfltWH de ellos, no hay almacén', () => {
     const almacenesDe = (lista: AlmacenSap[]) =>
       armarPedidosSap({ ...base, almacenes: lista }).map(
         (p) => p.DocumentLines[0].WarehouseCode,
       );
-    expect(almacenesDe([otraSucursal])).toEqual(['']);
+    expect(
+      almacenesDe([{ ...almacen('ITG-PV2', '1', 'PV'), Location: 4 }]),
+    ).toEqual(['']);
+    // Varios de canal 1: pasa a distribuido y los DfltWH de las líneas no son de ellos.
     expect(
       almacenesDe([almacen('ITG-PRV', '1', 'A'), almacen('ITG-PR2', '1', 'B')]),
     ).toEqual(['']);
-    expect(almacenesDe([almacen('ITG-PRV', '1', 'A'), otraSucursal])).toEqual([
-      'ITG-PRV',
-    ]);
   });
 
-  it('canal 1: un solo pedido desde el almacén de su sucursal y canal', () => {
+  it('unificado: un solo pedido desde el almacén de su sucursal y canal', () => {
     const pedidos = armarPedidosSap(base);
     expect(pedidos).toHaveLength(1);
     expect(pedidos[0]).toMatchObject({
@@ -73,7 +98,7 @@ describe('armarPedidosSap', () => {
     ).toEqual(new Set(['ITG-PRV']));
   });
 
-  it('canal 2: un pedido por almacén del producto, sin almacén si no es de su sucursal', () => {
+  it('distribuido: un pedido por DfltWH del producto, sin almacén si no es de su sucursal y canal', () => {
     const pedidos = armarPedidosSap({ ...base, canal: '2' });
     expect(
       pedidos.map((p) => [
@@ -114,6 +139,17 @@ describe('armarPedidosSap', () => {
     expect(pedido.Comments).toBe(
       'Migrado por Comercia el 30/11/2026 10:47\nPortón lateral',
     );
+  });
+
+  it('el catálogo muestra los productos de su canal con almacén', () => {
+    expect(whereProductosUsuario(base)).toEqual({ tipo: '1' });
+    expect(whereProductosUsuario({ ...base, canal: '2' })).toEqual({
+      tipo: '2',
+      almacen: { in: ['ITG-EMB', 'ITG-HAM'] },
+    });
+    expect(
+      whereProductosUsuario({ ...base, canal: null, sucursal: null }),
+    ).toEqual({ tipo: '', almacen: { in: [] } });
   });
 
   it('pone el id del documento en el último tramo', () => {

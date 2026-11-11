@@ -92,7 +92,9 @@ describe('PedidosService.copiar', () => {
     expect(prisma.producto.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
-          AND: expect.arrayContaining([{ almacen: { in: [] } }]) as unknown,
+          AND: expect.arrayContaining([
+            { tipo: '2', almacen: { in: [] } },
+          ]) as unknown,
         }) as unknown,
       }),
     );
@@ -229,8 +231,24 @@ describe('PedidosService.crear', () => {
     expect(pedido).toMatchObject({ numero: 'PV-12', total: 38900 });
   });
 
-  it('el buscador solo muestra productos de un almacén de su sucursal y canal', async () => {
+  it('el buscador solo muestra productos de su canal con almacén de su sucursal y canal', async () => {
     const { prisma, servicio } = preparar();
+    prisma.almacen.findMany.mockResolvedValue([
+      {
+        WarehouseCode: 'ITG-HAM',
+        WarehouseName: 'Hamburguesas',
+        AddressName2: 'ITAUGUA',
+        Location: 3,
+        GlobalLocationNumber: '2',
+      },
+      {
+        WarehouseCode: 'ITG-EMB',
+        WarehouseName: 'Embutidos',
+        AddressName2: 'ITAUGUA',
+        Location: 3,
+        GlobalLocationNumber: '2',
+      },
+    ]);
     prisma.producto.findMany.mockResolvedValue([
       { itemcode: 'H1', itemname: 'Hamburguesa', almacen: 'ITG-HAM' },
     ]);
@@ -246,7 +264,7 @@ describe('PedidosService.crear', () => {
     expect(prisma.producto.count).toHaveBeenCalledWith({
       where: {
         AND: expect.arrayContaining([
-          { almacen: { in: ['ITG-HAM'] } },
+          { tipo: '2', almacen: { in: ['ITG-HAM', 'ITG-EMB'] } },
         ]) as unknown,
       },
     });
