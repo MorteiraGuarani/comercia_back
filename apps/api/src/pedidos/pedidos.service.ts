@@ -61,7 +61,6 @@ import {
   armarPedidosSap,
   conIdDocumento,
   resolverAlmacen,
-  whereProductosUsuario,
 } from './utils/pedido-sap';
 import { ServiceLayerService } from './service-layer.service';
 
@@ -503,7 +502,6 @@ export class PedidosService {
     const where: Prisma.ProductoWhereInput = {
       AND: [
         ...activosAnd,
-        whereProductosUsuario(datos),
         whereLinea(query.linea),
         ...(texto
           ? [
@@ -574,7 +572,7 @@ export class PedidosService {
     const productos = await this.prisma.producto.findMany({
       where: {
         itemcode: { in: codigos },
-        AND: [...activosAnd, whereProductosUsuario(datos)],
+        AND: activosAnd,
       },
       select: {
         itemcode: true,

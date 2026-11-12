@@ -1,4 +1,3 @@
-import type { Prisma } from '../../../generated/prisma/client';
 import type {
   DatosAlmacenUsuario,
   DatosPedidoSap,
@@ -36,23 +35,6 @@ export function resolverAlmacen(d: DatosAlmacenUsuario) {
       : codigo && codigos.has(codigo)
         ? codigo
         : '';
-}
-
-/**
- * Productos que el usuario puede pedir: los de su canal (U_beas_vg) que tienen
- * almacén. Unificado: todos salen del único almacén. Distribuido: solo los que
- * tienen DfltWH en uno de sus almacenes. Sin almacenes, ninguno.
- */
-export function whereProductosUsuario(
-  d: DatosAlmacenUsuario,
-): Prisma.ProductoWhereInput {
-  const suyos = almacenesDelUsuario(d);
-  return {
-    tipo: d.canal ?? '',
-    ...(suyos.length === 1
-      ? {}
-      : { almacen: { in: suyos.map((a) => a.WarehouseCode) } }),
-  };
 }
 
 /** Pedidos para el Service Layer, uno por almacén. */

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { apiFetch } from "@/lib/api";
 import { Paginacion } from "@/components/paginacion";
 import { SelectorPaginado } from "@/components/selector-paginado";
@@ -11,6 +11,15 @@ import { guaranies } from "@/utils/pedidos";
 
 const botonCantidad =
   "grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-xl border border-control-line bg-surface-soft text-lg font-bold text-foreground transition hover:border-brand-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-40";
+
+const ESCRITORIO = "(min-width: 1024px)"; // lg de Tailwind
+const esEscritorio = () => window.matchMedia(ESCRITORIO).matches;
+const enServidor = () => false;
+const suscribirEscritorio = (avisar: () => void) => {
+  const media = window.matchMedia(ESCRITORIO);
+  media.addEventListener("change", avisar);
+  return () => media.removeEventListener("change", avisar);
+};
 
 /** Productos de una línea con búsqueda y paginación del servidor. */
 export function ProductosLineaPedido({
@@ -39,6 +48,8 @@ export function ProductosLineaPedido({
   // Los ya cargados van primero. Se fijan al traer cada página, no al tipear,
   // para que la fila no salte (y pierda el foco) mientras se edita la cantidad.
   const [fijados, setFijados] = useState<ProductoPedido[]>([]);
+  // Se monta solo la vista visible: con las dos ocultas por CSS, cada pestaña pedía los productos dos veces.
+  const escritorio = useSyncExternalStore(suscribirEscritorio, esEscritorio, enServidor);
   const itemsRef = useRef(items);
   useEffect(() => {
     itemsRef.current = items;
@@ -53,6 +64,7 @@ export function ProductosLineaPedido({
   }, [texto]);
 
   useEffect(() => {
+    if (escritorio) return; // en escritorio busca el SelectorPaginado
     const control = new AbortController();
     const query = new URLSearchParams({
       cardCode,
@@ -78,7 +90,7 @@ export function ProductosLineaPedido({
           );
       });
     return () => control.abort();
-  }, [cardCode, linea, buscar, page, limit, intento]);
+  }, [escritorio, cardCode, linea, buscar, page, limit, intento]);
 
   const cargados = Object.values(items).filter((i) => i.linea === linea);
   const consulta = buscar.toLowerCase();
@@ -102,7 +114,8 @@ export function ProductosLineaPedido({
   return (
     <div className="space-y-3">
       {/* Pantallas grandes: buscador que agrega con 1 unidad y solo lo cargado. */}
-      <div className="hidden space-y-3 lg:block">
+      {escritorio ? (
+      <div className="space-y-3">
         <SelectorPaginado<string>
           key={elegidos}
           url={`/pedidos/productos?${new URLSearchParams({ cardCode, linea })}`}
@@ -140,7 +153,8 @@ export function ProductosLineaPedido({
           </p>
         )}
       </div>
-      <div className="space-y-3 lg:hidden">
+      ) : (
+      <div className="space-y-3">
       <input
         type="search"
         value={texto}
@@ -199,6 +213,7 @@ export function ProductosLineaPedido({
         />
       ) : null}
       </div>
+      )}
       <p className="flex justify-between text-sm text-muted">
         <span>
           {cargados.length} producto{cargados.length === 1 ? "" : "s"} cargado

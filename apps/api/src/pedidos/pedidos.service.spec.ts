@@ -1,6 +1,7 @@
 import { Logger } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
 import type { PrismaService } from '../prisma/prisma.service';
+import { activosAnd } from '../common/utils/productos-activos';
 import { PedidosService } from './pedidos.service';
 import type { ServiceLayerService } from './service-layer.service';
 import { aCreditoCliente } from './utils/credito-cliente';
@@ -88,14 +89,10 @@ describe('PedidosService.copiar', () => {
       },
     ]);
     expect(copia.noDisponibles).toEqual(['VIEJO']);
-    // Sin almacenes en su sucursal y canal, ningún producto se puede pedir.
+    // Solo se filtra por activo en SAP: ni canal ni almacén.
     expect(prisma.producto.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({
-          AND: expect.arrayContaining([
-            { tipo: '2', almacen: { in: [] } },
-          ]) as unknown,
-        }) as unknown,
+        where: { itemcode: { in: ['H1', 'VIEJO'] }, AND: activosAnd },
       }),
     );
   });
@@ -231,7 +228,7 @@ describe('PedidosService.crear', () => {
     expect(pedido).toMatchObject({ numero: 'PV-12', total: 38900 });
   });
 
-  it('el buscador solo muestra productos de su canal con almacén de su sucursal y canal', async () => {
+  it('el buscador muestra todos los activos y dice de qué almacén sale cada uno', async () => {
     const { prisma, servicio } = preparar();
     prisma.almacen.findMany.mockResolvedValue([
       {
@@ -251,24 +248,16 @@ describe('PedidosService.crear', () => {
     ]);
     prisma.producto.findMany.mockResolvedValue([
       { itemcode: 'H1', itemname: 'Hamburguesa', almacen: 'ITG-HAM' },
+      { itemcode: 'PV14', itemname: 'Besito', almacen: null },
     ]);
     const { items } = await servicio.productos(7, {
       cardCode: 'C0001',
       linea: 'embutidos',
     });
-    expect(prisma.almacen.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { empresaId: 2, Location: 3, GlobalLocationNumber: '2' },
-      }),
-    );
     expect(prisma.producto.count).toHaveBeenCalledWith({
-      where: {
-        AND: expect.arrayContaining([
-          { tipo: '2', almacen: { in: ['ITG-HAM', 'ITG-EMB'] } },
-        ]) as unknown,
-      },
+      where: { AND: [...activosAnd, whereLinea('embutidos')] },
     });
-    expect(items.map((p) => p.almacen)).toEqual(['ITG-HAM']);
+    expect(items.map((p) => p.almacen)).toEqual(['ITG-HAM', null]);
   });
 
   it('guarda el documento de SAP con su id en U_beas_version', async () => {

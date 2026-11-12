@@ -40,8 +40,13 @@ import { VencimientosService } from './vencimientos.service';
 
 const dia = (fecha: Date) => fecha.toISOString().slice(0, 10);
 
+// Inventario solo usa lo que SAP marca con QryInventario Y (o tYES).
+const enInventario: Prisma.ProductoWhereInput = {
+  inventory: { in: ['Y', 'tYES'] },
+};
+
 const productosActivos = (): Prisma.ProductoWhereInput => ({
-  AND: activosAnd,
+  AND: [...activosAnd, enInventario],
 });
 
 /**
@@ -249,12 +254,13 @@ export class InventarioLocalService {
     };
   }
 
-  /** Productos activos de tbl_oitm para agregar al local. */
+  /** Productos activos de tbl_oitm con QryInventario Y para agregar al local. */
   async productos(usuarioId: number, query: BuscarInventarioDto) {
     await this.acceso(usuarioId);
     const where: Prisma.ProductoWhereInput = {
       AND: [
         ...activosAnd,
+        enInventario,
         ...(query.buscar
           ? [
               {

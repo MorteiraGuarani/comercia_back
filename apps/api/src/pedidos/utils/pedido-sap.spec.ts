@@ -2,11 +2,7 @@ import type {
   AlmacenSap,
   DatosPedidoSap,
 } from '../interfaces/pedido-sap.interface';
-import {
-  armarPedidosSap,
-  conIdDocumento,
-  whereProductosUsuario,
-} from './pedido-sap';
+import { armarPedidosSap, conIdDocumento } from './pedido-sap';
 
 const almacen = (
   WarehouseCode: string,
@@ -139,17 +135,6 @@ describe('armarPedidosSap', () => {
     expect(pedido.Comments).toBe(
       'Migrado por Comercia el 30/11/2026 10:47\nPortón lateral',
     );
-  });
-
-  it('el catálogo muestra los productos de su canal con almacén', () => {
-    expect(whereProductosUsuario(base)).toEqual({ tipo: '1' });
-    expect(whereProductosUsuario({ ...base, canal: '2' })).toEqual({
-      tipo: '2',
-      almacen: { in: ['ITG-EMB', 'ITG-HAM'] },
-    });
-    expect(
-      whereProductosUsuario({ ...base, canal: null, sucursal: null }),
-    ).toEqual({ tipo: '', almacen: { in: [] } });
   });
 
   it('pone el id del documento en el último tramo', () => {
