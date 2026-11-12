@@ -2,7 +2,7 @@ import type { Prisma } from '../../../generated/prisma/client';
 
 /**
  * Pasos del asistente de pedidos: cada línea agrupa grupos de artículos de
- * OITM (ItmsGrpCod). "Resto" es todo lo que no entra en las anteriores.
+ * OITM (ItemsGroupCode). "Resto" es todo lo que no entra en las anteriores.
  */
 // shortcut: grupos fijos en código; pasarlos a una tabla de categorías cuando se definan las demás líneas.
 export const LINEAS_PEDIDO = [
@@ -26,10 +26,14 @@ export function whereLinea(linea: LineaPedido): Prisma.ProductoWhereInput {
     : { OR: [{ itmsgrpcode: null }, { itmsgrpcode: { notIn: AGRUPADOS } }] };
 }
 
-export function lineaDeGrupo(grupo: number | null): LineaPedido {
+export function lineaDeGrupo(
+  grupo: Prisma.Decimal | number | null,
+): LineaPedido {
   return (
     LINEAS_PEDIDO.find((l) =>
-      (l.grupos as readonly number[]).includes(grupo ?? Number.NaN),
+      (l.grupos as readonly number[]).includes(
+        grupo === null ? Number.NaN : Number(grupo),
+      ),
     )?.id ?? 'resto'
   );
 }

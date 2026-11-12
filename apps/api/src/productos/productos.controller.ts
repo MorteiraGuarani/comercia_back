@@ -150,7 +150,7 @@ export class ProductosController {
         value: {
           itemcode: 'AV00018',
           itemname: 'PAPAS TRAD. 9,5 MM 4X2.5 KG-XL',
-          iva: 10,
+          iva: 'IVA_10',
           itmsgrpcode: 143,
           pricelist: 13,
           price: 141650,
@@ -162,7 +162,7 @@ export class ProductosController {
         value: [13, 14, 16, 21, 22].map((pricelist) => ({
           itemcode: 'AV00018',
           itemname: 'PAPAS TRAD. 9,5 MM 4X2.5 KG-XL',
-          iva: 10,
+          iva: 'IVA_10',
           itmsgrpcode: 143,
           pricelist,
           price: 141650,
@@ -179,7 +179,7 @@ export class ProductosController {
           id: '1',
           itemcode: 'A0001',
           itemname: 'Artículo',
-          iva: 10,
+          iva: 'IVA_10',
           itmsgrpcode: 100,
           itmsgrpnam: null,
           inventory: 'tNO',

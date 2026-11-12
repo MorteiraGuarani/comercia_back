@@ -15,7 +15,7 @@ export function productoRespuesta(
     itemcode: fila.itemcode,
     itemname: p?.itemname ?? null,
     iva: p?.iva ?? null,
-    itmsgrpcode: p?.itmsgrpcode ?? null,
+    itmsgrpcode: p?.itmsgrpcode == null ? null : Number(p.itmsgrpcode),
     itmsgrpnam: null,
     inventory: p?.inventory ?? null,
     pricelist: fila.pricelist,

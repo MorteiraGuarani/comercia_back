@@ -86,19 +86,17 @@ export class DatosProductoDto {
   })
   itemname?: string | null;
   @CampoTabla({
-    tipo: 'entero',
-    small: true,
+    tipo: 'texto',
+    longitud: 20,
     nullable: true,
-    descripcion: 'TaxCodeAR del maestro.',
-    ejemplo: 10,
+    descripcion: 'ArTaxCode del maestro.',
+    ejemplo: 'IVA_10',
   })
-  iva?: number | null;
+  iva?: string | null;
   @CampoTabla({
     tipo: 'entero',
-    small: true,
     nullable: true,
-    defecto: -1,
-    descripcion: 'ItmsGrpCod int2 del maestro.',
+    descripcion: 'ItemsGroupCode del maestro.',
     ejemplo: 100,
   })
   itmsgrpcode?: number | null;
@@ -167,7 +165,7 @@ export class ProductoRespuestaDto {
   id!: string;
   @ApiProperty({ type: String, example: 'A0001' }) itemcode!: string;
   @ApiProperty({ type: String, nullable: true }) itemname!: string | null;
-  @ApiProperty({ type: 'integer', nullable: true }) iva!: number | null;
+  @ApiProperty({ type: String, nullable: true }) iva!: string | null;
   @ApiProperty({ type: 'integer', nullable: true }) itmsgrpcode!: number | null;
   @ApiProperty({
     type: String,

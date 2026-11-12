@@ -7,7 +7,7 @@ export interface ProductoAdmin {
   id: string;
   itemcode: string;
   itemname: string | null;
-  iva: number | null;
+  iva: string | null;
   itmsgrpcode: number | null;
   itmsgrpnam: string | null;
   inventory: string | null;

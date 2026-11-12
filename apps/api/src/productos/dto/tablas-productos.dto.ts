@@ -11,7 +11,7 @@ export class ArticuloDto {
   ItemCode!: string;
   @CampoTabla({
     tipo: 'texto',
-    longitud: 200,
+    longitud: 250,
     requerido: false,
     nullable: true,
     descripcion: 'Nombre del artículo compartido por sus listas.',
@@ -19,24 +19,22 @@ export class ArticuloDto {
   })
   ItemName?: string | null;
   @CampoTabla({
-    tipo: 'entero',
-    small: true,
+    tipo: 'texto',
+    longitud: 20,
     requerido: false,
     nullable: true,
-    descripcion: 'Código impositivo int2.',
-    ejemplo: 10,
+    descripcion: 'Código impositivo de SAP (ArTaxCode).',
+    ejemplo: 'IVA_10',
   })
-  TaxCodeAR?: number | null;
+  ArTaxCode?: string | null;
   @CampoTabla({
-    tipo: 'entero',
-    small: true,
+    tipo: 'decimal',
     requerido: false,
     nullable: true,
-    defecto: -1,
-    descripcion: 'Grupo de artículos int2.',
-    ejemplo: 100,
+    descripcion: 'Grupo de artículos de SAP (ItemsGroupCode), numeric(19,6).',
+    ejemplo: '100.000000',
   })
-  ItmsGrpCod?: number | null;
+  ItemsGroupCode?: number | string | null;
   @CampoTabla({
     tipo: 'texto',
     longitud: 4,
@@ -51,45 +49,46 @@ export class ArticuloDto {
     tipo: 'decimal',
     requerido: false,
     nullable: true,
-    descripcion: 'Peso de venta (SAP SWeight1), numeric(21,6).',
+    descripcion: 'Peso de venta de SAP (SalesUnitWeight), numeric(19,6).',
     ejemplo: '1.250000',
   })
-  SWeight1?: number | string | null;
+  SalesUnitWeight?: number | string | null;
   @CampoTabla({
     tipo: 'texto',
-    longitud: 10,
+    longitud: 20,
     requerido: false,
     nullable: true,
-    descripcion: 'Almacén por defecto (SAP DfltWH).',
-    ejemplo: '01',
+    descripcion:
+      'Almacén por defecto de SAP (DefaultWarehouse): Pedidos lo usa para repartir por almacén.',
+    ejemplo: 'ITG-HAM',
   })
-  DfltWH?: string | null;
-  @CampoTabla({
-    tipo: 'texto',
-    longitud: 4,
-    requerido: false,
-    nullable: true,
-    defecto: 'Y',
-    descripcion: 'Indicador de artículo activo.',
-    ejemplo: 'Y',
-  })
-  validFor?: string | null;
+  DefaultWarehouse?: string | null;
   @CampoTabla({
     tipo: 'texto',
     longitud: 4,
     requerido: false,
     nullable: true,
-    defecto: 'N',
-    descripcion: 'Indicador de artículo bloqueado.',
-    ejemplo: 'N',
+    defecto: 'tYES',
+    descripcion: 'Artículo activo en SAP (Valid): tYES o tNO.',
+    ejemplo: 'tYES',
   })
-  frozenFor?: string | null;
+  Valid?: string | null;
+  @CampoTabla({
+    tipo: 'texto',
+    longitud: 4,
+    requerido: false,
+    nullable: true,
+    defecto: 'tNO',
+    descripcion: 'Artículo congelado en SAP (Frozen): tYES o tNO.',
+    ejemplo: 'tNO',
+  })
+  Frozen?: string | null;
   @CampoTabla({
     tipo: 'decimal',
     requerido: false,
     nullable: true,
     descripcion:
-      'Cantidad por unidad del artículo (SAP U_ItemQty), numeric(21,6).',
+      'Cantidad por unidad del artículo (SAP U_ItemQty), numeric(19,6).',
     ejemplo: '12.000000',
   })
   U_ItemQty?: number | string | null;

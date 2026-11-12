@@ -23,7 +23,7 @@ export function formularioProducto(producto: ProductoAdmin): FormProducto {
   return {
     itemcode: producto.itemcode,
     itemname: producto.itemname ?? "",
-    iva: producto.iva === null ? "" : String(producto.iva),
+    iva: producto.iva ?? "",
     itmsgrpcode: producto.itmsgrpcode === null ? "" : String(producto.itmsgrpcode),
     itmsgrpnam: "",
     inventory: producto.inventory ?? "",
@@ -38,7 +38,7 @@ export function datosProducto(form: FormProducto) {
   return {
     itemcode: form.itemcode.trim(),
     itemname: form.itemname.trim() || null,
-    iva: form.iva.trim() === "" ? null : Number(form.iva),
+    iva: form.iva.trim() || null,
     itmsgrpcode: form.itmsgrpcode.trim() === "" ? null : Number(form.itmsgrpcode),
     itmsgrpnam: null,
     inventory: form.inventory || null,

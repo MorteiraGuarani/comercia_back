@@ -52,7 +52,7 @@ try {
   assert.equal(normalizarPrecio('999999999999999.123456'), '999999999999999.123456');
   assert.equal(normalizarPrecio('-000123,123456'), '-123.123456');
   const producto = {
-    id: '9007199254740993', itemcode: '0001', itemname: 'Artículo', iva: 10,
+    id: '9007199254740993', itemcode: '0001', itemname: 'Artículo', iva: 'IVA_10',
     itmsgrpcode: 2, itmsgrpnam: null, inventory: null, pricelist: 0,
     pricelistname: null, price: '999999999999999.123456', tipo: null,
   };

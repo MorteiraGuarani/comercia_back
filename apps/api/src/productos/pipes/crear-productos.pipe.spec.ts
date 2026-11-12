@@ -6,7 +6,7 @@ describe('Entrada individual o por lote de productos', () => {
   const producto = {
     itemcode: 'AV00018',
     itemname: 'PAPAS TRAD. 9,5 MM 4X2.5 KG-XL',
-    iva: 10,
+    iva: 'IVA_10',
     itmsgrpcode: 143,
     pricelist: 13,
     price: 141650,
@@ -39,10 +39,10 @@ describe('Entrada individual o por lote de productos', () => {
 
   it.each([
     { price: 'no-numero' },
-    { iva: 32768 },
+    { iva: 'x'.repeat(21) },
     { pricelist: null },
     { itemcode: 'A'.repeat(16) },
-    { itmsgrpcode: 32768 },
+    { itmsgrpcode: 2147483648 },
     { empresa_id: 9 },
     { id: '1' },
   ])(
@@ -66,7 +66,7 @@ describe('Entrada individual o por lote de productos', () => {
       .transform([
         { ...producto, price: '1,5' },
         producto,
-        { ...producto, iva: 'diez', extra: 1 },
+        { ...producto, iva: 10, extra: 1 },
       ])
       .catch((e: unknown) => e)) as BadRequestException;
     const r = error.getResponse() as Record<string, unknown>;

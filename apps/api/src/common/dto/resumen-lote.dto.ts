@@ -52,7 +52,7 @@ export class ResumenLoteDto {
           items: {
             type: 'object',
             properties: {
-              campo: { type: 'string', example: 'SWeight1' },
+              campo: { type: 'string', example: 'SalesUnitWeight' },
               valor: { example: '' },
               mensajes: { type: 'array', items: { type: 'string' } },
             },
@@ -61,7 +61,7 @@ export class ResumenLoteDto {
         motivo: {
           type: 'string',
           example:
-            'ItemCode A0001: SWeight1 = "": El decimal admite hasta 15 enteros y 6 decimales',
+            'ItemCode A0001: SalesUnitWeight = "": El decimal admite hasta 15 enteros y 6 decimales',
         },
       },
     },

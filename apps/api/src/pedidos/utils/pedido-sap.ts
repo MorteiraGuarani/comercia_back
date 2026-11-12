@@ -11,7 +11,7 @@ export const conIdDocumento = (version: string, id: number) =>
 /**
  * Almacenes de tbl_owhs de la sucursal (Location) y canal (GlobalLocationNumber)
  * del usuario. Cuántos son decide el pedido, sin reglas por canal en el código:
- * uno es pedido unificado; varios, distribuido por el DfltWH de cada producto.
+ * uno es pedido unificado; varios, distribuido por el DefaultWarehouse de cada producto.
  */
 export const almacenesDelUsuario = (d: DatosAlmacenUsuario) =>
   d.almacenes.filter(
@@ -24,7 +24,7 @@ export const almacenesDelUsuario = (d: DatosAlmacenUsuario) =>
 
 /**
  * Almacén de un producto: el único de su sucursal y canal (unificado) o, si son
- * varios, el DfltWH del producto si es uno de ellos (distribuido). Si no, vacío.
+ * varios, el DefaultWarehouse del producto si es uno de ellos (distribuido). Si no, vacío.
  */
 export function resolverAlmacen(d: DatosAlmacenUsuario) {
   const suyos = almacenesDelUsuario(d);

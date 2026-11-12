@@ -252,7 +252,7 @@ export function crearControladorTablaProductos(
                     fila: 4,
                     errores: [
                       {
-                        campo: 'SWeight1',
+                        campo: 'SalesUnitWeight',
                         valor: '',
                         mensajes: [
                           'El decimal admite hasta 15 enteros y 6 decimales',
@@ -260,7 +260,7 @@ export function crearControladorTablaProductos(
                       },
                     ],
                     motivo:
-                      'ItemCode A0001: SWeight1 = "": El decimal admite hasta 15 enteros y 6 decimales',
+                      'ItemCode A0001: SalesUnitWeight = "": El decimal admite hasta 15 enteros y 6 decimales',
                   },
                 ],
               },

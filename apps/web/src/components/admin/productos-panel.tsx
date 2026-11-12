@@ -487,10 +487,7 @@ function FormularioProducto({
           iva
           <input
             className={inputBase}
-            type="number"
-            min={-32768}
-            max={32767}
-            step="1"
+            maxLength={20}
             value={form.iva}
             onChange={(e) => onCambiar({ ...form, iva: e.target.value })}
           />

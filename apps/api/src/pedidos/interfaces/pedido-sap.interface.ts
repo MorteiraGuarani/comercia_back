@@ -70,6 +70,6 @@ export interface DatosPedidoSap extends DatosAlmacenUsuario {
   sello: string;
   usuarioLogin: string;
   celular: string;
-  /** almacen: DfltWH de tbl_oitm. */
+  /** almacen: DefaultWarehouse de tbl_oitm. */
   lineas: { itemCode: string; cantidad: number; almacen: string | null }[];
 }

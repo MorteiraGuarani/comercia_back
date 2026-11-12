@@ -18,7 +18,7 @@ describe('Maestro OITM y precios ITM1 con pantalla compatible', () => {
     const maestro = {
       itemcode: 'A',
       itemname: 'Artículo',
-      iva: 10,
+      iva: 'IVA_10',
       itmsgrpcode: 100,
       inventory: 'Y',
       tipo: null,
@@ -75,7 +75,7 @@ describe('Maestro OITM y precios ITM1 con pantalla compatible', () => {
       datos: {
         itemcode: 'A',
         itemname: 'Artículo',
-        iva: 10,
+        iva: 'IVA_10',
         itmsgrpcode: 100,
         pricelist: 1,
         price: '999999999999999.123456',
@@ -113,7 +113,7 @@ describe('Maestro OITM y precios ITM1 con pantalla compatible', () => {
         {
           itemcode: 'A',
           itemname: 'Artículo',
-          iva: 10,
+          iva: 'IVA_10',
           itmsgrpcode: 100,
           inventory: undefined,
           tipo: undefined,
@@ -154,7 +154,7 @@ describe('Maestro OITM y precios ITM1 con pantalla compatible', () => {
           {
             itemcode: 'A',
             itemname: 'Artículo',
-            iva: 10,
+            iva: 'IVA_10',
             itmsgrpcode: 100,
             inventory: undefined,
             tipo: undefined,
@@ -240,7 +240,7 @@ describe('Maestro OITM y precios ITM1 con pantalla compatible', () => {
     ).toHaveLength(0);
     for (const valor of [
       { itemcode: 'x'.repeat(16) },
-      { itmsgrpcode: 32768 },
+      { itmsgrpcode: 2147483648 },
       { price: '1.1234567' },
     ])
       expect(

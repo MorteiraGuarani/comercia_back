@@ -11,22 +11,22 @@ describe('CargaTablaPipe', () => {
   it('en un bulk saltea la fila inválida, la informa por campo y deja seguir al resto', async () => {
     await expect(
       pipe.transform([
-        { ItemCode: 'A1', SWeight1: '1,5' },
-        { ItemCode: 'A2', SWeight1: '1.5' },
+        { ItemCode: 'A1', SalesUnitWeight: '1,5' },
+        { ItemCode: 'A2', SalesUnitWeight: '1.5' },
         { ItemCode: 'A3', U_ItemQty: '1,5', extra: 1 },
       ]),
     ).resolves.toMatchObject({
       recibidos: 3,
-      filas: [{ ItemCode: 'A2', SWeight1: '1.5' }],
+      filas: [{ ItemCode: 'A2', SalesUnitWeight: '1.5' }],
       indices: [1],
       invalidas: [
         {
           index: 0,
           fila: 1,
           clave: { ItemCode: 'A1' },
-          errores: [{ campo: 'SWeight1', valor: '1,5' }],
+          errores: [{ campo: 'SalesUnitWeight', valor: '1,5' }],
           motivo:
-            'ItemCode A1: SWeight1 = "1,5": El decimal admite hasta 15 enteros y 6 decimales',
+            'ItemCode A1: SalesUnitWeight = "1,5": El decimal admite hasta 15 enteros y 6 decimales',
         },
         { index: 2, fila: 3, clave: { ItemCode: 'A3' } },
       ],
@@ -57,9 +57,9 @@ describe('CargaTablaPipe', () => {
       pipe.transform([
         {
           ItemCode: 'A1',
-          TaxCodeAR: '',
-          SWeight1: ' ',
-          ItmsGrpCod: '',
+          ArTaxCode: '',
+          SalesUnitWeight: ' ',
+          ItemsGroupCode: '',
           U_ItemQty: '2',
         },
       ]),
@@ -67,9 +67,9 @@ describe('CargaTablaPipe', () => {
       filas: [
         {
           ItemCode: 'A1',
-          TaxCodeAR: null,
-          SWeight1: null,
-          ItmsGrpCod: null,
+          ArTaxCode: '',
+          SalesUnitWeight: null,
+          ItemsGroupCode: null,
           U_ItemQty: '2',
         },
       ],
