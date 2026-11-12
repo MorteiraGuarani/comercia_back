@@ -1,5 +1,6 @@
 "use client";
 
+import { SkeletonFilas } from "@/components/skeleton";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { apiFetch } from "@/lib/api";
 import { Paginacion } from "@/components/paginacion";
@@ -176,7 +177,7 @@ export function ProductosLineaPedido({
           </button>
         </div>
       ) : !datos ? (
-        <p className="py-6 text-center text-sm text-muted">Cargando productos…</p>
+        <SkeletonFilas etiqueta="Cargando productos…" filas={4} className="rounded-2xl border border-line bg-surface-raised p-4" />
       ) : !filas.length ? (
         <p className="rounded-2xl border border-dashed border-line bg-surface-raised px-4 py-6 text-center text-sm text-muted">
           {buscar

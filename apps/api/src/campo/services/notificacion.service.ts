@@ -267,7 +267,7 @@ export class NotificacionService {
     if (!aviso?.referenciaId)
       throw new NotFoundException('Detalle no disponible');
     const carga = await this.prisma.cargaInventarioCampo.findFirst({
-      where: { id: aviso.referenciaId, empresaId },
+      where: { id: aviso.referenciaId, empresaId, eliminadaEn: null },
       select: {
         id: true,
         itemcode: true,

@@ -9,6 +9,18 @@ export const conIdDocumento = (version: string, id: number) =>
   version.replace(/\d+$/, String(id));
 
 /**
+ * Clientes del vendedor: tbl_ocrd.SlpCode igual a su Código Vendedor
+ * (ERP_CodUsuarioSap). Sin código, todos los de la empresa; un código no
+ * numérico no coincide con ninguno.
+ */
+export const whereVendedor = (codigo: string | null) => {
+  const texto = codigo?.trim();
+  if (!texto) return {};
+  const slp = Number(texto);
+  return { SlpCode: Number.isInteger(slp) ? slp : -2 };
+};
+
+/**
  * Almacenes de tbl_owhs de la sucursal (Location) y canal (GlobalLocationNumber)
  * del usuario. Cuántos son decide el pedido, sin reglas por canal en el código:
  * uno es pedido unificado; varios, distribuido por el DefaultWarehouse de cada producto.

@@ -61,6 +61,7 @@ import {
   armarPedidosSap,
   conIdDocumento,
   resolverAlmacen,
+  whereVendedor,
 } from './utils/pedido-sap';
 import { ServiceLayerService } from './service-layer.service';
 
@@ -155,7 +156,12 @@ const SELECT_USUARIO_SAP = {
   celular: true,
   ERP_Sucursal: true,
   ERP_CanalVenta: true,
+  ERP_CodUsuarioSap: true,
 } satisfies Prisma.UsuarioSelect;
+
+type UsuarioSap = Prisma.UsuarioGetPayload<{
+  select: typeof SELECT_USUARIO_SAP;
+}>;
 
 const fechaSap = (fecha: Date) =>
   `${fecha.toISOString().slice(0, 10)}T00:00:00Z`;
@@ -320,8 +326,7 @@ export class PedidosService {
     usuarioId: number,
     cardCode: string,
   ): Promise<FacturaCliente[]> {
-    const empresaId = await this.empresaDe(usuarioId);
-    const c = await this.cliente(empresaId, cardCode);
+    const c = await this.cliente(await this.usuarioSap(usuarioId), cardCode);
     return this.facturasSap(c.CardCode);
   }
 
@@ -331,8 +336,7 @@ export class PedidosService {
     cardCode: string,
     docEntry: number,
   ): Promise<LineaFacturaCliente[]> {
-    const empresaId = await this.empresaDe(usuarioId);
-    const c = await this.cliente(empresaId, cardCode);
+    const c = await this.cliente(await this.usuarioSap(usuarioId), cardCode);
     // Solo facturas del cliente: un DocEntry ajeno responde igual que uno inexistente.
     const propias = await this.facturasSap(c.CardCode);
     if (!propias.some((f) => f.docEntry === docEntry))
@@ -358,9 +362,15 @@ export class PedidosService {
     return u.empresaId;
   }
 
-  private async cliente(empresaId: number, cardCode: string) {
+  /** Cliente activo de la cartera del usuario; uno ajeno responde igual que uno inexistente. */
+  private async cliente(u: UsuarioSap, cardCode: string) {
     const c = await this.prisma.socioNegocio.findFirst({
-      where: { empresaId, CardCode: cardCode, ...CLIENTE_ACTIVO },
+      where: {
+        empresaId: u.empresaId,
+        CardCode: cardCode,
+        ...CLIENTE_ACTIVO,
+        ...whereVendedor(u.ERP_CodUsuarioSap),
+      },
       select: {
         CardCode: true,
         CardName: true,
@@ -400,11 +410,14 @@ export class PedidosService {
   }
 
   async clientes(usuarioId: number, query: BuscarClientesPedidoDto) {
-    const empresaId = await this.empresaDe(usuarioId);
+    const u = await this.usuarioSap(usuarioId);
+    const { empresaId } = u;
     const texto = query.buscar?.trim();
     const where: Prisma.SocioNegocioWhereInput = {
       empresaId,
       ...CLIENTE_ACTIVO,
+      // Solo su cartera: tbl_ocrd.SlpCode = su Código Vendedor.
+      ...whereVendedor(u.ERP_CodUsuarioSap),
       ...(texto
         ? {
             OR: [
@@ -449,8 +462,9 @@ export class PedidosService {
     usuarioId: number,
     cardCode: string,
   ): Promise<PerfilClientePedido> {
-    const empresaId = await this.empresaDe(usuarioId);
-    const c = await this.cliente(empresaId, cardCode);
+    const u = await this.usuarioSap(usuarioId);
+    const { empresaId } = u;
+    const c = await this.cliente(u, cardCode);
     const codigoCanal = Number(c.U_jCANAL);
     const [direcciones, condicion, lista, canal, credito] = await Promise.all([
       direccionesLocales(this.prisma, empresaId, [c.CardCode]),
@@ -496,12 +510,14 @@ export class PedidosService {
   async productos(usuarioId: number, query: BuscarProductosPedidoDto) {
     const u = await this.usuarioSap(usuarioId);
     const { empresaId } = u;
-    const c = await this.cliente(empresaId, query.cardCode);
+    const c = await this.cliente(u, query.cardCode);
     const texto = query.buscar?.trim();
     const datos = await this.datosAlmacen(u);
     const where: Prisma.ProductoWhereInput = {
       AND: [
         ...activosAnd,
+        // U_beas_vg es el canal: solo los artículos del canal del usuario.
+        { tipo: u.ERP_CanalVenta ?? '' },
         whereLinea(query.linea),
         ...(texto
           ? [
@@ -559,7 +575,7 @@ export class PedidosService {
   async copiar(usuarioId: number, dto: CopiarPedidoDto): Promise<CopiaPedido> {
     const u = await this.usuarioSap(usuarioId);
     const { empresaId } = u;
-    const c = await this.cliente(empresaId, dto.cardCode);
+    const c = await this.cliente(u, dto.cardCode);
     // Una factura puede repetir un producto.
     const cantidades = new Map<string, number>();
     for (const l of dto.lineas)
@@ -572,6 +588,8 @@ export class PedidosService {
     const productos = await this.prisma.producto.findMany({
       where: {
         itemcode: { in: codigos },
+        // Los de otro canal (U_beas_vg) quedan como «ya no se vende» para este usuario.
+        tipo: u.ERP_CanalVenta ?? '',
         AND: activosAnd,
       },
       select: {
@@ -616,9 +634,7 @@ export class PedidosService {
    * Canal, sucursal y filas de tbl_owhs de esa sucursal y canal: son los únicos
    * almacenes de los que puede salir su pedido.
    */
-  private async datosAlmacen(
-    u: Prisma.UsuarioGetPayload<{ select: typeof SELECT_USUARIO_SAP }>,
-  ): Promise<DatosAlmacenUsuario> {
+  private async datosAlmacen(u: UsuarioSap): Promise<DatosAlmacenUsuario> {
     const canal = u.ERP_CanalVenta;
     const sucursal = u.ERP_Sucursal;
     const almacenes =
@@ -643,7 +659,7 @@ export class PedidosService {
 
   /** Arma los documentos de SAP de una carga, uno por almacén. */
   private documentosSap(
-    u: Prisma.UsuarioGetPayload<{ select: typeof SELECT_USUARIO_SAP }>,
+    u: UsuarioSap,
     datos: DatosAlmacenUsuario,
     cardCode: string,
     dto: CrearPedidoDto,
@@ -814,7 +830,7 @@ export class PedidosService {
     }
     const u = await this.usuarioSap(usuarioId);
     const { empresaId } = u;
-    const c = await this.cliente(empresaId, dto.cardCode);
+    const c = await this.cliente(u, dto.cardCode);
     const entrega = fechaCampo(dto.fechaEntrega);
     if (dto.fechaEntrega <= relojCampo().fecha)
       throw new BadRequestException('La entrega tiene que ser desde mañana');

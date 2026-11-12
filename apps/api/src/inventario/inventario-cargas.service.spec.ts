@@ -28,7 +28,7 @@ describe('InventarioCargasService', () => {
       count: jest.fn().mockResolvedValue(0),
       findMany: jest.fn().mockResolvedValue([]),
       findFirst: jest.fn(),
-      delete: jest.fn().mockReturnValue('borrar-carga'),
+      update: jest.fn<unknown, [unknown]>().mockReturnValue('marcar-eliminada'),
     },
     notificacionCampo: {
       deleteMany: jest.fn().mockReturnValue('borrar-avisos'),
@@ -140,7 +140,12 @@ describe('InventarioCargasService', () => {
     );
     expect(prisma.cargaInventarioCampo.findFirst).toHaveBeenLastCalledWith(
       expect.objectContaining({
-        where: { id: 40, empresaId: 2, usuarioId: { in: [5, 6, 7] } },
+        where: {
+          id: 40,
+          eliminadaEn: null,
+          empresaId: 2,
+          usuarioId: { in: [5, 6, 7] },
+        },
       }),
     );
     expect(prisma.$transaction).not.toHaveBeenCalled();
@@ -153,9 +158,14 @@ describe('InventarioCargasService', () => {
     expect(prisma.notificacionCampo.deleteMany).toHaveBeenCalledWith({
       where: { empresaId: 2, tipo: 'VENCIMIENTO_PROXIMO', referenciaId: 41 },
     });
+    // Baja lógica: la fila queda, marcada con quién y cuándo.
+    expect(prisma.cargaInventarioCampo.update.mock.calls[0][0]).toMatchObject({
+      where: { id: 41 },
+      data: { eliminadaPorId: 5 },
+    });
     expect(prisma.$transaction).toHaveBeenCalledWith([
       'borrar-avisos',
-      'borrar-carga',
+      'marcar-eliminada',
     ]);
   });
 

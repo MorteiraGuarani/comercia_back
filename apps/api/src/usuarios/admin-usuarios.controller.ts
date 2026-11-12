@@ -31,6 +31,7 @@ import {
   CrearUsuarioDto,
   DesactivarUsuarioLoteDto,
   ListarUsuariosDto,
+  VendedorSugeridoDto,
 } from './dto/usuario.dto';
 import type { FilasLoteUsuarios } from './interfaces/lote-usuarios.interface';
 import {
@@ -126,6 +127,39 @@ export class AdminUsuariosController {
     @Query() query: ListarUsuariosDto,
   ) {
     return this.usuarios.listarLocales(req.usuarioId, query);
+  }
+
+  // Catálogos de la pestaña SAP: los mismos de /usuarios para el panel de superadmin.
+  @Get('canales-venta')
+  listarCanalesVenta(
+    @Req() req: RequestConUsuario,
+    @Query() query: ListarUsuariosDto,
+  ) {
+    return this.usuarios.listarCatalogoErp(req.usuarioId, query, 'canales');
+  }
+
+  @Get('sucursales')
+  listarSucursales(
+    @Req() req: RequestConUsuario,
+    @Query() query: ListarUsuariosDto,
+  ) {
+    return this.usuarios.listarCatalogoErp(req.usuarioId, query, 'sucursales');
+  }
+
+  @Get('vendedores-sap')
+  listarVendedoresSap(
+    @Req() req: RequestConUsuario,
+    @Query() query: ListarUsuariosDto,
+  ) {
+    return this.usuarios.listarVendedoresSap(req.usuarioId, query);
+  }
+
+  @Get('vendedores-sap/sugerido')
+  vendedorSugerido(
+    @Req() req: RequestConUsuario,
+    @Query() query: VendedorSugeridoDto,
+  ) {
+    return this.usuarios.vendedorSugerido(req.usuarioId, query);
   }
 
   @Get('meta')

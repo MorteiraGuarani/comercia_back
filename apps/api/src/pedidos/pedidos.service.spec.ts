@@ -37,6 +37,7 @@ describe('PedidosService.copiar', () => {
         ERP_Sucursal: 3,
         ERP_CanalVenta: '2',
         ERP_CodigoAlmacen: null,
+        ERP_CodUsuarioSap: '220',
       }),
     },
     socioNegocio: {
@@ -89,10 +90,21 @@ describe('PedidosService.copiar', () => {
       },
     ]);
     expect(copia.noDisponibles).toEqual(['VIEJO']);
-    // Solo se filtra por activo en SAP: ni canal ni almacén.
+    // Activos en SAP y del canal del usuario (U_beas_vg); el almacén no filtra.
     expect(prisma.producto.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { itemcode: { in: ['H1', 'VIEJO'] }, AND: activosAnd },
+        where: {
+          itemcode: { in: ['H1', 'VIEJO'] },
+          tipo: '2',
+          AND: activosAnd,
+        },
+      }),
+    );
+    // Solo un cliente de su cartera (tbl_ocrd.SlpCode = Código Vendedor).
+    expect(prisma.socioNegocio.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- matcher de jest
+        where: expect.objectContaining({ CardCode: 'C0001', SlpCode: 220 }),
       }),
     );
   });
@@ -228,7 +240,7 @@ describe('PedidosService.crear', () => {
     expect(pedido).toMatchObject({ numero: 'PV-12', total: 38900 });
   });
 
-  it('el buscador muestra todos los activos y dice de qué almacén sale cada uno', async () => {
+  it('el buscador muestra los activos de su canal y dice de qué almacén sale cada uno', async () => {
     const { prisma, servicio } = preparar();
     prisma.almacen.findMany.mockResolvedValue([
       {
@@ -255,7 +267,7 @@ describe('PedidosService.crear', () => {
       linea: 'embutidos',
     });
     expect(prisma.producto.count).toHaveBeenCalledWith({
-      where: { AND: [...activosAnd, whereLinea('embutidos')] },
+      where: { AND: [...activosAnd, { tipo: '2' }, whereLinea('embutidos')] },
     });
     expect(items.map((p) => p.almacen)).toEqual(['ITG-HAM', null]);
   });

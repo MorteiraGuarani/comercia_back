@@ -1,12 +1,15 @@
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import type { FormularioErpUsuario, UsuarioAdmin } from "@/types/usuario";
+import type { OpcionSelector } from "@/types/opcion-selector";
 import { SelectorPaginado } from "@/components/selector-paginado";
-import { inputBase, labelBase } from "@/components/ui";
+import { apiFetch } from "@/lib/api";
 
-/** Pestaña SAP: canal de venta (tbl_jcanales), sucursal (tbl_oclp) y usuario SAP. */
+/** Pestaña SAP: canal de venta (tbl_jcanales), sucursal (tbl_oclp) y Código Vendedor (tbl_oslp). */
 export function CamposErpUsuario({
   base,
   empresaId,
   usuario,
+  legajo,
   valor,
   onChange,
   disabled,
@@ -15,10 +18,43 @@ export function CamposErpUsuario({
   empresaId: number;
   /** El que se edita: da el nombre de lo ya elegido aunque no esté en la página. */
   usuario?: UsuarioAdmin;
+  /** Sin Código Vendedor, se propone el de tbl_oslp cuyo Fax coincide con el legajo. */
+  legajo: string;
   valor: FormularioErpUsuario;
   onChange: (campo: keyof FormularioErpUsuario, valor: string) => void;
   disabled: boolean;
 }) {
+  const [sugerido, setSugerido] = useState<string>();
+  const intentado = useRef("");
+  const sinVendedor = valor.ERP_CodUsuarioSap === "";
+  const legajoLimpio = legajo.trim();
+  // El padre pasa un onChange nuevo en cada render: no debe cortar la consulta.
+  const proponer = useEffectEvent((opcion: OpcionSelector) => {
+    setSugerido(opcion.nombre);
+    onChange("ERP_CodUsuarioSap", String(opcion.id));
+  });
+  useEffect(() => {
+    const clave = `${empresaId}|${legajoLimpio}`;
+    // Una sola propuesta por legajo: si la borra, no vuelve a aparecer.
+    if (!sinVendedor || !legajoLimpio || intentado.current === clave) return;
+    intentado.current = clave;
+    const control = new AbortController();
+    const params = new URLSearchParams({
+      empresaId: String(empresaId),
+      legajo: legajoLimpio,
+    });
+    apiFetch<OpcionSelector | null>(
+      `${base}/vendedores-sap/sugerido?${params}`,
+      { signal: control.signal },
+    )
+      .then((opcion) => {
+        if (opcion) proponer(opcion);
+      })
+      // Sin sugerencia el campo queda vacío para elegir a mano.
+      .catch(() => undefined);
+    return () => control.abort();
+  }, [base, empresaId, legajoLimpio, sinVendedor]);
+
   const campos = [
     {
       campo: "ERP_CanalVenta",
@@ -55,16 +91,22 @@ export function CamposErpUsuario({
             limite={50}
           />
         ))}
-        <label className={`${labelBase} sm:col-span-2`}>
-          Código de usuario SAP
-          <input
-            value={valor.ERP_CodUsuarioSap}
-            onChange={(e) => onChange("ERP_CodUsuarioSap", e.target.value)}
-            maxLength={100}
-            autoComplete="off"
-            className={inputBase}
+        <div className="min-w-0 sm:col-span-2">
+          <SelectorPaginado
+            key={`vendedor-${empresaId}-${usuario?.id ?? "nuevo"}`}
+            url={`${base}/vendedores-sap?empresaId=${empresaId}`}
+            etiqueta="Código Vendedor"
+            placeholder="Buscá por nombre o legajo"
+            buscable
+            limpiable
+            conDescripcion
+            value={sinVendedor ? "" : Number(valor.ERP_CodUsuarioSap)}
+            seleccionActual={
+              sugerido ?? usuario?.vendedorSapNombre ?? undefined
+            }
+            onChange={(id) => onChange("ERP_CodUsuarioSap", String(id))}
           />
-        </label>
+        </div>
       </div>
     </fieldset>
   );
@@ -75,7 +117,7 @@ export function DetalleErpUsuario({ usuario }: { usuario: UsuarioAdmin }) {
     ["Canal de venta", usuario.canalVentaNombre, usuario.ERP_CanalVenta],
     ["Sucursal", usuario.sucursalNombre, usuario.ERP_Sucursal],
     ["Almacén", usuario.ERP_NombreAlmacen, usuario.ERP_CodigoAlmacen],
-    ["Usuario SAP", null, usuario.ERP_CodUsuarioSap],
+    ["Código Vendedor", usuario.vendedorSapNombre, usuario.ERP_CodUsuarioSap],
   ] as const;
   if (datos.every(([, nombre, code]) => nombre == null && code == null))
     return null;

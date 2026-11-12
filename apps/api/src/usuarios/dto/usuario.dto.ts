@@ -21,6 +21,22 @@ import { MAX_INT4 } from '../../common/utils/numeros';
 import { lowerTrimString, trimString } from '../../common/utils/transforms';
 import { DatosErpUsuarioDto } from './datos-erp-usuario.dto';
 
+/** Vendedor de tbl_oslp sugerido para un legajo. */
+export class VendedorSugeridoDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(MAX_INT4)
+  empresaId?: number;
+
+  /** Legajo del usuario; se compara con tbl_oslp.Fax sin ceros a la izquierda. */
+  @Transform(trimString)
+  @IsString()
+  @Length(1, 50)
+  legajo!: string;
+}
+
 // Texto libre opcional: vacío se guarda como null.
 const textoOpcional = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() || null : value;

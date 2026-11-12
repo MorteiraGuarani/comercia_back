@@ -79,3 +79,23 @@ async function pedir<T>(path: string, init?: RequestInit): Promise<T> {
   }
   return data as T;
 }
+
+/** Descarga un archivo de la API (por ejemplo, una exportación) con la sesión actual. */
+export async function descargarArchivo(path: string, nombre: string): Promise<void> {
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, { credentials: "include" });
+  } catch {
+    throw new ApiError(0, "No se pudo conectar con el servidor");
+  }
+  if (!res.ok) {
+    const data: unknown = await res.json().catch(() => null);
+    throw new ApiError(res.status, extraerMensaje(data) ?? `Error ${res.status}`);
+  }
+  const url = URL.createObjectURL(await res.blob());
+  const enlace = document.createElement("a");
+  enlace.href = url;
+  enlace.download = nombre;
+  enlace.click();
+  URL.revokeObjectURL(url);
+}

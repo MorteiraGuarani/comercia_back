@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState, type ReactNode } from "react";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, descargarArchivo } from "@/lib/api";
 import { BotonEliminarCampo } from "@/components/campo/boton-eliminar-campo";
 import { confirmar } from "@/components/confirmacion/confirmacion-controller";
 import { PantallaCarga } from "@/components/pantalla-carga";
@@ -14,7 +14,7 @@ import {
   BOTON_FILTRO_COMPACTO,
   SelectorFechaFiltro,
 } from "@/components/campo/ui/selector-fecha-filtro";
-import { btnPrimary } from "@/components/ui";
+import { btnGhost, btnPrimary } from "@/components/ui";
 import { useListaCampo } from "@/hooks/use-lista-campo";
 import type {
   CargaInventarioFila,
@@ -199,7 +199,7 @@ function TarjetaCarga({
   );
 }
 
-/** Inventarios cargados por la persona y su equipo, según su lugar en el organigrama. */
+/** Inventario cargado por la persona y su equipo, según su lugar en el organigrama. */
 export function InventariosPanel() {
   const hoy = fechaEnZonaIso(new Date());
   const panelFiltros = useId();
@@ -213,6 +213,7 @@ export function InventariosPanel() {
   const [puedeConfigurarAvisos, setPuedeConfigurarAvisos] = useState(false);
   const [avisosAbierto, setAvisosAbierto] = useState(false);
   const [eliminando, setEliminando] = useState(false);
+  const [exportando, setExportando] = useState(false);
 
   useEffect(() => {
     const control = new AbortController();
@@ -243,7 +244,7 @@ export function InventariosPanel() {
     if (
       !(await confirmar({
         titulo: "Eliminar carga",
-        mensaje: `¿Eliminar ${c.producto} de ${c.local.nombre}, cargado por ${c.usuario.nombre}? No se puede deshacer.`,
+        mensaje: `¿Eliminar ${c.producto} de ${c.local.nombre}, cargado por ${c.usuario.nombre}? Deja de verse en el inventario.`,
         textoConfirmar: "Eliminar",
         peligro: true,
       }))
@@ -260,6 +261,18 @@ export function InventariosPanel() {
       mostrarToast("error", e instanceof Error ? e.message : "No se pudo eliminar la carga");
     } finally {
       setEliminando(false);
+    }
+  }
+
+  // Lleva todo lo que da la búsqueda aplicada, no solo la página que se ve.
+  async function exportar() {
+    setExportando(true);
+    try {
+      await descargarArchivo(`${BASE}/exportar?${consulta}`, `inventario-${hoy}.csv`);
+    } catch (e) {
+      mostrarToast("error", e instanceof Error ? e.message : "No se pudo exportar a Excel");
+    } finally {
+      setExportando(false);
     }
   }
 
@@ -284,11 +297,12 @@ export function InventariosPanel() {
   return (
     <section
       className="campo-screen w-full min-w-0 space-y-4 p-4 sm:p-6 lg:p-8"
-      aria-label="Inventarios"
+      aria-label="Inventario"
     >
       <PantallaCarga visible={eliminando} mensaje="Eliminando carga" />
+      <PantallaCarga visible={exportando} mensaje="Exportando a Excel" />
       <div className="flex min-w-0 items-center justify-between gap-3">
-        <h1 className="ft-display text-2xl font-semibold text-foreground">Inventarios</h1>
+        <h1 className="ft-display text-2xl font-semibold text-foreground">Inventario</h1>
         <div className="flex shrink-0 items-center gap-2">
         {puedeConfigurarAvisos ? (
           <button
@@ -395,12 +409,12 @@ export function InventariosPanel() {
       </div>
       {!aplicados ? (
         <p className="rounded-2xl border border-line bg-surface-raised p-6 text-center text-sm text-muted">
-          Tocá Buscar para ver los inventarios.
+          Tocá Buscar para ver el inventario.
         </p>
       ) : (
       <TablaCampo
         lista={lista}
-        etiqueta="Inventarios"
+        etiqueta="Inventario"
         columnas={[
           { titulo: "Fecha", valor: (c) => <span className="whitespace-nowrap text-xs text-foreground">{fechaCorta(c.fecha)}</span> },
           { titulo: "Cargado por", valor: (c) => <Persona c={c} conEmpresa={conEmpresa} /> },
@@ -418,6 +432,22 @@ export function InventariosPanel() {
         )}
       />
       )}
+      {aplicados ? (
+        <button
+          type="button"
+          onClick={() => void exportar()}
+          disabled={exportando || !lista.datos?.total}
+          title="Descarga todos los registros de la búsqueda para abrirlos en Excel"
+          className={`${btnGhost} w-full gap-2 sm:w-auto`}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden>
+            <path d="M12 3v12" />
+            <path d="m7 10 5 5 5-5" />
+            <path d="M5 21h14" />
+          </svg>
+          Exportar a Excel
+        </button>
+      ) : null}
       {avisosAbierto ? (
         <ConfigVencimientosModal onCerrar={() => setAvisosAbierto(false)} />
       ) : null}

@@ -1,5 +1,6 @@
 "use client";
 
+import { SkeletonFilas } from "@/components/skeleton";
 import { useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { BotonCopiar } from "@/components/boton-copiar";
@@ -144,7 +145,7 @@ export function PedidosCargados({
       {error ? (
         <p className={errorBox}>{error}</p>
       ) : !datos ? (
-        <p className="text-sm text-muted">Cargando pedidos…</p>
+        <SkeletonFilas etiqueta="Cargando pedidos…" className="rounded-2xl border border-line bg-surface-raised p-4" />
       ) : !datos.total ? (
         <p className="rounded-2xl border border-line bg-surface-raised p-4 text-center text-sm text-muted">
           No hay pedidos con estos filtros.

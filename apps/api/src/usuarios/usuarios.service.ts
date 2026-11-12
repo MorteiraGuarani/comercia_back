@@ -41,9 +41,11 @@ import {
   CrearUsuarioDto,
   DesactivarUsuarioLoteDto,
   ListarUsuariosDto,
+  VendedorSugeridoDto,
 } from './dto/usuario.dto';
 import type {
   MetaUsuariosDto,
+  OpcionVendedorSap,
   UsuarioLocalAsignacionDto,
   UsuarioAdminDto,
 } from './interfaces/usuario-admin.interface';
@@ -124,9 +126,40 @@ function codigoCanal(texto: string | null | undefined): number | null {
     : null;
 }
 
+/** El legajo de Comercia viene con ceros a la izquierda; en tbl_oslp.Fax, sin ellos. */
+function legajoSinCeros(legajo: string): string {
+  return legajo.trim().replace(/^0+(?=.)/, '');
+}
+
+const SELECT_VENDEDOR = {
+  SalesEmployeeCode: true,
+  SalesEmployeeName: true,
+  Fax: true,
+  Active: true,
+} satisfies Prisma.SocioNegocioVendedorSelect;
+
+function aOpcionVendedor(
+  v: Prisma.SocioNegocioVendedorGetPayload<{ select: typeof SELECT_VENDEDOR }>,
+): OpcionVendedorSap {
+  return {
+    id: v.SalesEmployeeCode,
+    nombre: v.SalesEmployeeName ?? `Vendedor ${v.SalesEmployeeCode}`,
+    descripcion: [
+      `Código ${v.SalesEmployeeCode}`,
+      v.Fax ? `Legajo ${v.Fax}` : null,
+      v.Active === 'N' ? 'Inactivo' : null,
+    ]
+      .filter(Boolean)
+      .join(' · '),
+  };
+}
+
 function aUsuarioDto(
   usuario: UsuarioFila,
-  nombres: Pick<UsuarioAdminDto, 'canalVentaNombre' | 'sucursalNombre'>,
+  nombres: Pick<
+    UsuarioAdminDto,
+    'canalVentaNombre' | 'sucursalNombre' | 'vendedorSapNombre'
+  >,
 ): UsuarioAdminDto {
   return {
     id: usuario.id,
@@ -403,14 +436,93 @@ export class UsuariosService {
     );
   }
 
+  /** «Código Vendedor»: vendedores de tbl_oslp de la empresa, por nombre o legajo (Fax). */
+  async listarVendedoresSap(usuarioId: number, query: ListarUsuariosDto) {
+    const actual = await this.contexto(usuarioId);
+    const empresaId = this.empresaObjetivo(actual, query.empresaId);
+    const buscar = query.buscar?.trim();
+    const where: Prisma.SocioNegocioVendedorWhereInput = {
+      empresaId,
+      // -1 es «Ningún empleado del departamento de ventas».
+      SalesEmployeeCode: { gt: 0 },
+      ...(buscar
+        ? {
+            OR: [
+              { SalesEmployeeName: { contains: buscar, mode: 'insensitive' } },
+              { Fax: { contains: legajoSinCeros(buscar) } },
+            ],
+          }
+        : {}),
+    };
+    const { skip, take, page, limit } = rangoPaginacion(query);
+    const [total, filas] = await Promise.all([
+      this.prisma.socioNegocioVendedor.count({ where }),
+      this.prisma.socioNegocioVendedor.findMany({
+        where,
+        select: SELECT_VENDEDOR,
+        orderBy: [{ SalesEmployeeName: 'asc' }, { SalesEmployeeCode: 'asc' }],
+        skip,
+        take,
+      }),
+    ]);
+    return respuestaPaginada(filas.map(aOpcionVendedor), total, page, limit);
+  }
+
   /**
-   * Canal (tbl_jcanales) y sucursal (tbl_oclp) se eligen del catálogo de la
-   * empresa y se guarda su Code. undefined conserva el valor; null lo borra.
+   * Vendedor sugerido para el legajo del usuario: primero el Fax igual al
+   * legajo sin ceros a la izquierda, después uno que lo contenga. Activos primero.
+   */
+  async vendedorSugerido(
+    usuarioId: number,
+    query: VendedorSugeridoDto,
+  ): Promise<OpcionVendedorSap | null> {
+    const actual = await this.contexto(usuarioId);
+    const empresaId = this.empresaObjetivo(actual, query.empresaId);
+    const legajo = legajoSinCeros(query.legajo);
+    if (!legajo) return null;
+    const base = { empresaId, SalesEmployeeCode: { gt: 0 } };
+    const orderBy = [
+      { Active: 'desc' as const },
+      { SalesEmployeeCode: 'asc' as const },
+    ];
+    const fila =
+      (await this.prisma.socioNegocioVendedor.findFirst({
+        where: { ...base, Fax: { in: [legajo, query.legajo.trim()] } },
+        select: SELECT_VENDEDOR,
+        orderBy,
+      })) ??
+      (await this.prisma.socioNegocioVendedor.findFirst({
+        where: { ...base, Fax: { contains: legajo } },
+        select: SELECT_VENDEDOR,
+        orderBy,
+      }));
+    return fila ? aOpcionVendedor(fila) : null;
+  }
+
+  /**
+   * Canal (tbl_jcanales), sucursal (tbl_oclp) y vendedor (tbl_oslp) se eligen
+   * del catálogo de la empresa y se guarda su código. undefined conserva el
+   * valor; null lo borra.
    */
   private async validarErp(
     empresaId: number,
-    dto: { ERP_CanalVenta?: string | null; ERP_Sucursal?: number | null },
+    dto: {
+      ERP_CanalVenta?: string | null;
+      ERP_Sucursal?: number | null;
+      ERP_CodUsuarioSap?: string | null;
+    },
   ) {
+    const vendedor = codigoCanal(dto.ERP_CodUsuarioSap);
+    if (
+      dto.ERP_CodUsuarioSap != null &&
+      (vendedor === null ||
+        !(await this.prisma.socioNegocioVendedor.count({
+          where: { empresaId, SalesEmployeeCode: vendedor },
+        })))
+    )
+      throw new BadRequestException(
+        'Elegí un código de vendedor de la lista de la empresa',
+      );
     const canal = codigoCanal(dto.ERP_CanalVenta);
     if (
       dto.ERP_CanalVenta != null &&
@@ -434,6 +546,8 @@ export class UsuariosService {
     return {
       ERP_CanalVenta: canal === null ? dto.ERP_CanalVenta : String(canal),
       ERP_Sucursal: dto.ERP_Sucursal,
+      ERP_CodUsuarioSap:
+        vendedor === null ? dto.ERP_CodUsuarioSap : String(vendedor),
     };
   }
 
@@ -445,10 +559,15 @@ export class UsuariosService {
         return Code == null ? [] : [{ empresaId: u.empresa.id, Code }];
       });
     const canalDe = (u: UsuarioFila) => codigoCanal(u.ERP_CanalVenta);
+    const vendedorDe = (u: UsuarioFila) => codigoCanal(u.ERP_CodUsuarioSap);
     const buscarCanales = claves(canalDe);
     const buscarSucursales = claves((u) => u.ERP_Sucursal);
+    const buscarVendedores = claves(vendedorDe).map((c) => ({
+      empresaId: c.empresaId,
+      SalesEmployeeCode: c.Code,
+    }));
     const select = { empresaId: true, Code: true, Name: true };
-    const [canales, sucursales] = await Promise.all([
+    const [canales, sucursales, vendedores] = await Promise.all([
       buscarCanales.length
         ? this.prisma.socioNegocioCanales.findMany({
             where: { OR: buscarCanales },
@@ -461,6 +580,20 @@ export class UsuariosService {
             select,
           })
         : [],
+      buscarVendedores.length
+        ? this.prisma.socioNegocioVendedor.findMany({
+            where: { OR: buscarVendedores },
+            select: {
+              empresaId: true,
+              SalesEmployeeCode: true,
+              SalesEmployeeName: true,
+            },
+          })
+        : ([] as {
+            empresaId: number;
+            SalesEmployeeCode: number;
+            SalesEmployeeName: string | null;
+          }[]),
     ]);
     const nombre = (
       filas: { empresaId: number; Code: number; Name: string | null }[],
@@ -473,6 +606,12 @@ export class UsuariosService {
       aUsuarioDto(u, {
         canalVentaNombre: nombre(canales, u.empresa.id, canalDe(u)),
         sucursalNombre: nombre(sucursales, u.empresa.id, u.ERP_Sucursal),
+        vendedorSapNombre:
+          vendedores.find(
+            (v) =>
+              v.empresaId === u.empresa.id &&
+              v.SalesEmployeeCode === vendedorDe(u),
+          )?.SalesEmployeeName ?? null,
       }),
     );
   }
@@ -886,7 +1025,7 @@ export class UsuariosService {
           ERP_Repositor: dto.ERP_Repositor,
           ERP_CodigoAlmacen: dto.ERP_CodigoAlmacen,
           ERP_NombreAlmacen: dto.ERP_NombreAlmacen,
-          ERP_CodUsuarioSap: dto.ERP_CodUsuarioSap,
+          ERP_CodUsuarioSap: erp.ERP_CodUsuarioSap,
           ERP_Sucursal: erp.ERP_Sucursal,
           rolId: dto.rolId,
           superiorId: dto.superiorId,

@@ -157,6 +157,21 @@ prioridad. No volver a descargar lo que la pantalla ya tiene.
   indicadores inline cuando aporten contexto, pero no usarlos como único
   feedback durante un procedimiento bloqueante.
 
+## Carga de datos: skeleton (OBLIGATORIO)
+
+- Mientras se cargan datos que se van a mostrar (una consulta a la API, un
+  procedimiento de SAP, una búsqueda de clientes o productos, el detalle de un
+  registro), mostrar un **skeleton** con la forma de lo que va a llegar, no un
+  texto “Cargando…”. Usar `src/components/skeleton.tsx`: `SkeletonFilas` para
+  listas y detalles, y `Skeleton` para piezas sueltas (un KPI, un título).
+- `SkeletonFilas` lleva `etiqueta` con lo que se carga (“Cargando clientes”):
+  queda para lectores de pantalla con `role="status"`. Dar el mismo marco
+  (borde, fondo, padding) que el contenido real para que no salte al llegar.
+- Las animaciones del skeleton respetan reducir movimiento (`motion-safe:`) y
+  usan los colores del tema, con soporte claro y oscuro.
+- El skeleton es para **leer**. Las operaciones que el usuario dispara y debe
+  esperar (guardar, enviar, marcar, subir) siguen con `PantallaCarga`.
+
 ## Botones de alta en ABM
 
 - Todo botón que abra el alta de una entidad debe mostrar exclusivamente el

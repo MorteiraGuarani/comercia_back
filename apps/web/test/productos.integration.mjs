@@ -16,6 +16,7 @@ const stubs = {
   '@/lib/api': { ApiError: class extends Error {}, apiFetch: async () => ({ items, total: items.length, page: 1, limit: 7, totalPages: 1 }) },
   '@/components/paginacion': { Paginacion: () => null },
   '@/components/pantalla-carga': { PantallaCarga: () => null },
+  '@/components/skeleton': { SkeletonFilas: () => null },
   '@/components/ui': {},
 };
 function cargar(ruta) {

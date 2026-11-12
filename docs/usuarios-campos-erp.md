@@ -39,7 +39,7 @@ Ejemplo de datos ERP que pueden acompañar el alta:
   "ERP_Repositor": "REP01",
   "ERP_CodigoAlmacen": "01",
   "ERP_NombreAlmacen": "DEPÓSITO CENTRAL",
-  "ERP_CodUsuarioSap": "manager"
+  "ERP_CodUsuarioSap": "220"
 }
 ```
 
@@ -54,10 +54,9 @@ en lote. El listado del ABM incluye las referencias ERP y permite buscarlas;
 
 ## Pestaña SAP
 
-La pestaña SAP del ABM (alta y edición) muestra dos selectores con búsqueda y
-paginación, del catálogo de la empresa del usuario, y el código de usuario SAP
-(`ERP_CodUsuarioSap`), texto libre de hasta 100 caracteres. Un texto en blanco
-se guarda como `NULL`. `ERP_CodigoAlmacen` y `ERP_NombreAlmacen` no se muestran
+La pestaña SAP del ABM (alta y edición) muestra tres selectores paginados, del
+catálogo de la empresa del usuario: canal, sucursal y «Código Vendedor»
+(`ERP_CodUsuarioSap`). Vacío se guarda como `NULL`. `ERP_CodigoAlmacen` y `ERP_NombreAlmacen` no se muestran
 en la pestaña, pero siguen en la base y en la API, y editar un usuario conserva
 su valor.
 
@@ -65,9 +64,19 @@ su valor.
 | --- | --- | --- | --- |
 | Canal de venta | `tbl_jcanales` | `Code` como texto en `ERP_CanalVenta` | `GET /usuarios/canales-venta?empresaId=` |
 | Sucursal | `tbl_oclp` | `Code` en `ERP_Sucursal` (`INTEGER`, migración `20261106120000_usuario_erp_sucursal`) | `GET /usuarios/sucursales?empresaId=` |
+| Código Vendedor | `tbl_oslp` | `SalesEmployeeCode` como texto en `ERP_CodUsuarioSap` | `GET /usuarios/vendedores-sap?empresaId=&buscar=` (por `SalesEmployeeName` o legajo en `Fax`) |
+
+Si el usuario no tiene Código Vendedor, al abrir la pestaña SAP se propone el
+de `tbl_oslp` cuyo `Fax` es su legajo sin ceros a la izquierda (o lo contiene):
+`GET /usuarios/vendedores-sap/sugerido?empresaId=&legajo=`, `null` si no hay.
+Se puede cambiar o borrar antes de guardar. En Pedidos, el vendedor solo ve y
+carga clientes de su cartera (`tbl_ocrd.SlpCode` = su Código Vendedor); sin
+código ve todos los de la empresa. Los catálogos también están bajo
+`/admin/usuarios/...` para el panel de superadmin.
 
 Alta y edición devuelven 400 si el Code no existe en ese catálogo de la
-empresa. La respuesta del ABM agrega `canalVentaNombre` y `sucursalNombre`.
+empresa. La respuesta del ABM agrega `canalVentaNombre`, `sucursalNombre` y
+`vendedorSapNombre`.
 `ERP_Repositor` no se muestra en la pestaña, pero sigue en la base y en la API
 (alta, edición y lote) con las reglas de arriba.
 

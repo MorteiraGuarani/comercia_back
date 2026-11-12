@@ -1,5 +1,6 @@
 "use client";
 
+import { SkeletonFilas } from "@/components/skeleton";
 import { useEffect, useId, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { BotonCopiar } from "@/components/boton-copiar";
@@ -22,6 +23,8 @@ export function FacturasClientePedido({
   const [error, setError] = useState("");
   const [intento, setIntento] = useState(0);
   const [anteriores, setAnteriores] = useState(false);
+  // Acordeón: en "Pedidos anteriores" queda abierta una sola factura.
+  const [abiertaAnterior, setAbiertaAnterior] = useState<number | null>(null);
 
   useEffect(() => {
     const control = new AbortController();
@@ -52,7 +55,7 @@ export function FacturasClientePedido({
           </button>
         </p>
       ) : !facturas ? (
-        <p className="py-4 text-center text-sm text-muted">Cargando facturas…</p>
+        <SkeletonFilas etiqueta="Cargando facturas…" filas={2} className="rounded-2xl border border-line bg-surface-raised p-4" />
       ) : !ultima ? (
         <p className="rounded-xl border border-line bg-surface-raised px-3 py-2 text-sm text-muted">
           El cliente no tiene facturas en SAP.
@@ -85,7 +88,14 @@ export function FacturasClientePedido({
           >
             <div className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface-raised">
               {previas.map((f) => (
-                <FacturaDesplegable key={f.docEntry} cardCode={cardCode} factura={f} onCopiar={onCopiar} />
+                <FacturaDesplegable
+                  key={f.docEntry}
+                  cardCode={cardCode}
+                  factura={f}
+                  onCopiar={onCopiar}
+                  abierto={abiertaAnterior === f.docEntry}
+                  onAbierto={(abrir) => setAbiertaAnterior(abrir ? f.docEntry : null)}
+                />
               ))}
             </div>
           </Modal>
@@ -101,13 +111,20 @@ function FacturaDesplegable({
   factura,
   destacada,
   onCopiar,
+  abierto: abiertoControlado,
+  onAbierto,
 }: {
   cardCode: string;
   factura: FacturaCliente;
   destacada?: boolean;
   onCopiar: (lineas: LineaFacturaCliente[]) => void;
+  /** Con estos dos, el que la contiene decide cuál está abierta (acordeón). */
+  abierto?: boolean;
+  onAbierto?: (abierto: boolean) => void;
 }) {
-  const [abierto, setAbierto] = useState(false);
+  const [abiertoPropio, setAbiertoPropio] = useState(false);
+  const abierto = abiertoControlado ?? abiertoPropio;
+  const setAbierto = onAbierto ?? setAbiertoPropio;
   const [lineas, setLineas] = useState<LineaFacturaCliente[] | null>(null);
   const [cargando, setCargando] = useState(false);
   const detalleId = useId();
@@ -193,7 +210,7 @@ function FacturaDesplegable({
       {abierto ? (
         <div id={detalleId} className="border-t border-line">
           {!lineas ? (
-            <p className="px-4 py-3 text-center text-sm text-muted">Cargando detalle…</p>
+            <SkeletonFilas etiqueta="Cargando detalle…" filas={2} className="px-4 py-3" />
           ) : (
             <ul aria-label={`Productos de la factura ${factura.docNum}`} className="divide-y divide-line">
               {lineas.map((l, i) => (

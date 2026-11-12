@@ -2,8 +2,10 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  PayloadTooLargeException,
   UnauthorizedException,
 } from '@nestjs/common';
+import { aCsv } from '../common/utils/csv';
 import {
   type Prisma,
   TipoNotificacionCampo,
@@ -38,6 +40,45 @@ const MAX_PRODUCTOS_BUSQUEDA = 200;
 
 // shortcut: el filtro de estado recorre hasta 1000 empresas; alcanza de sobra por ahora.
 const MAX_EMPRESAS = 1000;
+// Tope de la exportación a Excel: más que eso responde 413 en vez de truncar.
+const LIMITE_EXPORTAR = 20_000;
+
+const SELECT_CARGA = {
+  id: true,
+  empresaId: true,
+  fecha: true,
+  itemcode: true,
+  cantidad: true,
+  vencimiento: true,
+  actualizadaEn: true,
+  local: { select: { CardCode: true, CardName: true } },
+  usuario: {
+    select: {
+      id: true,
+      nombre: true,
+      apellido: true,
+      empresa: { select: { nombre: true } },
+      rol: {
+        select: {
+          descripcion: true,
+          equipoCampo: { select: { nombre: true } },
+        },
+      },
+    },
+  },
+} satisfies Prisma.CargaInventarioCampoSelect;
+
+const ORDEN_CARGAS = [
+  { fecha: 'desc' },
+  { actualizadaEn: 'desc' },
+  { id: 'desc' },
+] satisfies Prisma.CargaInventarioCampoOrderByWithRelationInput[];
+
+const ESTADO_TEXTO: Record<ReturnType<typeof estadoCarga>, string> = {
+  VENCIDO: 'Vencido',
+  POR_VENCER: 'Por vencer',
+  VIGENTE: 'Vigente',
+};
 
 /**
  * Consulta de lo cargado. Cada uno ve lo suyo y su cadena hacia abajo; el
@@ -180,13 +221,17 @@ export class InventarioCargasService {
     );
   }
 
-  /** Borra una carga dentro del alcance de la sesión, con sus avisos de vencimiento. */
+  /**
+   * Baja lógica de una carga dentro del alcance: queda en la base marcada como
+   * eliminada. Sus avisos de vencimiento sí se borran, ya no corresponden.
+   */
   async eliminar(usuarioId: number, id: number): Promise<void> {
     const a = await this.alcance(usuarioId);
     // Fuera del alcance responde igual que inexistente.
     const carga = await this.prisma.cargaInventarioCampo.findFirst({
       where: {
         id,
+        eliminadaEn: null,
         ...this.deEmpresa(a.empresaId),
         ...(a.ids ? { usuarioId: { in: a.ids } } : {}),
       },
@@ -201,11 +246,88 @@ export class InventarioCargasService {
           referenciaId: carga.id,
         },
       }),
-      this.prisma.cargaInventarioCampo.delete({ where: { id: carga.id } }),
+      this.prisma.cargaInventarioCampo.update({
+        where: { id: carga.id },
+        data: { eliminadaEn: new Date(), eliminadaPorId: usuarioId },
+        select: { id: true },
+      }),
     ]);
   }
 
   async listar(usuarioId: number, q: ConsultaCargasInventarioDto) {
+    const { where, hoy, diasAviso } = await this.consulta(usuarioId, q);
+    const { skip, take, page, limit } = rangoPaginacion(q);
+    const [total, filas] = await Promise.all([
+      this.prisma.cargaInventarioCampo.count({ where }),
+      this.prisma.cargaInventarioCampo.findMany({
+        where,
+        select: SELECT_CARGA,
+        orderBy: ORDEN_CARGAS,
+        skip,
+        take,
+      }),
+    ]);
+    return respuestaPaginada(
+      await this.aFilas(filas, hoy, diasAviso),
+      total,
+      page,
+      limit,
+    );
+  }
+
+  /** Todas las cargas de la consulta, sin paginar, en CSV para Excel. */
+  async exportar(
+    usuarioId: number,
+    q: ConsultaCargasInventarioDto,
+  ): Promise<string> {
+    const { where, hoy, diasAviso } = await this.consulta(usuarioId, q);
+    const filas = await this.prisma.cargaInventarioCampo.findMany({
+      where,
+      select: SELECT_CARGA,
+      orderBy: ORDEN_CARGAS,
+      take: LIMITE_EXPORTAR + 1,
+    });
+    if (filas.length > LIMITE_EXPORTAR)
+      throw new PayloadTooLargeException(
+        `Son más de ${LIMITE_EXPORTAR} registros: acotá el período o los filtros`,
+      );
+    const items = await this.aFilas(filas, hoy, diasAviso);
+    return aCsv(
+      [
+        'Fecha',
+        'Empresa',
+        'Cargado por',
+        'Rol',
+        'Equipo',
+        'Código local',
+        'Local',
+        'Código producto',
+        'Producto',
+        'Cantidad',
+        'Vencimiento',
+        'Días para vencer',
+        'Estado',
+      ],
+      items.map((c) => [
+        c.fecha,
+        c.usuario.empresa,
+        c.usuario.nombre,
+        c.usuario.rol,
+        c.usuario.equipo,
+        c.local.id,
+        c.local.nombre,
+        c.itemcode,
+        c.producto,
+        c.cantidad,
+        c.vencimiento,
+        c.diasParaVencer,
+        ESTADO_TEXTO[c.estado],
+      ]),
+    );
+  }
+
+  /** Filtro común del listado y la exportación. */
+  private async consulta(usuarioId: number, q: ConsultaCargasInventarioDto) {
     const a = await this.alcance(usuarioId, q.empresaId);
     if (q.responsableId && a.ids && !a.ids.includes(q.responsableId))
       throw new ForbiddenException('No tenés acceso a esta sección');
@@ -265,6 +387,7 @@ export class InventarioCargasService {
       : [];
     const where: Prisma.CargaInventarioCampoWhereInput = {
       ...this.deEmpresa(a.empresaId),
+      eliminadaEn: null,
       fecha: {
         gte: fechaCampo(q.desde ?? hoy),
         lte: fechaCampo(q.hasta ?? q.desde ?? hoy),
@@ -304,40 +427,16 @@ export class InventarioCargasService {
           : []),
       ],
     };
-    const { skip, take, page, limit } = rangoPaginacion(q);
-    const [total, filas] = await Promise.all([
-      this.prisma.cargaInventarioCampo.count({ where }),
-      this.prisma.cargaInventarioCampo.findMany({
-        where,
-        select: {
-          id: true,
-          empresaId: true,
-          fecha: true,
-          itemcode: true,
-          cantidad: true,
-          vencimiento: true,
-          actualizadaEn: true,
-          local: { select: { CardCode: true, CardName: true } },
-          usuario: {
-            select: {
-              id: true,
-              nombre: true,
-              apellido: true,
-              empresa: { select: { nombre: true } },
-              rol: {
-                select: {
-                  descripcion: true,
-                  equipoCampo: { select: { nombre: true } },
-                },
-              },
-            },
-          },
-        },
-        orderBy: [{ fecha: 'desc' }, { actualizadaEn: 'desc' }, { id: 'desc' }],
-        skip,
-        take,
-      }),
-    ]);
+    return { where, hoy, diasAviso };
+  }
+
+  private async aFilas(
+    filas: Prisma.CargaInventarioCampoGetPayload<{
+      select: typeof SELECT_CARGA;
+    }>[],
+    hoy: string,
+    diasAviso: Map<number, number>,
+  ) {
     const nombres = new Map(
       (
         await this.prisma.producto.findMany({
@@ -347,32 +446,27 @@ export class InventarioCargasService {
         })
       ).map((p) => [p.itemcode, p.itemname]),
     );
-    return respuestaPaginada(
-      filas.map((f) => {
-        const dias = diasParaVencer(f.vencimiento, hoy);
-        return {
-          id: f.id,
-          fecha: dia(f.fecha),
-          local: { id: f.local.CardCode, nombre: nombreLocal(f.local) },
-          itemcode: f.itemcode,
-          producto: nombres.get(f.itemcode) ?? f.itemcode,
-          cantidad: f.cantidad,
-          vencimiento: dia(f.vencimiento),
-          diasParaVencer: dias,
-          estado: estadoCarga(dias, diasAviso.get(f.empresaId) ?? 0),
-          usuario: {
-            id: f.usuario.id,
-            nombre: `${f.usuario.nombre} ${f.usuario.apellido}`.trim(),
-            rol: f.usuario.rol?.descripcion ?? 'Sin rol',
-            equipo: f.usuario.rol?.equipoCampo?.nombre ?? null,
-            empresa: f.usuario.empresa.nombre,
-          },
-          cargadaEn: f.actualizadaEn.toISOString(),
-        };
-      }),
-      total,
-      page,
-      limit,
-    );
+    return filas.map((f) => {
+      const dias = diasParaVencer(f.vencimiento, hoy);
+      return {
+        id: f.id,
+        fecha: dia(f.fecha),
+        local: { id: f.local.CardCode, nombre: nombreLocal(f.local) },
+        itemcode: f.itemcode,
+        producto: nombres.get(f.itemcode) ?? f.itemcode,
+        cantidad: f.cantidad,
+        vencimiento: dia(f.vencimiento),
+        diasParaVencer: dias,
+        estado: estadoCarga(dias, diasAviso.get(f.empresaId) ?? 0),
+        usuario: {
+          id: f.usuario.id,
+          nombre: `${f.usuario.nombre} ${f.usuario.apellido}`.trim(),
+          rol: f.usuario.rol?.descripcion ?? 'Sin rol',
+          equipo: f.usuario.rol?.equipoCampo?.nombre ?? null,
+          empresa: f.usuario.empresa.nombre,
+        },
+        cargadaEn: f.actualizadaEn.toISOString(),
+      };
+    });
   }
 }

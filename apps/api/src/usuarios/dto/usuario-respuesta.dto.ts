@@ -39,6 +39,8 @@ export class UsuarioAdminRespuestaDto implements UsuarioAdminDto {
   canalVentaNombre!: string | null;
   @ApiProperty({ type: String, nullable: true })
   sucursalNombre!: string | null;
+  @ApiProperty({ type: String, nullable: true, example: 'ANTONIO SALINAS' })
+  vendedorSapNombre!: string | null;
   empresa!: EmpresaUsuarioRespuestaDto;
   @ApiProperty({ type: RolUsuarioRespuestaDto, nullable: true })
   rol!: RolUsuarioRespuestaDto | null;

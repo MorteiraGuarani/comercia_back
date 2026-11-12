@@ -50,6 +50,19 @@ describe('UsuariosService - permiso de superadmin', () => {
       count: jest.fn().mockResolvedValue(1),
       findMany: jest.fn().mockResolvedValue([]),
     },
+    socioNegocioVendedor: {
+      count: jest.fn().mockResolvedValue(1),
+      findMany: jest.fn().mockResolvedValue([
+        {
+          empresaId: 20,
+          SalesEmployeeCode: 220,
+          SalesEmployeeName: 'ANTONIO SALINAS',
+          Fax: '4087',
+          Active: 'Y',
+        },
+      ]),
+      findFirst: jest.fn(),
+    },
   };
   const auth = { crearUsuario: jest.fn() };
   const ucheckUsuarios = { marcar: jest.fn() };
@@ -64,7 +77,7 @@ describe('UsuariosService - permiso de superadmin', () => {
     ERP_Repositor: 'REP01',
     ERP_CodigoAlmacen: 'ALM01',
     ERP_NombreAlmacen: 'Depósito central',
-    ERP_CodUsuarioSap: 'manager',
+    ERP_CodUsuarioSap: '220',
     ERP_Sucursal: 3,
   };
   const dto = {
@@ -285,6 +298,10 @@ describe('UsuariosService - permiso de superadmin', () => {
       ...erp,
       canalVentaNombre: 'CANAL TRADICIONAL',
       sucursalNombre: null,
+      vendedorSapNombre: 'ANTONIO SALINAS',
+    });
+    expect(prisma.socioNegocioVendedor.count).toHaveBeenCalledWith({
+      where: { empresaId: 20, SalesEmployeeCode: 220 },
     });
     expect(prisma.socioNegocioCanales.count).toHaveBeenCalledWith({
       where: { empresaId: 20, Code: 1 },
@@ -300,12 +317,12 @@ describe('UsuariosService - permiso de superadmin', () => {
     prepararCambioCorreo();
     await service.actualizar(1, 2, {
       ERP_CodigoAlmacen: null,
-      ERP_CodUsuarioSap: 'manager',
+      ERP_CodUsuarioSap: '220',
     });
     expect(prisma.usuario.update.mock.calls[0][0]).toMatchObject({
       data: {
         ERP_CodigoAlmacen: null,
-        ERP_CodUsuarioSap: 'manager',
+        ERP_CodUsuarioSap: '220',
         ERP_CanalVenta: undefined,
         ERP_NombreAlmacen: undefined,
       },
@@ -322,7 +339,37 @@ describe('UsuariosService - permiso de superadmin', () => {
     await expect(service.actualizar(1, 2, { ERP_Sucursal: 9 })).rejects.toThrow(
       'Elegí una sucursal de la lista de la empresa',
     );
+    prepararCambioCorreo();
+    prisma.socioNegocioVendedor.count.mockResolvedValueOnce(0);
+    await expect(
+      service.actualizar(1, 2, { ERP_CodUsuarioSap: 'manager' }),
+    ).rejects.toThrow('Elegí un código de vendedor de la lista de la empresa');
     expect(prisma.usuario.update).not.toHaveBeenCalled();
+  });
+
+  it('sugiere el vendedor por legajo sin ceros: primero el Fax exacto', async () => {
+    prisma.usuario.findUnique.mockResolvedValueOnce({
+      id: 1,
+      empresaId: 20,
+      esSuperadmin: true,
+      isActive: true,
+    });
+    prisma.socioNegocioVendedor.findFirst.mockResolvedValueOnce({
+      SalesEmployeeCode: 220,
+      SalesEmployeeName: 'ANTONIO SALINAS',
+      Fax: '4087',
+      Active: 'Y',
+    });
+    await expect(
+      service.vendedorSugerido(1, { legajo: '00004087' }),
+    ).resolves.toEqual({
+      id: 220,
+      nombre: 'ANTONIO SALINAS',
+      descripcion: 'Código 220 · Legajo 4087',
+    });
+    expect(prisma.socioNegocioVendedor.findFirst.mock.calls[0]).toMatchObject([
+      { where: { empresaId: 20, Fax: { in: ['4087', '00004087'] } } },
+    ]);
   });
 
   it('lista los canales de venta de la empresa como opciones', async () => {

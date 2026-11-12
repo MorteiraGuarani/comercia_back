@@ -1,5 +1,6 @@
 "use client";
 
+import { SkeletonFilas } from "@/components/skeleton";
 import { useEffect, useId, useRef, useState } from "react";
 import { apiFetch, ApiError } from "@/lib/api";
 import type { OpcionSelector } from "@/types/opcion-selector";
@@ -333,13 +334,15 @@ export function SelectorPaginado<TId extends number | string = number>({
         >
           {buscable ? (
             <>
-              <div role="status" className="text-sm text-muted">
-                {cargando
-                  ? "Buscando opciones…"
-                  : !error && opciones.length === 0
+              {cargando ? (
+                <SkeletonFilas etiqueta="Buscando opciones…" className="p-2" />
+              ) : (
+                <div role="status" className="text-sm text-muted">
+                  {!error && opciones.length === 0
                     ? "No se encontraron resultados."
                     : ""}
-              </div>
+                </div>
+              )}
               <ul
                 id={listaId}
                 role="listbox"

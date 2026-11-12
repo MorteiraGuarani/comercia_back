@@ -2,6 +2,7 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   HttpCode,
   Param,
   ParseIntPipe,
@@ -13,6 +14,7 @@ import {
   ApiBearerAuth,
   ApiForbiddenResponse,
   ApiOperation,
+  ApiProduces,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
@@ -27,7 +29,7 @@ import { InventarioCargasService } from './inventario-cargas.service';
 @ApiTags('Inventarios cargados')
 @ApiBearerAuth()
 @ApiUnauthorizedResponse({ description: 'Sesión requerida' })
-@ApiForbiddenResponse({ description: 'Sin acceso a Inventarios' })
+@ApiForbiddenResponse({ description: 'Sin acceso a Inventario' })
 @Controller('campo/inventario/cargas')
 @UseGuards(JwtAuthGuard)
 export class InventarioCargasController {
@@ -41,10 +43,27 @@ export class InventarioCargasController {
     return this.servicio.listar(r.usuarioId, q);
   }
 
+  // Sin paginar a propósito: la exportación lleva todo el filtro (tope y 413 en el servicio).
+  @Get('exportar')
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @Header('Content-Disposition', 'attachment; filename="inventario.csv"')
+  @ApiOperation({
+    summary:
+      'Cargas de la consulta en CSV para Excel (sin paginar, hasta 20000 filas)',
+  })
+  @ApiProduces('text/csv')
+  exportar(
+    @Req() r: RequestConUsuario,
+    @Query() q: ConsultaCargasInventarioDto,
+  ) {
+    return this.servicio.exportar(r.usuarioId, q);
+  }
+
   @Delete(':id')
   @HttpCode(204)
   @ApiOperation({
-    summary: 'Borrar una carga dentro del alcance, con sus avisos',
+    summary:
+      'Eliminar una carga dentro del alcance (queda en la base marcada como eliminada)',
   })
   eliminar(@Req() r: RequestConUsuario, @Param('id', ParseIntPipe) id: number) {
     return this.servicio.eliminar(r.usuarioId, id);

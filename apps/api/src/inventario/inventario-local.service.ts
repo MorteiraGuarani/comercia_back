@@ -170,7 +170,7 @@ export class InventarioLocalService {
         take: LIMITE_PRODUCTOS_COPIA + 1,
       }),
       this.prisma.cargaInventarioCampo.findMany({
-        where: { ...delLocal, fecha: fechaCampo(hoy) },
+        where: { ...delLocal, fecha: fechaCampo(hoy), eliminadaEn: null },
         select: {
           localId: true,
           itemcode: true,
@@ -183,6 +183,7 @@ export class InventarioLocalService {
         by: ['localId', 'fecha'],
         where: {
           ...delLocal,
+          eliminadaEn: null,
           fecha: { gte: fechaCampo(desde), lt: fechaCampo(hoy) },
         },
         orderBy: [{ localId: 'asc' }, { fecha: 'desc' }],
@@ -327,10 +328,14 @@ export class InventarioLocalService {
       }),
       this.prisma.productoLocalCampo.count({ where: delLocal }),
       this.prisma.cargaInventarioCampo.count({
-        where: { ...delLocal, fecha: fechaCampo(hoy) },
+        where: { ...delLocal, fecha: fechaCampo(hoy), eliminadaEn: null },
       }),
       this.prisma.cargaInventarioCampo.findMany({
-        where: { ...delLocal, fecha: { lt: fechaCampo(hoy) } },
+        where: {
+          ...delLocal,
+          fecha: { lt: fechaCampo(hoy) },
+          eliminadaEn: null,
+        },
         distinct: ['fecha'],
         select: { fecha: true },
         orderBy: { fecha: 'desc' },
@@ -364,6 +369,7 @@ export class InventarioLocalService {
         where: {
           ...delLocal,
           fecha: fechaCampo(hoy),
+          eliminadaEn: null,
           itemcode: { in: productos.map((p) => p.itemcode) },
         },
         select: { itemcode: true, cantidad: true, vencimiento: true },
@@ -391,7 +397,11 @@ export class InventarioLocalService {
         limit,
       );
     } else {
-      const where = { ...delLocal, fecha: fechaCampo(fecha) };
+      const where = {
+        ...delLocal,
+        fecha: fechaCampo(fecha),
+        eliminadaEn: null,
+      };
       const [total, cargas] = await Promise.all([
         this.prisma.cargaInventarioCampo.count({ where }),
         this.prisma.cargaInventarioCampo.findMany({
@@ -501,7 +511,12 @@ export class InventarioLocalService {
     const fecha = fechaCampo(diaCarga);
     await this.prisma.$transaction(async (tx) => {
       const actuales = await tx.cargaInventarioCampo.findMany({
-        where: { ...delLocal, fecha, itemcode: { in: codigos } },
+        where: {
+          ...delLocal,
+          fecha,
+          itemcode: { in: codigos },
+          eliminadaEn: null,
+        },
         select: { itemcode: true, vencimiento: true },
         take: codigos.length,
       });
@@ -530,6 +545,9 @@ export class InventarioLocalService {
             cantidad: carga.cantidad,
             vencimiento,
             usuarioId,
+            // Volver a cargar una eliminada ese día la reactiva.
+            eliminadaEn: null,
+            eliminadaPorId: null,
             ...(vencimientoActual.get(carga.itemcode) !== carga.vencimiento
               ? { avisadoEn: null }
               : {}),

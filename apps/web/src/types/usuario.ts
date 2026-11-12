@@ -71,6 +71,8 @@ export interface UsuarioAdmin extends DatosErpUsuario {
   /** Name del canal (tbl_jcanales) y de la sucursal (tbl_oclp) elegidos. */
   canalVentaNombre: string | null;
   sucursalNombre: string | null;
+  /** SalesEmployeeName de tbl_oslp del Código Vendedor (ERP_CodUsuarioSap). */
+  vendedorSapNombre: string | null;
   empresa: { id: number; nombre: string };
   rol: { id: number; descripcion: string } | null;
   superior: { id: number; nombre: string } | null;
@@ -92,4 +94,10 @@ export interface UsuarioLocalAsignacion {
   nombreLocal: string;
   fechaDesde: string;
   fechaHasta: string | null;
+}
+
+/** Canal de venta y sucursal de SAP del usuario, para Mis datos (solo lectura). */
+export interface DatosSapPerfil {
+  canalVenta: string | null;
+  sucursal: string | null;
 }

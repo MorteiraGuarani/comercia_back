@@ -12,6 +12,8 @@ export interface UsuarioAdminDto extends DatosErpUsuario {
   /** Name de tbl_jcanales / tbl_oclp para mostrar lo elegido. */
   canalVentaNombre: string | null;
   sucursalNombre: string | null;
+  /** SalesEmployeeName de tbl_oslp del Código Vendedor (ERP_CodUsuarioSap). */
+  vendedorSapNombre: string | null;
   empresa: { id: number; nombre: string };
   rol: { id: number; descripcion: string } | null;
   superior: { id: number; nombre: string } | null;
@@ -20,6 +22,15 @@ export interface UsuarioAdminDto extends DatosErpUsuario {
   /** Copia de sus programas de Ucheck (códigos). */
   programasUcheck: string[];
   createdAt: string;
+}
+
+/** Vendedor de tbl_oslp para el selector «Código Vendedor». */
+export interface OpcionVendedorSap {
+  /** SalesEmployeeCode: se guarda como texto en ERP_CodUsuarioSap. */
+  id: number;
+  nombre: string;
+  /** Código, legajo (Fax) y si está inactivo. */
+  descripcion: string;
 }
 
 export interface MetaUsuariosDto {

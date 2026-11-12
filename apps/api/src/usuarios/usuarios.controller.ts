@@ -25,6 +25,7 @@ import {
   AsignarUsuarioLocalDto,
   CrearUsuarioDto,
   ListarUsuariosDto,
+  VendedorSugeridoDto,
 } from './dto/usuario.dto';
 import { UsuariosService } from './usuarios.service';
 import { ListarSuperioresDto } from './dto/listar-superiores.dto';
@@ -101,6 +102,32 @@ export class UsuariosController {
     @Query() query: ListarUsuariosDto,
   ) {
     return this.usuarios.listarCatalogoErp(req.usuarioId, query, 'sucursales');
+  }
+
+  @Get('vendedores-sap')
+  @ApiOperation({
+    summary: 'Vendedores (tbl_oslp) para «Código Vendedor» de la pestaña SAP',
+    description:
+      'Paginado de la empresa del usuario o `empresaId`. `buscar` filtra por SalesEmployeeName o por legajo (Fax). El `id` es el SalesEmployeeCode que va en `ERP_CodUsuarioSap`.',
+  })
+  listarVendedoresSap(
+    @Req() req: RequestConUsuario,
+    @Query() query: ListarUsuariosDto,
+  ) {
+    return this.usuarios.listarVendedoresSap(req.usuarioId, query);
+  }
+
+  @Get('vendedores-sap/sugerido')
+  @ApiOperation({
+    summary: 'Vendedor de tbl_oslp sugerido para un legajo',
+    description:
+      'Busca el Fax igual al legajo sin ceros a la izquierda y, si no hay, uno que lo contenga. Devuelve null si no encuentra.',
+  })
+  vendedorSugerido(
+    @Req() req: RequestConUsuario,
+    @Query() query: VendedorSugeridoDto,
+  ) {
+    return this.usuarios.vendedorSugerido(req.usuarioId, query);
   }
 
   @Get('meta')

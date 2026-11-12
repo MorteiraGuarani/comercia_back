@@ -355,7 +355,7 @@ export default function PanelLayout({
                           onClick={() => setMenuAbierto(false)}
                           className={itemMenu}
                         >
-                          <IconoCaja className="h-4 w-4" /> Inventarios
+                          <IconoCaja className="h-4 w-4" /> Inventario
                         </Link>
                       )}
                       {tieneAdministracion && !usuario.esSuperadmin && (

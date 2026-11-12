@@ -19,6 +19,7 @@ import { LoginSimDto } from './dto/login-sim.dto';
 import { CallbackUcheckSsoDto } from './dto/callback-ucheck-sso.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import type { UsuarioSesion } from './interfaces/usuario-sesion.interface';
+import type { DatosSapPerfil } from './interfaces/datos-sap-perfil.interface';
 import type { RequestConUsuario } from './interfaces/request-con-usuario.interface';
 import { UcheckSsoService } from './ucheck-sso.service';
 
@@ -79,6 +80,15 @@ export class AuthController {
   @ApiOperation({ summary: 'Usuario de la sesión actual' })
   async me(@Req() req: RequestConUsuario): Promise<{ usuario: UsuarioSesion }> {
     return { usuario: await this.authService.me(req.usuarioId) };
+  }
+
+  @Get('me/sap')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Canal de venta y sucursal de SAP del usuario (solo lectura)',
+  })
+  sap(@Req() req: RequestConUsuario): Promise<DatosSapPerfil> {
+    return this.authService.datosSap(req.usuarioId);
   }
 
   // Excepción pública deliberada: el código es opaco, dura 60 segundos, se

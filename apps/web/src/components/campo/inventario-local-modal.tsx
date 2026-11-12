@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Modal } from "@/components/modal";
-import { IconoPaqueteMas } from "./ui/iconos-campo";
+import { IconoMas } from "@/components/icono-mas";
 import { Paginacion } from "@/components/paginacion";
 import { PantallaCarga } from "@/components/pantalla-carga";
 import { usePanel } from "@/components/panel/contexto";
@@ -459,15 +459,17 @@ export function InventarioLocalModal({
                 </select>
               </label>
               {editable ? (
+                // Deshabilitado: el local ya trae todos los productos de inventario (Properties3 tYES).
                 <button
                   type="button"
+                  disabled
                   onClick={() => setAgregando((a) => !a)}
                   aria-expanded={agregando}
                   aria-label="Agregar productos"
-                  className={`${btnMarca} inline-flex items-center gap-1.5`}
+                  title="Todos los productos de inventario ya están en la lista"
+                  className={`${btnMarca} inline-grid h-11 w-11 place-items-center px-0`}
                 >
-                  <IconoPaqueteMas className="h-5 w-5 shrink-0" />
-                  Agregar
+                  <IconoMas />
                 </button>
               ) : null}
             </div>
@@ -511,7 +513,7 @@ export function InventarioLocalModal({
             <div className={marco}>
               {items.length === 0 ? (
                 <p className="p-6 text-center text-sm text-muted">
-                  Todavía no hay productos en este local. Agregalos con «+ Agregar».
+                  Todavía no hay productos de inventario en este equipo.
                 </p>
               ) : (
                 <ul className="divide-y divide-line" aria-label="Productos del local">

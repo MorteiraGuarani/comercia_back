@@ -64,6 +64,7 @@ export class VencimientosService implements OnModuleInit, OnModuleDestroy {
           SELECT DISTINCT ON (empresa_id, "CardCode", "ItemCode")
             id, empresa_id, avisado_en, cantidad, vencimiento
           FROM campo_inventario_cargas
+          WHERE eliminada_en IS NULL
           ORDER BY empresa_id, "CardCode", "ItemCode", fecha DESC
         ) u
         JOIN empresas e ON e.id = u.empresa_id

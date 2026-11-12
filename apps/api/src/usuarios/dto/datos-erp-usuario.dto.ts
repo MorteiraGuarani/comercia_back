@@ -70,8 +70,9 @@ export class DatosErpUsuarioDto {
     type: String,
     nullable: true,
     maxLength: 100,
-    example: 'manager',
-    description: 'Código del usuario en SAP.',
+    example: '220',
+    description:
+      'Código Vendedor: SalesEmployeeCode de tbl_oslp de la empresa del usuario (se valida que exista).',
   })
   @Transform(vacioComo(null))
   @IsOptional()

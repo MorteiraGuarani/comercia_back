@@ -809,6 +809,8 @@ export function UsuariosPanel({ soloSuperadmin = false }: UsuariosPanelProps) {
                 base={base}
                 empresaId={empresaId}
                 usuario={editando === "nuevo" ? undefined : editando}
+                // Recién al abrir la pestaña SAP: el legajo ya está escrito completo.
+                legajo={paso === 2 ? form.legajo : ""}
                 valor={form}
                 disabled={guardando}
                 onChange={(campo, valor) =>

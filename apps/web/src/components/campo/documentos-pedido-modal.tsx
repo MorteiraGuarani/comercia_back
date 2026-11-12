@@ -1,5 +1,6 @@
 "use client";
 
+import { SkeletonFilas } from "@/components/skeleton";
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { Modal } from "@/components/modal";
@@ -59,7 +60,7 @@ export function DocumentosPedidoModal({
       {error ? (
         <p className={errorBox}>{error}</p>
       ) : !detalle ? (
-        <p className="py-6 text-center text-sm text-muted">Cargando documentos…</p>
+        <SkeletonFilas etiqueta="Cargando documentos…" className="py-2" />
       ) : !detalle.documentos.length ? (
         <p className="py-6 text-center text-sm text-muted">
           Este pedido se cargó antes de que se guardaran los documentos para SAP.

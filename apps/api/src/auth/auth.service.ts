@@ -22,6 +22,7 @@ import {
   puedeEditarPerfil,
 } from '../common/utils/permisos-usuario';
 import type { UsuarioSesion } from './interfaces/usuario-sesion.interface';
+import type { DatosSapPerfil } from './interfaces/datos-sap-perfil.interface';
 import type { TokenPayload } from './interfaces/token-payload.interface';
 import type { EquipoCampoDto } from '../roles/interfaces/equipo-campo.interface';
 import type { AsignacionUsuario } from './interfaces/asignacion-usuario.interface';
@@ -221,6 +222,44 @@ export class AuthService {
       throw new UnauthorizedException();
     }
     return this.aSesion(usuario);
+  }
+
+  /** Solo lectura: los asigna un administrador en la pestaña SAP del usuario. */
+  async datosSap(usuarioId: number): Promise<DatosSapPerfil> {
+    const u = await this.prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      select: {
+        empresaId: true,
+        isActive: true,
+        ERP_CanalVenta: true,
+        ERP_Sucursal: true,
+      },
+    });
+    if (!u?.isActive) throw new UnauthorizedException();
+    const canal = Number(u.ERP_CanalVenta ?? NaN);
+    const [canalVenta, sucursal] = await Promise.all([
+      Number.isSafeInteger(canal)
+        ? this.prisma.socioNegocioCanales.findFirst({
+            where: { empresaId: u.empresaId, Code: canal },
+            select: { Name: true },
+          })
+        : null,
+      u.ERP_Sucursal === null
+        ? null
+        : this.prisma.catalogoOclp.findFirst({
+            where: { empresaId: u.empresaId, Code: u.ERP_Sucursal },
+            select: { Name: true },
+          }),
+    ]);
+    return {
+      canalVenta: u.ERP_CanalVenta
+        ? (canalVenta?.Name ?? `Código ${u.ERP_CanalVenta}`)
+        : null,
+      sucursal:
+        u.ERP_Sucursal === null
+          ? null
+          : (sucursal?.Name ?? `Código ${u.ERP_Sucursal}`),
+    };
   }
 
   async iniciarSesionPorUsuarioId(

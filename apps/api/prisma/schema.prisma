@@ -1240,6 +1240,9 @@ model CargaInventarioCampo {
   cantidad Int
   vencimiento DateTime @db.Date
   avisadoEn DateTime? @map("avisado_en")
+  // Baja lógica: eliminar no borra la fila. Cargarla de nuevo ese día la reactiva.
+  eliminadaEn DateTime? @map("eliminada_en")
+  eliminadaPorId Int? @map("eliminada_por")
   creadaEn DateTime @default(now()) @map("creada_en")
   actualizadaEn DateTime @default(now()) @updatedAt @map("actualizada_en")
 

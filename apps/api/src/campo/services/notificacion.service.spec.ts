@@ -142,7 +142,9 @@ describe('notificaciones de campo', () => {
     expect(detalle.producto.nombre.length).toBeGreaterThan(250);
     expect(detalle.local.nombre.length).toBeGreaterThan(250);
     expect(prisma.cargaInventarioCampo.findFirst).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { id: 8, empresaId: 10 } }),
+      expect.objectContaining({
+        where: { id: 8, empresaId: 10, eliminadaEn: null },
+      }),
     );
   });
   it.each([

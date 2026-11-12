@@ -2,7 +2,7 @@ import type {
   AlmacenSap,
   DatosPedidoSap,
 } from '../interfaces/pedido-sap.interface';
-import { armarPedidosSap, conIdDocumento } from './pedido-sap';
+import { armarPedidosSap, conIdDocumento, whereVendedor } from './pedido-sap';
 
 const almacen = (
   WarehouseCode: string,
@@ -141,5 +141,16 @@ describe('armarPedidosSap', () => {
     expect(conIdDocumento('C|595991188620|20261130104755|0', 41)).toBe(
       'C|595991188620|20261130104755|41',
     );
+  });
+});
+
+describe('whereVendedor', () => {
+  it('filtra la cartera por SlpCode; sin código no filtra', () => {
+    expect(whereVendedor('220')).toEqual({ SlpCode: 220 });
+    expect(whereVendedor(' 220 ')).toEqual({ SlpCode: 220 });
+    expect(whereVendedor(null)).toEqual({});
+    expect(whereVendedor('  ')).toEqual({});
+    // Un código viejo no numérico no habilita clientes ajenos.
+    expect(whereVendedor('REP01')).toEqual({ SlpCode: -2 });
   });
 });

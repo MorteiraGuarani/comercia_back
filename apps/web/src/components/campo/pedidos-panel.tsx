@@ -1,5 +1,6 @@
 "use client";
 
+import { SkeletonFilas } from "@/components/skeleton";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { enviarAccionTarea } from "@/lib/pendientes-tareas";
@@ -107,10 +108,27 @@ export function PedidosPanel() {
   const actual = PASOS[paso];
   const ultimo = paso === PASOS.length - 1;
 
+  // Pestaña de la que se saltó hacia atrás: «Siguiente» vuelve ahí y no paso a paso.
+  const [volverA, setVolverA] = useState<number | null>(null);
+
   function ir(i: number) {
     setPaso(Math.max(0, Math.min(PASOS.length - 1, i)));
     setError("");
     window.scrollTo(0, 0);
+  }
+
+  /** Salto elegido por el usuario (pestañas o Editar en Revisar). */
+  function saltar(i: number) {
+    if (i < paso) setVolverA((v) => Math.max(v ?? 0, paso));
+    else if (volverA !== null && i >= volverA) setVolverA(null);
+    ir(i);
+  }
+
+  function siguiente() {
+    if (volverA !== null && volverA > paso) {
+      setVolverA(null);
+      ir(volverA);
+    } else ir(paso + 1);
   }
 
   function elegirCliente(opcion: { id: string; nombre?: string } | null) {
@@ -223,6 +241,7 @@ export function PedidosPanel() {
       setItems(Object.fromEntries(copiables.map((i) => [i.itemCode, i])));
       setEntrega(manana);
       setObservaciones(comentario.slice(0, 200));
+      setVolverA(null);
       ir(PASOS.length - 1);
       const faltan = copia.noDisponibles.map(
         (c) => origen.find((l) => l.itemCode === c)?.nombre ?? c,
@@ -264,6 +283,7 @@ export function PedidosPanel() {
     setItems({});
     setEntrega(manana);
     setObservaciones("");
+    setVolverA(null);
     ir(0);
   }
 
@@ -298,7 +318,7 @@ export function PedidosPanel() {
                 <button
                   key={p.t}
                   type="button"
-                  onClick={() => ir(i)}
+                  onClick={() => saltar(i)}
                   disabled={i > 0 && (!cliente || bloqueado)}
                   aria-current={activo ? "step" : undefined}
                   className={`${chip} ${
@@ -406,7 +426,7 @@ export function PedidosPanel() {
             {!cliente ? null : errorPerfil ? (
               <p className={errorBox}>{errorPerfil}</p>
             ) : !perfil ? (
-              <p className="py-6 text-center text-sm text-muted">Cargando cliente…</p>
+              <SkeletonFilas etiqueta="Cargando cliente…" filas={4} className="rounded-2xl border border-line bg-surface-raised p-4" />
             ) : (
               <>
                 <PerfilCliente perfil={perfil} />
@@ -448,12 +468,12 @@ export function PedidosPanel() {
                       {grupo.length ? (
                         <BotonEditar
                           etiqueta={`Editar ${l.nombre}`}
-                          onClick={() => ir(PASOS.findIndex((p) => p.t === l.nombre))}
+                          onClick={() => saltar(PASOS.findIndex((p) => p.t === l.nombre))}
                         />
                       ) : (
                         <button
                           type="button"
-                          onClick={() => ir(PASOS.findIndex((p) => p.t === l.nombre))}
+                          onClick={() => saltar(PASOS.findIndex((p) => p.t === l.nombre))}
                           aria-label={`Agregar en ${l.nombre}`}
                           title={`Agregar en ${l.nombre}`}
                           className="inline-grid h-11 w-11 cursor-pointer place-items-center rounded-md text-muted transition-colors hover:bg-surface-soft hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 md:h-9 md:w-9"
@@ -530,7 +550,7 @@ export function PedidosPanel() {
         <FlechaLateral
           etiqueta={ultimo ? "Último paso" : `Siguiente: ${PASOS[paso + 1].t}`}
           disabled={ultimo || !cliente || bloqueado}
-          onClick={() => ir(paso + 1)}
+          onClick={siguiente}
         />
       </section>
 
@@ -578,12 +598,12 @@ export function PedidosPanel() {
           </button>
           <button
             type="button"
-            onClick={() => (ultimo ? void guardar(true) : ir(paso + 1))}
+            onClick={() => (ultimo ? void guardar(true) : siguiente())}
             disabled={bloqueado || (ultimo ? !lista.length || guardando : !cliente)}
             title={ultimo ? "Guarda el pedido y lo envía a SAP" : undefined}
             className={`${btnPrimary} h-14 gap-2 rounded-2xl text-base`}
           >
-            {ultimo ? "Enviar" : `Siguiente: ${PASOS[paso + 1].t}`}
+            {ultimo ? "Enviar" : "Siguiente"}
             {ultimo ? null : <Flecha />}
           </button>
         </div>

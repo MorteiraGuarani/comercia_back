@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { apiFetch } from "@/lib/api";
 import type { CountryCode } from "libphonenumber-js";
 import { Modal } from "@/components/modal";
 import { PantallaCarga } from "@/components/pantalla-carga";
@@ -18,7 +19,7 @@ import { mensajeError } from "@/utils/error";
 import { prepararImagen } from "@/utils/preparar-imagen";
 import { baseRuc, calcularDvRucPy } from "@/utils/ruc";
 import { formatearTelefono, partesCelular } from "@/utils/telefono";
-import type { UsuarioSesion } from "@/types/usuario";
+import type { DatosSapPerfil, UsuarioSesion } from "@/types/usuario";
 
 const PAISES: { codigo: CountryCode; nombre: string }[] = [
   { codigo: "PY", nombre: "Paraguay (+595)" },
@@ -58,6 +59,15 @@ export function PerfilModal({
   const [operacion, setOperacion] = useState("");
   const [error, setError] = useState("");
   const archivoRef = useRef<HTMLInputElement>(null);
+  const [sap, setSap] = useState<DatosSapPerfil | null>(null);
+  useEffect(() => {
+    const control = new AbortController();
+    apiFetch<DatosSapPerfil>("/auth/me/sap", { signal: control.signal })
+      .then(setSap)
+      // Sin estos datos el perfil se ve igual, con «—».
+      .catch(() => undefined);
+    return () => control.abort();
+  }, []);
   const original = formularioDe(usuario);
   const cambioRuc = form.ruc !== original.ruc;
   const cambioCelular =
@@ -157,6 +167,8 @@ export function PerfilModal({
                 ["Empresa", usuario.empresa.nombre],
                 ["Legajo", usuario.legajo],
                 ["Equipo", usuario.rol?.equipoCampo?.nombre],
+                ["Canal Venta", sap?.canalVenta],
+                ["Sucursal", sap?.sucursal],
               ] as const
             ).map(([etiqueta, valor]) => (
               <div key={etiqueta} className="contents">
@@ -369,6 +381,10 @@ export function PerfilModal({
                 <dd className="text-foreground">{usuario.rol.equipoCampo.nombre}</dd>
               </>
             ) : null}
+            <dt className="text-muted">Canal Venta</dt>
+            <dd className="break-words text-foreground">{sap?.canalVenta ?? "—"}</dd>
+            <dt className="text-muted">Sucursal</dt>
+            <dd className="break-words text-foreground">{sap?.sucursal ?? "—"}</dd>
           </dl>
         </section>
 
