@@ -131,7 +131,7 @@ export function descargarCopia(usuarioId: number): Promise<CopiaGuardada> {
 }
 
 /** Productos guardados para el selector, por nombre. */
-/** Productos con QryInventario = 'Y' guardados en el equipo, por nombre: se precargan en cada local. */
+/** Productos con Properties3 = 'tYES' guardados en el equipo, por nombre: se precargan en cada local. */
 export function productosDeInventario(usuarioId: number): Promise<ProductoGuardado[]> {
   return db()
     .productos.where("[usuarioId+orden]")

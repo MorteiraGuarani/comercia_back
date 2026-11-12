@@ -182,7 +182,7 @@ export class ProductosController {
           iva: 10,
           itmsgrpcode: 100,
           itmsgrpnam: null,
-          inventory: 'N',
+          inventory: 'tNO',
           pricelist: 1,
           pricelistname: 'General',
           price: '15000.123456',

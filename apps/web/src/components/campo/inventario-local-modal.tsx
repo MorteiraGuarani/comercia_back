@@ -198,7 +198,7 @@ export function InventarioLocalModal({
     [usuarioId, localId],
   );
   const copia = useLiveQuery(() => leerCopia(usuarioId).catch(() => null), [usuarioId]);
-  // Productos con QryInventario = 'Y', guardados en el equipo: se precargan en
+  // Productos con Properties3 = 'tYES', guardados en el equipo: se precargan en
   // todos los locales (también sin señal).
   const fijos = useLiveQuery(
     () => productosDeInventario(usuarioId).catch(() => []),
@@ -495,7 +495,7 @@ export function InventarioLocalModal({
                           item={item}
                           editable
                           diasAviso={diasAviso}
-                          // Los precargados (QryInventario = 'Y') no se quitan del local.
+                          // Los precargados (Properties3 = 'tYES') no se quitan del local.
                           onQuitar={
                             fijosCodigos.has(item.itemcode)
                               ? undefined

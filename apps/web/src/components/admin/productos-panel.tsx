@@ -35,7 +35,7 @@ const PRODUCTO_VACIO: FormProducto = {
   iva: "",
   itmsgrpcode: "",
   itmsgrpnam: "",
-  inventory: "N",
+  inventory: "tNO",
   pricelist: "",
   pricelistname: "",
   price: "",

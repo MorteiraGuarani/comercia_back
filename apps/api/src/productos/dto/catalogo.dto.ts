@@ -117,7 +117,7 @@ export class DatosProductoDto {
     longitud: 1,
     nullable: true,
     defecto: 'N',
-    descripcion: 'QryInventario del maestro.',
+    descripcion: 'Properties3 del maestro (tYES/tNO).',
     ejemplo: 'N',
   })
   inventory?: string | null;

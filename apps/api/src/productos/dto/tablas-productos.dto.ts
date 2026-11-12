@@ -42,11 +42,11 @@ export class ArticuloDto {
     longitud: 4,
     requerido: false,
     nullable: true,
-    defecto: 'N',
-    descripcion: 'Indicador de inventario original.',
-    ejemplo: 'Y',
+    defecto: 'tNO',
+    descripcion: 'Propiedad 3 de SAP: tYES lo muestra en Inventario, tNO no.',
+    ejemplo: 'tYES',
   })
-  QryInventario?: string | null;
+  Properties3?: string | null;
   @CampoTabla({
     tipo: 'decimal',
     requerido: false,
@@ -102,15 +102,6 @@ export class ArticuloDto {
     ejemplo: '2',
   })
   U_beas_vg?: string | null;
-  @CampoTabla({
-    tipo: 'texto',
-    longitud: 4,
-    requerido: false,
-    nullable: true,
-    descripcion: 'Propiedad 3 del artículo en SAP (QryGroup3).',
-    ejemplo: 'N',
-  })
-  QryGroup3?: string | null;
 }
 export class PrecioListaDto {
   @CampoTabla({

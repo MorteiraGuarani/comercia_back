@@ -348,16 +348,14 @@ function AgendaDelDia({
         r = await marcar();
       } catch (e) {
         if (esSinConexion(e)) return await guardarEnEsteEquipo();
-        if (!(e instanceof ApiError && e.codigo === "TELEFONO_SIN_UBICACION")) throw e;
-        // El teléfono no mandó su ubicación a tiempo: va la del navegador.
-        const ubicacion = await gpsNavegador();
-        paso("Registrando la visita en Ucheck");
-        try {
-          r = await marcar(ubicacion);
-        } catch (e2) {
-          if (esSinConexion(e2)) return await guardarEnEsteEquipo(ubicacion);
-          throw e2;
-        }
+        // Sin la ubicación del teléfono no se marca con la del navegador: tiene que abrir Ucheck.
+        if (e instanceof ApiError && e.codigo === "TELEFONO_SIN_UBICACION")
+          throw new ApiError(
+            e.status,
+            "Ucheck no tiene la ubicación de tu teléfono. Abrí la aplicación Ucheck, iniciala y volvé a marcar.",
+            e.codigo,
+          );
+        throw e;
       }
       if (r.estado === "PENDIENTE")
         mostrarToast(
