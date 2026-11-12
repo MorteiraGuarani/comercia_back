@@ -130,6 +130,14 @@ export function descargarCopia(usuarioId: number): Promise<CopiaGuardada> {
   return tarea;
 }
 
+/** Cuántos productos hay guardados en el equipo (0: hay que descargarlos). */
+export function contarProductos(usuarioId: number): Promise<number> {
+  return db()
+    .productos.where("[usuarioId+orden]")
+    .between(...delUsuario(usuarioId))
+    .count();
+}
+
 /** Productos guardados para el selector, por nombre. */
 /** Productos con Properties3 = 'tYES' guardados en el equipo, por nombre: se precargan en cada local. */
 export function productosDeInventario(usuarioId: number): Promise<ProductoGuardado[]> {

@@ -11,6 +11,7 @@ import { mostrarToast } from "@/components/toast/toast-controller";
 import { useListaCampo, useOperacionCampo } from "@/hooks/use-lista-campo";
 import { useEnLinea } from "@/hooks/use-en-linea";
 import {
+  contarProductos,
   descargarCopia,
   enviarPendientes,
   guardarCambios,
@@ -204,6 +205,10 @@ export function InventarioLocalModal({
     () => productosDeInventario(usuarioId).catch(() => []),
     [usuarioId],
   );
+  const totalProductos = useLiveQuery(
+    () => contarProductos(usuarioId).catch(() => 0),
+    [usuarioId],
+  );
   const diasAviso = copia?.diasAviso ?? 5;
   const op = useOperacionCampo();
   const [fecha, setFecha] = useState("");
@@ -393,6 +398,29 @@ export function InventarioLocalModal({
                   }
                 >
                   Descargar inventario
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+
+          {/* Sin productos en el equipo no hay precargados ni se puede agregar: se descargan acá. */}
+          {local && totalProductos === 0 ? (
+            <div className="space-y-3 rounded-xl border border-line bg-surface-soft p-4 text-sm text-foreground">
+              <p>
+                No hay productos guardados en este equipo.
+                {enLinea
+                  ? " Descargalos para ver los de inventario y poder agregar."
+                  : " Conectate para descargarlos."}
+              </p>
+              {enLinea ? (
+                <button
+                  type="button"
+                  className={btnMarca}
+                  onClick={() =>
+                    void op.ejecutar("Descargando productos", () => descargarCopia(usuarioId))
+                  }
+                >
+                  Descargar productos
                 </button>
               ) : null}
             </div>
