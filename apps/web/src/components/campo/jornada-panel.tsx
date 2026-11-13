@@ -348,14 +348,26 @@ function AgendaDelDia({
         r = await marcar();
       } catch (e) {
         if (esSinConexion(e)) return await guardarEnEsteEquipo();
-        // Sin la ubicación del teléfono no se marca con la del navegador: tiene que abrir Ucheck.
-        if (e instanceof ApiError && e.codigo === "TELEFONO_SIN_UBICACION")
+        if (!(e instanceof ApiError && e.codigo === "TELEFONO_SIN_UBICACION")) throw e;
+        // El teléfono no mandó su ubicación a tiempo (Android frena Ucheck en
+        // segundo plano): va la del navegador, que Ucheck valida igual.
+        let ubicacion: MarcaSinConexion["ubicacion"];
+        try {
+          ubicacion = await gpsNavegador();
+        } catch {
           throw new ApiError(
             e.status,
-            "Ucheck no tiene la ubicación de tu teléfono. Abrí la aplicación Ucheck, iniciala y volvé a marcar.",
+            "No se pudo tomar tu ubicación. Permití la ubicación en este navegador, o abrí Ucheck, revisá que el seguimiento esté activo y volvé a marcar.",
             e.codigo,
           );
-        throw e;
+        }
+        paso("Registrando la visita en Ucheck");
+        try {
+          r = await marcar(ubicacion);
+        } catch (e2) {
+          if (esSinConexion(e2)) return await guardarEnEsteEquipo(ubicacion);
+          throw e2;
+        }
       }
       if (r.estado === "PENDIENTE")
         mostrarToast(

@@ -14,18 +14,19 @@ Aplica a todos los roles de campo: impulsadores, TeamLeaders y repositores.
    en *Gestión de campo → Itinerario*. Repositores, supervisores y TeamLeaders
    marcan directo, sin modal, y el resultado llega en un toast. Habilita
    cualquier programa de COMERCIA en UCHECK, no el nombre del rol.
-   - **Primero, el teléfono.** UCHECK espera hasta 20 s la primera lectura GPS
-     que la app mande *después* del toque (con el seguimiento activo llega cada
-     ~10 s). Nunca usa una anterior. La ubicación de una PC sale de Wi-Fi o IP,
-     con ±100 m o más, y no alcanza la precisión.
+   - **Primero, el teléfono.** UCHECK usa la última lectura GPS que la app
+     mandó hasta 75 s antes del toque (lo que la app muestra como «Podés marcar
+     en Comercia»); si no hay, espera hasta 20 s la próxima. En segundo plano
+     Android atrasa esas lecturas, sobre todo con la batería optimizada.
    - **Si el teléfono no responde** (`codigo` TELEFONO_SIN_UBICACION), la web
      toma el GPS del navegador y marca con él, también a través de UCHECK.
    - **Sin conexión con UCHECK** (sin internet, o COMERCIA no llega a UCHECK:
      `codigo` UCHECK_SIN_CONEXION), ver *Marcas guardadas sin conexión*.
 2. COMERCIA le manda la marca a UCHECK (`POST /comercia-integracion/marcar`).
 3. UCHECK la valida en ese momento: asignación vigente en la agenda de
-   COMERCIA, franja horaria, GPS dentro del radio del local, ubicación reciente
-   (2 minutos como máximo) y tolerancias. Si algo no da, la rechaza y la persona
+   COMERCIA, franja horaria, GPS dentro del radio del local, precisión de hasta
+   150 m (y nunca peor que el radio del local), ubicación reciente (2 minutos
+   como máximo) y tolerancias. Si algo no da, la rechaza y la persona
    ve el motivo. Si da bien, la guarda: desde ahí la marcación ya existe.
 4. UCHECK responde con un número de operación.
 5. COMERCIA pide enseguida la copia por GET y la guarda en `campo_visitas`. Casi

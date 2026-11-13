@@ -25,7 +25,7 @@ export function comprobarMarcaEnLocal(
   if (
     !Number.isFinite(marca.precisionMetros) ||
     marca.precisionMetros < 0 ||
-    marca.precisionMetros > Math.min(local.radioMetros, 100)
+    marca.precisionMetros > Math.min(local.radioMetros, 150)
   )
     throw new BadRequestException(
       'La precisión del GPS no es suficiente. Acercate al local y volvé a intentar',

@@ -262,7 +262,8 @@ export class InventarioCargasService {
       this.prisma.cargaInventarioCampo.findMany({
         where,
         select: SELECT_CARGA,
-        orderBy: ORDEN_CARGAS,
+        // La pantalla muestra primero lo más urgente.
+        orderBy: [{ vencimiento: 'asc' }, ...ORDEN_CARGAS],
         skip,
         take,
       }),
