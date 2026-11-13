@@ -1,8 +1,8 @@
 import {
-  BadGatewayException,
   Injectable,
   Logger,
   ServiceUnavailableException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { PedidoSap } from './interfaces/pedido-sap.interface';
@@ -89,7 +89,9 @@ export class ServiceLayerService {
       const mensaje =
         typeof motivo === 'string' ? motivo : `Error ${respuesta.status}`;
       this.logger.error(`POST ${ruta}: HTTP ${respuesta.status} · ${mensaje}`);
-      throw new BadGatewayException(`SAP: ${mensaje}`);
+      // 422 y no 502: Cloudflare reemplaza los 502/504 por su propia página y
+      // el motivo de SAP (y las cabeceras CORS) no llegarían al navegador.
+      throw new UnprocessableEntityException(`SAP: ${mensaje}`);
     }
     return datos as T;
   }
