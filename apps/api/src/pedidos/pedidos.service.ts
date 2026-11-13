@@ -65,6 +65,9 @@ import {
 } from './utils/pedido-sap';
 import { ServiceLayerService } from './service-layer.service';
 
+// shortcut: tope de artículos con precio en una lista, subirlo si una lista lo supera.
+const MAX_PRODUCTOS_LISTA = 20_000;
+
 // Cliente habilitado en SAP: si está inhabilitado no se le carga el pedido.
 const CLIENTE_ACTIVO = {
   CardType: 'C',
@@ -391,7 +394,7 @@ export class PedidosService {
     return c;
   }
 
-  /** Precio por ItemCode en la lista del cliente; sin lista, ninguno. */
+  /** Precio por ItemCode en la lista del cliente; sin lista o con precio 0, ninguno. */
   private async precios(
     empresaId: number,
     lista: number | null,
@@ -404,7 +407,9 @@ export class PedidosService {
     });
     return new Map(
       filas.flatMap((f) =>
-        f.price === null ? [] : [[f.itemcode, Number(f.price)] as const],
+        f.price === null || Number(f.price) <= 0
+          ? []
+          : [[f.itemcode, Number(f.price)] as const],
       ),
     );
   }
@@ -513,9 +518,19 @@ export class PedidosService {
     const c = await this.cliente(u, query.cardCode);
     const texto = query.buscar?.trim();
     const datos = await this.datosAlmacen(u);
+    // Solo lo que tiene precio en la lista del cliente (tbl_itm1.PriceList = tbl_ocrd.ListNum).
+    const conPrecio =
+      c.ListNum === null
+        ? []
+        : await this.prisma.productoPrecio.findMany({
+            where: { empresaId, pricelist: c.ListNum, price: { gt: 0 } },
+            select: { itemcode: true },
+            take: MAX_PRODUCTOS_LISTA,
+          });
     const where: Prisma.ProductoWhereInput = {
       AND: [
         ...activosAnd,
+        { itemcode: { in: conPrecio.map((p) => p.itemcode) } },
         // U_beas_vg es el canal: solo los artículos del canal del usuario.
         { tipo: u.ERP_CanalVenta ?? '' },
         whereLinea(query.linea),
@@ -602,10 +617,12 @@ export class PedidosService {
     });
     const precios = await this.precios(empresaId, c.ListNum, codigos);
     const almacenDe = resolverAlmacen(datos);
-    const activos = new Set(productos.map((p) => p.itemcode));
+    // Sin precio en la lista del cliente tampoco se puede pedir.
+    const vendibles = productos.filter((p) => precios.has(p.itemcode));
+    const activos = new Set(vendibles.map((p) => p.itemcode));
     return {
       cliente: { id: c.CardCode, nombre: nombreLocal(c) },
-      items: productos.map((p) => ({
+      items: vendibles.map((p) => ({
         itemCode: p.itemcode,
         nombre: p.itemname?.trim() || p.itemcode,
         linea: lineaDeGrupo(p.itmsgrpcode),

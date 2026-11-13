@@ -267,7 +267,15 @@ describe('PedidosService.crear', () => {
       linea: 'embutidos',
     });
     expect(prisma.producto.count).toHaveBeenCalledWith({
-      where: { AND: [...activosAnd, { tipo: '2' }, whereLinea('embutidos')] },
+      where: {
+        AND: [
+          ...activosAnd,
+          // Solo los que tienen precio en la lista del cliente.
+          { itemcode: { in: ['H1'] } },
+          { tipo: '2' },
+          whereLinea('embutidos'),
+        ],
+      },
     });
     expect(items.map((p) => p.almacen)).toEqual(['ITG-HAM', null]);
   });
