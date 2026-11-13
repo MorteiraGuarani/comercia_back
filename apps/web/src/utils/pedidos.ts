@@ -5,7 +5,7 @@ export const LINEAS_PEDIDO: { id: LineaPedido; nombre: string }[] = [
   { id: "hamburguesas", nombre: "Hamburguesas" },
   { id: "embutidos", nombre: "Embutidos" },
   { id: "pollo", nombre: "Pollo" },
-  { id: "resto", nombre: "Resto" },
+  { id: "resto", nombre: "Otros" },
 ];
 
 export const ESTADOS_PEDIDO: { id: EstadoPedido; nombre: string }[] = [

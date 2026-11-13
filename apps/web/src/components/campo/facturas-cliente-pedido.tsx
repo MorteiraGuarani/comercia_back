@@ -8,6 +8,10 @@ import { Modal } from "@/components/modal";
 import { mostrarToast } from "@/components/toast/toast-controller";
 import { btnGhost } from "@/components/ui";
 import type { FacturaCliente, LineaFacturaCliente } from "@/types/pedido";
+import { formatoFechaCalendario } from "@/utils/fechas";
+
+// SAP manda la fecha con hora en cero ("2026-11-13 00:00:00.000000000"): solo interesa el día.
+const fechaFactura = (f: FacturaCliente) => formatoFechaCalendario(f.fecha.slice(0, 10)) ?? f.fecha;
 
 /** Último pedido facturado del cliente en SAP y, en una hoja, los anteriores. */
 export function FacturasClientePedido({
@@ -45,63 +49,100 @@ export function FacturasClientePedido({
   const [ultima, ...previas] = facturas ?? [];
 
   return (
-    <section aria-label="Último pedido facturado" className="space-y-2 pt-2">
-      <h2 className="text-lg font-bold text-foreground">Último pedido facturado</h2>
-      {error ? (
-        <p className="flex items-center justify-between gap-2 rounded-xl border border-line bg-surface-raised px-3 py-2 text-sm text-muted">
-          {error}
-          <button type="button" onClick={() => setIntento((n) => n + 1)} className={btnGhost}>
-            Reintentar
-          </button>
-        </p>
-      ) : !facturas ? (
-        <SkeletonFilas etiqueta="Cargando facturas…" filas={2} className="rounded-2xl border border-line bg-surface-raised p-4" />
-      ) : !ultima ? (
-        <p className="rounded-xl border border-line bg-surface-raised px-3 py-2 text-sm text-muted">
-          El cliente no tiene facturas en SAP.
-        </p>
-      ) : (
-        <>
-          <div className="overflow-hidden rounded-2xl border border-line bg-surface-raised">
-            <FacturaDesplegable cardCode={cardCode} factura={ultima} destacada onCopiar={onCopiar} />
-          </div>
-          {previas.length ? (
-            <button type="button" onClick={() => setAnteriores(true)} className={`${btnGhost} w-full gap-2`}>
-              <IconoHistorial />
-              {previas.length} anterior{previas.length === 1 ? "" : "es"}
-            </button>
-          ) : null}
-          <Modal
-            titulo="Pedidos anteriores"
-            abierto={anteriores}
-            onCerrar={() => setAnteriores(false)}
-            hojaMovil
-            textoCerrar="Cerrar"
-            encabezado={
-              <div>
-                <p className="text-base font-extrabold text-foreground sm:text-lg">Pedidos anteriores</p>
-                <p className="text-sm text-muted">
-                  {nombre} · {previas.length} pedido{previas.length === 1 ? "" : "s"} antes del último
-                </p>
-              </div>
-            }
-          >
-            <div className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface-raised">
-              {previas.map((f) => (
-                <FacturaDesplegable
-                  key={f.docEntry}
-                  cardCode={cardCode}
-                  factura={f}
-                  onCopiar={onCopiar}
-                  abierto={abiertaAnterior === f.docEntry}
-                  onAbierto={(abrir) => setAbiertaAnterior(abrir ? f.docEntry : null)}
-                />
-              ))}
+    <div className="space-y-2">
+      <section aria-label="Último pedido facturado" className="overflow-hidden rounded-2xl border border-line bg-surface-raised shadow-sm">
+        {error ? (
+          <>
+            <CabeceraUltimo />
+            <div className="flex items-center justify-between gap-2 border-t border-line px-4 py-3 text-sm text-muted">
+              {error}
+              <button type="button" onClick={() => setIntento((n) => n + 1)} className={btnGhost}>
+                Reintentar
+              </button>
             </div>
-          </Modal>
-        </>
-      )}
-    </section>
+          </>
+        ) : !facturas ? (
+          <>
+            <CabeceraUltimo />
+            <SkeletonFilas etiqueta="Cargando facturas…" filas={1} className="border-t border-line px-4 py-3" />
+          </>
+        ) : !ultima ? (
+          <>
+            <CabeceraUltimo />
+            <div className="flex items-center justify-between gap-3 border-t border-line px-4 py-3">
+              <span className="text-muted">Pedido vacío</span>
+              <span className="text-xl font-extrabold tabular-nums text-foreground">Gs. 0</span>
+            </div>
+          </>
+        ) : (
+          <FacturaDesplegable cardCode={cardCode} factura={ultima} destacada onCopiar={onCopiar} />
+        )}
+      </section>
+      {previas.length ? (
+        <button type="button" onClick={() => setAnteriores(true)} className={`${btnGhost} w-full gap-2`}>
+          <IconoHistorial />
+          {previas.length} anterior{previas.length === 1 ? "" : "es"}
+        </button>
+      ) : null}
+      <Modal
+        titulo="Pedidos anteriores"
+        abierto={anteriores}
+        onCerrar={() => setAnteriores(false)}
+        hojaMovil
+        textoCerrar="Cerrar"
+        encabezado={
+          <div>
+            <p className="text-base font-extrabold text-foreground sm:text-lg">Pedidos anteriores</p>
+            <p className="text-sm text-muted">
+              {nombre} · {previas.length} pedido{previas.length === 1 ? "" : "s"} antes del último
+            </p>
+          </div>
+        }
+      >
+        <div className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface-raised">
+          {previas.map((f) => (
+            <FacturaDesplegable
+              key={f.docEntry}
+              cardCode={cardCode}
+              factura={f}
+              onCopiar={onCopiar}
+              abierto={abiertaAnterior === f.docEntry}
+              onAbierto={(abrir) => setAbiertaAnterior(abrir ? f.docEntry : null)}
+            />
+          ))}
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+const CLASE_CABECERA = "flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left";
+
+function IconoCarrito() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-7 w-7 shrink-0 text-brand-700 dark:text-brand-200" aria-hidden>
+      <path d="M3 4h2l2.4 10.2a1 1 0 0 0 1 .8h8.9a1 1 0 0 0 1-.76L20 8H6.2" />
+      <circle cx="9" cy="19" r="1.4" />
+      <circle cx="17" cy="19" r="1.4" />
+    </svg>
+  );
+}
+
+function FlechaDerecha({ abierta = false }: { abierta?: boolean }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor" className={`h-5 w-5 shrink-0 text-muted transition-transform ${abierta ? "rotate-90" : ""}`} aria-hidden>
+      <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 0 1 .02-1.06L11.17 10 7.23 6.29a.75.75 0 1 1 1.04-1.08l4.5 4.25a.75.75 0 0 1 0 1.08l-4.5 4.25a.75.75 0 0 1-1.06-.02z" clipRule="evenodd" />
+    </svg>
+  );
+}
+
+/** Cabecera fija de la tarjeta mientras no hay una factura para desplegar. */
+function CabeceraUltimo() {
+  return (
+    <div className={CLASE_CABECERA}>
+      <IconoCarrito />
+      <h2 className="min-w-0 flex-1 text-lg font-bold text-foreground">Último pedido facturado</h2>
+    </div>
   );
 }
 
@@ -159,32 +200,25 @@ function FacturaDesplegable({
     <div>
       {destacada ? (
         <>
-          <div className="flex items-start justify-between gap-3 px-4 py-3">
-            <div className="min-w-0">
-              <p className="font-bold text-foreground">Factura {factura.docNum}</p>
-              <p className="text-xs text-muted">{factura.fecha}</p>
-            </div>
-            <div className="shrink-0 text-right">
-              <p className="text-lg font-extrabold tabular-nums text-foreground">{factura.montoTotal}</p>
-              <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 text-xs font-semibold text-accent">
-                <i aria-hidden className="h-1.5 w-1.5 rounded-full bg-current" />
-                Facturado
-              </span>
-            </div>
-          </div>
           <button
             type="button"
             onClick={() => void alternar()}
             aria-expanded={abierto}
             aria-controls={detalleId}
-            className="flex min-h-11 w-full cursor-pointer items-center justify-between gap-2 border-t border-line px-4 text-sm font-semibold text-brand-700 transition-colors hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus dark:text-brand-200"
+            aria-label={`${abierto ? "Ocultar" : "Ver"} productos de la factura ${factura.docNum}`}
+            className={`${CLASE_CABECERA} cursor-pointer transition-colors hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus`}
           >
-            {abierto ? "Ocultar detalle de productos" : "Ver detalle de productos"}
-            <span className="flex items-center gap-1 text-muted">
-              {productos}
-              {flecha}
-            </span>
+            <IconoCarrito />
+            <span className="min-w-0 flex-1 text-lg font-bold text-foreground">Último pedido facturado</span>
+            <FlechaDerecha abierta={abierto} />
           </button>
+          <div className="flex items-center justify-between gap-3 border-t border-line px-4 py-3">
+            <span className="min-w-0 text-muted">
+              Factura {factura.docNum} · {fechaFactura(factura)}
+              {productos ? ` · ${productos}` : ""}
+            </span>
+            <span className="shrink-0 text-xl font-extrabold tabular-nums text-foreground">{factura.montoTotal}</span>
+          </div>
         </>
       ) : (
         <button
@@ -197,7 +231,7 @@ function FacturaDesplegable({
           <span className="min-w-0">
             <span className="block font-bold text-foreground">Factura {factura.docNum}</span>
             <span className="block text-xs text-muted">
-              {factura.fecha}
+              {fechaFactura(factura)}
               {productos ? ` · ${productos}` : ""}
             </span>
           </span>

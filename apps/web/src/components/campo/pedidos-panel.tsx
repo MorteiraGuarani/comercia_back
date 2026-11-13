@@ -1,7 +1,7 @@
 "use client";
 
 import { SkeletonFilas } from "@/components/skeleton";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { enviarAccionTarea } from "@/lib/pendientes-tareas";
 import { usePanel } from "@/components/panel/contexto";
@@ -658,71 +658,104 @@ function Flecha({ atras }: { atras?: boolean }) {
   );
 }
 
-const TONO_DATO = {
-  normal: "text-foreground",
-  ok: "text-emerald-700 dark:text-emerald-300",
-  mal: "text-red-700 dark:text-red-300",
-};
-
-function Dato({
-  k,
-  v,
-  ancho,
-  tono = "normal",
-  detalle,
-}: {
-  k: string;
-  v: string;
-  /** Línea chica debajo del valor. */
-  detalle?: string;
-  ancho?: boolean;
-  tono?: keyof typeof TONO_DATO;
-}) {
+/** Ícono de trazo para las cabeceras de tarjeta del perfil. */
+function IconoTrazo({ d, className = "h-6 w-6" }: { d: string; className?: string }) {
   return (
-    <div
-      className={`min-w-0 rounded-xl border border-line bg-surface-raised px-3 py-2 ${
-        ancho ? "col-span-full" : ""
-      }`}
-    >
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">{k}</p>
-      <p className={`mt-0.5 break-words font-semibold ${TONO_DATO[tono]}`}>{v}</p>
-      {detalle ? <p className="text-xs text-muted">{detalle}</p> : null}
-    </div>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={`shrink-0 ${className}`} aria-hidden>
+      <path d={d} />
+    </svg>
   );
 }
 
-/** Perfil del cliente: el estado de crédito de SAP, en el orden de la maqueta. */
+const ICONO_PERSONA = "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 20a8 8 0 0 1 16 0";
+const ICONO_MARCADOR = "M7 3h10a1 1 0 0 1 1 1v17l-6-4-6 4V4a1 1 0 0 1 1-1z";
+
+/** Perfil del cliente: el estado de crédito de SAP en una franja de tres datos. */
 function PerfilCliente({ perfil }: { perfil: PerfilClientePedido }) {
   const c = perfil.credito;
-  if (!c)
-    return (
-      <div className="grid grid-cols-2 gap-2">
-        <Dato k="Estado" v="No se pudo consultar SAP" ancho />
-      </div>
-    );
+  const motivoId = useId();
+  // Inhabilitado: el motivo es lo primero que hay que leer.
+  const [verMotivo, setVerMotivo] = useState(c ? !c.habilitado : false);
+  const tono = !c
+    ? "border-line bg-surface-soft"
+    : c.habilitado
+      ? "border-emerald-200 bg-emerald-50 dark:border-emerald-900/60 dark:bg-emerald-950/30"
+      : "border-red-200 bg-red-50 dark:border-red-900/60 dark:bg-red-950/30";
   return (
-    <div
-      className="grid grid-cols-2 gap-2"
-      role={c.habilitado ? undefined : "alert"}
+    <section
+      aria-label="Perfil del cliente"
+      role={c && !c.habilitado ? "alert" : undefined}
+      className="space-y-3 rounded-2xl border border-line bg-surface-raised p-2.5 shadow-sm"
     >
-      <Dato
-        k="Deuda pendiente"
-        v={c.facturasPendientes ? c.montosPendientes.join(" · ") : "Sin deuda"}
-      />
-      <Dato k="Facturas pendientes" v={String(c.facturasPendientes)} />
-      <Dato
-        k="Estado"
-        v={c.habilitado ? "Habilitado" : "Inhabilitado"}
-        tono={c.habilitado ? "ok" : "mal"}
-      />
-      <Dato k="Deuda desde el" v={c.fechaFacturaInhabilitante ?? "—"} />
-      <Dato
-        k="Motivo"
-        v={c.habilitado ? "—" : `${c.motivo || "Facturas vencidas"}. No se le puede cargar pedido.`}
-        tono={c.habilitado ? "normal" : "mal"}
-        ancho
-      />
-    </div>
+      <div className="flex min-w-0 items-center gap-3">
+        <IconoTrazo d={ICONO_PERSONA} className="h-7 w-7 text-foreground" />
+        <h2 className="min-w-0 flex-1 text-lg font-bold text-foreground">Perfil del cliente</h2>
+        {c ? (
+          <button
+            type="button"
+            onClick={() => setVerMotivo((v) => !v)}
+            aria-expanded={verMotivo}
+            aria-controls={motivoId}
+            className="inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap rounded-lg bg-emerald-50 px-3 text-sm font-semibold text-foreground transition-colors hover:bg-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50"
+          >
+            <IconoTrazo d={ICONO_MARCADOR} className="h-5 w-5 text-emerald-700 dark:text-emerald-300" />
+            Motivo
+          </button>
+        ) : null}
+      </div>
+      {!c ? (
+        <p className={`rounded-xl border px-3 py-3 text-sm text-muted ${tono}`}>
+          No se pudo consultar el estado del cliente en SAP.
+        </p>
+      ) : (
+        <>
+          {/* Columnas a medida: la deuda necesita más lugar que el estado y la cantidad de facturas. */}
+          <dl className={`grid grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)_minmax(0,0.85fr)] divide-x divide-line rounded-xl border ${tono}`}>
+            <div className="min-w-0 space-y-1.5 px-2 py-3 sm:px-3">
+              <dt className="text-xs text-muted sm:text-sm">Estado</dt>
+              <dd>
+                <span
+                  className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-1 text-xs font-bold sm:px-2.5 sm:text-sm ${
+                    c.habilitado
+                      ? "bg-emerald-200/70 text-emerald-900 dark:bg-emerald-800/60 dark:text-emerald-50"
+                      : "bg-red-200/70 text-red-900 dark:bg-red-800/60 dark:text-red-50"
+                  }`}
+                >
+                  <svg viewBox="0 0 20 20" fill="currentColor" className="hidden h-4 w-4 sm:block" aria-hidden>
+                    {c.habilitado ? (
+                      <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm3.86-9.81a.75.75 0 0 0-1.22-.88l-3.24 4.5-1.6-1.6a.75.75 0 1 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.09l3.73-5.24z" clipRule="evenodd" />
+                    ) : (
+                      <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM8.28 7.22a.75.75 0 0 0-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 1 0 1.06 1.06L10 11.06l1.72 1.72a.75.75 0 1 0 1.06-1.06L11.06 10l1.72-1.72a.75.75 0 0 0-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
+                    )}
+                  </svg>
+                  {c.habilitado ? "Habilitado" : "Inhabilitado"}
+                </span>
+              </dd>
+            </div>
+            <div className="min-w-0 space-y-1 px-2 py-3 sm:px-3">
+              <dt className="text-xs text-muted sm:text-sm">Deuda pendiente</dt>
+              <dd className="break-words text-base font-extrabold tabular-nums text-foreground sm:text-2xl">
+                {c.facturasPendientes ? c.montosPendientes.join(" · ") : "Gs. 0"}
+              </dd>
+            </div>
+            <div className="min-w-0 space-y-1 px-2 py-3 sm:px-3">
+              <dt className="text-xs text-muted sm:text-sm">Facturas pendientes</dt>
+              <dd className="text-base font-extrabold tabular-nums text-foreground sm:text-2xl">
+                {c.facturasPendientes}
+              </dd>
+            </div>
+          </dl>
+          <dl id={motivoId} hidden={!verMotivo} className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1 px-1 text-sm">
+            <dt className="text-muted">Motivo</dt>
+            <dd className={`break-words font-semibold ${c.habilitado ? "text-foreground" : "text-red-700 dark:text-red-300"}`}>
+              {c.habilitado ? "Sin restricciones" : `${c.motivo || "Facturas vencidas"}. No se le puede cargar pedido.`}
+            </dd>
+            <dt className="text-muted">Deuda desde el</dt>
+            <dd className="text-foreground">{c.fechaFacturaInhabilitante ?? "—"}</dd>
+          </dl>
+        </>
+      )}
+    </section>
   );
 }
 

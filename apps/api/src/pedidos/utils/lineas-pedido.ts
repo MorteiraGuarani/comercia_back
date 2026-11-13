@@ -2,14 +2,14 @@ import type { Prisma } from '../../../generated/prisma/client';
 
 /**
  * Pasos del asistente de pedidos: cada línea agrupa grupos de artículos de
- * OITM (ItemsGroupCode). "Resto" es todo lo que no entra en las anteriores.
+ * OITM (ItemsGroupCode). "Otros" es todo lo que no entra en las anteriores.
  */
 // shortcut: grupos fijos en código; pasarlos a una tabla de categorías cuando se definan las demás líneas.
 export const LINEAS_PEDIDO = [
   { id: 'hamburguesas', nombre: 'Hamburguesas', grupos: [144] },
   { id: 'embutidos', nombre: 'Embutidos', grupos: [145] },
   { id: 'pollo', nombre: 'Pollo', grupos: [241] },
-  { id: 'resto', nombre: 'Resto', grupos: [] },
+  { id: 'resto', nombre: 'Otros', grupos: [] },
 ] as const;
 
 export type LineaPedido = (typeof LINEAS_PEDIDO)[number]['id'];
