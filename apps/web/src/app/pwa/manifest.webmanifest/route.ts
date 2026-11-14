@@ -13,8 +13,8 @@ const manifest: MetadataRoute.Manifest = {
   scope: "/",
   display: "standalone",
   orientation: "portrait",
-  background_color: "#e8dfd3",
-  theme_color: "#183129",
+  background_color: "#f5f6f2",
+  theme_color: "#365745",
   icons: [
     { src: "/pwa/icono-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
     { src: "/pwa/icono-512.png", sizes: "512x512", type: "image/png", purpose: "any" },

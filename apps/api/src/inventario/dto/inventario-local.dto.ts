@@ -5,6 +5,7 @@ import {
   ArrayUnique,
   IsArray,
   IsInt,
+  IsNumber,
   IsOptional,
   IsString,
   Length,
@@ -43,7 +44,10 @@ export class CargaInventarioDto {
   @IsString() @Length(1, 15) itemcode!: string;
 
   @Type(() => Number)
-  @IsInt({ message: 'La cantidad debe ser un número entero' })
+  @IsNumber(
+    { maxDecimalPlaces: 2, allowNaN: false, allowInfinity: false },
+    { message: 'La cantidad debe ser un número con hasta dos decimales' },
+  )
   @Min(0)
   @Max(1_000_000)
   cantidad!: number;

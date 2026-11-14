@@ -12,7 +12,7 @@ const modulo = { exports: {} };
 // En este mismo contexto: arrays y objetos se comparan con los de Node.
 vm.runInThisContext(`(function (module, exports, require) {${js}
 })`)(modulo, modulo.exports, () => ({}));
-const { aplicarCambio, diasParaVencer, hoyEquipo, necesitaSincronizar, prepararCargasInventario } = modulo.exports;
+const { aplicarCambio, diasParaVencer, hoyEquipo, necesitaSincronizar, normalizarCantidad, pasoCantidad, prepararCargasInventario } = modulo.exports;
 
 const hora = (dia, h, m = 0) => new Date(2026, 9, dia, h, m).getTime();
 
@@ -87,7 +87,7 @@ assert.deepEqual(guardadoParcial.items.slice(5), siete.items.slice(5), "lo no en
 const pendientesInvalidos = {
   vacio: { cantidad: "", vencimiento: "" },
   negativo: { cantidad: "-1", vencimiento: "2026-11-01" },
-  decimal: { cantidad: "1.5", vencimiento: "2026-11-01" },
+  tresDecimales: { cantidad: "1.555", vencimiento: "2026-11-01" },
   exceso: { cantidad: "1000001", vencimiento: "2026-11-01" },
   imposible: { cantidad: "3", vencimiento: "2026-02-31" },
 };
@@ -101,5 +101,22 @@ const final = prepararCargasInventario({
 });
 assert.equal(final.cargas.length, 2, "se puede completar y guardar el resto después");
 assert.deepEqual(final.pendientes, {});
+
+const decimales = prepararCargasInventario({
+  punto: { cantidad: "1.5", vencimiento: "2026-11-01" },
+  coma: { cantidad: "2,25", vencimiento: "2026-11-01" },
+});
+assert.deepEqual(decimales.cargas.map((c) => c.cantidad), [1.5, 2.25], "admite hasta dos decimales, con punto o coma");
+
+assert.equal(normalizarCantidad("2,5"), "2.5");
+assert.equal(normalizarCantidad("2.55"), "2.55");
+assert.equal(normalizarCantidad("2.555"), null, "un tercer decimal no se escribe");
+assert.equal(normalizarCantidad("-1"), null);
+assert.equal(normalizarCantidad("abc"), null);
+assert.equal(pasoCantidad("0.5", -1), "0", "restar no baja de cero");
+assert.equal(pasoCantidad("", 1), "1");
+assert.equal(pasoCantidad("2.5", 1), "3.5");
+assert.equal(pasoCantidad("0.1", 1), "1.1", "sin errores de coma flotante");
+assert.equal(pasoCantidad("1000000", 1), "1000000", "no pasa el máximo");
 
 console.log("inventario: ok");

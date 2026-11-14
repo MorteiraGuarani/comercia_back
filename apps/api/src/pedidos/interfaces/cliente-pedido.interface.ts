@@ -20,6 +20,8 @@ export interface PerfilClientePedido {
   condicionPago: string | null;
   listaPrecios: string | null;
   diasVisita: string[];
+  /** false si está inactivo (validFor N) o congelado (frozenFor Y) en SAP: no se le carga pedido. */
+  activo: boolean;
   /** Estado en SAP; null si no se pudo consultar. */
   credito: CreditoCliente | null;
 }

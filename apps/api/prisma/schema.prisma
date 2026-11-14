@@ -1237,7 +1237,8 @@ model CargaInventarioCampo {
   usuarioId Int @map("usuario_id")
   usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
   fecha DateTime @db.Date
-  cantidad Int
+  // Hasta dos decimales (2,5 kg).
+  cantidad Decimal @db.Decimal(12, 2)
   vencimiento DateTime @db.Date
   avisadoEn DateTime? @map("avisado_en")
   // Baja lógica: eliminar no borra la fila. Cargarla de nuevo ese día la reactiva.
@@ -1351,14 +1352,15 @@ model CampoDocumentoLinea {
   @@map("campo_documento_linea")
 }
 
-// Categorías (líneas) de productos para Pedidos: cada una agrupa artículos de
-// SAP por su grupo (OITB, codesap) y se muestran según "orden".
+// Categorías (pestañas) de productos para Pedidos: cada una agrupa artículos de
+// SAP por su grupo (tbl_oitb.Number = OITM.ItemsGroupCode). Modo I = pestaña
+// propia, en el orden de "orden"; G (o vacío) = el grupo va en «Otros».
 model CategoriaCampo {
   id               Int     @id @default(autoincrement())
   empresaId        Int     @map("empresa_id")
   empresa          Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   nombre_categoria String  @db.VarChar(100)
-  codesap          Int?
+  ItemGroupCode    Int?
   Modo             String? @db.Char(1)
   orden            Int     @default(0)
 

@@ -118,7 +118,7 @@ export class VencimientosService implements OnModuleInit, OnModuleDestroy {
               nombres.get(carga.itemcode) ?? carga.itemcode,
               nombreLocal(carga.local),
               carga.vencimiento,
-              carga.cantidad,
+              Number(carga.cantidad),
               hoy,
             );
             avisos.push(

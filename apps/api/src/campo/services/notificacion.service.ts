@@ -298,7 +298,7 @@ export class NotificacionService {
     return {
       id: carga.id,
       fecha: carga.fecha.toISOString().slice(0, 10),
-      cantidad: carga.cantidad,
+      cantidad: Number(carga.cantidad),
       vencimiento: carga.vencimiento.toISOString().slice(0, 10),
       diasParaVencer: diasParaVencer(carga.vencimiento, relojCampo().fecha),
       creadaEn: carga.creadaEn.toISOString(),

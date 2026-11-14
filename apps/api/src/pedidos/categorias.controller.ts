@@ -21,7 +21,7 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { SuperadminGuard } from '../auth/superadmin.guard';
+import { AdminTiGuard } from '../auth/admin-ti.guard';
 import {
   ActualizarCategoriaDto,
   ConsultaCategoriasDto,
@@ -32,19 +32,21 @@ import { CategoriasService } from './categorias.service';
 const EJEMPLO = {
   id: 1,
   nombre_categoria: 'Hamburguesas',
-  codesap: 144,
-  Modo: 'T',
+  ItemGroupCode: 144,
+  grupo: 'P.Ter.Hamburguesas',
+  Modo: 'I',
   orden: 1,
 };
 
 @ApiTags('Categorías de pedidos (campo_categoria)')
 @ApiBearerAuth()
 @ApiUnauthorizedResponse({ description: 'Sesión requerida' })
-@ApiForbiddenResponse({ description: 'Solo superadmin' })
+@ApiForbiddenResponse({ description: 'Solo superadmin o Admin TI' })
 @ApiNotFoundResponse({ description: 'Empresa no disponible' })
-// Administración → Categorías: solo el superadmin, sobre la empresa que elige.
+// Administración → Categorías: superadmin y Admin TI, sobre la empresa que eligen
+// (como Roles y Acceso por empresa).
 @Controller('admin/empresas/:empresaId/categorias')
-@UseGuards(JwtAuthGuard, SuperadminGuard)
+@UseGuards(JwtAuthGuard, AdminTiGuard)
 export class CategoriasController {
   constructor(private readonly servicio: CategoriasService) {}
 
@@ -62,6 +64,32 @@ export class CategoriasController {
     @Query() query: ConsultaCategoriasDto,
   ) {
     return this.servicio.listar(empresaId, query);
+  }
+
+  // Antes de :id, para que «grupos» no se lea como un id.
+  @Get('grupos')
+  @ApiOperation({
+    summary:
+      'Grupos de artículos de OITB de la empresa (buscar por nombre o código) para el campo ItemGroupCode',
+  })
+  @ApiOkResponse({
+    schema: {
+      example: {
+        items: [
+          { id: 144, nombre: 'P.Ter.Hamburguesas', descripcion: 'Código 144' },
+        ],
+        total: 1,
+        page: 1,
+        limit: 7,
+        totalPages: 1,
+      },
+    },
+  })
+  grupos(
+    @Param('empresaId', ParseIntPipe) empresaId: number,
+    @Query() query: ConsultaCategoriasDto,
+  ) {
+    return this.servicio.grupos(empresaId, query);
   }
 
   @Get(':id')

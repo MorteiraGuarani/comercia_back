@@ -1,6 +1,6 @@
 "use client";
 
-import { SkeletonFilas } from "@/components/skeleton";
+import { Skeleton, SkeletonFilas } from "@/components/skeleton";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { enviarAccionTarea } from "@/lib/pendientes-tareas";
@@ -27,24 +27,20 @@ import type {
   ItemPedido,
   LineaFacturaCliente,
   LineaPedido,
+  LineaPedidoTab,
   PedidoDetalle,
   PedidoResumen,
   PerfilClientePedido,
   ProductoPedido,
 } from "@/types/pedido";
 import { agregarDiasIso, fechaEnZonaIso, formatoDiaLargo } from "@/utils/fechas";
-import { ESTADOS_PEDIDO, guaranies, LINEAS_PEDIDO } from "@/utils/pedidos";
+import { ESTADOS_PEDIDO, guaranies, LINEA_OTROS } from "@/utils/pedidos";
 
 type Paso =
   | { k: "cliente"; t: string }
   | { k: "linea"; t: string; linea: LineaPedido }
   | { k: "revisar"; t: string };
 
-const PASOS: Paso[] = [
-  { k: "cliente", t: "Cliente" },
-  ...LINEAS_PEDIDO.map((l) => ({ k: "linea" as const, t: l.nombre, linea: l.id })),
-  { k: "revisar", t: "Revisar" },
-];
 
 const chip =
   "inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap rounded-full border px-3 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50";
@@ -55,14 +51,24 @@ export function PedidosPanel() {
   const hoy = fechaEnZonaIso(new Date());
   const manana = agregarDiasIso(hoy, 1);
   const [pasoElegido, setPaso] = useState(0);
+  // Pestañas de productos según Categorías de la empresa; se piden una vez.
+  const [lineas, setLineas] = useState<LineaPedidoTab[] | null>(null);
+  const [errorLineas, setErrorLineas] = useState("");
+  const [intentoLineas, setIntentoLineas] = useState(0);
+  // Mientras no llegan, solo Cliente y Revisar.
+  const pasos: Paso[] = [
+    { k: "cliente", t: "Cliente" },
+    ...(lineas ?? []).map((l) => ({ k: "linea" as const, t: l.nombre, linea: l.id })),
+    { k: "revisar", t: "Revisar" },
+  ];
   const [cliente, setCliente] = useState<{ id: string; nombre: string } | null>(
     null,
   );
   const [perfil, setPerfil] = useState<PerfilClientePedido | null>(null);
-  // Inhabilitado en SAP (facturas vencidas): no se le carga el pedido.
-  const bloqueado = perfil?.credito?.habilitado === false;
+  // Inactivo o congelado, o inhabilitado por facturas vencidas: no se le carga el pedido.
+  const bloqueado = perfil !== null && (!perfil.activo || perfil.credito?.habilitado === false);
   // Al copiar se salta a Revisar: si está inhabilitado, vuelve a ver el motivo.
-  const paso = bloqueado ? 0 : pasoElegido;
+  const paso = bloqueado ? 0 : Math.min(pasoElegido, pasos.length - 1);
   const [copiando, setCopiando] = useState(false);
   const [errorPerfil, setErrorPerfil] = useState("");
   const [items, setItems] = useState<Record<string, ItemPedido>>({});
@@ -81,6 +87,20 @@ export function PedidosPanel() {
       ?.querySelector('[aria-current="step"]')
       ?.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
   }, [paso]);
+
+  useEffect(() => {
+    const control = new AbortController();
+    apiFetch<LineaPedidoTab[]>("/pedidos/lineas", { signal: control.signal })
+      .then((l) => {
+        setLineas(l);
+        setErrorLineas("");
+      })
+      .catch((e: unknown) => {
+        if (!control.signal.aborted)
+          setErrorLineas(e instanceof Error ? e.message : "No se pudieron traer las pestañas de productos");
+      });
+    return () => control.abort();
+  }, [intentoLineas]);
 
   useEffect(() => {
     if (!cliente) return;
@@ -105,14 +125,19 @@ export function PedidosPanel() {
   const lista = Object.values(items);
   const unidades = lista.reduce((suma, i) => suma + i.cantidad, 0);
   const total = lista.reduce((suma, i) => suma + (i.precio ?? 0) * i.cantidad, 0);
-  const actual = PASOS[paso];
-  const ultimo = paso === PASOS.length - 1;
+  const actual = pasos[paso];
+  // Un producto de una pestaña que ya no existe (Categorías cambió) se muestra en Otros.
+  const idsLineas = new Set((lineas ?? []).map((l) => l.id));
+  const lineaDe = (i: ItemPedido) => (idsLineas.has(i.linea) ? i.linea : LINEA_OTROS);
+  const pasoDeLinea = (linea: LineaPedido) =>
+    pasos.findIndex((p) => p.k === "linea" && p.linea === linea);
+  const ultimo = paso === pasos.length - 1;
 
   // Pestaña de la que se saltó hacia atrás: «Siguiente» vuelve ahí y no paso a paso.
   const [volverA, setVolverA] = useState<number | null>(null);
 
   function ir(i: number) {
-    setPaso(Math.max(0, Math.min(PASOS.length - 1, i)));
+    setPaso(Math.max(0, Math.min(pasos.length - 1, i)));
     setError("");
     window.scrollTo(0, 0);
   }
@@ -141,13 +166,10 @@ export function PedidosPanel() {
 
   function cantidad(linea: LineaPedido, p: ProductoPedido, n: number) {
     const valor = Math.max(0, Math.min(9999, Math.trunc(n) || 0));
-    // Se avisa una sola vez, al elegirlo; cambiar la cantidad no repite el aviso.
-    if (valor && !items[p.itemCode]) {
-      if (!p.almacen) {
-        mostrarToast("alerta", `${p.nombre} no tiene almacén: no se puede agregar`);
-        return;
-      }
-      mostrarToast("info", `${p.nombre}: sale del almacén ${p.almacen}`);
+    // Sin almacén no se puede enviar a SAP: se avisa al elegirlo y no se agrega.
+    if (valor && !items[p.itemCode] && !p.almacen) {
+      mostrarToast("alerta", `${p.nombre} no tiene almacén: no se puede agregar`);
+      return;
     }
     setItems((actuales) => {
       const siguientes = { ...actuales };
@@ -242,7 +264,7 @@ export function PedidosPanel() {
       setEntrega(manana);
       setObservaciones(comentario.slice(0, 200));
       setVolverA(null);
-      ir(PASOS.length - 1);
+      ir(pasos.length - 1);
       const faltan = copia.noDisponibles.map(
         (c) => origen.find((l) => l.itemCode === c)?.nombre ?? c,
       );
@@ -310,9 +332,9 @@ export function PedidosPanel() {
             aria-label="Pasos del pedido"
             className="-mx-4 flex gap-1.5 overflow-x-auto px-4 [scrollbar-width:none]"
           >
-            {PASOS.map((p, i) => {
+            {pasos.map((p, i) => {
               const cargados =
-                p.k === "linea" ? lista.filter((x) => x.linea === p.linea).length : 0;
+                p.k === "linea" ? lista.filter((x) => lineaDe(x) === p.linea).length : 0;
               const activo = i === paso;
               return (
                 <button
@@ -347,11 +369,26 @@ export function PedidosPanel() {
                 </button>
               );
             })}
+            {!lineas && !errorLineas ? (
+              <span role="status" className="flex shrink-0 items-center gap-1.5">
+                <span className="sr-only">Cargando pestañas de productos</span>
+                <Skeleton className="h-11 w-32 rounded-full" />
+                <Skeleton className="h-11 w-28 rounded-full" />
+              </span>
+            ) : null}
           </nav>
+          {errorLineas ? (
+            <div className={`${errorBox} flex items-center justify-between gap-2`}>
+              <span className="min-w-0">{errorLineas}</span>
+              <button type="button" className={btnGhost} onClick={() => setIntentoLineas((n) => n + 1)}>
+                Reintentar
+              </button>
+            </div>
+          ) : null}
           <div className="h-1 overflow-hidden rounded-full bg-surface-soft" aria-hidden>
             <i
               className="block h-full bg-brand-600 transition-[width]"
-              style={{ width: `${(paso / (PASOS.length - 1)) * 100}%` }}
+              style={{ width: `${(paso / (pasos.length - 1)) * 100}%` }}
             />
           </div>
         </>
@@ -385,7 +422,7 @@ export function PedidosPanel() {
       <section className="flex-1 px-4 py-4 lg:grid lg:grid-cols-[3.5rem_minmax(0,1fr)_3.5rem] lg:gap-3 lg:px-0 lg:py-6">
         <FlechaLateral
           atras
-          etiqueta={paso ? `Volver a ${PASOS[paso - 1].t}` : "Paso anterior"}
+          etiqueta={paso ? `Volver a ${pasos[paso - 1].t}` : "Paso anterior"}
           disabled={paso === 0}
           onClick={() => ir(paso - 1)}
         />
@@ -434,6 +471,7 @@ export function PedidosPanel() {
                   cardCode={perfil.id}
                   nombre={perfil.nombre}
                   onCopiar={(lineas) => void copiarLineas(perfil.id, lineas)}
+                  bloqueado={bloqueado}
                 />
               </>
             )}
@@ -457,8 +495,8 @@ export function PedidosPanel() {
         {actual.k === "revisar" ? (
           <div className="space-y-3">
             <div className="overflow-hidden rounded-2xl border border-line bg-surface-raised">
-              {LINEAS_PEDIDO.map((l) => {
-                const grupo = lista.filter((i) => i.linea === l.id);
+              {(lineas?.length ? lineas : [{ id: LINEA_OTROS, nombre: "Otros" }]).map((l) => {
+                const grupo = lista.filter((i) => lineaDe(i) === l.id);
                 return (
                   <div key={l.id} className="border-t border-line first:border-t-0">
                     <div className="flex items-center justify-between bg-surface-soft px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-muted">
@@ -468,12 +506,12 @@ export function PedidosPanel() {
                       {grupo.length ? (
                         <BotonEditar
                           etiqueta={`Editar ${l.nombre}`}
-                          onClick={() => saltar(PASOS.findIndex((p) => p.t === l.nombre))}
+                          onClick={() => saltar(pasoDeLinea(l.id))}
                         />
                       ) : (
                         <button
                           type="button"
-                          onClick={() => saltar(PASOS.findIndex((p) => p.t === l.nombre))}
+                          onClick={() => saltar(pasoDeLinea(l.id))}
                           aria-label={`Agregar en ${l.nombre}`}
                           title={`Agregar en ${l.nombre}`}
                           className="inline-grid h-11 w-11 cursor-pointer place-items-center rounded-md text-muted transition-colors hover:bg-surface-soft hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 md:h-9 md:w-9"
@@ -548,7 +586,7 @@ export function PedidosPanel() {
         ) : null}
         </div>
         <FlechaLateral
-          etiqueta={ultimo ? "Último paso" : `Siguiente: ${PASOS[paso + 1].t}`}
+          etiqueta={ultimo ? "Último paso" : `Siguiente: ${pasos[paso + 1].t}`}
           disabled={ultimo || !cliente || bloqueado}
           onClick={siguiente}
         />
@@ -590,8 +628,8 @@ export function PedidosPanel() {
             type="button"
             onClick={() => ir(paso - 1)}
             disabled={paso === 0}
-            aria-label={paso ? `Volver a ${PASOS[paso - 1].t}` : "Paso anterior"}
-            title={paso ? `Volver a ${PASOS[paso - 1].t}` : undefined}
+            aria-label={paso ? `Volver a ${pasos[paso - 1].t}` : "Paso anterior"}
+            title={paso ? `Volver a ${pasos[paso - 1].t}` : undefined}
             className={`${btnGhost} h-14 w-14 rounded-2xl px-0 lg:hidden`}
           >
             <Flecha atras />
@@ -668,42 +706,69 @@ function IconoTrazo({ d, className = "h-6 w-6" }: { d: string; className?: strin
 }
 
 const ICONO_PERSONA = "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 20a8 8 0 0 1 16 0";
-const ICONO_MARCADOR = "M7 3h10a1 1 0 0 1 1 1v17l-6-4-6 4V4a1 1 0 0 1 1-1z";
+const ICONO_INFO = "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 11v5M12 7.5v.01";
 
-/** Perfil del cliente: el estado de crédito de SAP en una franja de tres datos. */
+/** Perfil del cliente: su estado en SAP (activo y crédito) en una franja de tres datos. */
 function PerfilCliente({ perfil }: { perfil: PerfilClientePedido }) {
   const c = perfil.credito;
   const motivoId = useId();
-  // Inhabilitado: el motivo es lo primero que hay que leer.
-  const [verMotivo, setVerMotivo] = useState(c ? !c.habilitado : false);
-  const tono = !c
-    ? "border-line bg-surface-soft"
-    : c.habilitado
-      ? "border-emerald-200 bg-emerald-50 dark:border-emerald-900/60 dark:bg-emerald-950/30"
-      : "border-red-200 bg-red-50 dark:border-red-900/60 dark:bg-red-950/30";
+  // Inactivo o congelado manda sobre el crédito: no se le carga pedido aunque no deba nada.
+  const estado = !perfil.activo
+    ? { texto: "Inactivo", tipo: "inactivo", motivo: "Cliente inactivo o congelado en SAP. No se le puede cargar pedido." }
+    : !c
+      ? null
+      : c.habilitado
+        ? { texto: "Habilitado", tipo: "ok", motivo: "Sin restricciones" }
+        : { texto: "Inhabilitado", tipo: "mal", motivo: `${c.motivo || "Facturas vencidas"}. No se le puede cargar pedido.` };
+  const [verMotivo, setVerMotivo] = useState(false);
+  // Verde habilitado, rojo inhabilitado por deuda, gris inactivo o congelado.
+  const tonos = {
+    ok: {
+      franja: "border-emerald-200 bg-emerald-50 dark:border-emerald-900/60 dark:bg-emerald-950/30",
+      pildora: "bg-emerald-200/70 text-emerald-900 dark:bg-emerald-800/60 dark:text-emerald-50",
+      texto: "text-foreground",
+    },
+    mal: {
+      franja: "border-red-200 bg-red-50 dark:border-red-900/60 dark:bg-red-950/30",
+      pildora: "bg-red-200/70 text-red-900 dark:bg-red-800/60 dark:text-red-50",
+      texto: "text-red-700 dark:text-red-300",
+    },
+    inactivo: {
+      franja: "border-line bg-surface-soft",
+      pildora: "bg-zinc-300 text-zinc-800 dark:bg-zinc-700 dark:text-zinc-100",
+      texto: "text-foreground",
+    },
+  } as const;
+  const t = estado ? tonos[estado.tipo as keyof typeof tonos] : null;
+  const tono = t ? t.franja : "border-line bg-surface-soft";
   return (
     <section
       aria-label="Perfil del cliente"
-      role={c && !c.habilitado ? "alert" : undefined}
+      role={estado && estado.tipo !== "ok" ? "alert" : undefined}
       className="space-y-3 rounded-2xl border border-line bg-surface-raised p-2.5 shadow-sm"
     >
       <div className="flex min-w-0 items-center gap-3">
         <IconoTrazo d={ICONO_PERSONA} className="h-7 w-7 text-foreground" />
         <h2 className="min-w-0 flex-1 text-lg font-bold text-foreground">Perfil del cliente</h2>
-        {c ? (
+        {estado ? (
           <button
             type="button"
             onClick={() => setVerMotivo((v) => !v)}
             aria-expanded={verMotivo}
             aria-controls={motivoId}
-            className="inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap rounded-lg bg-emerald-50 px-3 text-sm font-semibold text-foreground transition-colors hover:bg-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50"
+            aria-label={verMotivo ? "Ocultar detalle del estado" : "Ver detalle del estado"}
+            title="Detalle del estado"
+            className={`grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${
+              verMotivo
+                ? "border-foreground bg-foreground text-surface-raised"
+                : "border-line bg-surface-soft text-foreground hover:bg-surface"
+            }`}
           >
-            <IconoTrazo d={ICONO_MARCADOR} className="h-5 w-5 text-emerald-700 dark:text-emerald-300" />
-            Motivo
+            <IconoTrazo d={ICONO_INFO} className="h-5 w-5" />
           </button>
         ) : null}
       </div>
-      {!c ? (
+      {!estado ? (
         <p className={`rounded-xl border px-3 py-3 text-sm text-muted ${tono}`}>
           No se pudo consultar el estado del cliente en SAP.
         </p>
@@ -716,42 +781,44 @@ function PerfilCliente({ perfil }: { perfil: PerfilClientePedido }) {
               <dd>
                 <span
                   className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-1 text-xs font-bold sm:px-2.5 sm:text-sm ${
-                    c.habilitado
-                      ? "bg-emerald-200/70 text-emerald-900 dark:bg-emerald-800/60 dark:text-emerald-50"
-                      : "bg-red-200/70 text-red-900 dark:bg-red-800/60 dark:text-red-50"
+                    t!.pildora
                   }`}
                 >
                   <svg viewBox="0 0 20 20" fill="currentColor" className="hidden h-4 w-4 sm:block" aria-hidden>
-                    {c.habilitado ? (
+                    {estado.tipo === "ok" ? (
                       <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm3.86-9.81a.75.75 0 0 0-1.22-.88l-3.24 4.5-1.6-1.6a.75.75 0 1 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.09l3.73-5.24z" clipRule="evenodd" />
                     ) : (
                       <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM8.28 7.22a.75.75 0 0 0-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 1 0 1.06 1.06L10 11.06l1.72 1.72a.75.75 0 1 0 1.06-1.06L11.06 10l1.72-1.72a.75.75 0 0 0-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
                     )}
                   </svg>
-                  {c.habilitado ? "Habilitado" : "Inhabilitado"}
+                  {estado.texto}
                 </span>
               </dd>
             </div>
             <div className="min-w-0 space-y-1 px-2 py-3 sm:px-3">
               <dt className="text-xs text-muted sm:text-sm">Deuda pendiente</dt>
               <dd className="break-words text-base font-extrabold tabular-nums text-foreground sm:text-2xl">
-                {c.facturasPendientes ? c.montosPendientes.join(" · ") : "Gs. 0"}
+                {!c ? "—" : c.facturasPendientes ? c.montosPendientes.join(" · ") : "Gs. 0"}
               </dd>
             </div>
             <div className="min-w-0 space-y-1 px-2 py-3 sm:px-3">
               <dt className="text-xs text-muted sm:text-sm">Facturas pendientes</dt>
               <dd className="text-base font-extrabold tabular-nums text-foreground sm:text-2xl">
-                {c.facturasPendientes}
+                {c ? c.facturasPendientes : "—"}
               </dd>
             </div>
           </dl>
-          <dl id={motivoId} hidden={!verMotivo} className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1 px-1 text-sm">
-            <dt className="text-muted">Motivo</dt>
-            <dd className={`break-words font-semibold ${c.habilitado ? "text-foreground" : "text-red-700 dark:text-red-300"}`}>
-              {c.habilitado ? "Sin restricciones" : `${c.motivo || "Facturas vencidas"}. No se le puede cargar pedido.`}
+          <dl id={motivoId} hidden={!verMotivo} className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1 rounded-xl border border-line bg-surface px-3 py-2.5 text-sm">
+            <dt className="text-muted">Descripción</dt>
+            <dd className={`break-words font-semibold ${t!.texto}`}>
+              {estado.motivo}
+            </dd>
+            <dt className="text-muted">Deuda</dt>
+            <dd className="break-words text-foreground">
+              {!c ? "—" : c.facturasPendientes ? c.montosPendientes.join(" · ") : "Sin deuda"}
             </dd>
             <dt className="text-muted">Deuda desde el</dt>
-            <dd className="text-foreground">{c.fechaFacturaInhabilitante ?? "—"}</dd>
+            <dd className="text-foreground">{c?.fechaFacturaInhabilitante ?? "—"}</dd>
           </dl>
         </>
       )}

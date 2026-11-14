@@ -26,14 +26,14 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   colorScheme: "light dark",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f4efe7" },
-    { media: "(prefers-color-scheme: dark)", color: "#15120f" },
+    { media: "(prefers-color-scheme: light)", color: "#f5f6f2" },
+    { media: "(prefers-color-scheme: dark)", color: "#111b17" },
   ],
 };
 
-// Aplica el tema ANTES del primer pintado (sin destello): usa la elección
-// guardada del usuario o, si no eligió, la preferencia del dispositivo.
-const scriptTema = `(function(){try{var t=localStorage.getItem("tema");var oscuro=t?t==="oscuro":matchMedia("(prefers-color-scheme: dark)").matches;if(oscuro)document.documentElement.classList.add("dark");}catch(e){}})();`;
+// Aplica el tema ANTES del primer pintado (sin destello): claro (Field Light)
+// por defecto para el trabajo en exteriores; oscuro solo si el usuario lo eligió.
+const scriptTema = `(function(){try{if(localStorage.getItem("tema")==="oscuro")document.documentElement.classList.add("dark");}catch(e){}})();`;
 
 export default function RootLayout({
   children,

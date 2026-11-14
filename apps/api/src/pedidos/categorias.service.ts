@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import type { Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { rangoPaginacion, respuestaPaginada } from '../common/utils/paginacion';
@@ -7,19 +11,23 @@ import type {
   ConsultaCategoriasDto,
   CrearCategoriaDto,
 } from './dto/categoria.dto';
-import type { Categoria } from './interfaces/categoria.interface';
+import type { Categoria, GrupoOitb } from './interfaces/categoria.interface';
 
 const SELECT_CATEGORIA = {
   id: true,
   nombre_categoria: true,
-  codesap: true,
+  ItemGroupCode: true,
   Modo: true,
   orden: true,
 } satisfies Prisma.CategoriaCampoSelect;
 
+type FilaCategoria = Prisma.CategoriaCampoGetPayload<{
+  select: typeof SELECT_CATEGORIA;
+}>;
+
 /**
- * ABM de campo_categoria para el superadmin: trabaja sobre la empresa elegida
- * y nunca toca categorías de otra.
+ * ABM de campo_categoria para superadmin y Admin TI: trabaja sobre la empresa
+ * elegida y nunca toca categorías de otra.
  */
 @Injectable()
 export class CategoriasService {
@@ -33,6 +41,42 @@ export class CategoriasService {
     if (!empresa) throw new NotFoundException('Empresa no disponible');
   }
 
+  /** Suma el nombre del grupo de OITB a cada categoría. */
+  private async conGrupo(
+    empresaId: number,
+    filas: FilaCategoria[],
+  ): Promise<Categoria[]> {
+    const numeros = [...new Set(filas.flatMap((f) => f.ItemGroupCode ?? []))];
+    const grupos = numeros.length
+      ? await this.prisma.grupoArticulo.findMany({
+          where: { empresaId, Number: { in: numeros } },
+          select: { Number: true, GroupName: true },
+          take: numeros.length,
+        })
+      : [];
+    const nombres = new Map(grupos.map((g) => [g.Number, g.GroupName]));
+    return filas.map((f) => ({
+      ...f,
+      grupo:
+        f.ItemGroupCode === null
+          ? null
+          : (nombres.get(f.ItemGroupCode)?.trim() ?? null),
+    }));
+  }
+
+  /** El grupo tiene que existir en tbl_oitb de la misma empresa. */
+  private async validarGrupo(empresaId: number, numero?: number | null) {
+    if (numero === undefined || numero === null) return;
+    const grupo = await this.prisma.grupoArticulo.findFirst({
+      where: { empresaId, Number: numero },
+      select: { id: true },
+    });
+    if (!grupo)
+      throw new BadRequestException(
+        `El grupo ${numero} no existe en los grupos de artículos (OITB) de la empresa`,
+      );
+  }
+
   async listar(empresaId: number, query: ConsultaCategoriasDto) {
     await this.existeEmpresa(empresaId);
     const texto = query.buscar?.trim();
@@ -43,7 +87,7 @@ export class CategoriasService {
         : {}),
     };
     const { skip, take, page, limit } = rangoPaginacion(query);
-    const [total, items] = await Promise.all([
+    const [total, filas] = await Promise.all([
       this.prisma.categoriaCampo.count({ where }),
       this.prisma.categoriaCampo.findMany({
         where,
@@ -53,7 +97,51 @@ export class CategoriasService {
         take,
       }),
     ]);
-    return respuestaPaginada<Categoria>(items, total, page, limit);
+    return respuestaPaginada<Categoria>(
+      await this.conGrupo(empresaId, filas),
+      total,
+      page,
+      limit,
+    );
+  }
+
+  /** Grupos de artículos de OITB de la empresa, para elegir el de la categoría. */
+  async grupos(empresaId: number, query: ConsultaCategoriasDto) {
+    await this.existeEmpresa(empresaId);
+    const texto = query.buscar?.trim();
+    const numero = texto && /^\d{1,9}$/.test(texto) ? Number(texto) : null;
+    const where: Prisma.GrupoArticuloWhereInput = {
+      empresaId,
+      ...(texto
+        ? {
+            OR: [
+              { GroupName: { contains: texto, mode: 'insensitive' } },
+              ...(numero === null ? [] : [{ Number: numero }]),
+            ],
+          }
+        : {}),
+    };
+    const { skip, take, page, limit } = rangoPaginacion(query);
+    const [total, filas] = await Promise.all([
+      this.prisma.grupoArticulo.count({ where }),
+      this.prisma.grupoArticulo.findMany({
+        where,
+        select: { Number: true, GroupName: true },
+        orderBy: [{ GroupName: 'asc' }, { Number: 'asc' }],
+        skip,
+        take,
+      }),
+    ]);
+    return respuestaPaginada<GrupoOitb>(
+      filas.map((g) => ({
+        id: g.Number,
+        nombre: g.GroupName?.trim() || `Grupo ${g.Number}`,
+        descripcion: `Código ${g.Number}`,
+      })),
+      total,
+      page,
+      limit,
+    );
   }
 
   async obtener(empresaId: number, id: number): Promise<Categoria> {
@@ -62,21 +150,23 @@ export class CategoriasService {
       select: SELECT_CATEGORIA,
     });
     if (!categoria) throw new NotFoundException('Categoría no disponible');
-    return categoria;
+    return (await this.conGrupo(empresaId, [categoria]))[0];
   }
 
   async crear(empresaId: number, dto: CrearCategoriaDto): Promise<Categoria> {
     await this.existeEmpresa(empresaId);
-    return this.prisma.categoriaCampo.create({
+    await this.validarGrupo(empresaId, dto.ItemGroupCode);
+    const creada = await this.prisma.categoriaCampo.create({
       data: {
         empresaId,
         nombre_categoria: dto.nombre_categoria,
-        codesap: dto.codesap ?? null,
+        ItemGroupCode: dto.ItemGroupCode ?? null,
         Modo: dto.Modo ?? null,
         orden: dto.orden ?? 0,
       },
       select: SELECT_CATEGORIA,
     });
+    return (await this.conGrupo(empresaId, [creada]))[0];
   }
 
   async actualizar(
@@ -84,12 +174,13 @@ export class CategoriasService {
     id: number,
     dto: ActualizarCategoriaDto,
   ): Promise<Categoria> {
-    // Solo cambia lo enviado; null en codesap o Modo los deja vacíos.
+    await this.validarGrupo(empresaId, dto.ItemGroupCode);
+    // Solo cambia lo enviado; null en ItemGroupCode o Modo los deja vacíos.
     const { count } = await this.prisma.categoriaCampo.updateMany({
       where: { id, empresaId },
       data: {
         nombre_categoria: dto.nombre_categoria,
-        codesap: dto.codesap,
+        ItemGroupCode: dto.ItemGroupCode,
         Modo: dto.Modo,
         orden: dto.orden,
       },

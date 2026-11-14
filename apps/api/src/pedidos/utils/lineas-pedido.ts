@@ -1,39 +1,67 @@
+import { BadRequestException } from '@nestjs/common';
 import type { Prisma } from '../../../generated/prisma/client';
 
 /**
- * Pasos del asistente de pedidos: cada línea agrupa grupos de artículos de
- * OITM (ItemsGroupCode). "Otros" es todo lo que no entra en las anteriores.
+ * Pestañas del asistente de pedidos. Salen de campo_categoria: cada categoría
+ * Modo I con grupo de OITB es una pestaña propia, en su orden; el resto de los
+ * grupos (Modo G, sin categoría o sin grupo) va en «Otros», siempre al final.
  */
-// shortcut: grupos fijos en código; pasarlos a una tabla de categorías cuando se definan las demás líneas.
-export const LINEAS_PEDIDO = [
-  { id: 'hamburguesas', nombre: 'Hamburguesas', grupos: [144] },
-  { id: 'embutidos', nombre: 'Embutidos', grupos: [145] },
-  { id: 'pollo', nombre: 'Pollo', grupos: [241] },
-  { id: 'resto', nombre: 'Otros', grupos: [] },
-] as const;
+export interface LineaPedidoConfig {
+  /** Id de campo_categoria, o «resto» para Otros. Se guarda en pedido_lineas.linea. */
+  id: string;
+  nombre: string;
+  /** tbl_oitb.Number (OITM.ItemsGroupCode); null en Otros. */
+  grupo: number | null;
+}
 
-export type LineaPedido = (typeof LINEAS_PEDIDO)[number]['id'];
-export const IDS_LINEAS_PEDIDO = LINEAS_PEDIDO.map((l) => l.id);
+export type LineaPedido = string;
 
-const AGRUPADOS: number[] = LINEAS_PEDIDO.flatMap((l) => [...l.grupos]);
+/** Id fijo de «Otros»: es el que ya tienen los pedidos guardados como «Resto». */
+export const LINEA_OTROS = 'resto';
 
-export function whereLinea(linea: LineaPedido): Prisma.ProductoWhereInput {
-  const grupos: readonly number[] = LINEAS_PEDIDO.find(
-    (l) => l.id === linea,
-  )!.grupos;
-  return grupos.length
-    ? { itmsgrpcode: { in: [...grupos] } }
-    : { OR: [{ itmsgrpcode: null }, { itmsgrpcode: { notIn: AGRUPADOS } }] };
+export interface CategoriaLinea {
+  id: number;
+  nombre_categoria: string;
+  ItemGroupCode: number | null;
+  Modo: string | null;
+}
+
+/** Las categorías llegan ordenadas por orden e id. */
+export function armarLineas(categorias: CategoriaLinea[]): LineaPedidoConfig[] {
+  const usados = new Set<number>();
+  const propias: LineaPedidoConfig[] = [];
+  for (const c of categorias) {
+    if (c.Modo?.trim().toUpperCase() !== 'I' || c.ItemGroupCode === null)
+      continue;
+    // Un grupo repetido queda en la primera pestaña que lo nombra.
+    if (usados.has(c.ItemGroupCode)) continue;
+    usados.add(c.ItemGroupCode);
+    propias.push({
+      id: String(c.id),
+      nombre: c.nombre_categoria.trim(),
+      grupo: c.ItemGroupCode,
+    });
+  }
+  return [...propias, { id: LINEA_OTROS, nombre: 'Otros', grupo: null }];
+}
+
+export function whereLinea(
+  lineas: LineaPedidoConfig[],
+  linea: LineaPedido,
+): Prisma.ProductoWhereInput {
+  const elegida = lineas.find((l) => l.id === linea);
+  if (!elegida) throw new BadRequestException('Línea de productos inválida');
+  if (elegida.grupo !== null) return { itmsgrpcode: elegida.grupo };
+  const propios = lineas.flatMap((l) => (l.grupo === null ? [] : [l.grupo]));
+  return propios.length
+    ? { OR: [{ itmsgrpcode: null }, { itmsgrpcode: { notIn: propios } }] }
+    : {};
 }
 
 export function lineaDeGrupo(
+  lineas: LineaPedidoConfig[],
   grupo: Prisma.Decimal | number | null,
 ): LineaPedido {
-  return (
-    LINEAS_PEDIDO.find((l) =>
-      (l.grupos as readonly number[]).includes(
-        grupo === null ? Number.NaN : Number(grupo),
-      ),
-    )?.id ?? 'resto'
-  );
+  const numero = grupo === null ? Number.NaN : Number(grupo);
+  return lineas.find((l) => l.grupo === numero)?.id ?? LINEA_OTROS;
 }

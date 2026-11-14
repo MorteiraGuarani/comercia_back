@@ -220,7 +220,7 @@ export class InventarioLocalService {
       lista.push({
         itemcode: a.itemcode,
         itemname: nombresAsociados.get(a.itemcode) ?? a.itemcode,
-        cantidad: carga?.cantidad ?? null,
+        cantidad: carga ? Number(carga.cantidad) : null,
         vencimiento: carga ? dia(carga.vencimiento) : null,
       });
       itemsDe.set(a.localId, lista);
@@ -345,11 +345,11 @@ export class InventarioLocalService {
     const item = (
       itemcode: string,
       itemname: string | null,
-      carga?: { cantidad: number; vencimiento: Date },
+      carga?: { cantidad: Prisma.Decimal; vencimiento: Date },
     ) => ({
       itemcode,
       itemname: itemname ?? itemcode,
-      cantidad: carga?.cantidad ?? null,
+      cantidad: carga ? Number(carga.cantidad) : null,
       vencimiento: carga ? dia(carga.vencimiento) : null,
       diasParaVencer: carga ? diasParaVencer(carga.vencimiento, hoy) : null,
     });

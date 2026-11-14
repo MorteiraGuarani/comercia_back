@@ -9,30 +9,45 @@
 .pwa-instalacion { min-width: 0; }
 .pwa-instalacion__ayuda { margin: 0.5rem 0; padding: 0 0.75rem; font-size: 0.8125rem; line-height: 1.5; color: var(--muted); overflow-wrap: anywhere; }
 
-/* Modo oscuro por CLASE (.dark en <html>): automático según el dispositivo por
-   defecto, con botón manual en el navbar que persiste en localStorage("tema").
-   El script inline de layout.tsx aplica la clase antes del primer pintado. */
+/* Paleta «Field Green» (Guía de colores comercIA v1.0). Los valores marcados
+   «derivado» no están en la guía: cubren usos que la app ya tenía (campos,
+   barra lateral, cobre como texto) con el mismo tono y contraste AA. */
+
+/* Modo oscuro por CLASE (.dark en <html>): claro (Field Light) por defecto, con
+   botón manual en el navbar que persiste en localStorage("tema"). El script
+   inline de layout.tsx aplica la clase antes del primer pintado. */
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
   --panel-content-max: 104rem;
   color-scheme: light;
-  --background: #e8dfd3;
-  --foreground: #211c18;
-  --surface: #f8f1e9;
-  --surface-raised: #fffdf9;
-  --surface-soft: #e9ded1;
-  --muted: #685e55;
-  --border: #c2b5a8;
-  --control-border: #918478;
-  --commercial-ink: #183129;
-  --commercial-ink-soft: #25483d;
-  --accent: #c98248;
-  --accent-ink: #a15326;
-  --accent-on-ink: #efc39d;
-  --accent-soft: #f2dfcb;
-  --focus-ring: #315d47;
-  --warm-shadow: 32, 25, 18;
+  /* Field Light */
+  --background: #f5f6f2; /* --bg */
+  --foreground: #202822; /* --text */
+  --surface: #f0f3ee; /* --surface-alt: bloques secundarios y campos */
+  --surface-raised: #ffffff; /* --surface: tarjetas y formularios */
+  --surface-soft: #e6ece5; /* derivado: hover y encabezados sobre tarjetas */
+  --muted: #647068; /* --text-muted */
+  --border: #dce3dc; /* --border */
+  --control-border: #8c998f; /* derivado: borde de campos, 3:1 sobre blanco */
+  --selected: #dce9df; /* --selected: navegación y selección */
+  --primary: #365745; /* --primary */
+  --primary-text: #ffffff; /* --primary-text */
+  --primary-hover: #2c4838; /* derivado */
+  --commercial-ink: #1f3328; /* derivado: barra lateral */
+  --commercial-ink-soft: #365745;
+  --accent: #b57b43; /* --accent: acentos, no texto chico */
+  --accent-ink: #8a5a2b; /* derivado: cobre como texto, AA sobre fondo claro */
+  --accent-on-ink: #e8c29c; /* derivado: cobre sobre la barra lateral */
+  --accent-soft: #f3e7da; /* derivado */
+  --focus-ring: #365745;
+  --status-saved: #365745;
+  --status-pending: #a56c19;
+  --status-migrated: #246bb2;
+  --status-complete: #168568;
+  --status-error: #b43f35;
+  --status-cancelled: #707a73;
+  --warm-shadow: 32, 40, 34;
   --route-pending: var(--accent);
   --route-active: var(--commercial-ink-soft);
   --route-late: oklch(55% 0.2 20);
@@ -43,21 +58,32 @@
 
 .dark {
   color-scheme: dark;
-  --background: #0d0b09;
-  --foreground: #f5ece2;
-  --surface: #1d1814;
-  --surface-raised: #29221d;
-  --surface-soft: #3a3028;
-  --muted: #c3b5a6;
-  --border: #5b4d42;
-  --control-border: #806e60;
-  --commercial-ink: #0d1f19;
-  --commercial-ink-soft: #17382e;
-  --accent: #dea06a;
-  --accent-ink: #efb782;
-  --accent-on-ink: #efb782;
-  --accent-soft: #493326;
-  --focus-ring: #bfd6c6;
+  /* Field Dark */
+  --background: #111b17; /* --bg */
+  --foreground: #f2f5f0; /* --text */
+  --surface: #17231e; /* derivado: campos, entre el fondo y las tarjetas */
+  --surface-raised: #1d2b24; /* --surface */
+  --surface-soft: #28392f; /* --surface-alt */
+  --muted: #aabbb0; /* --text-muted */
+  --border: #34483c; /* --border */
+  --control-border: #557060; /* derivado: borde de campos, 3:1 sobre tarjetas */
+  --selected: #294b38; /* --selected */
+  --primary: #8bd2a5; /* --primary */
+  --primary-text: #10251a; /* --primary-text */
+  --primary-hover: #a3ddb8; /* derivado */
+  --commercial-ink: #0c1511; /* derivado: barra lateral */
+  --commercial-ink-soft: #294b38;
+  --accent: #d9a16a; /* --accent */
+  --accent-ink: #d9a16a;
+  --accent-on-ink: #d9a16a;
+  --accent-soft: #3b2e21; /* derivado */
+  --focus-ring: #8bd2a5;
+  --status-saved: #8bd2a5;
+  --status-pending: #f0bd68;
+  --status-migrated: #79b7ff;
+  --status-complete: #4dd5a0;
+  --status-error: #ffaa9d;
+  --status-cancelled: #aabbb0;
   --warm-shadow: 0, 0, 0;
   --route-pending: var(--accent);
   --route-active: oklch(70% 0.1 160);
@@ -110,20 +136,30 @@
   --color-accent-soft: var(--accent-soft);
   --color-accent-on-ink: var(--accent-on-ink);
   --color-focus: var(--focus-ring);
+  --color-selected: var(--selected);
+  --color-primary: var(--primary);
+  --color-primary-text: var(--primary-text);
+  --color-primary-hover: var(--primary-hover);
+  --color-status-saved: var(--status-saved);
+  --color-status-pending: var(--status-pending);
+  --color-status-migrated: var(--status-migrated);
+  --color-status-complete: var(--status-complete);
+  --color-status-error: var(--status-error);
+  --color-status-cancelled: var(--status-cancelled);
   --color-zinc-400: var(--muted);
 }
 
-/* Marca Comercia: verde oliva operativo + acento cobre editorial. */
+/* Marca Comercia (Field Green): escala del verde principal #365745 = brand-700. */
 @theme {
-  --color-brand-50: #f1f6f2;
-  --color-brand-100: #dcebe1;
+  --color-brand-50: #f0f3ee;
+  --color-brand-100: #dce9df;
   --color-brand-200: #bfd6c6;
   --color-brand-500: #4f7d61;
-  --color-brand-600: #3f6b51;
-  --color-brand-700: #315d47;
-  --color-brand-800: #284c3b;
-  --color-brand-900: #203d30;
-  --color-brand-950: #12231b;
+  --color-brand-600: #406a53;
+  --color-brand-700: #365745;
+  --color-brand-800: #2c4838;
+  --color-brand-900: #223829;
+  --color-brand-950: #10251a;
 
   /* Hoja inferior (Modal con hojaMovil): sube desde el borde de la pantalla. */
   --animate-hoja-subir: hoja-subir 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);

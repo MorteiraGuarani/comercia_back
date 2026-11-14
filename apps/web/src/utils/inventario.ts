@@ -30,14 +30,33 @@ export function coincideBusqueda(busqueda: string, palabras: string[]): boolean 
   return palabras.every((palabra) => busqueda.includes(palabra));
 }
 
+const CANTIDAD_MAXIMA = 1_000_000;
+
+/**
+ * Lo que se escribe en la cantidad: dígitos y hasta dos decimales, con punto o coma.
+ * null si el texto no puede llegar a ser una cantidad (así el campo lo ignora).
+ */
+export function normalizarCantidad(texto: string): string | null {
+  const limpio = texto.replace(",", ".").trim();
+  return /^\d*(\.\d{0,2})?$/.test(limpio) ? limpio : null;
+}
+
+/** Suma o resta 1 sin bajar de 0 ni pasar el máximo: 0,5 − 1 queda en 0. */
+export function pasoCantidad(texto: string, delta: 1 | -1): string {
+  const actual = Number(normalizarCantidad(texto) || 0) || 0;
+  const nuevo = Math.min(CANTIDAD_MAXIMA, Math.max(0, actual + delta));
+  // Redondeo a centavos: 0,1 + 1 no debe quedar en 1,1000000000000001.
+  return String(Math.round(nuevo * 100) / 100);
+}
+
 /** Solo envía filas completas y válidas; las demás siguen en edición. */
 export function prepararCargasInventario(ediciones: Record<string, EdicionInventario>) {
   const cargas: CargaInventario[] = [];
   const pendientes: Record<string, EdicionInventario> = {};
   for (const [itemcode, edicion] of Object.entries(ediciones)) {
-    const cantidad = edicion.cantidad.trim();
+    const cantidad = edicion.cantidad.trim().replace(",", ".");
     const fecha = Date.parse(`${edicion.vencimiento}T00:00:00Z`);
-    const valida = /^\d+$/.test(cantidad) && Number(cantidad) <= 1_000_000 &&
+    const valida = /^\d+(\.\d{1,2})?$/.test(cantidad) && Number(cantidad) <= CANTIDAD_MAXIMA &&
       /^\d{4}-\d{2}-\d{2}$/.test(edicion.vencimiento) && Number.isFinite(fecha) &&
       new Date(fecha).toISOString().slice(0, 10) === edicion.vencimiento;
     if (valida) cargas.push({ itemcode, cantidad: Number(cantidad), vencimiento: edicion.vencimiento });

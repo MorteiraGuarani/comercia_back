@@ -1,10 +1,10 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
-  Length,
   Max,
   MaxLength,
   Min,
@@ -41,27 +41,28 @@ export class CrearCategoriaDto {
     nullable: true,
     example: 144,
     description:
-      'Grupo de artículos de SAP (OITB / OITM.ItmsGrpCod). Vacío = sin grupo.',
+      'Grupo de artículos de SAP: tbl_oitb.Number (OITM.ItemsGroupCode) de la misma empresa. Vacío = sin grupo.',
   })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(INT4_MIN)
   @Max(INT4_MAX)
-  codesap?: number | null;
+  ItemGroupCode?: number | null;
 
   @ApiPropertyOptional({
     nullable: true,
-    example: 'T',
-    minLength: 1,
-    maxLength: 1,
-    description: 'Modo de la categoría: un solo carácter.',
+    enum: ['I', 'G'],
+    example: 'I',
+    description:
+      'I = pestaña propia en Pedidos, en el orden de la categoría. G = sus productos van en «Otros».',
   })
   @IsOptional()
-  @Transform(recortar)
-  @IsString()
-  @Length(1, 1, { message: 'Modo debe ser un solo carácter' })
-  Modo?: string | null;
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim().toUpperCase() : value,
+  )
+  @IsIn(['I', 'G'], { message: 'Modo debe ser I (individual) o G (en Otros)' })
+  Modo?: 'I' | 'G' | null;
 
   @ApiPropertyOptional({
     type: 'integer',

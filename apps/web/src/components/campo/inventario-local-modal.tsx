@@ -20,7 +20,13 @@ import {
   listarPendientes,
   productosDeInventario,
 } from "@/lib/inventario-db";
-import { diasParaVencer, hoyEquipo, prepararCargasInventario } from "@/utils/inventario";
+import {
+  diasParaVencer,
+  hoyEquipo,
+  normalizarCantidad,
+  pasoCantidad,
+  prepararCargasInventario,
+} from "@/utils/inventario";
 import { mensajeError } from "@/utils/error";
 import { SelectorProductoInventario } from "./selector-producto-inventario";
 import { PendientesInventario } from "./pendientes-inventario";
@@ -40,6 +46,8 @@ const campo =
   "min-h-11 w-full min-w-0 rounded-lg border border-line bg-surface px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-brand-600 disabled:cursor-not-allowed disabled:opacity-50 dark:border-line dark:bg-surface dark:text-foreground";
 
 // Cantidad y vencimiento chicos: entran más productos en la pantalla.
+const botonPaso =
+  "grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-lg border border-line bg-surface-raised text-xl font-bold text-foreground transition-colors hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-40";
 const campoCompacto =
   "h-9 w-full min-w-0 rounded-md border border-line bg-surface px-2 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:border-line dark:bg-surface dark:text-foreground";
 
@@ -302,7 +310,7 @@ export function InventarioLocalModal({
     if (!cargas.length) {
       mostrarToast(
         "alerta",
-        "Completá al menos un producto con cantidad entera entre 0 y 1.000.000 y un vencimiento válido.",
+        "Completá al menos un producto con cantidad entre 0 y 1.000.000 (hasta dos decimales) y un vencimiento válido.",
       );
       return;
     }
@@ -539,20 +547,41 @@ export function InventarioLocalModal({
                                 }
                           }
                         />
-                        <div className="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-2 sm:max-w-sm">
-                          <input
-                            id={`cantidad-${item.itemcode}`}
-                            type="number"
-                            inputMode="numeric"
-                            min={0}
-                            max={1_000_000}
-                            step={1}
-                            placeholder="Cant."
-                            aria-label={`Cantidad de ${item.itemname}`}
-                            value={v.cantidad}
-                            onChange={(e) => editar(item, { cantidad: e.target.value })}
-                            className={campoCompacto}
-                          />
+                        <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-2 sm:max-w-md">
+                          {/* Texto con teclado decimal: acepta coma o punto y hasta dos decimales. */}
+                          <div className="flex items-center gap-1" role="group" aria-label={`Cantidad de ${item.itemname}`}>
+                            <button
+                              type="button"
+                              aria-label={`Restar 1 a ${item.itemname}`}
+                              disabled={!v.cantidad || Number(normalizarCantidad(v.cantidad)) <= 0}
+                              onClick={() => editar(item, { cantidad: pasoCantidad(v.cantidad, -1) })}
+                              className={botonPaso}
+                            >
+                              −
+                            </button>
+                            <input
+                              id={`cantidad-${item.itemcode}`}
+                              type="text"
+                              inputMode="decimal"
+                              autoComplete="off"
+                              placeholder="Cant."
+                              aria-label={`Cantidad de ${item.itemname}`}
+                              value={v.cantidad}
+                              onChange={(e) => {
+                                const cantidad = normalizarCantidad(e.target.value);
+                                if (cantidad !== null) editar(item, { cantidad });
+                              }}
+                              className="h-11 w-20 min-w-0 rounded-md border border-line bg-surface px-2 text-center text-sm tabular-nums text-foreground outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:border-line dark:bg-surface dark:text-foreground"
+                            />
+                            <button
+                              type="button"
+                              aria-label={`Sumar 1 a ${item.itemname}`}
+                              onClick={() => editar(item, { cantidad: pasoCantidad(v.cantidad, 1) })}
+                              className={botonPaso}
+                            >
+                              +
+                            </button>
+                          </div>
                           <input
                             type="date"
                             aria-label={`Vencimiento de ${item.itemname}`}

@@ -18,10 +18,13 @@ export function FacturasClientePedido({
   cardCode,
   nombre,
   onCopiar,
+  bloqueado = false,
 }: {
   cardCode: string;
   nombre: string;
   onCopiar: (lineas: LineaFacturaCliente[]) => void;
+  /** Cliente al que no se le puede cargar pedido: se ven las facturas, pero no se copian. */
+  bloqueado?: boolean;
 }) {
   const [facturas, setFacturas] = useState<FacturaCliente[] | null>(null);
   const [error, setError] = useState("");
@@ -75,7 +78,7 @@ export function FacturasClientePedido({
             </div>
           </>
         ) : (
-          <FacturaDesplegable cardCode={cardCode} factura={ultima} destacada onCopiar={onCopiar} />
+          <FacturaDesplegable cardCode={cardCode} factura={ultima} destacada onCopiar={onCopiar} bloqueado={bloqueado} />
         )}
       </section>
       {previas.length ? (
@@ -106,6 +109,7 @@ export function FacturasClientePedido({
               cardCode={cardCode}
               factura={f}
               onCopiar={onCopiar}
+              bloqueado={bloqueado}
               abierto={abiertaAnterior === f.docEntry}
               onAbierto={(abrir) => setAbiertaAnterior(abrir ? f.docEntry : null)}
             />
@@ -152,6 +156,7 @@ function FacturaDesplegable({
   factura,
   destacada,
   onCopiar,
+  bloqueado,
   abierto: abiertoControlado,
   onAbierto,
 }: {
@@ -159,6 +164,7 @@ function FacturaDesplegable({
   factura: FacturaCliente;
   destacada?: boolean;
   onCopiar: (lineas: LineaFacturaCliente[]) => void;
+  bloqueado: boolean;
   /** Con estos dos, el que la contiene decide cuál está abierta (acordeón). */
   abierto?: boolean;
   onAbierto?: (abierto: boolean) => void;
@@ -267,6 +273,7 @@ function FacturaDesplegable({
                   modo="texto"
                   etiqueta={`Copiar factura ${factura.docNum} a un pedido nuevo`}
                   className="w-full"
+                  disabled={bloqueado}
                   onClick={() => onCopiar(lineas)}
                 />
               </li>

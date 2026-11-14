@@ -67,6 +67,8 @@ export default function AdminPage() {
         >
           Acceso por empresa
         </button>
+        {/* Admin TI también configura las pestañas de productos de Pedidos. */}
+        <button type="button" onClick={() => setTab("categorias")} className={`${tabClase("categorias")} whitespace-nowrap`}>Categorías</button>
         {usuario.esSuperadmin && <><button
           type="button"
           onClick={() => setTab("empresas")}
@@ -90,7 +92,6 @@ export default function AdminPage() {
         </button>
         <button type="button" onClick={() => setTab("productos")} className={`${tabClase("productos")} whitespace-nowrap`}>Productos y precios</button>
         <button type="button" onClick={() => setTab("locales")} className={`${tabClase("locales")} whitespace-nowrap`}>Locales</button>
-        <button type="button" onClick={() => setTab("categorias")} className={`${tabClase("categorias")} whitespace-nowrap`}>Categorías</button>
         <button type="button" onClick={() => setTab("marcaciones")} className={`${tabClase("marcaciones")} whitespace-nowrap`}>Registro de marcaciones</button></>}
       </div>
 
@@ -103,7 +104,7 @@ export default function AdminPage() {
         {tab === "accesos" && <EmpresasPanel />}
         {tab === "productos" && <ProductosPanel />}
         {tab === "locales" && <LocalesEmpresaPanel />}
-        {tab === "categorias" && usuario.esSuperadmin && <CategoriasPanel />}
+        {tab === "categorias" && <CategoriasPanel />}
         {tab === "marcaciones" && usuario.esSuperadmin && <RegistroMarcacionesPanel />}
       </div>
     </div>

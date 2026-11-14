@@ -18,7 +18,6 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { PaginacionDto } from '../../common/utils/paginacion';
-import { IDS_LINEAS_PEDIDO, type LineaPedido } from '../utils/lineas-pedido';
 
 export class BuscarClientesPedidoDto extends PaginacionDto {
   @IsOptional() @IsString() @MaxLength(120) buscar?: string;
@@ -28,8 +27,10 @@ export class BuscarProductosPedidoDto extends PaginacionDto {
   /** Cliente de tbl_ocrd: define la lista de precios. */
   @IsString() @Length(1, 50) cardCode!: string;
 
-  @IsIn(IDS_LINEAS_PEDIDO, { message: 'Línea de productos inválida' })
-  linea!: LineaPedido;
+  /** Id de la pestaña (campo_categoria) o «resto» para Otros; se valida contra las categorías. */
+  @IsString()
+  @Length(1, 20, { message: 'Línea de productos inválida' })
+  linea!: string;
 
   @IsOptional() @IsString() @MaxLength(120) buscar?: string;
 }

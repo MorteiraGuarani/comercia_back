@@ -455,7 +455,7 @@ export class InventarioCargasService {
         local: { id: f.local.CardCode, nombre: nombreLocal(f.local) },
         itemcode: f.itemcode,
         producto: nombres.get(f.itemcode) ?? f.itemcode,
-        cantidad: f.cantidad,
+        cantidad: Number(f.cantidad),
         vencimiento: dia(f.vencimiento),
         diasParaVencer: dias,
         estado: estadoCarga(dias, diasAviso.get(f.empresaId) ?? 0),

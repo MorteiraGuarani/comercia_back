@@ -47,9 +47,10 @@ import type {
 import { aCreditoCliente } from './utils/credito-cliente';
 import { aFacturaCliente, aLineaFactura } from './utils/facturas-cliente';
 import {
+  armarLineas,
   lineaDeGrupo,
   whereLinea,
-  type LineaPedido,
+  type LineaPedidoConfig,
 } from './utils/lineas-pedido';
 import type {
   DatosAlmacenUsuario,
@@ -68,12 +69,11 @@ import { ServiceLayerService } from './service-layer.service';
 // shortcut: tope de artículos con precio en una lista, subirlo si una lista lo supera.
 const MAX_PRODUCTOS_LISTA = 20_000;
 
-// Cliente habilitado en SAP: si está inhabilitado no se le carga el pedido.
-const CLIENTE_ACTIVO = {
-  CardType: 'C',
-  validFor: { not: 'N' },
-  frozenFor: { not: 'Y' },
-} satisfies Prisma.SocioNegocioWhereInput;
+// Inactivos o congelados en SAP: se buscan y se ven, pero no se les carga pedido.
+const clienteActivo = (c: {
+  validFor: string | null;
+  frozenFor: string | null;
+}) => c.validFor !== 'N' && c.frozenFor !== 'Y';
 
 const DIAS_VISITA = [
   ['QryLunes', 'Lunes'],
@@ -329,7 +329,11 @@ export class PedidosService {
     usuarioId: number,
     cardCode: string,
   ): Promise<FacturaCliente[]> {
-    const c = await this.cliente(await this.usuarioSap(usuarioId), cardCode);
+    const c = await this.cliente(
+      await this.usuarioSap(usuarioId),
+      cardCode,
+      false,
+    );
     return this.facturasSap(c.CardCode);
   }
 
@@ -339,7 +343,11 @@ export class PedidosService {
     cardCode: string,
     docEntry: number,
   ): Promise<LineaFacturaCliente[]> {
-    const c = await this.cliente(await this.usuarioSap(usuarioId), cardCode);
+    const c = await this.cliente(
+      await this.usuarioSap(usuarioId),
+      cardCode,
+      false,
+    );
     // Solo facturas del cliente: un DocEntry ajeno responde igual que uno inexistente.
     const propias = await this.facturasSap(c.CardCode);
     if (!propias.some((f) => f.docEntry === docEntry))
@@ -365,13 +373,16 @@ export class PedidosService {
     return u.empresaId;
   }
 
-  /** Cliente activo de la cartera del usuario; uno ajeno responde igual que uno inexistente. */
-  private async cliente(u: UsuarioSap, cardCode: string) {
+  /**
+   * Cliente de la cartera del usuario; uno ajeno responde igual que uno inexistente.
+   * Con `soloActivo`, uno inactivo o congelado en SAP se rechaza (no se le carga pedido).
+   */
+  private async cliente(u: UsuarioSap, cardCode: string, soloActivo = true) {
     const c = await this.prisma.socioNegocio.findFirst({
       where: {
         empresaId: u.empresaId,
         CardCode: cardCode,
-        ...CLIENTE_ACTIVO,
+        CardType: 'C',
         ...whereVendedor(u.ERP_CodUsuarioSap),
       },
       select: {
@@ -388,10 +399,43 @@ export class PedidosService {
         QryMiercoles: true,
         QryJueves: true,
         QryViernes: true,
+        validFor: true,
+        frozenFor: true,
       },
     });
     if (!c) throw new NotFoundException('Cliente no disponible');
+    if (soloActivo && !clienteActivo(c))
+      throw new BadRequestException(
+        'El cliente está inactivo en SAP: no se le puede cargar pedido',
+      );
     return c;
+  }
+
+  /** Pestañas del asistente según campo_categoria de la empresa; «Otros» siempre al final. */
+  private async lineasDe(empresaId: number): Promise<LineaPedidoConfig[]> {
+    return armarLineas(
+      await this.prisma.categoriaCampo.findMany({
+        where: { empresaId },
+        select: {
+          id: true,
+          nombre_categoria: true,
+          ItemGroupCode: true,
+          Modo: true,
+        },
+        orderBy: [{ orden: 'asc' }, { id: 'asc' }],
+        // shortcut: tope de categorías por empresa; subirlo si alguna lo supera.
+        take: 200,
+      }),
+    );
+  }
+
+  /** Pestañas de productos para el usuario: id y nombre, en orden. */
+  async lineas(usuarioId: number) {
+    const { empresaId } = await this.usuarioSap(usuarioId);
+    return (await this.lineasDe(empresaId)).map(({ id, nombre }) => ({
+      id,
+      nombre,
+    }));
   }
 
   /** Precio por ItemCode en la lista del cliente; sin lista o con precio 0, ninguno. */
@@ -420,7 +464,7 @@ export class PedidosService {
     const texto = query.buscar?.trim();
     const where: Prisma.SocioNegocioWhereInput = {
       empresaId,
-      ...CLIENTE_ACTIVO,
+      CardType: 'C',
       // Solo su cartera: tbl_ocrd.SlpCode = su Código Vendedor.
       ...whereVendedor(u.ERP_CodUsuarioSap),
       ...(texto
@@ -438,7 +482,12 @@ export class PedidosService {
       this.prisma.socioNegocio.count({ where }),
       this.prisma.socioNegocio.findMany({
         where,
-        select: { CardCode: true, CardName: true },
+        select: {
+          CardCode: true,
+          CardName: true,
+          validFor: true,
+          frozenFor: true,
+        },
         orderBy: [{ CardName: 'asc' }, { CardCode: 'asc' }],
         skip,
         take,
@@ -453,7 +502,11 @@ export class PedidosService {
       filas.map((f) => ({
         id: f.CardCode,
         nombre: nombreLocal(f),
-        descripcion: [direcciones.get(f.CardCode)?.direccion, f.CardCode]
+        descripcion: [
+          direcciones.get(f.CardCode)?.direccion,
+          f.CardCode,
+          clienteActivo(f) ? null : 'Inactivo',
+        ]
           .filter(Boolean)
           .join(' · '),
       })),
@@ -469,7 +522,8 @@ export class PedidosService {
   ): Promise<PerfilClientePedido> {
     const u = await this.usuarioSap(usuarioId);
     const { empresaId } = u;
-    const c = await this.cliente(u, cardCode);
+    // El perfil se muestra aunque esté inactivo, para que se vea el motivo.
+    const c = await this.cliente(u, cardCode, false);
     const codigoCanal = Number(c.U_jCANAL);
     const [direcciones, condicion, lista, canal, credito] = await Promise.all([
       direccionesLocales(this.prisma, empresaId, [c.CardCode]),
@@ -508,6 +562,7 @@ export class PedidosService {
       diasVisita: DIAS_VISITA.filter(([campo]) => c[campo] === 'Y').map(
         ([, dia]) => dia,
       ),
+      activo: clienteActivo(c),
       credito,
     };
   }
@@ -518,6 +573,7 @@ export class PedidosService {
     const c = await this.cliente(u, query.cardCode);
     const texto = query.buscar?.trim();
     const datos = await this.datosAlmacen(u);
+    const lineas = await this.lineasDe(empresaId);
     // Solo lo que tiene precio en la lista del cliente (tbl_itm1.PriceList = tbl_ocrd.ListNum).
     const conPrecio =
       c.ListNum === null
@@ -533,7 +589,7 @@ export class PedidosService {
         { itemcode: { in: conPrecio.map((p) => p.itemcode) } },
         // U_beas_vg es el canal: solo los artículos del canal del usuario.
         { tipo: u.ERP_CanalVenta ?? '' },
-        whereLinea(query.linea),
+        whereLinea(lineas, query.linea),
         ...(texto
           ? [
               {
@@ -615,7 +671,10 @@ export class PedidosService {
       },
       take: codigos.length,
     });
-    const precios = await this.precios(empresaId, c.ListNum, codigos);
+    const [precios, lineas] = await Promise.all([
+      this.precios(empresaId, c.ListNum, codigos),
+      this.lineasDe(empresaId),
+    ]);
     const almacenDe = resolverAlmacen(datos);
     // Sin precio en la lista del cliente tampoco se puede pedir.
     const vendibles = productos.filter((p) => precios.has(p.itemcode));
@@ -625,7 +684,7 @@ export class PedidosService {
       items: vendibles.map((p) => ({
         itemCode: p.itemcode,
         nombre: p.itemname?.trim() || p.itemcode,
-        linea: lineaDeGrupo(p.itmsgrpcode),
+        linea: lineaDeGrupo(lineas, p.itmsgrpcode),
         // Un pedido admite enteros de 1 a 9999; la factura puede traer decimales.
         cantidad: Math.min(
           9999,
@@ -714,7 +773,6 @@ export class PedidosService {
         observaciones: p.observaciones,
         lineas: p.lineas.map((l) => ({
           ...l,
-          linea: l.linea as LineaPedido,
           precio: l.precio === null ? null : Number(l.precio),
           total: l.total === null ? null : Number(l.total),
         })),
@@ -880,14 +938,17 @@ export class PedidosService {
         `Productos no disponibles: ${faltan.join(', ')}`,
       );
     // El precio sale de la lista del cliente, nunca del navegador.
-    const precios = await this.precios(empresaId, c.ListNum, codigos);
+    const [precios, lineasPedido] = await Promise.all([
+      this.precios(empresaId, c.ListNum, codigos),
+      this.lineasDe(empresaId),
+    ]);
     const lineas: LineaPedidoRespuesta[] = dto.lineas.map((l) => {
       const p = porCodigo.get(l.itemCode)!;
       const precio = precios.get(l.itemCode) ?? null;
       return {
         itemCode: p.itemcode,
         nombre: p.itemname?.trim() || p.itemcode,
-        linea: lineaDeGrupo(p.itmsgrpcode),
+        linea: lineaDeGrupo(lineasPedido, p.itmsgrpcode),
         cantidad: l.cantidad,
         precio,
         total: precio === null ? null : precio * l.cantidad,

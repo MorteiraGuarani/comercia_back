@@ -15,6 +15,7 @@ import {
 import {
   ApiBearerAuth,
   ApiForbiddenResponse,
+  ApiOkResponse,
   ApiOperation,
   ApiTags,
   ApiUnauthorizedResponse,
@@ -83,6 +84,24 @@ export class PedidosController {
     @Param('docEntry', ParseIntPipe) docEntry: number,
   ) {
     return this.servicio.detalleFactura(req.usuarioId, cardCode, docEntry);
+  }
+
+  // Sin paginar: son las pestañas del asistente (pocas, configuradas en Categorías).
+  @Get('lineas')
+  @ApiOperation({
+    summary:
+      'Pestañas de productos del asistente: categorías Modo I en su orden y «Otros» al final',
+  })
+  @ApiOkResponse({
+    schema: {
+      example: [
+        { id: '1', nombre: 'Hamburguesas' },
+        { id: 'resto', nombre: 'Otros' },
+      ],
+    },
+  })
+  lineas(@Req() req: RequestConUsuario) {
+    return this.servicio.lineas(req.usuarioId);
   }
 
   @Get('productos')

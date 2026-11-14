@@ -9,21 +9,43 @@ jest.mock('../prisma/prisma.service', () => ({
 }));
 
 describe('campo_categoria', () => {
-  it('valida Modo de un carácter y deja codesap vacío con null', async () => {
+  it('acepta Modo I o G (en mayúscula) y deja ItemGroupCode vacío con null', async () => {
     const ok = plainToInstance(CrearCategoriaDto, {
-      nombre_categoria: ' Resto ',
-      codesap: null,
-      Modo: 'T',
+      nombre_categoria: ' Otros ',
+      ItemGroupCode: null,
+      Modo: ' g ',
       orden: '5',
     });
     expect(await validate(ok)).toEqual([]);
     expect(ok).toMatchObject({
-      nombre_categoria: 'Resto',
-      codesap: null,
+      nombre_categoria: 'Otros',
+      ItemGroupCode: null,
+      Modo: 'G',
       orden: 5,
     });
-    const mal = plainToInstance(ActualizarCategoriaDto, { Modo: 'TM' });
+    const mal = plainToInstance(ActualizarCategoriaDto, { Modo: 'T' });
     expect((await validate(mal)).map((e) => e.property)).toEqual(['Modo']);
+  });
+
+  it('no guarda un grupo que no está en OITB de la empresa', async () => {
+    const prisma = {
+      empresa: { findUnique: jest.fn().mockResolvedValue({ id: 2 }) },
+      grupoArticulo: { findFirst: jest.fn().mockResolvedValue(null) },
+      categoriaCampo: { create: jest.fn(), updateMany: jest.fn() },
+    };
+    const servicio = new CategoriasService(prisma as unknown as PrismaService);
+    await expect(
+      servicio.crear(2, { nombre_categoria: 'Papas', ItemGroupCode: 999 }),
+    ).rejects.toThrow('El grupo 999 no existe');
+    await expect(
+      servicio.actualizar(2, 1, { ItemGroupCode: 999 }),
+    ).rejects.toThrow('El grupo 999 no existe');
+    expect(prisma.grupoArticulo.findFirst).toHaveBeenCalledWith({
+      where: { empresaId: 2, Number: 999 },
+      select: { id: true },
+    });
+    expect(prisma.categoriaCampo.create).not.toHaveBeenCalled();
+    expect(prisma.categoriaCampo.updateMany).not.toHaveBeenCalled();
   });
 
   it('no modifica ni borra categorías de otra empresa', async () => {
@@ -52,7 +74,7 @@ describe('campo_categoria', () => {
     };
     const servicio = new CategoriasService(prisma as unknown as PrismaService);
     await expect(
-      servicio.crear(99, { nombre_categoria: 'Resto' }),
+      servicio.crear(99, { nombre_categoria: 'Otros' }),
     ).rejects.toThrow('Empresa no disponible');
     expect(prisma.categoriaCampo.create).not.toHaveBeenCalled();
   });

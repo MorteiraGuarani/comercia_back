@@ -5,7 +5,18 @@ import { activosAnd } from '../common/utils/productos-activos';
 import { PedidosService } from './pedidos.service';
 import type { ServiceLayerService } from './service-layer.service';
 import { aCreditoCliente } from './utils/credito-cliente';
-import { lineaDeGrupo, whereLinea } from './utils/lineas-pedido';
+import { armarLineas, lineaDeGrupo, whereLinea } from './utils/lineas-pedido';
+
+// campo_categoria como la deja la migración: tres pestañas propias (Modo I).
+const CATEGORIAS = [
+  { id: 1, nombre_categoria: 'Hamburguesas', ItemGroupCode: 144, Modo: 'I' },
+  { id: 2, nombre_categoria: 'Embutidos', ItemGroupCode: 145, Modo: 'I' },
+  { id: 3, nombre_categoria: 'Pollo', ItemGroupCode: 241, Modo: 'I' },
+];
+const LINEAS = armarLineas(CATEGORIAS);
+const categoriaCampo = () => ({
+  findMany: jest.fn().mockResolvedValue(CATEGORIAS),
+});
 
 jest.mock('../prisma/prisma.service', () => ({
   PrismaService: class PrismaService {},
@@ -16,14 +27,38 @@ const sinServiceLayer = {
 } as unknown as ServiceLayerService;
 
 describe('lineas de pedido', () => {
-  it('ubica cada grupo de OITM en su línea y el resto fuera de las demás', () => {
-    expect(lineaDeGrupo(144)).toBe('hamburguesas');
-    expect(lineaDeGrupo(241)).toBe('pollo');
-    expect(lineaDeGrupo(999)).toBe('resto');
-    expect(lineaDeGrupo(null)).toBe('resto');
-    expect(whereLinea('resto')).toEqual({
+  it('arma una pestaña por categoría Modo I, en orden, y Otros al final', () => {
+    expect(
+      armarLineas([
+        ...CATEGORIAS,
+        // G va en Otros; un grupo repetido o sin grupo no suma pestaña.
+        { id: 4, nombre_categoria: 'Papas', ItemGroupCode: 143, Modo: 'G' },
+        { id: 5, nombre_categoria: 'Repetida', ItemGroupCode: 144, Modo: 'I' },
+        {
+          id: 6,
+          nombre_categoria: 'Sin grupo',
+          ItemGroupCode: null,
+          Modo: 'I',
+        },
+      ]).map((l) => l.nombre),
+    ).toEqual(['Hamburguesas', 'Embutidos', 'Pollo', 'Otros']);
+    expect(armarLineas([])).toEqual([
+      { id: 'resto', nombre: 'Otros', grupo: null },
+    ]);
+  });
+
+  it('ubica cada grupo de OITM en su pestaña y el resto en Otros', () => {
+    expect(lineaDeGrupo(LINEAS, 144)).toBe('1');
+    expect(lineaDeGrupo(LINEAS, 241)).toBe('3');
+    expect(lineaDeGrupo(LINEAS, 143)).toBe('resto');
+    expect(lineaDeGrupo(LINEAS, null)).toBe('resto');
+    expect(whereLinea(LINEAS, '2')).toEqual({ itmsgrpcode: 145 });
+    expect(whereLinea(LINEAS, 'resto')).toEqual({
       OR: [{ itmsgrpcode: null }, { itmsgrpcode: { notIn: [144, 145, 241] } }],
     });
+    expect(() => whereLinea(LINEAS, 'hamburguesas')).toThrow(
+      'Línea de productos inválida',
+    );
   });
 });
 
@@ -47,6 +82,7 @@ describe('PedidosService.copiar', () => {
         ListNum: 3,
       }),
     },
+    categoriaCampo: categoriaCampo(),
     producto: {
       findMany: jest.fn().mockResolvedValue([
         {
@@ -83,7 +119,7 @@ describe('PedidosService.copiar', () => {
       {
         itemCode: 'H1',
         nombre: 'Hamburguesa clásica',
-        linea: 'hamburguesas',
+        linea: '1',
         cantidad: 4,
         precio: 3890,
         almacen: null,
@@ -139,6 +175,7 @@ describe('PedidosService.crear', () => {
           },
         ]),
       },
+      categoriaCampo: categoriaCampo(),
       campoDocumento: {
         create: jest.fn().mockResolvedValue({ id: 41 }),
         update: jest.fn<Promise<unknown>, [unknown]>().mockResolvedValue({}),
@@ -228,7 +265,7 @@ describe('PedidosService.crear', () => {
           create: [
             {
               itemCode: 'H1',
-              linea: 'hamburguesas',
+              linea: '1',
               precio: 3890,
               total: 38900,
             },
@@ -264,7 +301,7 @@ describe('PedidosService.crear', () => {
     ]);
     const { items } = await servicio.productos(7, {
       cardCode: 'C0001',
-      linea: 'embutidos',
+      linea: '2',
     });
     expect(prisma.producto.count).toHaveBeenCalledWith({
       where: {
@@ -273,11 +310,29 @@ describe('PedidosService.crear', () => {
           // Solo los que tienen precio en la lista del cliente.
           { itemcode: { in: ['H1'] } },
           { tipo: '2' },
-          whereLinea('embutidos'),
+          whereLinea(LINEAS, '2'),
         ],
       },
     });
     expect(items.map((p) => p.almacen)).toEqual(['ITG-HAM', null]);
+  });
+
+  it('a un cliente inactivo o congelado en SAP no le carga pedido', async () => {
+    for (const estado of [{ validFor: 'N' }, { frozenFor: 'Y' }]) {
+      const { prisma, servicio, dto } = preparar();
+      prisma.socioNegocio.findFirst.mockResolvedValue({
+        CardCode: 'C0001',
+        CardName: 'Cliente',
+        ListNum: 13,
+        validFor: 'Y',
+        frozenFor: 'N',
+        ...estado,
+      });
+      await expect(servicio.crear(7, dto)).rejects.toThrow(
+        'El cliente está inactivo en SAP',
+      );
+      expect(prisma.pedido.create).not.toHaveBeenCalled();
+    }
   });
 
   it('guarda el documento de SAP con su id en U_beas_version', async () => {

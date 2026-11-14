@@ -1,12 +1,7 @@
-import type { EstadoPedido, LineaPedido } from "@/types/pedido";
+import type { EstadoPedido } from "@/types/pedido";
 
-/** Pasos de productos del pedido; los mismos ids que valida la API. */
-export const LINEAS_PEDIDO: { id: LineaPedido; nombre: string }[] = [
-  { id: "hamburguesas", nombre: "Hamburguesas" },
-  { id: "embutidos", nombre: "Embutidos" },
-  { id: "pollo", nombre: "Pollo" },
-  { id: "resto", nombre: "Otros" },
-];
+/** Id fijo de la pestaña «Otros» (lo que no tiene pestaña propia en Categorías). */
+export const LINEA_OTROS = "resto";
 
 export const ESTADOS_PEDIDO: { id: EstadoPedido; nombre: string }[] = [
   { id: "CARGADO", nombre: "Guardado" },

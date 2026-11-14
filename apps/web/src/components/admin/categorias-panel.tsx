@@ -15,7 +15,7 @@ import type { Categoria } from "@/types/categoria";
 import type { EmpresaCatalogo } from "@/types/producto";
 import type { RespuestaPaginada } from "@/types/paginacion";
 
-/** Superadmin: ABM de campo_categoria (pasos del asistente de pedidos) por empresa. */
+/** Superadmin y Admin TI: ABM de campo_categoria (pestañas de productos de Pedidos) por empresa. */
 export function CategoriasPanel() {
   const [empresa, setEmpresa] = useState<EmpresaCatalogo | null>(null);
   return (
@@ -46,8 +46,23 @@ export function CategoriasPanel() {
   );
 }
 
-type Form = { nombre_categoria: string; codesap: string; Modo: string; orden: string };
-const FORM_INICIAL: Form = { nombre_categoria: "", codesap: "", Modo: "", orden: "0" };
+type Form = {
+  nombre_categoria: string;
+  ItemGroupCode: number | "";
+  /** Nombre del grupo elegido, para mostrarlo en el selector. */
+  grupo: string;
+  Modo: "I" | "G";
+  orden: string;
+};
+const FORM_INICIAL: Form = { nombre_categoria: "", ItemGroupCode: "", grupo: "", Modo: "I", orden: "0" };
+
+const MODOS = {
+  I: "Pestaña propia",
+  G: "En Otros",
+} as const;
+
+const textoGrupo = (codigo: number | "" | null, nombre: string | null) =>
+  codigo === "" || codigo === null ? "—" : [codigo, nombre].filter(Boolean).join(" · ");
 
 function CategoriasDeEmpresa({ empresa }: { empresa: EmpresaCatalogo }) {
   const base = `/admin/empresas/${empresa.id}/categorias`;
@@ -82,8 +97,10 @@ function CategoriasDeEmpresa({ empresa }: { empresa: EmpresaCatalogo }) {
         ? FORM_INICIAL
         : {
             nombre_categoria: c.nombre_categoria,
-            codesap: c.codesap === null ? "" : String(c.codesap),
-            Modo: c.Modo ?? "",
+            ItemGroupCode: c.ItemGroupCode ?? "",
+            grupo: c.grupo ?? "",
+            // Vacío funciona como G: sus productos van en «Otros».
+            Modo: c.Modo === "I" ? "I" : "G",
             orden: String(c.orden),
           },
     );
@@ -101,9 +118,9 @@ function CategoriasDeEmpresa({ empresa }: { empresa: EmpresaCatalogo }) {
         method: editando === "nueva" ? "POST" : "PATCH",
         body: JSON.stringify({
           nombre_categoria: form.nombre_categoria,
-          // Vacío borra el dato: la API guarda null.
-          codesap: form.codesap.trim() ? Number(form.codesap) : null,
-          Modo: form.Modo.trim() || null,
+          // Vacío borra el grupo: la API guarda null.
+          ItemGroupCode: form.ItemGroupCode === "" ? null : form.ItemGroupCode,
+          Modo: form.Modo,
           orden: Number(form.orden || 0),
         }),
       });
@@ -181,7 +198,7 @@ function CategoriasDeEmpresa({ empresa }: { empresa: EmpresaCatalogo }) {
               {c.orden}. {c.nombre_categoria}
             </p>
             <p className="mt-1 text-xs text-muted">
-              Código SAP {c.codesap ?? "—"} · Modo {c.Modo ?? "—"}
+              Grupo OITB {textoGrupo(c.ItemGroupCode, c.grupo)} · {MODOS[c.Modo === "I" ? "I" : "G"]}
             </p>
             <div className="mt-3 flex flex-wrap gap-2 border-t border-line pt-3">{acciones(c)}</div>
           </li>
@@ -195,7 +212,7 @@ function CategoriasDeEmpresa({ empresa }: { empresa: EmpresaCatalogo }) {
             <tr>
               <th className="px-4 py-3 text-center">Orden</th>
               <th className="px-4 py-3">Categoría</th>
-              <th className="px-4 py-3">Código SAP</th>
+              <th className="px-4 py-3">Grupo OITB</th>
               <th className="px-4 py-3">Modo</th>
               <th className="px-4 py-3 text-right">Acciones</th>
             </tr>
@@ -205,8 +222,8 @@ function CategoriasDeEmpresa({ empresa }: { empresa: EmpresaCatalogo }) {
               <tr key={c.id} className="hover:bg-surface-soft">
                 <td className="px-4 py-3 text-center">{c.orden}</td>
                 <td className="px-4 py-3 font-semibold text-foreground">{c.nombre_categoria}</td>
-                <td className="px-4 py-3">{c.codesap ?? "—"}</td>
-                <td className="px-4 py-3">{c.Modo ?? "—"}</td>
+                <td className="px-4 py-3">{textoGrupo(c.ItemGroupCode, c.grupo)}</td>
+                <td className="px-4 py-3">{MODOS[c.Modo === "I" ? "I" : "G"]}</td>
                 <td className="px-4 py-3">
                   <div className="flex justify-end gap-2">{acciones(c)}</div>
                 </td>
@@ -250,28 +267,29 @@ function CategoriasDeEmpresa({ empresa }: { empresa: EmpresaCatalogo }) {
               className={inputBase}
             />
           </label>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <SelectorPaginado
+            url={`${base}/grupos`}
+            etiqueta="Grupo de artículos (OITB)"
+            value={form.ItemGroupCode}
+            seleccionActual={form.ItemGroupCode === "" ? undefined : textoGrupo(form.ItemGroupCode, form.grupo)}
+            placeholder="Buscá por nombre o código del grupo"
+            buscable
+            limpiable
+            conDescripcion
+            onChange={(id) => setForm((f) => ({ ...f, ItemGroupCode: id, grupo: id === "" ? "" : f.grupo }))}
+            onSeleccionar={(opcion) => setForm((f) => ({ ...f, ItemGroupCode: opcion.id, grupo: opcion.nombre ?? "" }))}
+          />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label className={labelBase}>
-              Código SAP (opcional)
-              <input
-                type="number"
-                inputMode="numeric"
-                step={1}
-                value={form.codesap}
-                onChange={(e) => setForm((f) => ({ ...f, codesap: e.target.value }))}
-                placeholder="Ej.: 144"
-                className={inputBase}
-              />
-            </label>
-            <label className={labelBase}>
-              Modo (opcional)
-              <input
+              Modo
+              <select
                 value={form.Modo}
-                onChange={(e) => setForm((f) => ({ ...f, Modo: e.target.value }))}
-                maxLength={1}
-                placeholder="Ej.: T"
+                onChange={(e) => setForm((f) => ({ ...f, Modo: e.target.value === "G" ? "G" : "I" }))}
                 className={inputBase}
-              />
+              >
+                <option value="I">Pestaña propia (I)</option>
+                <option value="G">En Otros (G)</option>
+              </select>
             </label>
             <label className={labelBase}>
               Orden
@@ -286,6 +304,11 @@ function CategoriasDeEmpresa({ empresa }: { empresa: EmpresaCatalogo }) {
               />
             </label>
           </div>
+          <p className="text-sm text-muted">
+            {form.Modo === "I"
+              ? "Los productos de este grupo tienen su propia pestaña en Pedidos, en el orden indicado (menor primero)."
+              : "Los productos de este grupo van en la pestaña «Otros» de Pedidos, junto con los grupos sin pestaña propia."}
+          </p>
           {errorForm ? <p className={errorBox}>{errorForm}</p> : null}
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => setEditando(null)} className={btnGhost}>

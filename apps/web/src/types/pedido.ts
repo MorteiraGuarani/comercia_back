@@ -1,4 +1,11 @@
-export type LineaPedido = "hamburguesas" | "embutidos" | "pollo" | "resto";
+/** Id de la pestaña de productos: el de campo_categoria, o «resto» para Otros. */
+export type LineaPedido = string;
+
+/** Pestaña de productos del asistente (GET /pedidos/lineas), en orden; «Otros» al final. */
+export interface LineaPedidoTab {
+  id: LineaPedido;
+  nombre: string;
+}
 export type EstadoPedido = "CARGADO" | "MIGRADO" | "FACTURADO" | "ENTREGADO";
 
 /** Estado de crédito del cliente en SAP (SP_ESTADO_CREDITO_CLIENTES). */
@@ -22,6 +29,8 @@ export interface PerfilClientePedido {
   condicionPago: string | null;
   listaPrecios: string | null;
   diasVisita: string[];
+  /** false si está inactivo o congelado en SAP: no se le carga pedido. */
+  activo: boolean;
   /** null si no se pudo consultar SAP. */
   credito: CreditoCliente | null;
 }
