@@ -57,6 +57,7 @@ import type {
   DocumentoSap,
   PedidoSap,
 } from './interfaces/pedido-sap.interface';
+import type { CredencialesSap } from './interfaces/service-layer.interface';
 import {
   almacenesDelUsuario,
   armarPedidosSap,
@@ -793,21 +794,27 @@ export class PedidosService {
     return dto.enviarSap ? this.enviarPedido(usuarioId, pedido) : pedido;
   }
 
-  /** Si SAP rechaza un documento, el pedido sigue guardado y vuelve el motivo. */
+  /**
+   * Si SAP rechaza, el pedido sigue guardado y vuelve el motivo. Varias órdenes
+   * (una por almacén) van juntas en un $batch: SAP crea todas o ninguna.
+   */
   private async enviarPedido(
     usuarioId: number,
     pedido: PedidoDetalle,
   ): Promise<PedidoDetalle> {
     const errores = new Map<number, string>();
-    for (const d of pedido.documentos.filter((x) => !x.enviadoSap)) {
-      try {
-        await this.enviarDocumento(usuarioId, d.id);
-      } catch (e) {
-        errores.set(
-          d.id,
-          e instanceof Error ? e.message : 'No se pudo enviar a SAP',
-        );
-      }
+    const motivo = (e: unknown) =>
+      e instanceof Error ? e.message : 'No se pudo enviar a SAP';
+    const pendientes = pedido.documentos
+      .filter((x) => !x.enviadoSap)
+      .map((d) => d.id);
+    try {
+      if (pendientes.length === 1)
+        await this.enviarDocumento(usuarioId, pendientes[0]);
+      else if (pendientes.length) await this.enviarLote(usuarioId, pendientes);
+    } catch (e) {
+      // Todo o nada: si falla, ninguna orden quedó en SAP.
+      for (const id of pendientes) errores.set(id, motivo(e));
     }
     const actual =
       (await this.detalleDonde({ id: pedido.id, usuarioId })) ?? pedido;
@@ -820,8 +827,50 @@ export class PedidosService {
     };
   }
 
-  /** Crea la orden en SAP con los datos de la empresa del usuario. */
-  async enviarDocumento(usuarioId: number, id: number): Promise<DocumentoSap> {
+  /** Órdenes del mismo pedido en un $batch con un solo login: todas o ninguna. */
+  private async enviarLote(usuarioId: number, ids: number[]): Promise<void> {
+    const docs = (
+      await Promise.all(
+        ids.map((id) => this.documentoParaEnviar(usuarioId, id)),
+      )
+    ).filter((d) => !d.documento.enviadoSap);
+    if (!docs.length) return;
+    if (docs.some((d) => this.enviando.has(d.id)))
+      throw new ConflictException('Este pedido ya se está enviando');
+    for (const d of docs) this.enviando.add(d.id);
+    try {
+      const creadas = await this.serviceLayer.crearOrdenes(
+        await this.credencialesSap(docs[0].empresaId),
+        docs.map((d) => d.documento.sap),
+      );
+      await this.marcarEnviados(
+        docs[0].pedidoId,
+        docs.map((d, i) => ({ id: d.id, DocNum: creadas[i]?.DocNum ?? null })),
+      );
+    } finally {
+      for (const d of docs) this.enviando.delete(d.id);
+    }
+  }
+
+  /** Esquema, usuario y contraseña de SAP de la empresa. */
+  private async credencialesSap(empresaId: number): Promise<CredencialesSap> {
+    const empresa = await this.prisma.empresa.findUnique({
+      where: { id: empresaId },
+      select: { sapEsquema: true, sapUsuario: true, sapContrasenia: true },
+    });
+    if (!empresa?.sapEsquema || !empresa.sapUsuario || !empresa.sapContrasenia)
+      throw new BadRequestException(
+        'La empresa no tiene cargados el esquema, usuario y contraseña de SAP',
+      );
+    return {
+      esquema: empresa.sapEsquema,
+      usuario: empresa.sapUsuario,
+      contrasenia: empresa.sapContrasenia,
+    };
+  }
+
+  /** Documento del usuario listo para SAP; rechaza el que tiene líneas sin almacén. */
+  private async documentoParaEnviar(usuarioId: number, id: number) {
     const fila = await this.prisma.campoDocumento.findFirst({
       where: { id, usuarioId },
       select: { ...SELECT_DOCUMENTO, empresaId: true, pedidoId: true },
@@ -829,12 +878,11 @@ export class PedidosService {
     if (!fila) throw new NotFoundException('Documento no encontrado');
     const { empresaId, pedidoId, ...datos } = fila;
     const documento = aDocumento(datos);
-    if (documento.enviadoSap) return documento;
     // Sin almacén SAP podría tomar uno por defecto y descontar de otro depósito.
     const sinAlmacen = documento.sap.DocumentLines.filter(
       (l) => !l.WarehouseCode,
     ).map((l) => l.ItemCode);
-    if (sinAlmacen.length) {
+    if (!documento.enviadoSap && sinAlmacen.length) {
       const productos = await this.prisma.pedidoLinea.findMany({
         where: { pedidoId, itemCode: { in: sinAlmacen } },
         select: { itemCode: true, nombre: true },
@@ -845,48 +893,53 @@ export class PedidosService {
           .join(', ')}. Revisá su almacén por defecto en SAP`,
       );
     }
-    if (this.enviando.has(id))
-      throw new ConflictException('Este documento ya se está enviando');
-    this.enviando.add(id);
-    try {
-      const empresa = await this.prisma.empresa.findUnique({
-        where: { id: empresaId },
-        select: { sapEsquema: true, sapUsuario: true, sapContrasenia: true },
-      });
-      if (
-        !empresa?.sapEsquema ||
-        !empresa.sapUsuario ||
-        !empresa.sapContrasenia
-      )
-        throw new BadRequestException(
-          'La empresa no tiene cargados el esquema, usuario y contraseña de SAP',
-        );
-      const { DocNum = null } = await this.serviceLayer.crearOrden(
-        {
-          esquema: empresa.sapEsquema,
-          usuario: empresa.sapUsuario,
-          contrasenia: empresa.sapContrasenia,
-        },
-        documento.sap,
-      );
-      await this.prisma.$transaction(async (tx) => {
+    return { id, empresaId, pedidoId, documento };
+  }
+
+  /** Marca enviados los documentos y, si no falta ninguno, el pedido pasa a Migrado. */
+  private async marcarEnviados(
+    pedidoId: number,
+    enviados: { id: number; DocNum: number | null }[],
+  ): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      for (const { id, DocNum } of enviados)
         await tx.campoDocumento.update({
           where: { id },
           data: { enviadoSap: true, DocNum },
         });
-        await tx.pedido.updateMany({
-          where: { id: pedidoId, docNumSap: null },
-          data: { docNumSap: DocNum },
-        });
-        const faltan = await tx.campoDocumento.count({
-          where: { pedidoId, enviadoSap: false },
-        });
-        if (!faltan)
-          await tx.pedido.update({
-            where: { id: pedidoId },
-            data: { estado: 'MIGRADO' },
-          });
+      await tx.pedido.updateMany({
+        where: { id: pedidoId, docNumSap: null },
+        data: {
+          docNumSap: enviados.find((e) => e.DocNum !== null)?.DocNum ?? null,
+        },
       });
+      const faltan = await tx.campoDocumento.count({
+        where: { pedidoId, enviadoSap: false },
+      });
+      if (!faltan)
+        await tx.pedido.update({
+          where: { id: pedidoId },
+          data: { estado: 'MIGRADO' },
+        });
+    });
+  }
+
+  /** Crea una orden en SAP con los datos de la empresa del usuario (reenvío suelto). */
+  async enviarDocumento(usuarioId: number, id: number): Promise<DocumentoSap> {
+    const { empresaId, pedidoId, documento } = await this.documentoParaEnviar(
+      usuarioId,
+      id,
+    );
+    if (documento.enviadoSap) return documento;
+    if (this.enviando.has(id))
+      throw new ConflictException('Este documento ya se está enviando');
+    this.enviando.add(id);
+    try {
+      const { DocNum = null } = await this.serviceLayer.crearOrden(
+        await this.credencialesSap(empresaId),
+        documento.sap,
+      );
+      await this.marcarEnviados(pedidoId, [{ id, DocNum }]);
       return { ...documento, enviadoSap: true, docNum: DocNum };
     } finally {
       this.enviando.delete(id);

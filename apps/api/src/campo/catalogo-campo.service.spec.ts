@@ -8,6 +8,7 @@ describe('Catálogo de tareas', () => {
   it('edita el cliente y su dirección principal solo dentro de la empresa del usuario', async () => {
     const tx = {
       socioNegocio: {
+        findFirst: jest.fn().mockResolvedValue(null),
         updateMany: jest
           .fn()
           .mockResolvedValueOnce({ count: 1 })

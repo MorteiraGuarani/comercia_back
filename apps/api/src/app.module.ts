@@ -26,6 +26,7 @@ import { InventarioModule } from './inventario/inventario.module';
 import { UbicacionesModule } from './ubicaciones/ubicaciones.module';
 import { SociosNegocioModule } from './socios-negocio/socios-negocio.module';
 import { PedidosModule } from './pedidos/pedidos.module';
+import { AuditoriaModule } from './common/auditoria/auditoria.module';
 
 const usaBaseProduccion = process.env.COMERCIA_DATABASE_TARGET === 'production';
 
@@ -79,6 +80,7 @@ if (process.env.NODE_ENV !== 'production' && !usaBaseProduccion) {
     IntegracionesUcheckModule,
     PlataformaModule,
     UsuariosModule,
+    AuditoriaModule,
   ],
   controllers: [AppController],
   providers: [

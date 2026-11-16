@@ -1,7 +1,7 @@
 "use client";
 
 import { SkeletonFilas } from "@/components/skeleton";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useId, useRef, useState } from "react";
 import { apiFetch, ApiError } from "@/lib/api";
 import type { OpcionSelector } from "@/types/opcion-selector";
 import type { RespuestaPaginada } from "@/types/paginacion";
@@ -91,6 +91,24 @@ export function SelectorPaginado<TId extends number | string = number>({
         ?.scrollIntoView({ block: "nearest" });
   }, [abierto, activa, listaId]);
 
+  // Si el catálogo tiene una sola opción y no hay nada elegido, queda elegida sola.
+  const elegirUnica = useEffectEvent(
+    (respuesta: RespuestaPaginada<OpcionSelector<TId>>) => {
+      const [unica] = respuesta.items;
+      if (
+        value !== "" ||
+        opcionVacia ||
+        respuesta.total !== 1 ||
+        !unica ||
+        unica.id === excluirId
+      )
+        return;
+      setElegida(unica);
+      onChange(unica.id);
+      onSeleccionar?.(unica);
+    },
+  );
+
   useEffect(() => {
     let vigente = true;
     const controller = new AbortController();
@@ -104,6 +122,7 @@ export function SelectorPaginado<TId extends number | string = number>({
             if (vigente) {
               setDatos(respuesta);
               setError(null);
+              if (!buscando && page === 1) elegirUnica(respuesta);
             }
           })
           .catch((problema) => {

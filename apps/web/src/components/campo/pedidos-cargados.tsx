@@ -38,28 +38,17 @@ function EstadoChip({ pedido }: { pedido: PedidoResumen }) {
   );
 }
 
-// Filtros de la lista: un toque filtra y otro toque en el mismo lo saca.
-const FILTROS_ESTADO: {
-  id: EstadoPedido;
-  nombre: string;
-  apagado: string;
-  activo: string;
-}[] = [
+// Color del chip de estado en la lista.
+const FILTROS_ESTADO: { id: EstadoPedido; apagado: string }[] = [
   {
     id: "MIGRADO",
-    nombre: "Migrado",
     apagado:
       "border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-800/60 dark:bg-sky-950/40 dark:text-sky-200/80",
-    activo:
-      "border-sky-700 bg-sky-700 text-white dark:border-sky-700 dark:bg-sky-800 dark:text-sky-50",
   },
   {
     id: "CARGADO",
-    nombre: "Guardado",
     apagado:
       "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200/80",
-    activo:
-      "border-emerald-700 bg-emerald-700 text-white dark:border-emerald-700 dark:bg-emerald-800 dark:text-emerald-50",
   },
 ];
 
@@ -123,24 +112,22 @@ export function PedidosCargados({
             setPage(1);
           }}
         />
-        <div role="group" aria-label="Estado" className="flex shrink-0 items-center gap-1">
-          {FILTROS_ESTADO.map((e) => (
-            <button
-              key={e.id}
-              type="button"
-              aria-pressed={estado === e.id}
-              onClick={() => {
-                setEstado((actual) => (actual === e.id ? "" : e.id));
-                setPage(1);
-              }}
-              className={`${BOTON_FILTRO_COMPACTO} cursor-pointer whitespace-nowrap rounded-full border font-semibold transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:hover:brightness-125 ${
-                estado === e.id ? e.activo : e.apagado
-              }`}
-            >
+        <select
+          aria-label="Estado"
+          value={estado}
+          onChange={(e) => {
+            setEstado(e.target.value as EstadoPedido | "");
+            setPage(1);
+          }}
+          className={`${BOTON_FILTRO_COMPACTO} min-w-0 shrink-0 cursor-pointer rounded-full border border-line bg-surface-raised font-semibold text-foreground transition hover:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus`}
+        >
+          <option value="">Todos los estados</option>
+          {ESTADOS_PEDIDO.map((e) => (
+            <option key={e.id} value={e.id}>
               {e.nombre}
-            </button>
+            </option>
           ))}
-        </div>
+        </select>
       </div>
       {error ? (
         <p className={errorBox}>{error}</p>

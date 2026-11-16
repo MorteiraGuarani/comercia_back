@@ -564,7 +564,7 @@ export function PedidosPanel() {
               />
             </label>
             <label className={labelBase}>
-              Comentarios
+              Comentario
               <textarea
                 value={observaciones}
                 maxLength={200}
@@ -579,7 +579,7 @@ export function PedidosPanel() {
               title="Guarda el pedido para editarlo y enviarlo después"
               className={`${btnGhost} w-full`}
             >
-              Guardar
+              Guardar Borrador
             </button>
             {error ? <p className={errorBox}>{error}</p> : null}
           </div>

@@ -51,6 +51,7 @@ describe('campo_categoria', () => {
   it('no modifica ni borra categorías de otra empresa', async () => {
     const prisma = {
       categoriaCampo: {
+        findFirst: jest.fn().mockResolvedValue(null),
         updateMany: jest.fn().mockResolvedValue({ count: 0 }),
         deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
       },

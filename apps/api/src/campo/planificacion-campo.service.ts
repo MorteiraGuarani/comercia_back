@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  Optional,
   PayloadTooLargeException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
@@ -31,6 +32,8 @@ import {
 import { Prisma } from '../../generated/prisma/client';
 import { destinatarioCampo, exigirEquipoCampo } from './utils/equipo-campo';
 import { filtroPersonalEquipoOperativo } from './utils/personal-equipo';
+import { AuditoriaService } from '../common/auditoria/auditoria.service';
+import { nombrePersona } from '../common/utils/auditoria';
 
 // Un traspaso corre en una sola transacción: tope para que no la alargue de más.
 const LIMITE_TRASPASO = 500;
@@ -40,6 +43,7 @@ export class PlanificacionCampoService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly acceso: CampoAccesoService,
+    @Optional() private readonly auditoria?: AuditoriaService,
   ) {}
 
   async equipo(usuarioId: number, query: ConsultaCampoDto) {
@@ -118,29 +122,31 @@ export class PlanificacionCampoService {
     await this.acceso.local(u.empresaId, localId);
     const destinatario = destinatarioCampo(u.equipoCampo);
     const equipoCampoId = exigirEquipoCampo(u.equipoCampo).id;
-    if (asignacionId) {
-      const { a } = await this.asignacionDelEquipo(usuarioId, asignacionId);
-      if (a.localId !== localId)
-        throw new NotFoundException('Asignación no disponible');
-    }
+    const a = asignacionId
+      ? (await this.asignacionDelEquipo(usuarioId, asignacionId)).a
+      : null;
+    if (a && a.localId !== localId)
+      throw new NotFoundException('Asignación no disponible');
     const data = { ...dto, ...vigenciaCampo(dto.fechaDesde, dto.fechaHasta) };
     validarHorario(data);
-    return this.prisma.$transaction(async (tx) => {
+    const { horario, anterior } = await this.prisma.$transaction(async (tx) => {
       // Serializa cambios por local y limita el tamaño de los horarios de agenda.
       await tx.$queryRaw`SELECT id FROM tbl_ocrd WHERE empresa_id = ${u.empresaId} AND "CardCode" = ${localId} FOR UPDATE`;
+      const anterior = id
+        ? await tx.horarioCampo.findFirst({
+            where: {
+              id,
+              empresaId: u.empresaId,
+              localId,
+              asignacionId: asignacionId ?? null,
+              destinatario,
+              equipoCampoId,
+              activo: true,
+            },
+            select: HORARIO_CAMPO_SELECT,
+          })
+        : null;
       if (id) {
-        const anterior = await tx.horarioCampo.findFirst({
-          where: {
-            id,
-            empresaId: u.empresaId,
-            localId,
-            asignacionId: asignacionId ?? null,
-            destinatario,
-            equipoCampoId,
-            activo: true,
-          },
-          select: { id: true },
-        });
         if (!anterior) throw new NotFoundException('Horario no disponible');
         // Versionar conserva la referencia y el rango de las visitas históricas.
         await tx.horarioCampo.update({
@@ -187,13 +193,26 @@ export class PlanificacionCampoService {
             select: { clave: true },
           });
       }
-      return horario;
+      return { horario, anterior };
     });
+    // Editar versiona: el horario nuevo reemplaza al anterior (otro id).
+    await this.auditoria?.registrar({
+      accion: anterior ? 'MODIFICAR' : 'CREAR',
+      entidad: 'Horario',
+      entidadId: horario.id,
+      empresaId: u.empresaId,
+      etiqueta: a
+        ? `${nombrePersona(a.usuario)} · local ${localId}`
+        : `Local ${localId}`,
+      antes: anterior,
+      despues: horario,
+    });
+    return horario;
   }
   async eliminarHorario(usuarioId: number, localId: string, id: number) {
     const u = await this.acceso.gestionar(usuarioId, 'locales');
     await this.acceso.local(u.empresaId, localId);
-    const resultado = await this.prisma.horarioCampo.updateMany({
+    const [horario] = await this.prisma.horarioCampo.updateManyAndReturn({
       where: {
         id,
         empresaId: u.empresaId,
@@ -203,8 +222,17 @@ export class PlanificacionCampoService {
         destinatario: destinatarioCampo(u.equipoCampo),
       },
       data: { activo: false },
+      select: HORARIO_CAMPO_SELECT,
     });
-    if (!resultado.count) throw new NotFoundException('Horario no disponible');
+    if (!horario) throw new NotFoundException('Horario no disponible');
+    await this.auditoria?.registrar({
+      accion: 'ELIMINAR',
+      entidad: 'Horario',
+      entidadId: id,
+      empresaId: u.empresaId,
+      etiqueta: `Local ${localId}`,
+      antes: { ...horario, activo: true },
+    });
     return { ok: true };
   }
   async horariosAsignacion(
@@ -246,8 +274,8 @@ export class PlanificacionCampoService {
     asignacionId: number,
     id: number,
   ) {
-    const { u } = await this.asignacionDelEquipo(usuarioId, asignacionId);
-    const resultado = await this.prisma.horarioCampo.updateMany({
+    const { u, a } = await this.asignacionDelEquipo(usuarioId, asignacionId);
+    const [horario] = await this.prisma.horarioCampo.updateManyAndReturn({
       where: {
         id,
         asignacionId,
@@ -256,8 +284,17 @@ export class PlanificacionCampoService {
         activo: true,
       },
       data: { activo: false },
+      select: HORARIO_CAMPO_SELECT,
     });
-    if (!resultado.count) throw new NotFoundException('Horario no disponible');
+    if (!horario) throw new NotFoundException('Horario no disponible');
+    await this.auditoria?.registrar({
+      accion: 'ELIMINAR',
+      entidad: 'Horario',
+      entidadId: id,
+      empresaId: u.empresaId,
+      etiqueta: `${nombrePersona(a.usuario)} · local ${a.localId}`,
+      antes: { ...horario, activo: true },
+    });
     return { ok: true };
   }
   async asignaciones(
@@ -291,7 +328,7 @@ export class PlanificacionCampoService {
     await this.acceso.local(u.empresaId, localId);
     await this.acceso.subordinado(u, dto.usuarioId);
     const fechas = vigenciaCampo(dto.fechaDesde, dto.fechaHasta);
-    return this.prisma.$transaction(async (tx) => {
+    const asignacion = await this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM tbl_ocrd WHERE empresa_id = ${u.empresaId} AND "CardCode" = ${localId} FOR UPDATE`;
       const solapa = await tx.asignacionCampo.count({
         where: {
@@ -320,6 +357,15 @@ export class PlanificacionCampoService {
         select: ASIGNACION_CAMPO_SELECT,
       });
     });
+    await this.auditoria?.registrar({
+      accion: 'ASIGNAR',
+      entidad: 'Asignación',
+      entidadId: asignacion.id,
+      empresaId: u.empresaId,
+      etiqueta: `${nombrePersona(asignacion.usuario)} · local ${localId}`,
+      despues: asignacion,
+    });
+    return asignacion;
   }
   private async asignacionDelEquipo(usuarioId: number, id: number) {
     const u = await this.acceso.gestionar(usuarioId, 'locales');
@@ -337,6 +383,7 @@ export class PlanificacionCampoService {
         usuarioId: true,
         fechaDesde: true,
         fechaHasta: true,
+        usuario: { select: { nombre: true, apellido: true } },
       },
     });
     if (!a) throw new NotFoundException('Asignación no disponible');
@@ -344,7 +391,7 @@ export class PlanificacionCampoService {
   }
   async localPrincipal(usuarioId: number, id: number, principal: boolean) {
     const { u, a, personal } = await this.asignacionDelEquipo(usuarioId, id);
-    return this.prisma.$transaction(
+    const resultado = await this.prisma.$transaction(
       async (tx) => {
         // Validación y escritura en el mismo snapshot que la asignación.
         const actual = await tx.asignacionCampo.findFirst({
@@ -387,10 +434,20 @@ export class PlanificacionCampoService {
       },
       { isolationLevel: 'Serializable' },
     );
+    await this.auditoria?.registrar({
+      accion: 'MODIFICAR',
+      entidad: 'Asignación',
+      entidadId: id,
+      empresaId: u.empresaId,
+      etiqueta: `${nombrePersona(a.usuario)} · local ${a.localId}`,
+      antes: { localPrincipal: !principal },
+      despues: { localPrincipal: principal },
+    });
+    return resultado;
   }
   async quitarAsignacion(usuarioId: number, id: number) {
     const { u, a } = await this.asignacionDelEquipo(usuarioId, id);
-    return this.prisma.$transaction(
+    const resultado = await this.prisma.$transaction(
       async (tx) => {
         await tx.asignacionCampo.update({
           where: { id },
@@ -417,6 +474,16 @@ export class PlanificacionCampoService {
       },
       { isolationLevel: 'Serializable' },
     );
+    await this.auditoria?.registrar({
+      accion: 'QUITAR',
+      entidad: 'Asignación',
+      entidadId: id,
+      empresaId: u.empresaId,
+      etiqueta: `${nombrePersona(a.usuario)} · local ${a.localId}`,
+      antes: { ...a, activo: true },
+      despues: { ...a, activo: false },
+    });
+    return resultado;
   }
   /**
    * Pasa locales de un titular a otro desde una fecha y, con intercambio, también
@@ -443,7 +510,7 @@ export class PlanificacionCampoService {
       OR: [{ fechaHasta: null }, { fechaHasta: { gte: fecha } }],
     };
 
-    return this.prisma.$transaction(
+    const resultado = await this.prisma.$transaction(
       async (tx) => {
         const elegir = async (titularId: number, sel: SeleccionLocalesDto) => {
           if (!sel.todos && !sel.locales.length)
@@ -590,10 +657,30 @@ export class PlanificacionCampoService {
         };
         const pasados = await pasar(ida, dto.origenId, dto.destinoId);
         const intercambiados = await pasar(vuelta, dto.destinoId, dto.origenId);
-        return { pasados, intercambiados, omitidos };
+        return {
+          respuesta: { pasados, intercambiados, omitidos },
+          locales: ida.map((a) => a.localId),
+          localesIntercambio: vuelta.map((a) => a.localId),
+        };
       },
       { isolationLevel: 'Serializable', timeout: 120_000, maxWait: 10_000 },
     );
+    await this.auditoria?.registrar({
+      accion: 'ASIGNAR',
+      entidad: 'Asignación',
+      entidadId: `traspaso ${dto.origenId}→${dto.destinoId}`,
+      empresaId: u.empresaId,
+      etiqueta: `Traspaso de locales desde ${dto.fecha}`,
+      despues: {
+        origenId: dto.origenId,
+        destinoId: dto.destinoId,
+        fecha: dto.fecha,
+        locales: resultado.locales,
+        localesIntercambio: resultado.localesIntercambio,
+        omitidos: resultado.respuesta.omitidos,
+      },
+    });
+    return resultado.respuesta;
   }
   async backups(
     usuarioId: number,
@@ -633,7 +720,7 @@ export class PlanificacionCampoService {
         'El backup debe ser otra persona y estar dentro de la vigencia del titular',
       );
     const hasta = fechas.fechaHasta;
-    return this.prisma.$transaction(async (tx) => {
+    const backup = await this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM campo_asignaciones WHERE id = ${asignacionId} FOR UPDATE`;
       if (
         await tx.backupCampo.count({
@@ -657,14 +744,33 @@ export class PlanificacionCampoService {
         select: BACKUP_CAMPO_SELECT,
       });
     });
+    await this.auditoria?.registrar({
+      accion: 'ASIGNAR',
+      entidad: 'Backup',
+      entidadId: backup.id,
+      empresaId: u.empresaId,
+      etiqueta: `${nombrePersona(backup.usuario)} cubre a ${nombrePersona(a.usuario)} · local ${a.localId}`,
+      despues: backup,
+    });
+    return backup;
   }
   async quitarBackup(usuarioId: number, asignacionId: number, id: number) {
-    await this.asignacionDelEquipo(usuarioId, asignacionId);
-    const resultado = await this.prisma.backupCampo.updateMany({
+    const { u, a } = await this.asignacionDelEquipo(usuarioId, asignacionId);
+    const [backup] = await this.prisma.backupCampo.updateManyAndReturn({
       where: { id, asignacionId },
       data: { activo: false },
+      select: BACKUP_CAMPO_SELECT,
     });
-    if (!resultado.count) throw new NotFoundException('Backup no disponible');
+    if (!backup) throw new NotFoundException('Backup no disponible');
+    await this.auditoria?.registrar({
+      accion: 'QUITAR',
+      entidad: 'Backup',
+      entidadId: id,
+      empresaId: u.empresaId,
+      etiqueta: `${nombrePersona(backup.usuario)} cubría a ${nombrePersona(a.usuario)} · local ${a.localId}`,
+      antes: { ...backup, activo: true },
+      despues: backup,
+    });
     return { ok: true };
   }
 }

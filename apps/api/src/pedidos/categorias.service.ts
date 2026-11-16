@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import type { Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -12,6 +13,7 @@ import type {
   CrearCategoriaDto,
 } from './dto/categoria.dto';
 import type { Categoria, GrupoOitb } from './interfaces/categoria.interface';
+import { AuditoriaService } from '../common/auditoria/auditoria.service';
 
 const SELECT_CATEGORIA = {
   id: true,
@@ -31,7 +33,10 @@ type FilaCategoria = Prisma.CategoriaCampoGetPayload<{
  */
 @Injectable()
 export class CategoriasService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly auditoria?: AuditoriaService,
+  ) {}
 
   private async existeEmpresa(empresaId: number) {
     const empresa = await this.prisma.empresa.findUnique({
@@ -166,6 +171,14 @@ export class CategoriasService {
       },
       select: SELECT_CATEGORIA,
     });
+    await this.auditoria?.registrar({
+      accion: 'CREAR',
+      entidad: 'Categoría',
+      entidadId: creada.id,
+      empresaId,
+      etiqueta: creada.nombre_categoria,
+      despues: creada,
+    });
     return (await this.conGrupo(empresaId, [creada]))[0];
   }
 
@@ -175,6 +188,10 @@ export class CategoriasService {
     dto: ActualizarCategoriaDto,
   ): Promise<Categoria> {
     await this.validarGrupo(empresaId, dto.ItemGroupCode);
+    const antes = await this.prisma.categoriaCampo.findFirst({
+      where: { id, empresaId },
+      select: SELECT_CATEGORIA,
+    });
     // Solo cambia lo enviado; null en ItemGroupCode o Modo los deja vacíos.
     const { count } = await this.prisma.categoriaCampo.updateMany({
       where: { id, empresaId },
@@ -186,14 +203,36 @@ export class CategoriasService {
       },
     });
     if (!count) throw new NotFoundException('Categoría no disponible');
-    return this.obtener(empresaId, id);
+    const despues = await this.obtener(empresaId, id);
+    await this.auditoria?.registrar({
+      accion: 'MODIFICAR',
+      entidad: 'Categoría',
+      entidadId: id,
+      empresaId,
+      etiqueta: despues.nombre_categoria,
+      antes,
+      despues: { ...despues, grupo: undefined },
+    });
+    return despues;
   }
 
   async eliminar(empresaId: number, id: number) {
+    const antes = await this.prisma.categoriaCampo.findFirst({
+      where: { id, empresaId },
+      select: SELECT_CATEGORIA,
+    });
     const { count } = await this.prisma.categoriaCampo.deleteMany({
       where: { id, empresaId },
     });
     if (!count) throw new NotFoundException('Categoría no disponible');
+    await this.auditoria?.registrar({
+      accion: 'ELIMINAR',
+      entidad: 'Categoría',
+      entidadId: id,
+      empresaId,
+      etiqueta: antes?.nombre_categoria,
+      antes,
+    });
     return { ok: true };
   }
 }

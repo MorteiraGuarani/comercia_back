@@ -1,9 +1,10 @@
 import {
   BadRequestException,
   ConflictException,
-  Injectable,
   ForbiddenException,
+  Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import {
   rangoPaginacion,
@@ -40,10 +41,14 @@ const SELECT_ROL_ADMIN = {
 
 import { aRolAdminDto } from './utils/rol-admin';
 import { relanzarDuplicado } from '../common/utils/error-prisma';
+import { AuditoriaService } from '../common/auditoria/auditoria.service';
 
 @Injectable()
 export class RolesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly auditoria?: AuditoriaService,
+  ) {}
 
   private async autorizar(usuarioId: number): Promise<void> {
     const usuario = await this.prisma.usuario.findUnique({
@@ -247,7 +252,16 @@ export class RolesService {
           select: SELECT_ROL_ADMIN,
         });
       });
-      return aRolAdminDto(rol);
+      const resultado = aRolAdminDto(rol);
+      await this.auditoria?.registrar({
+        accion: 'CREAR',
+        entidad: 'Rol',
+        entidadId: rol.id,
+        empresaId: dto.empresaId,
+        etiqueta: rol.descripcion,
+        despues: resultado,
+      });
+      return resultado;
     } catch (error: unknown) {
       relanzarDuplicado(
         error,
@@ -265,11 +279,16 @@ export class RolesService {
     const existente = await this.prisma.rol.findUnique({
       where: { id },
       select: {
-        id: true,
+        ...SELECT_ROL_ADMIN,
         empresaId: true,
         equipoCampoId: true,
-        gestionaTodosEquipos: true,
-        equiposGestion: { select: { equipoCampoId: true } },
+        equiposGestion: {
+          ...SELECT_ROL_ADMIN.equiposGestion,
+          select: {
+            ...SELECT_ROL_ADMIN.equiposGestion.select,
+            equipoCampoId: true,
+          },
+        },
       },
     });
     if (!existente) throw new NotFoundException('El rol no existe');
@@ -329,7 +348,17 @@ export class RolesService {
           select: SELECT_ROL_ADMIN,
         });
       });
-      return aRolAdminDto(rol);
+      const resultado = aRolAdminDto(rol);
+      await this.auditoria?.registrar({
+        accion: 'MODIFICAR',
+        entidad: 'Rol',
+        entidadId: id,
+        empresaId: existente.empresaId,
+        etiqueta: rol.descripcion,
+        antes: aRolAdminDto(existente),
+        despues: resultado,
+      });
+      return resultado;
     } catch (error: unknown) {
       relanzarDuplicado(
         error,
@@ -342,7 +371,12 @@ export class RolesService {
     await this.autorizar(usuarioId);
     const rol = await this.prisma.rol.findUnique({
       where: { id },
-      select: { id: true, _count: { select: { usuarios: true, hijos: true } } },
+      select: {
+        id: true,
+        descripcion: true,
+        empresaId: true,
+        _count: { select: { usuarios: true, hijos: true } },
+      },
     });
     if (!rol) throw new NotFoundException('El rol no existe');
     if (rol._count.usuarios > 0 || rol._count.hijos > 0) {
@@ -360,6 +394,14 @@ export class RolesService {
       );
     }
     await this.prisma.rol.delete({ where: { id } });
+    await this.auditoria?.registrar({
+      accion: 'ELIMINAR',
+      entidad: 'Rol',
+      entidadId: id,
+      empresaId: rol.empresaId,
+      etiqueta: rol.descripcion,
+      antes: rol,
+    });
     return { ok: true };
   }
 }

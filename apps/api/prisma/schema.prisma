@@ -1398,3 +1398,27 @@ model RegistroMarcacionCampo {
   @@index([usuarioId, creadoEn])
   @@map("campo_registro_marcaciones")
 }
+
+// Log de auditoría: altas, cambios y bajas hechas desde el backoffice, con quién
+// (copiado al momento: nombre y rol) y el antes/después de los campos que cambiaron.
+// Sin claves foráneas: el insert nunca falla por una relación. Nunca guarda
+// contraseñas, hashes, tokens ni credenciales (ver common/utils/auditoria.ts).
+model RegistroAuditoria {
+  id            Int      @id @default(autoincrement())
+  creadoEn      DateTime @default(now()) @map("creado_en")
+  usuarioId     Int?     @map("usuario_id")
+  usuarioNombre String?  @map("usuario_nombre") @db.VarChar(200)
+  usuarioRol    String?  @map("usuario_rol") @db.VarChar(120)
+  accion        String   @db.VarChar(10)
+  entidad       String   @db.VarChar(40)
+  entidadId     String   @map("entidad_id") @db.VarChar(80)
+  etiqueta      String?  @db.VarChar(200)
+  empresaId     Int?     @map("empresa_id")
+  cambios       Json
+
+  @@index([creadoEn])
+  @@index([empresaId, creadoEn])
+  @@index([usuarioId, creadoEn])
+  @@index([entidad, entidadId])
+  @@map("auditoria")
+}

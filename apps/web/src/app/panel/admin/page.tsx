@@ -13,8 +13,9 @@ import { ConexionesPanel } from "@/components/admin/conexiones-panel";
 import { LocalesEmpresaPanel } from "@/components/admin/locales-empresa-panel";
 import { CategoriasPanel } from "@/components/admin/categorias-panel";
 import { RegistroMarcacionesPanel } from "@/components/admin/registro-marcaciones-panel";
+import { AuditoriaPanel } from "@/components/admin/auditoria-panel";
 
-type Tab = "usuarios" | "roles" | "empresas" | "modulos" | "conexiones" | "accesos" | "productos" | "locales" | "categorias" | "marcaciones";
+type Tab = "usuarios" | "roles" | "empresas" | "modulos" | "conexiones" | "accesos" | "productos" | "locales" | "categorias" | "marcaciones" | "log";
 
 export default function AdminPage() {
   const router = useRouter();
@@ -69,6 +70,8 @@ export default function AdminPage() {
         </button>
         {/* Admin TI también configura las pestañas de productos de Pedidos. */}
         <button type="button" onClick={() => setTab("categorias")} className={`${tabClase("categorias")} whitespace-nowrap`}>Categorías</button>
+        {/* Quién cambió qué en el backoffice: superadmin y Admin TI. */}
+        <button type="button" onClick={() => setTab("log")} className={`${tabClase("log")} whitespace-nowrap`}>Log</button>
         {usuario.esSuperadmin && <><button
           type="button"
           onClick={() => setTab("empresas")}
@@ -105,6 +108,7 @@ export default function AdminPage() {
         {tab === "productos" && <ProductosPanel />}
         {tab === "locales" && <LocalesEmpresaPanel />}
         {tab === "categorias" && <CategoriasPanel />}
+        {tab === "log" && <AuditoriaPanel />}
         {tab === "marcaciones" && usuario.esSuperadmin && <RegistroMarcacionesPanel />}
       </div>
     </div>

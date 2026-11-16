@@ -4,6 +4,7 @@ import type { PrismaService } from '../prisma/prisma.service';
 import { activosAnd } from '../common/utils/productos-activos';
 import { PedidosService } from './pedidos.service';
 import type { ServiceLayerService } from './service-layer.service';
+import type { PedidoDetalle } from './interfaces/pedido.interface';
 import { aCreditoCliente } from './utils/credito-cliente';
 import { armarLineas, lineaDeGrupo, whereLinea } from './utils/lineas-pedido';
 
@@ -445,7 +446,9 @@ describe('PedidosService.enviarDocumento', () => {
     };
     const tx = {
       campoDocumento: {
-        findFirst: jest.fn().mockResolvedValue(fila),
+        findFirst: jest.fn(({ where }: { where: { id: number } }) =>
+          Promise.resolve({ ...fila, id: where.id }),
+        ),
         update: jest.fn<Promise<unknown>, [unknown]>().mockResolvedValue({}),
         count: jest.fn().mockResolvedValue(0),
       },
@@ -468,18 +471,78 @@ describe('PedidosService.enviarDocumento', () => {
     };
     const prisma = {
       ...tx,
+      pedido: { ...tx.pedido, findFirst: jest.fn().mockResolvedValue(null) },
       $transaction: (f: (cliente: typeof tx) => unknown) => f(tx),
     };
     const crearOrden = jest
       .fn<Promise<unknown>, [unknown, Record<string, unknown>]>()
       .mockResolvedValue({ DocEntry: 9, DocNum: 700 });
+    const crearOrdenes = jest
+      .fn<Promise<unknown>, [unknown, Record<string, unknown>[]]>()
+      .mockImplementation((_c, ordenes) =>
+        Promise.resolve(ordenes.map((_o, i) => ({ DocNum: 700 + i }))),
+      );
     const servicio = new PedidosService(
       prisma as unknown as PrismaService,
       { get: () => undefined } as unknown as ConfigService,
-      { crearOrden } as unknown as ServiceLayerService,
+      { crearOrden, crearOrdenes } as unknown as ServiceLayerService,
     );
-    return { tx, crearOrden, servicio };
+    return { tx, crearOrden, crearOrdenes, servicio };
   }
+
+  const pedidoCon = (...ids: number[]) =>
+    ({
+      id: 12,
+      documentos: ids.map((id) => ({ id, enviadoSap: false })),
+    }) as unknown as PedidoDetalle;
+  const enviarPedido = (s: PedidosService, p: PedidoDetalle) =>
+    (
+      s as unknown as {
+        enviarPedido: (u: number, p: PedidoDetalle) => Promise<PedidoDetalle>;
+      }
+    ).enviarPedido(7, p);
+
+  it('manda las órdenes del pedido juntas en un $batch con un solo login', async () => {
+    const { tx, crearOrden, crearOrdenes, servicio } = preparar();
+    const p = await enviarPedido(servicio, pedidoCon(41, 42, 43));
+    expect(crearOrden).not.toHaveBeenCalled();
+    expect(crearOrdenes).toHaveBeenCalledTimes(1);
+    expect(crearOrdenes.mock.calls[0][0]).toEqual({
+      esquema: 'FG_DESARROLLO',
+      usuario: 'comercia',
+      contrasenia: 'clave',
+    });
+    expect(crearOrdenes.mock.calls[0][1]).toHaveLength(3);
+    // Cada documento queda con el DocNum de su posición en el lote.
+    expect(tx.campoDocumento.update.mock.calls.map(([a]) => a)).toEqual([
+      { where: { id: 41 }, data: { enviadoSap: true, DocNum: 700 } },
+      { where: { id: 42 }, data: { enviadoSap: true, DocNum: 701 } },
+      { where: { id: 43 }, data: { enviadoSap: true, DocNum: 702 } },
+    ]);
+    expect(tx.pedido.update).toHaveBeenCalledWith({
+      where: { id: 12 },
+      data: { estado: 'MIGRADO' },
+    });
+    expect(p.documentos.every((d) => !d.errorSap)).toBe(true);
+  });
+
+  it('si SAP rechaza el lote, no queda ninguna enviada y todas tienen el motivo', async () => {
+    const { tx, crearOrdenes, servicio } = preparar();
+    crearOrdenes.mockRejectedValue(new Error('SAP: Invalid item'));
+    const p = await enviarPedido(servicio, pedidoCon(41, 42));
+    expect(tx.campoDocumento.update).not.toHaveBeenCalled();
+    expect(p.documentos.map((d) => d.errorSap)).toEqual([
+      'SAP: Invalid item',
+      'SAP: Invalid item',
+    ]);
+  });
+
+  it('con una sola orden usa el envío suelto', async () => {
+    const { crearOrden, crearOrdenes, servicio } = preparar();
+    await enviarPedido(servicio, pedidoCon(41));
+    expect(crearOrden).toHaveBeenCalledTimes(1);
+    expect(crearOrdenes).not.toHaveBeenCalled();
+  });
 
   it('usa los datos de la empresa y lo marca enviado con su número', async () => {
     const { tx, crearOrden, servicio } = preparar();

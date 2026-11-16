@@ -88,12 +88,11 @@ function contexto(rol: string, equipo: DestinatarioTareaCampo) {
       findMany: jest
         .fn()
         .mockResolvedValue([{ id: 5, localId: 20, destinatario: equipo }]),
-      updateMany: jest
+      updateManyAndReturn: jest
         .fn()
         .mockImplementation(
-          ({ where }: { where: { destinatario?: string } }) => ({
-            count: where.destinatario === equipo ? 0 : 1,
-          }),
+          ({ where }: { where: { destinatario?: string } }) =>
+            where.destinatario === equipo ? [] : [{ id: 90 }],
         ),
     },
     $transaction: jest

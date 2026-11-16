@@ -22,11 +22,69 @@ export class ServiceLayerService {
 
   constructor(private readonly config: ConfigService) {}
 
-  // shortcut: el gateway no busca órdenes por U_beas_version; si se corta la respuesta del POST, reintentar puede duplicar. Agregar esa consulta al gateway si pasa.
-  async crearOrden(
+  /** Una orden con su propia sesión. */
+  crearOrden(
     credenciales: CredencialesSap,
     orden: PedidoSap,
   ): Promise<OrdenSapCreada> {
+    return this.conSesion(credenciales, async (sesion) => {
+      const desde = Date.now();
+      const creada = await this.pedir<OrdenSapCreada>(
+        '/document/create',
+        sesion,
+        {
+          document: 'Orders',
+          // Opcionales en el gateway actual; se mandan para uno sin actualizar.
+          schema: 'PL_SERVICES',
+          layout: 'layout_orden',
+          data: orden,
+        },
+      );
+      this.logger.log(
+        `Orden ${creada.DocNum ?? '?'} creada en SAP en ${Date.now() - desde} ms`,
+      );
+      return creada;
+    });
+  }
+
+  /**
+   * Varias órdenes con un solo login, en un $batch del gateway: SAP crea todas
+   * o ninguna. Devuelve lo creado en el mismo orden.
+   */
+  async crearOrdenes(
+    credenciales: CredencialesSap,
+    ordenes: PedidoSap[],
+  ): Promise<OrdenSapCreada[]> {
+    if (ordenes.length === 1)
+      return [await this.crearOrden(credenciales, ordenes[0])];
+    return this.conSesion(credenciales, async (sesion) => {
+      const desde = Date.now();
+      const creadas = await this.pedir<OrdenSapCreada[]>(
+        '/document/batch',
+        sesion,
+        { document: 'Orders', data: ordenes },
+      );
+      if (!Array.isArray(creadas) || creadas.length !== ordenes.length) {
+        this.logger.error(
+          `POST /document/batch: se esperaban ${ordenes.length} órdenes y llegó otra respuesta`,
+        );
+        throw new UnprocessableEntityException(
+          'SAP respondió el lote de forma inesperada. Revisá en SAP si las órdenes se crearon antes de reenviar',
+        );
+      }
+      this.logger.log(
+        `${ordenes.length} órdenes (${creadas.map((c) => c.DocNum ?? '?').join(', ')}) creadas en SAP en un $batch en ${Date.now() - desde} ms`,
+      );
+      return creadas;
+    });
+  }
+
+  // shortcut: el gateway no busca órdenes por U_beas_version; si se corta la respuesta del POST, reintentar puede duplicar. Agregar esa consulta al gateway si pasa.
+  private async conSesion<T>(
+    credenciales: CredencialesSap,
+    usar: (sesion: string) => Promise<T>,
+  ): Promise<T> {
+    const inicio = Date.now();
     const { sessionId } = await this.pedir<SesionSap>(
       '/auth/login',
       undefined,
@@ -36,14 +94,9 @@ export class ServiceLayerService {
         Password: credenciales.contrasenia,
       },
     );
+    this.logger.log(`Login SAP en ${Date.now() - inicio} ms`);
     try {
-      return await this.pedir<OrdenSapCreada>('/document/create', sessionId, {
-        document: 'Orders',
-        // El gateway exige estos dos y solo comprueba que su tabla de layouts exista.
-        schema: 'PL_SERVICES',
-        layout: 'layout_orden',
-        data: orden,
-      });
+      return await usar(sessionId);
     } finally {
       await this.pedir('/auth/logout', sessionId).catch(() => undefined);
     }

@@ -1,9 +1,10 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
-  ConflictException,
+  Optional,
   PayloadTooLargeException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
@@ -41,6 +42,7 @@ import { obtenerColaboradoresGestionados } from './utils/autorizacion';
 import type { UsuarioConAcceso } from '../plataforma/interfaces/usuario-con-acceso.interface';
 import { CrearLocalCampoDto, EditarLocalCampoDto } from './dto/crear-local.dto';
 import { relanzarDuplicado } from '../common/utils/error-prisma';
+import { AuditoriaService } from '../common/auditoria/auditoria.service';
 
 // "Más cercanos" ordena todo el alcance en memoria antes de paginar; un
 // supervisor tiene decenas de locales, nunca miles.
@@ -51,6 +53,7 @@ export class CatalogoCampoService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly acceso: CampoAccesoService,
+    @Optional() private readonly auditoria?: AuditoriaService,
   ) {}
 
   private async alcanceItinerario(u: UsuarioConAcceso, hoy: Date) {
@@ -359,7 +362,7 @@ export class CatalogoCampoService {
     };
     const direccion = { address: dto.Address ?? '', street: dto.Street ?? '' };
     try {
-      return await this.prisma.$transaction(async (tx) => {
+      const creado = await this.prisma.$transaction(async (tx) => {
         const local = await tx.socioNegocio.create({
           data: {
             empresaId: u.empresaId,
@@ -385,6 +388,15 @@ export class CatalogoCampoService {
         }
         return aClientePdv(local, direccion);
       });
+      await this.auditoria?.registrar({
+        accion: 'CREAR',
+        entidad: 'Local',
+        entidadId: dto.CardCode,
+        empresaId: u.empresaId,
+        etiqueta: dto.CardName,
+        despues: creado,
+      });
+      return creado;
     } catch (error: unknown) {
       relanzarDuplicado(
         error,
@@ -407,7 +419,11 @@ export class CatalogoCampoService {
     const direccion = { address: dto.Address ?? '', street: dto.Street ?? '' };
     const delCliente = { empresaId: u.empresaId, CardCode: id };
     try {
-      return await this.prisma.$transaction(async (tx) => {
+      const { antes, despues } = await this.prisma.$transaction(async (tx) => {
+        const previo = await tx.socioNegocio.findFirst({
+          where: delCliente,
+          select: CLIENTE_OCRD_SELECT,
+        });
         const { count } = await tx.socioNegocio.updateMany({
           where: delCliente,
           data: {
@@ -422,12 +438,12 @@ export class CatalogoCampoService {
           (await tx.socioNegocioDireccion.findFirst({
             where: { ...delCliente, AdresType: 'S' },
             orderBy: { id: 'asc' },
-            select: { id: true },
+            select: { id: true, Address: true, Street: true },
           })) ??
           (await tx.socioNegocioDireccion.findFirst({
             where: delCliente,
             orderBy: { id: 'asc' },
-            select: { id: true },
+            select: { id: true, Address: true, Street: true },
           }));
         const datos = {
           Address: direccion.address || null,
@@ -444,14 +460,32 @@ export class CatalogoCampoService {
             data: { ...delCliente, ...datos, AdresType: 'S' },
             select: { id: true },
           });
-        return aClientePdv(
-          await tx.socioNegocio.findFirstOrThrow({
-            where: delCliente,
-            select: CLIENTE_OCRD_SELECT,
-          }),
-          direccion,
-        );
+        return {
+          antes:
+            previo &&
+            aClientePdv(previo, {
+              address: actual?.Address ?? '',
+              street: actual?.Street ?? '',
+            }),
+          despues: aClientePdv(
+            await tx.socioNegocio.findFirstOrThrow({
+              where: delCliente,
+              select: CLIENTE_OCRD_SELECT,
+            }),
+            direccion,
+          ),
+        };
       });
+      await this.auditoria?.registrar({
+        accion: 'MODIFICAR',
+        entidad: 'Local',
+        entidadId: id,
+        empresaId: u.empresaId,
+        etiqueta: despues.nombre,
+        antes,
+        despues,
+      });
+      return despues;
     } catch (error: unknown) {
       relanzarDuplicado(error, 'Esa dirección ya está cargada en el cliente');
     }
@@ -562,14 +596,18 @@ export class CatalogoCampoService {
       ...fechas,
     };
     // Las tareas globales se resuelven al consultar: incluyen también locales futuros.
-    return this.prisma.$transaction(async (tx) => {
+    const { tarea, antes } = await this.prisma.$transaction(async (tx) => {
+      let antes: Prisma.TareaCampoGetPayload<{
+        select: typeof TAREA_CAMPO_SELECT;
+      }> | null = null;
       if (id) {
         await tx.$queryRaw`SELECT id FROM campo_tareas WHERE id = ${id} FOR UPDATE`;
         const actual = await tx.tareaCampo.findFirst({
           where: { id, empresaId: u.empresaId, equipoCampoId },
-          select: { archivadaEn: true, version: true },
+          select: TAREA_CAMPO_SELECT,
         });
         if (!actual) throw new NotFoundException('Tarea no disponible');
+        antes = actual;
         if (actual.archivadaEn)
           throw new BadRequestException(
             'Las tareas archivadas conservan su historial y no se editan',
@@ -608,8 +646,18 @@ export class CatalogoCampoService {
           contenido: detalleTarea({ ...guardada, localIds: dto.localIds }),
         },
       });
-      return conLocalesTarea(guardada);
+      return { tarea: guardada, antes };
     });
+    await this.auditoria?.registrar({
+      accion: antes ? 'MODIFICAR' : 'CREAR',
+      entidad: 'Tarea',
+      entidadId: tarea.id,
+      empresaId: u.empresaId,
+      etiqueta: tarea.nombre,
+      antes,
+      despues: tarea,
+    });
+    return conLocalesTarea(tarea);
   }
   async eliminarTarea(usuarioId: number, id: number) {
     const u = await this.acceso.gestionar(usuarioId, 'tareas');
@@ -621,10 +669,10 @@ export class CatalogoCampoService {
         equipoCampoId: exigirEquipoCampo(u.equipoCampo).id,
         destinatario: destinatarioCampo(u.equipoCampo),
       },
-      select: { id: true },
+      select: { id: true, nombre: true },
     });
     if (!tarea) throw new NotFoundException('Tarea no disponible');
-    await this.prisma.$transaction(async (tx) => {
+    const archivada = await this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM campo_tareas WHERE id = ${id} FOR UPDATE`;
       const actual = await tx.tareaCampo.findFirst({
         where: {
@@ -635,7 +683,7 @@ export class CatalogoCampoService {
         select: { archivadaEn: true },
       });
       if (!actual) throw new NotFoundException('Tarea no disponible');
-      if (actual.archivadaEn) return;
+      if (actual.archivadaEn) return false;
       const archivada = await tx.tareaCampo.update({
         where: { id },
         data: {
@@ -653,7 +701,18 @@ export class CatalogoCampoService {
           contenido: detalleTarea(archivada),
         },
       });
+      return true;
     });
+    if (archivada)
+      await this.auditoria?.registrar({
+        accion: 'ELIMINAR',
+        entidad: 'Tarea',
+        entidadId: id,
+        empresaId: u.empresaId,
+        etiqueta: tarea.nombre,
+        antes: { activo: true, archivada: false },
+        despues: { activo: false, archivada: true },
+      });
     return { ok: true };
   }
 

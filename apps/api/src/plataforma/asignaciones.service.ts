@@ -2,14 +2,19 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AsignarModuloDto } from './dto/asignacion.dto';
 import type { AsignacionEmpresaDto } from './interfaces/asignacion.interface';
+import { AuditoriaService } from '../common/auditoria/auditoria.service';
 
 @Injectable()
 export class AsignacionesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly auditoria?: AuditoriaService,
+  ) {}
 
   // Qué módulos/páginas/roles tiene habilitados una empresa (para pintar el ABM)
   async deEmpresa(empresaId: number): Promise<AsignacionEmpresaDto> {
@@ -50,7 +55,7 @@ export class AsignacionesService {
       }),
       this.prisma.modulo.findUnique({
         where: { id: dto.moduloId },
-        select: { id: true },
+        select: { id: true, nombre: true },
       }),
     ]);
     if (!empresa) {
@@ -101,6 +106,9 @@ export class AsignacionesService {
       }
     }
 
+    const delModulo = (a: AsignacionEmpresaDto) =>
+      a.modulos.find((m) => m.moduloId === dto.moduloId) ?? null;
+    const antes = delModulo(await this.deEmpresa(dto.empresaId));
     await this.prisma.$transaction(async (tx) => {
       await tx.empresaModulo.upsert({
         where: {
@@ -138,7 +146,17 @@ export class AsignacionesService {
       }
     });
 
-    return this.deEmpresa(dto.empresaId);
+    const resultado = await this.deEmpresa(dto.empresaId);
+    await this.auditoria?.registrar({
+      accion: antes ? 'MODIFICAR' : 'ASIGNAR',
+      entidad: 'Acceso por empresa',
+      entidadId: `${dto.empresaId}:${dto.moduloId}`,
+      empresaId: dto.empresaId,
+      etiqueta: modulo.nombre,
+      antes,
+      despues: delModulo(resultado),
+    });
+    return resultado;
   }
 
   // Quita un módulo de una empresa (y sus páginas específicas)
@@ -148,6 +166,7 @@ export class AsignacionesService {
   ): Promise<AsignacionEmpresaDto> {
     const existe = await this.prisma.empresaModulo.findUnique({
       where: { empresaId_moduloId: { empresaId, moduloId } },
+      include: { modulo: { select: { nombre: true } } },
     });
     if (!existe) {
       throw new NotFoundException('La empresa no tiene ese módulo habilitado');
@@ -167,6 +186,18 @@ export class AsignacionesService {
         where: { empresaId_moduloId: { empresaId, moduloId } },
       }),
     ]);
+    await this.auditoria?.registrar({
+      accion: 'QUITAR',
+      entidad: 'Acceso por empresa',
+      entidadId: `${empresaId}:${moduloId}`,
+      empresaId,
+      etiqueta: existe.modulo.nombre,
+      antes: {
+        moduloId,
+        todasLasPaginas: existe.todasLasPaginas,
+        rolIds: existe.rolIds,
+      },
+    });
     return this.deEmpresa(empresaId);
   }
 }

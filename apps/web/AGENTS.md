@@ -37,6 +37,11 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Mantener el ID y nombre seleccionados aunque no estén en los resultados
   actuales. Mostrar carga, errores con reintento y búsqueda sin resultados.
   La búsqueda no debe bloquear la escritura ni enviar el formulario con Enter.
+- **Única opción = elegida por defecto (OBLIGATORIO en todas las pantallas)**:
+  si un selector tiene una sola opción posible (p. ej. una sola empresa) y no
+  hay nada elegido, queda seleccionada sola; el usuario no debe tener que
+  elegirla. `SelectorPaginado` ya lo hace (salvo con `opcionVacia`, como
+  «Todos»); un select o combobox propio debe hacer lo mismo.
 - Reservar selects sin buscador para conjuntos pequeños y acotados, como
   estados o días de la semana. No activar búsqueda en endpoints que no la soporten.
 

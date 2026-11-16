@@ -64,6 +64,46 @@ describe('ServiceLayerService', () => {
     ]);
   });
 
+  it('varias órdenes van en un solo $batch con un login y un logout', async () => {
+    const fetchMock = jest
+      .spyOn(global, 'fetch')
+      .mockResolvedValueOnce(respuesta(200, { sessionId: 'S1' }))
+      .mockResolvedValueOnce(
+        respuesta(201, [
+          { DocEntry: 9, DocNum: 700 },
+          { DocEntry: 10, DocNum: 701 },
+        ]),
+      )
+      .mockResolvedValueOnce(respuesta(200, {}));
+    const otra = { CardCode: 'C2' } as PedidoSap;
+    await expect(
+      servicio.crearOrdenes(credenciales, [orden, otra]),
+    ).resolves.toEqual([
+      { DocEntry: 9, DocNum: 700 },
+      { DocEntry: 10, DocNum: 701 },
+    ]);
+    expect(llamadas(fetchMock).slice(1)).toEqual([
+      {
+        url: 'http://sap.test/document/batch',
+        sesion: 'S1',
+        cuerpo: { document: 'Orders', data: [orden, otra] },
+      },
+      { url: 'http://sap.test/auth/logout', sesion: 'S1', cuerpo: null },
+    ]);
+  });
+
+  it('una respuesta del lote que no coincide es un error y cierra la sesión', async () => {
+    const fetchMock = jest
+      .spyOn(global, 'fetch')
+      .mockResolvedValueOnce(respuesta(200, { sessionId: 'S1' }))
+      .mockResolvedValueOnce(respuesta(201, [{ DocNum: 700 }]))
+      .mockResolvedValueOnce(respuesta(200, {}));
+    await expect(
+      servicio.crearOrdenes(credenciales, [orden, orden]),
+    ).rejects.toThrow('Revisá en SAP');
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
   it('devuelve el motivo de SAP y cierra la sesión igual', async () => {
     const fetchMock = jest
       .spyOn(global, 'fetch')

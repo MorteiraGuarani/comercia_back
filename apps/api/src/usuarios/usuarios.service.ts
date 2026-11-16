@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  Optional,
   UnauthorizedException,
 } from '@nestjs/common';
 import { randomBytes } from 'node:crypto';
@@ -62,6 +63,8 @@ import { filtroLocales, nombreLocal } from '../campo/utils/local-ocrd';
 import { UcheckUsuariosService } from './ucheck-usuarios.service';
 import { programasUcheck } from './utils/programas-ucheck';
 import { MAX_INT4, MIN_INT4 } from '../common/utils/numeros';
+import { AuditoriaService } from '../common/auditoria/auditoria.service';
+import { nombrePersona } from '../common/utils/auditoria';
 
 const SELECT_USUARIO_ADMIN = {
   id: true,
@@ -200,6 +203,7 @@ export class UsuariosService {
     private readonly auth: AuthService,
     private readonly plataforma: AccesoPlataformaService,
     private readonly ucheckUsuarios: UcheckUsuariosService,
+    @Optional() private readonly auditoria?: AuditoriaService,
   ) {}
 
   private async contexto(usuarioId: number): Promise<ContextoAdmin> {
@@ -624,7 +628,13 @@ export class UsuariosService {
         ...(actual.accesoGlobal ? {} : { empresaId: actual.empresaId }),
         esSuperadmin: false,
       },
-      select: { id: true, empresaId: true, isActive: true },
+      select: {
+        id: true,
+        empresaId: true,
+        isActive: true,
+        nombre: true,
+        apellido: true,
+      },
     });
     if (!objetivo) throw new NotFoundException('El usuario no existe');
     return { actual, objetivo };
@@ -719,13 +729,22 @@ export class UsuariosService {
         local: { select: { CardCode: true, CardName: true } },
       },
     });
-    return {
+    const resultado = {
       id: asignacion.id,
       localId: asignacion.localId,
       nombreLocal: nombreLocal(asignacion.local),
       fechaDesde: asignacion.fechaDesde.toISOString(),
       fechaHasta: asignacion.fechaHasta?.toISOString() ?? null,
     };
+    await this.auditoria?.registrar({
+      accion: 'ASIGNAR',
+      entidad: 'Asignación',
+      entidadId: asignacion.id,
+      empresaId: objetivo.empresaId,
+      etiqueta: `${nombrePersona(objetivo)} · ${resultado.nombreLocal}`,
+      despues: { usuarioId: objetivoId, ...resultado },
+    });
+    return resultado;
   }
 
   async quitarLocal(
@@ -733,13 +752,22 @@ export class UsuariosService {
     objetivoId: number,
     asignacionId: number,
   ) {
-    await this.objetivoAsignable(usuarioId, objetivoId);
+    const { objetivo } = await this.objetivoAsignable(usuarioId, objetivoId);
     const resultado = await this.prisma.asignacionCampo.updateMany({
       where: { id: asignacionId, usuarioId: objetivoId, activo: true },
       data: { activo: false },
     });
     if (!resultado.count)
       throw new NotFoundException('La asignación no existe');
+    await this.auditoria?.registrar({
+      accion: 'QUITAR',
+      entidad: 'Asignación',
+      entidadId: asignacionId,
+      empresaId: objetivo.empresaId,
+      etiqueta: nombrePersona(objetivo),
+      antes: { usuarioId: objetivoId, activo: true },
+      despues: { usuarioId: objetivoId, activo: false },
+    });
     return { ok: true };
   }
 
@@ -915,7 +943,16 @@ export class UsuariosService {
       select: SELECT_USUARIO_ADMIN,
     });
     if (!usuario) throw new NotFoundException('El usuario no existe');
-    return (await this.aUsuariosDto([usuario]))[0];
+    const resultado = (await this.aUsuariosDto([usuario]))[0];
+    await this.auditoria?.registrar({
+      accion: 'CREAR',
+      entidad: 'Usuario',
+      entidadId: resultado.id,
+      empresaId,
+      etiqueta: nombrePersona(resultado),
+      despues: usuario,
+    });
+    return resultado;
   }
 
   async actualizar(
@@ -946,12 +983,10 @@ export class UsuariosService {
     const objetivo = await this.prisma.usuario.findUnique({
       where: { id },
       select: {
+        ...SELECT_USUARIO_ADMIN,
         empresaId: true,
         rolId: true,
         superiorId: true,
-        esSuperadmin: true,
-        correo: true,
-        programasUcheck: true,
         identidadUcheck: { select: { ucheckUsuarioId: true } },
       },
     });
@@ -1059,6 +1094,18 @@ export class UsuariosService {
           ? objetivo.identidadUcheck?.ucheckUsuarioId
           : undefined,
         programas,
+      });
+      await this.auditoria?.registrar({
+        accion: 'MODIFICAR',
+        entidad: 'Usuario',
+        entidadId: id,
+        empresaId: objetivo.empresaId,
+        etiqueta: nombrePersona(usuario),
+        antes: objetivo,
+        despues: {
+          ...usuario,
+          ...(programas ? { programasUcheck: programas } : {}),
+        },
       });
       return {
         ...(await this.aUsuariosDto([usuario]))[0],
@@ -1218,6 +1265,9 @@ export class UsuariosService {
         id: true,
         empresaId: true,
         esSuperadmin: true,
+        nombre: true,
+        apellido: true,
+        isActive: true,
         rol: { select: { esAdminTi: true } },
       },
     });
@@ -1235,6 +1285,16 @@ export class UsuariosService {
       select: { id: true },
     });
     await this.ucheckUsuarios.marcar(id);
+    // La baja es lógica: queda como el paso de activo a inactivo.
+    await this.auditoria?.registrar({
+      accion: 'ELIMINAR',
+      entidad: 'Usuario',
+      entidadId: id,
+      empresaId: objetivo.empresaId,
+      etiqueta: nombrePersona(objetivo),
+      antes: objetivo,
+      despues: { isActive: false },
+    });
     return { ok: true };
   }
 }

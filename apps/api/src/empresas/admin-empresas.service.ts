@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import {
   rangoPaginacion,
@@ -20,6 +21,7 @@ import type {
 } from './interfaces/empresa-admin.interface';
 import { esEmpresaJerarquiaFila } from './utils/empresa-jerarquia';
 import { relanzarDuplicado } from '../common/utils/error-prisma';
+import { AuditoriaService } from '../common/auditoria/auditoria.service';
 
 const SELECT_EMPRESA_ADMIN = {
   id: true,
@@ -59,7 +61,10 @@ function aEmpresaAdminDto(empresa: EmpresaAdminFila): EmpresaAdminDto {
 
 @Injectable()
 export class AdminEmpresasService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly auditoria?: AuditoriaService,
+  ) {}
 
   async listar(
     query: PaginacionDto,
@@ -128,7 +133,16 @@ export class AdminEmpresasService {
         },
         select: SELECT_EMPRESA_ADMIN,
       });
-      return aEmpresaAdminDto(empresa);
+      const resultado = aEmpresaAdminDto(empresa);
+      await this.auditoria?.registrar({
+        accion: 'CREAR',
+        entidad: 'Empresa',
+        entidadId: empresa.id,
+        empresaId: empresa.id,
+        etiqueta: empresa.nombre,
+        despues: resultado,
+      });
+      return resultado;
     } catch (error: unknown) {
       relanzarDuplicado(error, 'Ya existe una empresa con ese nombre');
     }
@@ -140,7 +154,7 @@ export class AdminEmpresasService {
   ): Promise<EmpresaAdminDto> {
     const existente = await this.prisma.empresa.findUnique({
       where: { id },
-      select: { id: true },
+      select: SELECT_EMPRESA_ADMIN,
     });
     if (!existente) throw new NotFoundException('La empresa no existe');
     await this.validarPadre(dto.empresaId, id);
@@ -160,7 +174,17 @@ export class AdminEmpresasService {
         },
         select: SELECT_EMPRESA_ADMIN,
       });
-      return aEmpresaAdminDto(empresa);
+      const resultado = aEmpresaAdminDto(empresa);
+      await this.auditoria?.registrar({
+        accion: 'MODIFICAR',
+        entidad: 'Empresa',
+        entidadId: id,
+        empresaId: id,
+        etiqueta: empresa.nombre,
+        antes: aEmpresaAdminDto(existente),
+        despues: resultado,
+      });
+      return resultado;
     } catch (error: unknown) {
       relanzarDuplicado(error, 'Ya existe una empresa con ese nombre');
     }
@@ -171,6 +195,7 @@ export class AdminEmpresasService {
       where: { id },
       select: {
         id: true,
+        nombre: true,
         _count: {
           select: {
             roles: true,
@@ -193,6 +218,14 @@ export class AdminEmpresasService {
       );
     }
     await this.prisma.empresa.delete({ where: { id } });
+    await this.auditoria?.registrar({
+      accion: 'ELIMINAR',
+      entidad: 'Empresa',
+      entidadId: id,
+      empresaId: id,
+      etiqueta: empresa.nombre,
+      antes: { id, nombre: empresa.nombre },
+    });
     return { ok: true };
   }
 }
