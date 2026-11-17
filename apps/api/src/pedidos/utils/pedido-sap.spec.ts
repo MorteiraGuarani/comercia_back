@@ -2,7 +2,12 @@ import type {
   AlmacenSap,
   DatosPedidoSap,
 } from '../interfaces/pedido-sap.interface';
-import { armarPedidosSap, conIdDocumento, whereVendedor } from './pedido-sap';
+import {
+  armarPedidosSap,
+  conIdDocumento,
+  vendedorDe,
+  whereCartera,
+} from './pedido-sap';
 
 const almacen = (
   WarehouseCode: string,
@@ -144,13 +149,23 @@ describe('armarPedidosSap', () => {
   });
 });
 
-describe('whereVendedor', () => {
-  it('filtra la cartera por SlpCode; sin código no filtra', () => {
-    expect(whereVendedor('220')).toEqual({ SlpCode: 220 });
-    expect(whereVendedor(' 220 ')).toEqual({ SlpCode: 220 });
-    expect(whereVendedor(null)).toEqual({});
-    expect(whereVendedor('  ')).toEqual({});
+describe('whereCartera', () => {
+  it('une los SlpCode de la cadena sin repetir; sin ningún código no filtra', () => {
+    expect(whereCartera(['220'])).toEqual({ SlpCode: { in: [220] } });
+    // Supervisor, repositores y jefes de cualquier nivel: cada cliente una vez.
+    expect(whereCartera([' 220 ', null, '330', '220', ''])).toEqual({
+      SlpCode: { in: [220, 330] },
+    });
+    expect(whereCartera([null, '  '])).toEqual({});
     // Un código viejo no numérico no habilita clientes ajenos.
-    expect(whereVendedor('REP01')).toEqual({ SlpCode: -2 });
+    expect(whereCartera(['REP01'])).toEqual({ SlpCode: { in: [] } });
+  });
+
+  it('el vendedor del cliente es el de su SlpCode', () => {
+    const yo = { ERP_CodUsuarioSap: null as string | null, canal: '1' };
+    const repositor = { ERP_CodUsuarioSap: '330', canal: '2' };
+    expect(vendedorDe([yo, repositor], 330)).toBe(repositor);
+    expect(vendedorDe([yo, repositor], 999)).toBeUndefined();
+    expect(vendedorDe([yo, repositor], null)).toBeUndefined();
   });
 });

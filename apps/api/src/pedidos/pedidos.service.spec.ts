@@ -66,6 +66,7 @@ describe('lineas de pedido', () => {
 describe('PedidosService.copiar', () => {
   const prisma = {
     usuario: {
+      findMany: jest.fn().mockResolvedValue([]),
       findUnique: jest.fn().mockResolvedValue({
         empresaId: 2,
         nombreLogin: 'vendedor',
@@ -141,7 +142,81 @@ describe('PedidosService.copiar', () => {
     expect(prisma.socioNegocio.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- matcher de jest
-        where: expect.objectContaining({ CardCode: 'C0001', SlpCode: 220 }),
+        where: expect.objectContaining({
+          CardCode: 'C0001',
+          SlpCode: { in: [220] },
+        }),
+      }),
+    );
+  });
+});
+
+describe('PedidosService con organigrama', () => {
+  // Jefe (7, sin código ni canal) → supervisor (8, 220, canal 1) → repositor (9, 330, canal 2).
+  const usuario = {
+    findUnique: jest.fn().mockResolvedValue({
+      id: 7,
+      empresaId: 2,
+      nombreLogin: 'jefe',
+      celular: null,
+      ERP_Sucursal: null,
+      ERP_CanalVenta: null,
+      ERP_CodUsuarioSap: null,
+    }),
+    findMany: jest.fn(
+      ({ where }: { where: { superiorId?: { in: number[] } } }) => {
+        const nivel = where.superiorId?.in[0];
+        if (nivel === 7) return Promise.resolve([{ id: 8 }]);
+        if (nivel === 8) return Promise.resolve([{ id: 9 }]);
+        if (nivel !== undefined) return Promise.resolve([]);
+        return Promise.resolve([
+          { ERP_CodUsuarioSap: '220', ERP_CanalVenta: '1', ERP_Sucursal: 3 },
+          { ERP_CodUsuarioSap: '330', ERP_CanalVenta: '2', ERP_Sucursal: 3 },
+        ]);
+      },
+    ),
+  };
+  const prisma = {
+    usuario,
+    socioNegocio: {
+      count: jest.fn().mockResolvedValue(0),
+      findMany: jest.fn().mockResolvedValue([]),
+      findFirst: jest.fn().mockResolvedValue({
+        SlpCode: 330,
+        CardCode: 'C0002',
+        CardName: 'Almacén del repositor',
+        ListNum: 3,
+      }),
+    },
+    categoriaCampo: categoriaCampo(),
+    producto: {
+      count: jest.fn().mockResolvedValue(0),
+      findMany: jest.fn().mockResolvedValue([]),
+    },
+    productoPrecio: { findMany: jest.fn().mockResolvedValue([]) },
+    almacen: { findMany: jest.fn().mockResolvedValue([]) },
+  };
+  const servicio = new PedidosService(
+    prisma as unknown as PrismaService,
+    { get: () => undefined } as unknown as ConfigService,
+    sinServiceLayer,
+  );
+
+  it('ve los clientes de toda su cadena y los artículos del canal del vendedor del cliente', async () => {
+    await servicio.clientes(7, {});
+    expect(prisma.socioNegocio.count).toHaveBeenCalledWith({
+      where: { empresaId: 2, CardType: 'C', SlpCode: { in: [220, 330] } },
+    });
+    await servicio.productos(7, { cardCode: 'C0002', linea: '1' });
+    // El cliente es del repositor (330): canal 2 y almacenes de su sucursal.
+    expect(prisma.producto.count).toHaveBeenCalledWith({
+      where: {
+        AND: expect.arrayContaining([{ tipo: '2' }]) as unknown,
+      },
+    });
+    expect(prisma.almacen.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { empresaId: 2, Location: 3, GlobalLocationNumber: '2' },
       }),
     );
   });
@@ -156,6 +231,7 @@ describe('PedidosService.crear', () => {
   function preparar(sapApiUrl?: string) {
     const tx = {
       usuario: {
+        findMany: jest.fn().mockResolvedValue([]),
         findUnique: jest.fn().mockResolvedValue({
           empresaId: 2,
           nombreLogin: 'vendedor',
@@ -766,7 +842,10 @@ describe('PedidosService facturas de SAP', () => {
 
   function preparar() {
     const prisma = {
-      usuario: { findUnique: jest.fn().mockResolvedValue({ empresaId: 2 }) },
+      usuario: {
+        findMany: jest.fn().mockResolvedValue([]),
+        findUnique: jest.fn().mockResolvedValue({ empresaId: 2 }),
+      },
       socioNegocio: {
         findFirst: jest.fn().mockResolvedValue({ CardCode: 'C0001' }),
       },

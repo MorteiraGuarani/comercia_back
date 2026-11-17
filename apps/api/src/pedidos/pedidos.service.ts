@@ -15,6 +15,7 @@ import { esErrorDuplicado } from '../common/utils/error-prisma';
 import { activosAnd } from '../common/utils/productos-activos';
 import { fechaCampo, relojCampo } from '../campo/utils/calendario';
 import { direccionesLocales, nombreLocal } from '../campo/utils/local-ocrd';
+import { subordinadosEnCadena } from '../campo/utils/autorizacion';
 import type {
   BuscarClientesPedidoDto,
   ConsultaPedidosDto,
@@ -63,7 +64,8 @@ import {
   armarPedidosSap,
   conIdDocumento,
   resolverAlmacen,
-  whereVendedor,
+  vendedorDe,
+  whereCartera,
 } from './utils/pedido-sap';
 import { ServiceLayerService } from './service-layer.service';
 
@@ -154,13 +156,18 @@ const SELECT_DETALLE = {
   },
 } satisfies Prisma.PedidoSelect;
 
-const SELECT_USUARIO_SAP = {
-  empresaId: true,
-  nombreLogin: true,
-  celular: true,
+const SELECT_VENTA = {
   ERP_Sucursal: true,
   ERP_CanalVenta: true,
   ERP_CodUsuarioSap: true,
+} satisfies Prisma.UsuarioSelect;
+
+const SELECT_USUARIO_SAP = {
+  ...SELECT_VENTA,
+  id: true,
+  empresaId: true,
+  nombreLogin: true,
+  celular: true,
 } satisfies Prisma.UsuarioSelect;
 
 type UsuarioSap = Prisma.UsuarioGetPayload<{
@@ -375,18 +382,42 @@ export class PedidosService {
   }
 
   /**
-   * Cliente de la cartera del usuario; uno ajeno responde igual que uno inexistente.
-   * Con `soloActivo`, uno inactivo o congelado en SAP se rechaza (no se le carga pedido).
+   * Vendedores cuya cartera ve el usuario: él primero y después toda su cadena
+   * hacia abajo en el organigrama (superior_id), a cualquier nivel.
+   */
+  private async cartera(u: UsuarioSap) {
+    const ids = await subordinadosEnCadena(this.prisma, u.id, {
+      empresaId: u.empresaId,
+      isActive: true,
+      esSuperadmin: false,
+    });
+    const subordinados = ids.length
+      ? await this.prisma.usuario.findMany({
+          where: { id: { in: ids } },
+          select: SELECT_VENTA,
+          orderBy: { id: 'asc' },
+        })
+      : [];
+    return [u, ...subordinados];
+  }
+
+  /**
+   * Cliente de la cartera del usuario o de su cadena; uno ajeno responde igual
+   * que uno inexistente. Con `soloActivo`, uno inactivo o congelado en SAP se
+   * rechaza (no se le carga pedido). `venta` es el canal y la sucursal de su
+   * vendedor: el superior ve los mismos artículos y almacenes que él.
    */
   private async cliente(u: UsuarioSap, cardCode: string, soloActivo = true) {
+    const cartera = await this.cartera(u);
     const c = await this.prisma.socioNegocio.findFirst({
       where: {
         empresaId: u.empresaId,
         CardCode: cardCode,
         CardType: 'C',
-        ...whereVendedor(u.ERP_CodUsuarioSap),
+        ...whereCartera(cartera.map((v) => v.ERP_CodUsuarioSap)),
       },
       select: {
+        SlpCode: true,
         CardCode: true,
         CardName: true,
         AliasName: true,
@@ -409,7 +440,11 @@ export class PedidosService {
       throw new BadRequestException(
         'El cliente está inactivo en SAP: no se le puede cargar pedido',
       );
-    return c;
+    const v = vendedorDe(cartera, c.SlpCode) ?? u;
+    return {
+      ...c,
+      venta: { ERP_CanalVenta: v.ERP_CanalVenta, ERP_Sucursal: v.ERP_Sucursal },
+    };
   }
 
   /** Pestañas del asistente según campo_categoria de la empresa; «Otros» siempre al final. */
@@ -466,8 +501,8 @@ export class PedidosService {
     const where: Prisma.SocioNegocioWhereInput = {
       empresaId,
       CardType: 'C',
-      // Solo su cartera: tbl_ocrd.SlpCode = su Código Vendedor.
-      ...whereVendedor(u.ERP_CodUsuarioSap),
+      // Su cartera y la de toda su cadena hacia abajo, sin repetir clientes.
+      ...whereCartera((await this.cartera(u)).map((v) => v.ERP_CodUsuarioSap)),
       ...(texto
         ? {
             OR: [
@@ -573,7 +608,7 @@ export class PedidosService {
     const { empresaId } = u;
     const c = await this.cliente(u, query.cardCode);
     const texto = query.buscar?.trim();
-    const datos = await this.datosAlmacen(u);
+    const datos = await this.datosAlmacen({ ...u, ...c.venta });
     const lineas = await this.lineasDe(empresaId);
     // Solo lo que tiene precio en la lista del cliente (tbl_itm1.PriceList = tbl_ocrd.ListNum).
     const conPrecio =
@@ -588,8 +623,8 @@ export class PedidosService {
       AND: [
         ...activosAnd,
         { itemcode: { in: conPrecio.map((p) => p.itemcode) } },
-        // U_beas_vg es el canal: solo los artículos del canal del usuario.
-        { tipo: u.ERP_CanalVenta ?? '' },
+        // U_beas_vg es el canal: solo los artículos del canal del vendedor del cliente.
+        { tipo: c.venta.ERP_CanalVenta ?? '' },
         whereLinea(lineas, query.linea),
         ...(texto
           ? [
@@ -656,12 +691,12 @@ export class PedidosService {
         (cantidades.get(l.itemCode) ?? 0) + l.cantidad,
       );
     const codigos = [...cantidades.keys()];
-    const datos = await this.datosAlmacen(u);
+    const datos = await this.datosAlmacen({ ...u, ...c.venta });
     const productos = await this.prisma.producto.findMany({
       where: {
         itemcode: { in: codigos },
-        // Los de otro canal (U_beas_vg) quedan como «ya no se vende» para este usuario.
-        tipo: u.ERP_CanalVenta ?? '',
+        // Los de otro canal (U_beas_vg) quedan como «ya no se vende» para este cliente.
+        tipo: c.venta.ERP_CanalVenta ?? '',
         AND: activosAnd,
       },
       select: {
@@ -970,11 +1005,11 @@ export class PedidosService {
     const codigos = dto.lineas.map((l) => l.itemCode);
     if (new Set(codigos).size !== codigos.length)
       throw new BadRequestException('Hay productos repetidos en el pedido');
-    // Solo productos de su canal (U_beas_vg); el almacén se revisa abajo para avisar cuál falta.
+    // Solo productos del canal de su vendedor (U_beas_vg); el almacén se revisa abajo para avisar cuál falta.
     const productos = await this.prisma.producto.findMany({
       where: {
         itemcode: { in: codigos },
-        tipo: u.ERP_CanalVenta ?? '',
+        tipo: c.venta.ERP_CanalVenta ?? '',
         AND: activosAnd,
       },
       select: {
@@ -1009,7 +1044,7 @@ export class PedidosService {
     });
     const total = lineas.reduce((suma, l) => suma + (l.total ?? 0), 0);
     const observaciones = dto.observaciones?.trim() ?? '';
-    const datos = await this.datosAlmacen(u);
+    const datos = await this.datosAlmacen({ ...u, ...c.venta });
     const sap = this.documentosSap(
       u,
       datos,

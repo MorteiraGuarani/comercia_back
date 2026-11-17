@@ -129,7 +129,13 @@ export class JornadaCampoService {
           SELECT DISTINCT ON (l."CardCode") a.id, ${equipoTitular()} AS equipo, l."CardCode" AS local_id,
             COALESCE(NULLIF(TRIM(l."CardName"), ''), l."CardCode") AS nombre
           ${base}
-          ORDER BY l."CardCode", CASE WHEN a.usuario_id = ${u.id} THEN 0 ELSE 1 END, a.id
+          ORDER BY l."CardCode",
+            -- La de su visita abierta primero: una asignación nueva del mismo local no le corta la salida.
+            CASE WHEN EXISTS (
+              SELECT 1 FROM campo_visitas v WHERE v.asignacion_id = a.id AND v.usuario_id = ${u.id}
+                AND v.salida IS NULL AND v.fecha BETWEEN ${desde}::date AND ${hasta}::date
+            ) THEN 0 ELSE 1 END,
+            CASE WHEN a.usuario_id = ${u.id} THEN 0 ELSE 1 END, a.id
         ) elegida ORDER BY CASE WHEN elegida.local_id = ${preferencia?.localPrincipalId ?? null} THEN 0 ELSE 1 END, elegida.nombre, elegida.id LIMIT ${take} OFFSET ${skip}`,
       ),
     ]);

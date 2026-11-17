@@ -21,7 +21,7 @@ type ConsultaUsuarios = Pick<Prisma.TransactionClient, 'usuario'>;
  * Baja por la cadena de superiores nivel por nivel (supervisor → TeamLeader →
  * impulsador) sin repetir usuarios aunque haya un ciclo en los datos.
  */
-async function subordinadosEnCadena(
+export async function subordinadosEnCadena(
   db: ConsultaUsuarios,
   liderId: number,
   filtro: Prisma.UsuarioWhereInput,

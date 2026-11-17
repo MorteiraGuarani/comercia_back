@@ -8,17 +8,34 @@ import type {
 export const conIdDocumento = (version: string, id: number) =>
   version.replace(/\d+$/, String(id));
 
-/**
- * Clientes del vendedor: tbl_ocrd.SlpCode igual a su Código Vendedor
- * (ERP_CodUsuarioSap). Sin código, todos los de la empresa; un código no
- * numérico no coincide con ninguno.
- */
-export const whereVendedor = (codigo: string | null) => {
-  const texto = codigo?.trim();
-  if (!texto) return {};
-  const slp = Number(texto);
-  return { SlpCode: Number.isInteger(slp) ? slp : -2 };
+// Código Vendedor (ERP_CodUsuarioSap) como SlpCode; vacío o no numérico, ninguno.
+const slpDe = (codigo: string | null) => {
+  const slp = Number(codigo?.trim() || NaN);
+  return Number.isInteger(slp) ? slp : null;
 };
+
+/**
+ * Clientes de una cartera: tbl_ocrd.SlpCode de cualquiera de sus Códigos
+ * Vendedor, una sola vez cada uno. Si nadie tiene código, todos los de la
+ * empresa; un código no numérico no coincide con ninguno.
+ */
+export const whereCartera = (codigos: (string | null)[]) =>
+  codigos.some((c) => c?.trim())
+    ? {
+        SlpCode: {
+          in: [...new Set(codigos.map(slpDe).filter((s) => s !== null))],
+        },
+      }
+    : {};
+
+/** Vendedor de la cartera dueño del cliente: el primero con su SlpCode. */
+export const vendedorDe = <T extends { ERP_CodUsuarioSap: string | null }>(
+  cartera: T[],
+  slpCode: number | null,
+) =>
+  cartera.find(
+    (v) => slpCode !== null && slpDe(v.ERP_CodUsuarioSap) === slpCode,
+  );
 
 /**
  * Almacenes de tbl_owhs de la sucursal (Location) y canal (GlobalLocationNumber)
