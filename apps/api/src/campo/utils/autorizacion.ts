@@ -97,9 +97,9 @@ export async function obtenerEquipoCompleto(
 }
 
 /**
- * Colaboradores que gestiona el usuario, sin incluirlo. En equipos de
- * impulsadores abarca toda la cadena (supervisor → TeamLeaders → sus
- * impulsadores); en repositores, solo los reportes directos.
+ * Colaboradores que gestiona el usuario, sin incluirlo: toda su cadena del
+ * mismo equipo operativo (supervisor → TeamLeaders → sus impulsadores o
+ * repositores), también en equipos de tipo REPOSITOR, como presentismo.
  */
 export async function obtenerColaboradoresGestionados(
   prisma: ConsultaUsuarios,
@@ -110,27 +110,10 @@ export async function obtenerColaboradoresGestionados(
     gestor?: boolean;
   },
 ): Promise<number[]> {
-  if (lider.gestor)
-    return (await obtenerEquipoCompleto(prisma, lider.id)).filter(
-      (id) => id !== lider.id,
-    );
-  const equipo = exigirEquipoCampo(lider.equipoCampo);
-  if (equipo.tipo !== 'REPOSITOR')
-    return (await obtenerEquipoCompleto(prisma, lider.id)).filter(
-      (id) => id !== lider.id,
-    );
-  const directos = await prisma.usuario.findMany({
-    where: {
-      empresaId: lider.empresaId,
-      superiorId: lider.id,
-      isActive: true,
-      esSuperadmin: false,
-      rol: { equipoCampoId: equipo.id },
-    },
-    select: { id: true },
-    take: 10000,
-  });
-  return directos.map((u) => u.id);
+  if (!lider.gestor) exigirEquipoCampo(lider.equipoCampo);
+  return (await obtenerEquipoCompleto(prisma, lider.id)).filter(
+    (id) => id !== lider.id,
+  );
 }
 
 /**
